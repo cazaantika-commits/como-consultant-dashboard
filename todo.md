@@ -1145,20 +1145,20 @@
 - [x] Redesign Feasibility Study with net investor profit after Como’s 15% share, required-capital paid and remaining amounts, funding-source summary, and saleable-area metrics; remove break-even and annual-return sections
 - [x] Redesign Feasibility Study profit and capital summaries so profit distribution, capital requirement, and cost funding sources are distinct and immediately understandable
 - [x] Prepare a complete current cost-item, funding-source, and payment-rule table for user decisions on build-for-sale and build-for-rent project types
-- [ ] Implement the approved build-for-sale project type: no escrow/RERA off-plan costs, investor-funded construction, configurable 1% three-month marketing, full-payment direct sales, and deferred Como profit share
-- [ ] Verify the build-for-sale implementation only on an independent project while preserving all existing Off-Plan calculations and project data unchanged
-- [ ] Replace the prior build-for-sale work with a clean independent model that uses only the user-approved rules and does not inspect or reuse existing non-Off-Plan logic
-- [ ] Show only build-for-sale pages after classification and hide all Off-Plan-only sales-flow and escrow pages
-- [ ] Keep all build-for-sale implementation and verification strictly inside the Financial Studies & Planning module; do not modify any other app icon or module
-- [ ] Classify the user-approved Nad Al Sheba project as build-for-sale inside Financial Studies, save, reload, and verify its isolated tabs and calculations
-- [ ] Remove all Off-Plan-only RERA, escrow, bank, and report fields from General Inputs when a project is classified as build-for-sale
-- [ ] Diagnose and fix the stale Financial Studies interface that still shows Off-Plan fields after a build-for-sale project reload
-- [ ] Audit every build-for-sale Investor Cash Flow row against approved rules, including the land-department unit-registration label and timing
-- [ ] Verify build-for-sale revenue begins only after completion, records each sale as a full direct investor payment, and contains no escrow receipts or settlements
-- [ ] Add Villa and Townhouse unit types to Financial Studies and link their quantity, area, pricing, sales, revenue, and feasibility calculations
-- [ ] Add Villa and Townhouse as visible editable pricing rows in the build-for-sale Sales page
-- [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
-- [ ] Add regression proof that the zero-value unit update does not change any Off-Plan calculations or rules
+- [x] Implement the approved build-for-sale project type: no escrow/RERA off-plan costs, investor-funded construction, configurable 1% three-month marketing, full-payment direct sales, and deferred Como profit share
+- [x] Verify the build-for-sale implementation only on an independent project while preserving all existing Off-Plan calculations and project data unchanged
+- [x] Replace the prior build-for-sale work with a clean independent model that uses only the user-approved rules and does not inspect or reuse existing non-Off-Plan logic
+- [x] Show only build-for-sale pages after classification and hide all Off-Plan-only sales-flow and escrow pages
+- [x] Keep all build-for-sale implementation and verification strictly inside the Financial Studies & Planning module; do not modify any other app icon or module
+- [x] Classify the user-approved Nad Al Sheba project as build-for-sale inside Financial Studies, save, reload, and verify its isolated tabs and calculations
+- [x] Remove all Off-Plan-only RERA, escrow, bank, and report fields from General Inputs when a project is classified as build-for-sale
+- [x] Diagnose and fix the stale Financial Studies interface that still shows Off-Plan fields after a build-for-sale project reload
+- [x] Audit every build-for-sale Investor Cash Flow row against approved rules, including the land-department unit-registration label and timing
+- [x] Verify build-for-sale revenue begins only after completion, records each sale as a full direct investor payment, and contains no escrow receipts or settlements
+- [x] Add Villa and Townhouse unit types to Financial Studies and link their quantity, area, pricing, sales, revenue, and feasibility calculations
+- [x] Add Villa and Townhouse as visible editable pricing rows in the build-for-sale Sales page
+- [x] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
+- [x] Add regression proof that the zero-value unit update does not change any Off-Plan calculations or rules
 - [x] Implement build-for-rent inside Financial Studies with investor-funded costs and no sales, marketing, commissions, or revenue; exclude rental income for now
 - [x] Make build-for-rent developer fees configurable from construction cost: 1.5% across design and 2.5% across supervision
-- [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
+- [x] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages

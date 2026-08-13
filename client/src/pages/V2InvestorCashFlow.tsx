@@ -127,14 +127,25 @@ export default function V2InvestorCashFlow() {
     if (plan.resultsJson) {
       try {
         const parsed = JSON.parse(plan.resultsJson);
-        if (parsed.escrowData && parsed.salesDistribution) {
+        const parsedBuildForSaleUnits = Array.isArray(parsed.buildForSaleMonthlyUnits)
+          ? parsed.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0))
+          : undefined;
+        const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
+          || buildForSaleMonthlyUnits
+          || (scenario === "build_for_sale" && Array.isArray(parsed.salesDistribution)
+            ? parsed.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
+            : undefined);
+        const hasSavedSalesResult = scenario === "build_for_sale"
+          ? Array.isArray(parsed.actualCashInflow) || Array.isArray(parsed.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
+          : Array.isArray(parsed.escrowData) && Array.isArray(parsed.salesDistribution);
+        if (hasSavedSalesResult) {
           const storedCashInflow = parsed.actualCashInflow || [];
           const actualCashInflow = parsed.actualCashInflowVersion === 2
             ? storedCashInflow
             : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
           return {
-            escrowData: parsed.escrowData,
-            salesDistribution: parsed.salesDistribution,
+            escrowData: Array.isArray(parsed.escrowData) ? parsed.escrowData : [],
+            salesDistribution: Array.isArray(parsed.salesDistribution) ? parsed.salesDistribution : [],
             marketingMonthlyAmounts,
             ppDownPct,
             paymentPlan,
@@ -142,7 +153,7 @@ export default function V2InvestorCashFlow() {
             offplanPct: Number(plan.offplanPct ?? 80),
             directSalesStartMonth,
             directSalesInstallmentCount,
-            buildForSaleMonthlyUnits,
+            buildForSaleMonthlyUnits: resolvedBuildForSaleUnits,
           };
         }
       } catch {}

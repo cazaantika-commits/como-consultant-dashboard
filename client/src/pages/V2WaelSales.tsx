@@ -273,6 +273,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const salesMonths = isBuildForSale
     ? Math.max(3, manualUnits.length || 0)
     : timeline.projectEnd - timeline.salesStart + 1;
+  const salesStartMonth = isBuildForSale ? buildForSaleStartMonth : timeline.salesStart;
+  const salesEndMonth = salesStartMonth + salesMonths - 1;
+  const buildForSaleMarketingStartMonth = Math.max(
+    1,
+    timeline.projectEnd - buildForSaleMarketingStartBeforeCompletion,
+  );
+  const buildForSaleMarketingEndMonth = buildForSaleMarketingStartMonth + buildForSaleMarketingDuration - 1;
+  const timelineDisplayEndMonth = isBuildForSale
+    ? Math.max(timeline.projectEnd, buildForSaleMarketingEndMonth, salesEndMonth)
+    : timeline.projectEnd;
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
   const offPlanUnits = isBuildForSale ? totalUnits : Math.round((totalUnits * offPlan) / 100);
@@ -307,24 +317,31 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     try { absorption = JSON.parse(plan.salesAbsorptionJson || "{}"); } catch {}
     try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
     return {
-      marketing: getMarketingTimelineWindow({
-        settingsStartMonth: timeline.marketingStart,
-        projectEndMonth: timeline.projectEnd,
-        savedStartMonth: absorption.marketingActualStart,
-        savedEndMonth: absorption.marketingActualEnd,
-      }),
+      marketing: isBuildForSale
+        ? {
+            startMonth: buildForSaleMarketingStartMonth,
+            endMonth: buildForSaleMarketingEndMonth,
+            hasSavedActivity: true,
+          }
+        : getMarketingTimelineWindow({
+            settingsStartMonth: timeline.marketingStart,
+            projectEndMonth: timeline.projectEnd,
+            savedStartMonth: absorption.marketingActualStart,
+            savedEndMonth: absorption.marketingActualEnd,
+          }),
       sales: getSalesTimelineWindow({
-        settingsStartMonth: isBuildForSale ? buildForSaleStartMonth : timeline.salesStart,
-        projectEndMonth: isBuildForSale ? buildForSaleStartMonth + salesMonths - 1 : timeline.projectEnd,
+        settingsStartMonth: salesStartMonth,
+        projectEndMonth: salesEndMonth,
         salesDistribution: results.salesDistribution ?? salesDistribution,
       }),
     };
-  }, [plansQuery.data, salesDistribution, timeline.marketingStart, timeline.salesStart, timeline.projectEnd, isBuildForSale, buildForSaleStartMonth, salesMonths]);
+  }, [plansQuery.data, salesDistribution, timeline.marketingStart, timeline.projectEnd, isBuildForSale, buildForSaleMarketingStartMonth, buildForSaleMarketingEndMonth, salesStartMonth, salesEndMonth]);
 
   // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
   const escrowInitial = constructionCost * 0.2;
   const monthlySiphon = salesMonths > 0 ? constructionCost / salesMonths : 0;
   const escrowData = useMemo(() => {
+    if (isBuildForSale) return [];
     let balance = escrowInitial;
     // Each unit sold: buyer pays downPaymentPct immediately, duringConstructionPct spread over construction months
     const monthlyInstallmentPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionMonths || 1);
@@ -341,7 +358,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       balance = balance + totalIncome - withdrawal;
       return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
     });
-  }, [salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
+  }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
   const maxDeficit = escrowData.length > 0 ? Math.min(...escrowData.map((d) => d.balance)) : 0;
   const hasDeficit = maxDeficit < 0;
   const criticalMonth = useMemo(() => {
@@ -351,14 +368,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     escrowData.forEach((d, i) => { if (d.balance < minBalance) { minBalance = d.balance; minIdx = i; } });
     return escrowData[minIdx];
   }, [escrowData]);
+  const visibleTimelinePhases = isBuildForSale
+    ? PROJECT_PHASES.filter((phase) => ["design", "marketing", "sales", "construction"].includes(phase.id))
+    : PROJECT_PHASES;
 
   // ─── Computed: Cash Inflow (Payment Plan × Sales) + Detailed Grid ────────
   const { cashInflowData, perSaleGrid, activeSaleMonths, actualCashInflow } = useMemo(() => {
-    const totalMonths = isBuildForSale ? timeline.projectEnd + salesMonths : timeline.projectEnd;
+    const totalMonths = isBuildForSale ? salesEndMonth : timeline.projectEnd;
     const cashFlowHorizon = totalMonths + 13;
     const monthlySales: number[] = Array(totalMonths + 1).fill(0);
     salesDistribution.forEach((units, i) => {
-      const m = (isBuildForSale ? buildForSaleStartMonth : timeline.salesStart) + i;
+      const m = salesStartMonth + i;
       if (m <= totalMonths) monthlySales[m] = units * avgUnitPrice;
     });
     const cashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
@@ -407,7 +427,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     // the same convention consumed by the Escrow Cash Flow page and engine.
     const persistedCashInflow = Array.from({ length: cashFlowHorizon }, (_, i) => cashPerMonth[i + 1] || 0);
     return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList, actualCashInflow: persistedCashInflow };
-  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct, isBuildForSale, buildForSaleStartMonth, salesMonths]);
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct, isBuildForSale, salesStartMonth, salesEndMonth]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
   const handleSaveUnits = useCallback(() => {
@@ -437,7 +457,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           configurableRates: {
             ...configurableRates,
             buildForSaleMarketingRate,
-            buildForSaleMarketingStartMonthsBeforeCompletion,
+            buildForSaleMarketingStartMonthsBeforeCompletion: buildForSaleMarketingStartBeforeCompletion,
             buildForSaleMarketingDurationMonths: buildForSaleMarketingDuration,
           },
         },
@@ -484,7 +504,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         paymentPlanJson: JSON.stringify(isBuildForSale
           ? { downPct: 100, secondPct: 0, secondAfterMonths: 0, duringTotalPct: 0, installmentEveryMonths: 1, handoverPct: 0 }
           : { downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
-        resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2, ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}) }),
+        resultsJson: JSON.stringify({ escrowData: isBuildForSale ? [] : escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2, ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}) }),
       });
 
       setPlanId(savedPlan.id);
@@ -526,10 +546,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 حفظ التسعير
               </Button>
             )}
-            {hasPlanChanges && (
+            {(hasPlanChanges || isBuildForSale) && (
               <Button size="sm" onClick={handleSavePlan} disabled={savePlan.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
                 {savePlan.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                حفظ الخطة
+                {isBuildForSale ? "حفظ خطة البيع المباشر" : "حفظ الخطة"}
               </Button>
             )}
             <Button size="sm" variant="outline" onClick={() => {
@@ -798,7 +818,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 <div className="flex items-center gap-2">
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
-                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
+                    {Array.from({ length: timelineDisplayEndMonth }, (_, i) => {
                       const isDesign = i < timeline.designEnd;
                       const displayNum = isDesign ? i + 1 : i - timeline.designEnd + 1;
                       // Calculate actual month name from startDate
@@ -823,7 +843,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
               <div className="p-2">
                 <div className="space-y-1.5">
-                  {PROJECT_PHASES.map((phase) => {
+                  {visibleTimelinePhases.map((phase) => {
                     let start = 0, end = 0;
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
                     else if (phase.id === "materials") { start = timeline.materialsStart; end = sharedTiming.materialsEndMonth; }
@@ -831,7 +851,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     else if (phase.id === "marketing") { start = activityWindows.marketing.startMonth; end = activityWindows.marketing.endMonth; }
                     else if (phase.id === "sales") { start = activityWindows.sales.startMonth; end = activityWindows.sales.endMonth; }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
-                    const total = timeline.projectEnd;
+                    const total = timelineDisplayEndMonth;
                     const rightPct = ((start - 1) / total) * 100;
                     const widthPct = ((end - start + 1) / total) * 100;
                     const Icon = phase.icon;
@@ -841,7 +861,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + '))' }}>
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + timelineDisplayEndMonth + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timelineDisplayEndMonth + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timelineDisplayEndMonth + '))' }}>
                           <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
                         </div>
@@ -852,9 +872,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
                   <span>نقطة الانطلاق (اكتمال المخططات التخطيطية): <strong className="text-gray-800">شهر {sharedTiming.schematicCompletionMonth}</strong></span>
-                  <span>مدة تحضير المواد: <strong className="text-gray-800">{sharedTiming.marketingPrepMonths} شهر</strong></span>
-                  <span>مدة ريرا: <strong className="text-gray-800">{sharedTiming.reraApprovalMonths} شهر</strong></span>
-                  <Badge className="text-[8px] bg-pink-100 text-pink-700">التسويق: {activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                  {!isBuildForSale && <span>مدة تحضير المواد: <strong className="text-gray-800">{sharedTiming.marketingPrepMonths} شهر</strong></span>}
+                  {!isBuildForSale && <span>مدة ريرا: <strong className="text-gray-800">{sharedTiming.reraApprovalMonths} شهر</strong></span>}
+                  <Badge className="text-[8px] bg-pink-100 text-pink-700">التسويق: {isBuildForSale ? `قبل الإنجاز بـ ${buildForSaleMarketingStartBeforeCompletion} شهر لمدة ${buildForSaleMarketingDuration} أشهر` : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
                   <Badge className="text-[8px] bg-emerald-100 text-emerald-700">المبيعات: {activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                 </div>
               </div>
@@ -872,16 +892,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
               <div className="p-2 overflow-x-auto">
                 {(() => {
-                  const escrowStartMonth = timeline.salesStart;
-                  const escrowEndMonth = timeline.projectEnd;
-                  const escrowMonthCount = escrowEndMonth - escrowStartMonth + 1;
+                  const salesScheduleStartMonth = salesStartMonth;
+                  const salesScheduleEndMonth = salesEndMonth;
+                  const salesScheduleMonthCount = salesScheduleEndMonth - salesScheduleStartMonth + 1;
                   const colWidth = `minmax(42px, 1fr)`;
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${escrowMonthCount}, ${colWidth})`, direction: 'rtl' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: `60px repeat(${salesScheduleMonthCount}, ${colWidth})`, direction: 'rtl' }}>
                       {/* Row 1: Month labels */}
                       <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">الشهر</div>
-                      {Array.from({ length: escrowMonthCount }, (_, i) => {
-                        const absMonth = escrowStartMonth + i;
+                      {Array.from({ length: salesScheduleMonthCount }, (_, i) => {
+                        const absMonth = salesScheduleStartMonth + i;
                         const isDesign = absMonth <= timeline.designEnd;
                         const displayNum = isDesign ? absMonth : absMonth - timeline.designEnd;
                         const MN = ["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"];
@@ -896,9 +916,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       })}
                       {/* Row 2: Unit inputs */}
                       <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center border-b border-gray-200 py-0.5">وحدات</div>
-                      {Array.from({ length: escrowMonthCount }, (_, i) => {
-                        const absMonth = escrowStartMonth + i;
-                        const salesIdx = absMonth - timeline.salesStart;
+                      {Array.from({ length: salesScheduleMonthCount }, (_, i) => {
+                        const absMonth = salesScheduleStartMonth + i;
+                        const salesIdx = absMonth - salesStartMonth;
                         const inSalesRange = salesIdx >= 0 && salesIdx < salesMonths;
                         const val = inSalesRange ? (manualUnits[salesIdx] ?? salesDistribution[salesIdx] ?? 0) : 0;
                         return (
@@ -923,9 +943,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       })}
                       {/* Row 3: Percentages (bold) */}
                       <div className="text-[8px] font-bold text-gray-500 flex items-center justify-center py-0.5">%</div>
-                      {Array.from({ length: escrowMonthCount }, (_, i) => {
-                        const absMonth = escrowStartMonth + i;
-                        const salesIdx = absMonth - timeline.salesStart;
+                      {Array.from({ length: salesScheduleMonthCount }, (_, i) => {
+                        const absMonth = salesScheduleStartMonth + i;
+                        const salesIdx = absMonth - salesStartMonth;
                         const inSalesRange = salesIdx >= 0 && salesIdx < salesMonths;
                         const val = inSalesRange ? (manualUnits[salesIdx] ?? salesDistribution[salesIdx] ?? 0) : 0;
                         const pct = offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : '0';
@@ -942,7 +962,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 7: ESCROW (GUARANTEE ACCOUNT) */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            {!isBuildForSale && <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-violet-600" />
@@ -1064,7 +1084,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   );
                 })()}
               </div>
-            </section>
+            </section>}
 
             {/* SECTION 8: CASH INFLOW RESULTS TABLE (Payment Plan × Sales) */}
             <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -1095,7 +1115,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     {cashInflowData.map((row, i) => {
                       const isActive = row.salesThisMonth > 0 || row.cashInflow > 0;
                       const isDesign = row.month <= timeline.designEnd;
-                      const isSalesStart = row.month === timeline.salesStart;
+                      const isPostCompletion = row.month > timeline.projectEnd;
+                      const isSalesStart = row.month === salesStartMonth;
                       return (
                         <tr key={i} className={`border-b border-gray-50 ${!isActive ? 'opacity-30' : 'hover:bg-blue-50/30'} ${isSalesStart ? 'border-t-2 border-t-amber-300' : ''}`}>
                           <td className="py-0.5 px-1.5 text-gray-400 font-mono">{row.month}</td>
@@ -1103,8 +1124,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             {(() => { const MN=["ينا","فبر","مار","أبر","ماي","يون","يول","أغس","سبت","أكت","نوف","ديس"]; let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+row.month-1)%12];} return ml ? <><span className="font-bold">{ml}</span> <span className="text-[7px] text-gray-400">{row.month}</span></> : `شهر ${row.month}`; })()}
                           </td>
                           <td className="py-0.5 px-1.5 text-center">
-                            <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                              {isDesign ? 'تصاميم' : 'بناء'}
+                            <span className={`inline-block px-1 py-0.5 rounded text-[8px] font-bold ${isDesign ? 'bg-purple-50 text-purple-600' : isPostCompletion ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-600'}`}>
+                              {isDesign ? 'تصاميم' : isPostCompletion ? 'ما بعد الإنجاز' : 'بناء'}
                             </span>
                           </td>
                           <td className="py-0.5 px-1.5 text-left font-mono">
@@ -1170,11 +1191,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     <tr className="border-b-2 border-gray-300">
                       <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-0 bg-white z-20 min-w-[80px]">شهر البيع \ شهر التحصيل</th>
                       <th className="py-1 px-1 text-right text-gray-600 font-bold sticky left-[80px] bg-white z-20 min-w-[60px]">مبلغ البيع</th>
-                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                      {cashInflowData.map(({ month: m }) => {
                         const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
                         let ml=""; if(projectStartDate){const[y,mo]=projectStartDate.split("-").map(Number);if(y&&mo)ml=MN[(mo-1+m-1)%12];}
                         return (
-                          <th key={m} className={`py-1 px-0.5 text-center min-w-[45px] ${m === timeline.salesStart ? 'border-l-2 border-amber-300' : ''} ${m >= timeline.salesStart ? 'text-gray-700' : 'text-gray-400'}`}>
+                          <th key={m} className={`py-1 px-0.5 text-center min-w-[45px] ${m === salesStartMonth ? 'border-l-2 border-amber-300' : ''} ${m >= salesStartMonth ? 'text-gray-700' : 'text-gray-400'}`}>
                             <div className="flex flex-col items-center leading-tight">
                               <span className="text-[6px] text-gray-400">{m}</span>
                               <span className="text-[7px] font-bold">{ml || `\u0634${m}`}</span>
@@ -1193,11 +1214,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       return (
                         <tr key={saleMonth} className={`border-b border-gray-50 ${idx % 2 === 0 ? 'bg-gray-50/30' : ''} hover:bg-purple-50/30`}>
                           <td className="py-0.5 px-1 font-bold text-purple-700 sticky left-0 bg-inherit z-10">
-                            {(() => { const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"]; let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+saleMonth-1)%12];} return ml ? <>{ml} <span className="text-[7px] text-purple-400">{saleMonth}</span></> : `\u0634\u0647\u0631 ${saleMonth}`; })()}
-                            ({salesDistribution[saleMonth - timeline.salesStart] || 0} \u0648\u062d\u062f\u0629)
+                            {(() => { const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0641","\u062f\u064a\u0633"]; let ml=""; if(projectStartDate){const[y,m]=projectStartDate.split("-").map(Number);if(y&&m)ml=MN[(m-1+saleMonth-1)%12];} return ml ? <>{ml} <span className="text-[7px] text-purple-400">{saleMonth}</span></> : `\u0634\u0647\u0631 ${saleMonth}`; })()}
+                            ({salesDistribution[saleMonth - salesStartMonth] || 0} \u0648\u062d\u062f\u0629)
                           </td>
                           <td className="py-0.5 px-1 font-mono text-emerald-700 sticky left-[80px] bg-inherit z-10">{fmtFull(Math.round(saleAmount))}</td>
-                          {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                          {cashInflowData.map(({ month: m }) => {
                             const val = rowData ? rowData[m] || 0 : 0;
                             return (
                               <td key={m} className={`py-0.5 px-0.5 text-center font-mono ${m === saleMonth ? 'bg-amber-50 font-bold text-amber-700' : val > 0 ? 'text-blue-700' : 'text-gray-200'}`}>
@@ -1214,7 +1235,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     <tr>
                       <td className="py-1 px-1 text-right text-gray-800 sticky left-0 bg-gray-100 z-10">مجموع التحصيل الشهري</td>
                       <td className="py-1 px-1 font-mono text-emerald-800 sticky left-[80px] bg-gray-100 z-10">{fmtFull(Math.round(activeSaleMonths.reduce((s, sm) => s + (cashInflowData.find(d => d.month === sm)?.salesThisMonth || 0), 0)))}</td>
-                      {Array.from({ length: timeline.projectEnd }, (_, i) => i + 1).map(m => {
+                      {cashInflowData.map(({ month: m }) => {
                         const colTotal = activeSaleMonths.reduce((s, sm) => s + (perSaleGrid[sm]?.[m] || 0), 0);
                         return (
                           <td key={m} className={`py-1 px-0.5 text-center font-mono ${colTotal > 0 ? 'text-blue-800 font-bold' : 'text-gray-300'}`}>
@@ -1228,7 +1249,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </table>
               </div>
               <div className="px-3 py-1.5 border-t border-gray-100 bg-purple-50/30 text-[9px] text-gray-600">
-                <strong>ملاحظة:</strong> الخلية الصفراء = دفعة الحجز (في شهر البيع) | الخلايا الزرقاء = أقساط لاحقة حسب البيمنت بلان | الصف الأخير = إجمالي ما يدخل الإسكرو كل شهر
+                <strong>ملاحظة:</strong> {isBuildForSale
+                  ? "كل خلية صفراء تمثل تحصيلاً كاملاً ومباشراً للمستثمر في شهر بيع الوحدة."
+                  : "الخلية الصفراء = دفعة الحجز (في شهر البيع) | الخلايا الزرقاء = أقساط لاحقة حسب البيمنت بلان | الصف الأخير = إجمالي ما يدخل الإسكرو كل شهر"}
               </div>
             </section>
             )}

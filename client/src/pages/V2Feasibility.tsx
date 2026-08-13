@@ -99,7 +99,18 @@ export default function V2Feasibility() {
         ppDownPct = paymentPlan?.downPct;
       }
       const results = plan.resultsJson ? JSON.parse(plan.resultsJson) : null;
-      if (!results?.escrowData || !results?.salesDistribution) return (marketingMonthlyAmounts || buildForSaleMonthlyUnits)
+      const parsedBuildForSaleUnits = Array.isArray(results?.buildForSaleMonthlyUnits)
+        ? results.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0))
+        : undefined;
+      const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
+        || buildForSaleMonthlyUnits
+        || (isBuildForSale && Array.isArray(results?.salesDistribution)
+          ? results.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
+          : undefined);
+      const hasSavedSalesResult = isBuildForSale
+        ? Array.isArray(results?.actualCashInflow) || Array.isArray(results?.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
+        : Array.isArray(results?.escrowData) && Array.isArray(results?.salesDistribution);
+      if (!hasSavedSalesResult) return (marketingMonthlyAmounts || buildForSaleMonthlyUnits)
         ? { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, paymentPlan, buildForSaleMonthlyUnits }
         : undefined;
       const storedCash = results.actualCashInflow || [];
@@ -108,8 +119,8 @@ export default function V2Feasibility() {
         : (storedCash.length > 0 && storedCash[0] === 0 ? storedCash.slice(1) : storedCash);
       const directSales = JSON.parse((project as any).constructionScheduleJson || "{}")?.settings?.directPostCompletionSales || {};
       return {
-        escrowData: results.escrowData,
-        salesDistribution: results.salesDistribution,
+        escrowData: Array.isArray(results.escrowData) ? results.escrowData : [],
+        salesDistribution: Array.isArray(results.salesDistribution) ? results.salesDistribution : [],
         marketingMonthlyAmounts,
         ppDownPct,
         paymentPlan,
@@ -117,7 +128,7 @@ export default function V2Feasibility() {
         offplanPct: Number(plan.offplanPct ?? 80),
         directSalesStartMonth: Number(directSales.startMonth ?? 4),
         directSalesInstallmentCount: Number(directSales.installmentCount ?? 6),
-        buildForSaleMonthlyUnits: buildForSaleMonthlyUnits || results.buildForSaleMonthlyUnits,
+        buildForSaleMonthlyUnits: resolvedBuildForSaleUnits,
       };
     } catch {
       return undefined;
@@ -268,12 +279,12 @@ export default function V2Feasibility() {
                   <Row label="رسوم المجتمع" value={fmt(costs?.communityFees || 0)} pct={totalCosts > 0 ? ((costs?.communityFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم الجهات الحكومية" value={fmt(costs?.officialBodiesFees || 0)} pct={totalCosts > 0 ? ((costs?.officialBodiesFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="تسجيل الوحدات (دائرة الأراضي والأملاك)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  {!isBuildForRent && <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForSale && !isBuildForRent && <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  {!isBuildForRent && <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  {!isBuildForRent && <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  {!isBuildForRent && <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  {!isBuildForRent && <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForSale && !isBuildForRent && <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForSale && !isBuildForRent && <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForSale && !isBuildForRent && <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForSale && !isBuildForRent && <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* المبيعات */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">{isBuildForRent ? "أتعاب التطوير" : "المبيعات والتسويق"}</div>
                   <Row label="أتعاب المطور" value={fmt(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
@@ -381,9 +392,10 @@ export default function V2Feasibility() {
                   <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
 
                   <DetailRow
-                    label={isBuildForRent ? "أتعاب المطور (تصميم + إشراف)" : "أتعاب المطور"}
+                    label={isBuildForRent ? "أتعاب المطور (تصميم + إشراف)" : isBuildForSale ? "أتعاب المطور (تصميم + تنفيذ)" : "أتعاب المطور"}
                     value={isBuildForRent
                       ? `${buildForRentDeveloperFees.totalRate.toFixed(2)}% من تكلفة الإنشاء (${buildForRentDeveloperFees.designRate}% + ${buildForRentDeveloperFees.supervisionRate}%)`
+                      : isBuildForSale ? "3% من الإيرادات (1% + 2%)"
                       : project.developerFeePct ? `${project.developerFeePct}%` : "—"}
                   />
                   <DetailRow label="عمولة المبيعات" value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
@@ -394,6 +406,8 @@ export default function V2Feasibility() {
                     project.financingScenario === 'offplan_escrow' ? 'أوف بلان + ضمان' :
                     project.financingScenario === 'offplan_construction' ? 'أوف بلان + بناء' :
                     project.financingScenario === 'no_offplan' ? 'بدون أوف بلان' :
+                    project.financingScenario === 'build_for_sale' ? 'بناء للبيع' :
+                    project.financingScenario === 'build_for_rent' ? 'بناء للتأجير' :
                     project.financingScenario || "—"
                   } />
                   <DetailRow label="المدة الإجمالية" value={`${totalMonths} شهر (${totalYears.toFixed(1)} سنة)`} />
@@ -435,8 +449,8 @@ export default function V2Feasibility() {
                     <div className="bg-amber-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.remainingCapital / capital.requiredCapital) * 100 : 0}%` }} />
                   </div>
                   <p className="text-[8px] leading-relaxed text-gray-500">
-                    {isBuildForRent
-                      ? "لا يوجد حساب ضمان في البناء للتأجير؛ رأس المال المطلوب يمثل مصروفات المستثمر فقط."
+                    {isBuildForRent || isBuildForSale
+                      ? `لا يوجد حساب ضمان في ${isBuildForSale ? "البناء للبيع" : "البناء للتأجير"}؛ رأس المال المطلوب يمثل مصروفات المستثمر فقط.`
                       : "يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر."}
                   </p>
                 </div>
@@ -451,7 +465,7 @@ export default function V2Feasibility() {
                     </div>
                     <span className="text-sm font-black text-slate-800 tabular-nums" dir="ltr">{fmt(capital.totalProjectSpend)} AED</span>
                   </div>
-                  {isBuildForRent ? (
+                  {isBuildForRent || isBuildForSale ? (
                     <div className="rounded-md bg-slate-50 px-2.5 py-2">
                       <p className="text-[9px] text-slate-500">يدفعه المستثمر</p>
                       <p className="text-[11px] font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.investorProjectSpend)} AED</p>

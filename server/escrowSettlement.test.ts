@@ -302,6 +302,51 @@ describe("calculateEscrowSettlement", () => {
     expect(feasibility.surveyorDwgFees).toBe(0);
     expect(feasibility.developerFee).toBe(feasibility.totalRevenue * 0.03);
     expect(feasibility.marketingCost).toBe(feasibility.totalRevenue * 0.02);
+    const comoAllocation = result.rows.find((row) => row.label.includes("حصة كومو"))!;
+    const projectSpendBeforeAllocation = result.rows
+      .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation && row.funder === "investor")
+      .reduce((sum, row) => sum + row.totalCost, 0);
+    expect(comoAllocation.isProfitAllocation).toBe(true);
+    expect(calculateInvestorCapitalSummary(result).investorProjectSpend).toBe(projectSpendBeforeAllocation);
+  });
+
+  it("uses saved build-for-sale direct receipts for investor revenue and parallel commission timing", () => {
+    const expectedRevenue = 10 * 750 * 5000;
+    const result = computeInvestorCashFlow({
+      financingScenario: "build_for_sale",
+      preConMonths: 2,
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 10,
+      residential1brArea: 750,
+      residential1brPrice: 5000,
+    }, "build_for_sale", undefined, {
+      escrowData: [],
+      salesDistribution: [3, 7],
+      actualCashInflow: [
+        ...Array(10).fill(0),
+        expectedRevenue * 0.3,
+        expectedRevenue * 0.7,
+      ],
+    });
+
+    const sales = result.rows.find((row) => row.label === "إيرادات المبيعات")!;
+    const commission = result.rows.find((row) => row.label.includes("بعد تحصيل كامل"))!;
+    const comoShare = result.rows.find((row) => row.label.includes("حصة كومو"))!;
+
+    expect(sales.postConstructionMonths.slice(0, 3)).toEqual([
+      expectedRevenue * 0.3,
+      expectedRevenue * 0.7,
+      0,
+    ]);
+    expect(commission.postConstructionMonths.slice(0, 3)).toEqual([
+      expectedRevenue * 0.3 * 0.05,
+      expectedRevenue * 0.7 * 0.05,
+      0,
+    ]);
+    expect(comoShare.postConstructionMonths[0]).toBe(0);
+    expect(comoShare.postConstructionMonths[1]).toBe(comoShare.totalCost);
   });
 
   it("applies the approved build-for-rent rules with no sales, marketing, commissions, revenue, or escrow", () => {

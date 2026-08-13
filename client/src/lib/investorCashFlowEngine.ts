@@ -44,6 +44,8 @@ export interface CostRow {
   postConstructionMonths: number[];
   isRevenue?: boolean;
   isTransfer?: boolean;
+  /** A post-sale profit allocation, which stays in the cash flow but is excluded from project costs and capital. */
+  isProfitAllocation?: boolean;
 }
 
 export interface TimingRules {
@@ -165,7 +167,7 @@ export function calculateInvestorCapitalSummary(cashFlow: CashFlowResult): Inves
     .reduce((sum, row) => sum + row.paid, 0);
 
   const futureInvestorDebitRows = cashFlow.rows.filter((row) =>
-    !row.isRevenue && row.funder === "investor" && !(row.paid > 0 && row.unpaid === 0)
+    !row.isRevenue && !row.isProfitAllocation && row.funder === "investor" && !(row.paid > 0 && row.unpaid === 0)
   );
   const investorCreditRows = cashFlow.rows.filter((row) => row.isRevenue && !row.label.includes("تصفية حساب الضمان"));
 
@@ -221,7 +223,7 @@ export function calculateInvestorCapitalSummary(cashFlow: CashFlowResult): Inves
   }
 
   const investorProjectSpend = cashFlow.rows
-    .filter((row) => !row.isRevenue && row.funder === "investor" && !row.isTransfer)
+    .filter((row) => !row.isRevenue && !row.isProfitAllocation && row.funder === "investor" && !row.isTransfer)
     .reduce((sum, row) => sum + row.totalCost, 0);
   const escrowProjectSpend = cashFlow.rows
     .filter((row) => !row.isRevenue && row.funder === "escrow")
@@ -454,6 +456,38 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const emptyDesign = () => new Array(designDuration).fill(0);
   const emptyConstruction = () => new Array(constructionDuration).fill(0);
   const emptyPost = () => new Array(postDuration).fill(0);
+  const buildForSaleRevenuePost = (() => {
+    const revenuePost = emptyPost();
+    if (!isBuildForSale) return revenuePost;
+
+    // The Sales page saves actualCashInflow by absolute project month. Reuse it
+    // directly for the build-for-sale receipt schedule, scaled only to protect
+    // the Feasibility Study's shared total-revenue source from stale rounding.
+    const postStartIndex = designDuration + constructionDuration;
+    const savedReceipts = (salesResult?.actualCashInflow || [])
+      .slice(postStartIndex, postStartIndex + postDuration)
+      .map((amount) => Math.max(0, Number(amount) || 0));
+    const savedReceiptTotal = savedReceipts.reduce((sum, amount) => sum + amount, 0);
+    if (savedReceiptTotal > 0) {
+      const scale = totalRevenue / savedReceiptTotal;
+      savedReceipts.forEach((amount, index) => {
+        revenuePost[index] = amount * scale;
+      });
+      return revenuePost;
+    }
+
+    const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+    const monthlyUnits = salesResult?.buildForSaleMonthlyUnits || [];
+    if (monthlyUnits.some((units) => units > 0)) {
+      monthlyUnits.forEach((units, index) => {
+        if (index < revenuePost.length && units > 0) revenuePost[index] = units * averageUnitPrice;
+      });
+    } else {
+      // A plan has not yet been saved: retain the documented full-payment fallback.
+      revenuePost[0] = totalRevenue;
+    }
+    return revenuePost;
+  })();
 
   // ─── Generate default salesResult when not provided or empty (for offplan scenarios) ───
   // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
@@ -1046,18 +1080,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   // ─── عمولة مبيعات البناء للبيع: تدفع عند تحصيل كامل قيمة الوحدة ───
   if (isBuildForSale) {
-    const commPost = emptyPost();
-    const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
-    const monthlyUnits = salesResult?.buildForSaleMonthlyUnits || [];
-    if (monthlyUnits.some(units => units > 0)) {
-      monthlyUnits.forEach((units, index) => {
-        if (index < commPost.length && units > 0) {
-          commPost[index] = units * averageUnitPrice * r.salesCommission;
-        }
-      });
-    } else {
-      commPost[0] = costs.salesCommission;
-    }
+    const commPost = buildForSaleRevenuePost.map((receipt) => receipt * r.salesCommission);
     const commissionTotal = commPost.reduce((sum, amount) => sum + amount, 0);
     rows.push({
       label: "عمولة المبيعات (بعد تحصيل كامل قيمة الوحدة)",
@@ -1357,17 +1380,19 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   // ─── الإيرادات ───
   if (isScenario3 || isBuildForSale) {
-    const revenuePost = emptyPost();
-    const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
-    const monthlyUnits = salesResult?.buildForSaleMonthlyUnits || [];
-    if (monthlyUnits.some(units => units > 0)) {
-      monthlyUnits.forEach((units, index) => {
-        if (index < revenuePost.length && units > 0) revenuePost[index] = units * averageUnitPrice;
-      });
-    } else {
+    const revenuePost = isBuildForSale ? [...buildForSaleRevenuePost] : emptyPost();
+    if (isScenario3) {
+      const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+      const monthlyUnits = salesResult?.buildForSaleMonthlyUnits || [];
+      if (monthlyUnits.some((units) => units > 0)) {
+        monthlyUnits.forEach((units, index) => {
+          if (index < revenuePost.length && units > 0) revenuePost[index] = units * averageUnitPrice;
+        });
+      } else {
       // Approved default: sales begin in the first month after completion and
       // every sold unit is received as one full payment.
-      revenuePost[0] = totalRevenue;
+        revenuePost[0] = totalRevenue;
+      }
     }
     rows.push({
       label: "إيرادات المبيعات",
@@ -1623,6 +1648,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
       postConstructionMonths: devProfitPost,
+      isProfitAllocation: isBuildForSale,
     });
   }
 
