@@ -1108,3 +1108,5 @@
 - [x] Add a regression test covering creation and update of a Wael sales plan
 - [x] Verify month-by-month Sales Plan figures match Escrow Cash Flow after a real successful save
 - [x] Verify the Escrow Cash Flow closing balance reaches zero under the two-stage liquidation logic
+- [x] Add both escrow-liquidation payments as matching Investor Cash Flow credits in post-completion months 3 and 13
+- [x] Verify the Investor Cash Flow displays the same two settlement amounts as the Escrow Cash Flow

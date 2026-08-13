@@ -10,6 +10,7 @@ import {
   type CostRow,
   type SalesResult,
 } from "@/lib/investorCashFlowEngine";
+import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -84,16 +85,22 @@ export default function V2InvestorCashFlow() {
       } catch {}
     }
 
-    // If resultsJson exists, use escrowData and salesDistribution from it
+    // If resultsJson exists, use the saved buyer collections alongside
+    // escrowData and the sales distribution.
     if (plan.resultsJson) {
       try {
         const parsed = JSON.parse(plan.resultsJson);
         if (parsed.escrowData && parsed.salesDistribution) {
+          const storedCashInflow = parsed.actualCashInflow || [];
+          const actualCashInflow = parsed.actualCashInflowVersion === 2
+            ? storedCashInflow
+            : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
           return {
             escrowData: parsed.escrowData,
             salesDistribution: parsed.salesDistribution,
             marketingMonthlyAmounts,
             ppDownPct,
+            actualCashInflow,
           };
         }
       } catch {}
@@ -138,17 +145,80 @@ export default function V2InvestorCashFlow() {
   const totalMonths = designDuration + constructionDuration + postDuration;
   const projectName = projectQuery.data?.name || "—";
 
-  // ─── Separate rows into debit (investor costs) and credit (revenue) ────
-  const debitRows = rows.filter((r) => !r.isRevenue && r.funder === "investor" && !(r.paid > 0 && r.unpaid === 0));
-  const creditRows = rows.filter((r) => r.isRevenue);
-  const paidRows = rows.filter((r) => r.paid > 0 && !r.isRevenue);
-
   // ─── Build flat monthly arrays for each row ────────────────────────────
   const getRowValues = (row: CostRow): number[] => [
     ...row.designMonths,
     ...row.constructionMonths,
     ...row.postConstructionMonths,
   ];
+
+  // ─── Derive the two escrow settlements from the same source as the
+  // Escrow Cash Flow page. The engine's legacy liquidation rows are used only
+  // as labels; their displayed values are replaced with the actual settlements.
+  const postStartIdx = designDuration + constructionDuration;
+  const liq1MonthIdx = postStartIdx + 2;
+  const liq2MonthIdx = postStartIdx + 12;
+  const escrowOutflows = rows.filter((r) => r.funder === "escrow" && !r.isRevenue);
+  const transferRow = rows.find((r) => r.isTransfer);
+  const depositValues = new Array(totalMonths).fill(0);
+  if (transferRow) {
+    getRowValues(transferRow).slice(0, totalMonths).forEach((value, index) => {
+      depositValues[index] = value;
+    });
+  }
+  const effectiveSalesResult = data.usedSalesResult || salesResult;
+  const salesIncomeValues = new Array(totalMonths).fill(0);
+  const savedCashInflow = (effectiveSalesResult as any)?.actualCashInflow as number[] | undefined;
+  if (savedCashInflow && savedCashInflow.length > 0) {
+    savedCashInflow.slice(0, totalMonths).forEach((value, index) => {
+      salesIncomeValues[index] = value || 0;
+    });
+  } else {
+    for (const entry of effectiveSalesResult?.escrowData || []) {
+      const index = entry.month - 1;
+      if (index >= 0 && index < totalMonths) salesIncomeValues[index] += entry.income;
+    }
+  }
+  const escrowInflowTotals = depositValues.map((deposit, index) => deposit + salesIncomeValues[index]);
+  const escrowOutflowTotals = Array.from({ length: totalMonths }, (_, index) =>
+    escrowOutflows.reduce((sum, row) => sum + (getRowValues(row)[index] || 0), 0)
+  );
+  const cumulativeWithoutLiquidation = escrowOutflowTotals
+    .map((outflow, index) => escrowInflowTotals[index] - outflow)
+    .reduce<number[]>((accumulator, value) => {
+      accumulator.push((accumulator[accumulator.length - 1] || 0) + value);
+      return accumulator;
+    }, []);
+  const { firstLiquidation, finalLiquidation } = calculateEscrowSettlement({
+    cumulativeWithoutLiquidation,
+    firstLiquidationIndex: liq1MonthIdx,
+    finalLiquidationIndex: liq2MonthIdx,
+    actualSalesCashInflow: salesIncomeValues,
+  });
+  const liquidationTemplates = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
+  const settlementCredits = liquidationTemplates.map((template) => {
+    const isFirstSettlement = template.label.includes("دفعة 1");
+    const monthIndex = isFirstSettlement ? liq1MonthIdx : liq2MonthIdx;
+    const amount = isFirstSettlement ? firstLiquidation : finalLiquidation;
+    const postConstructionMonths = new Array(postDuration).fill(0);
+    postConstructionMonths[monthIndex - postStartIdx] = amount;
+    return {
+      ...template,
+      totalCost: amount,
+      investorAmount: amount,
+      paid: 0,
+      unpaid: amount,
+      postConstructionMonths,
+    };
+  });
+
+  // ─── Separate rows into debit (investor costs) and credit (revenue) ────
+  const debitRows = rows.filter((r) => !r.isRevenue && r.funder === "investor" && !(r.paid > 0 && r.unpaid === 0));
+  const creditRows = [
+    ...rows.filter((r) => r.isRevenue && !r.label.includes("تصفية حساب الضمان")),
+    ...settlementCredits,
+  ];
+  const paidRows = rows.filter((r) => r.paid > 0 && !r.isRevenue);
 
   // ─── Debit totals per month ────────────────────────────────────────────
   const debitTotals = Array.from({ length: totalMonths }, (_, i) =>

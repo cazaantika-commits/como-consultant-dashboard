@@ -1144,39 +1144,6 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const totalSalesIncome = salesResult.escrowData.reduce((s, e) => s + e.income, 0);
       directRevenue = 0; // No direct revenue in escrow model - all goes through escrow
       
-      // Add monthly cash inflow rows from actualCashInflow
-      if (salesResult.actualCashInflow && salesResult.actualCashInflow.length > 0) {
-        for (let month = 1; month <= salesResult.actualCashInflow.length; month++) {
-          const amount = salesResult.actualCashInflow[month - 1] || 0;
-          if (amount > 0) {
-            const monthDesign = emptyDesign();
-            const monthConstruction = emptyConstruction();
-            const monthPost = emptyPost();
-            if (month <= designDuration) {
-              monthDesign[month - 1] = amount;
-            } else if (month <= designDuration + constructionDuration) {
-              monthConstruction[month - designDuration - 1] = amount;
-            } else {
-              const postIdx = month - designDuration - constructionDuration - 1;
-              if (postIdx < postDuration) monthPost[postIdx] = amount;
-            }
-            rows.push({
-              label: `Monthly Revenue M${month}`,
-              totalCost: amount,
-              investorAmount: amount,
-              paid: 0,
-              unpaid: amount,
-              funder: "investor",
-              section: "الإيرادات",
-              designMonths: monthDesign,
-              constructionMonths: monthConstruction,
-              postConstructionMonths: monthPost,
-              isRevenue: true,
-            });
-          }
-        }
-      }
-      
       // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
       const escrowRevenue = totalSalesIncome; // Total collected from buyers through escrow
       const revenueRetention = totalRevenue * 0.05; // DLD retention = 5% of TOTAL project revenue
