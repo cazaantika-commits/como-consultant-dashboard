@@ -1144,3 +1144,4 @@
 - [x] Calculate Majan required capital as the maximum cumulative investor funding deficit and separate its paid and remaining components
 - [x] Redesign Feasibility Study with net investor profit after Como’s 15% share, required-capital paid and remaining amounts, funding-source summary, and saleable-area metrics; remove break-even and annual-return sections
 - [x] Redesign Feasibility Study profit and capital summaries so profit distribution, capital requirement, and cost funding sources are distinct and immediately understandable
+- [x] Prepare a complete current cost-item, funding-source, and payment-rule table for user decisions on build-for-sale and build-for-rent project types
