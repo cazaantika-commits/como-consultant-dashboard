@@ -121,6 +121,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const [curveTemplate, setCurveTemplate] = useState<"bell" | "fast" | "gradual" | "late">("bell");
   const [salesMode, setSalesMode] = useState<"auto" | "manual">("auto");
   const [manualUnits, setManualUnits] = useState<number[]>([]);
+  const [buildForSaleMarketingRate, setBuildForSaleMarketingRate] = useState(1);
+  const [buildForSaleMarketingStartBeforeCompletion, setBuildForSaleMarketingStartBeforeCompletion] = useState(1);
+  const [buildForSaleMarketingDuration, setBuildForSaleMarketingDuration] = useState(3);
+  const [hasBuildForSaleMarketingChanges, setHasBuildForSaleMarketingChanges] = useState(false);
 
   const [hasPlanChanges, setHasPlanChanges] = useState(false);
 
@@ -161,6 +165,21 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
       if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
       if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
+      if (p.financingScenario === "build_for_sale") {
+        try {
+          const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+          const savedRate = Number(savedRates.buildForSaleMarketingRate ?? 1);
+          setBuildForSaleMarketingRate(savedRate);
+          setMarketingPct(savedRate);
+          setBuildForSaleMarketingStartBeforeCompletion(Math.max(0, Number(savedRates.buildForSaleMarketingStartMonthsBeforeCompletion ?? 1)));
+          setBuildForSaleMarketingDuration(Math.max(1, Number(savedRates.buildForSaleMarketingDurationMonths ?? 3)));
+        } catch {
+          setBuildForSaleMarketingRate(1);
+          setBuildForSaleMarketingStartBeforeCompletion(1);
+          setBuildForSaleMarketingDuration(3);
+        }
+      }
+      setHasBuildForSaleMarketingChanges(false);
     }
   }, [projectQuery.data]);
 
@@ -397,6 +416,35 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasUnitChanges(false);
   }, [selectedProjectId, unitData, commissionPct, updateProject]);
 
+  const handleSaveBuildForSaleMarketing = useCallback(() => {
+    if (!selectedProjectId || !projectQuery.data) return;
+    let schedule: any = {};
+    try { schedule = JSON.parse((projectQuery.data as any).constructionScheduleJson || "{}"); } catch {}
+    const settings = schedule.settings || {};
+    const configurableRates = settings.configurableRates || {};
+    updateProject.mutate({
+      id: selectedProjectId,
+      constructionScheduleJson: JSON.stringify({
+        ...schedule,
+        settings: {
+          ...settings,
+          configurableRates: {
+            ...configurableRates,
+            buildForSaleMarketingRate,
+            buildForSaleMarketingStartMonthsBeforeCompletion,
+            buildForSaleMarketingDurationMonths: buildForSaleMarketingDuration,
+          },
+        },
+      }),
+    } as any, {
+      onSuccess: () => {
+        setMarketingPct(buildForSaleMarketingRate);
+        setHasBuildForSaleMarketingChanges(false);
+        toast({ title: "تم حفظ إعدادات تسويق البناء للبيع ✓" });
+      },
+    });
+  }, [selectedProjectId, projectQuery.data, updateProject, buildForSaleMarketingRate, buildForSaleMarketingStartBeforeCompletion, buildForSaleMarketingDuration, toast]);
+
   const handleSavePlan = useCallback(async () => {
     if (!selectedProjectId) return;
     try {
@@ -621,9 +669,30 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 <Badge variant={isBuildForSale || ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{isBuildForSale ? "100%" : `${ppTotal}%`}</Badge>
               </div>
               {isBuildForSale && (
-                <div className="border-b border-emerald-100 bg-emerald-50 px-3 py-3 text-center">
-                  <p className="text-[11px] font-bold text-emerald-800">دفعة كاملة عند بيع الوحدة</p>
-                  <p className="mt-1 text-[9px] leading-4 text-emerald-700">تبدأ المبيعات بعد الإنجاز، وتدخل الحصيلة كاملة مباشرة إلى حساب المستثمر.</p>
+                <div className="border-b border-emerald-100 bg-emerald-50 px-3 py-3 space-y-3">
+                  <div className="text-center">
+                    <p className="text-[11px] font-bold text-emerald-800">دفعة كاملة عند بيع الوحدة</p>
+                    <p className="mt-1 text-[9px] leading-4 text-emerald-700">تبدأ المبيعات بعد الإنجاز، وتدخل الحصيلة كاملة مباشرة إلى حساب المستثمر.</p>
+                  </div>
+                  <div className="rounded-lg border border-emerald-200 bg-white/80 p-2 text-right">
+                    <p className="mb-2 text-[10px] font-bold text-emerald-900">تسويق البناء للبيع</p>
+                    <div className="grid grid-cols-3 gap-1.5 text-[9px]">
+                      <label className="space-y-0.5">
+                        <span className="block text-emerald-800">النسبة من الإيراد</span>
+                        <input type="number" min={0} max={10} step={0.1} value={buildForSaleMarketingRate} onChange={(e) => { const value = Number(e.target.value) || 0; setBuildForSaleMarketingRate(value); setMarketingPct(value); setHasBuildForSaleMarketingChanges(true); }} className="w-full h-6 rounded border border-emerald-200 bg-white px-1 text-center font-bold" />
+                      </label>
+                      <label className="space-y-0.5">
+                        <span className="block text-emerald-800">قبل الإنجاز (شهر)</span>
+                        <input type="number" min={0} max={12} step={1} value={buildForSaleMarketingStartBeforeCompletion} onChange={(e) => { setBuildForSaleMarketingStartBeforeCompletion(Math.max(0, Number(e.target.value) || 0)); setHasBuildForSaleMarketingChanges(true); }} className="w-full h-6 rounded border border-emerald-200 bg-white px-1 text-center font-bold" />
+                      </label>
+                      <label className="space-y-0.5">
+                        <span className="block text-emerald-800">المدة (شهر)</span>
+                        <input type="number" min={1} max={24} step={1} value={buildForSaleMarketingDuration} onChange={(e) => { setBuildForSaleMarketingDuration(Math.max(1, Number(e.target.value) || 1)); setHasBuildForSaleMarketingChanges(true); }} className="w-full h-6 rounded border border-emerald-200 bg-white px-1 text-center font-bold" />
+                      </label>
+                    </div>
+                    <p className="mt-1 text-[8px] leading-3 text-emerald-700">القيمة الافتراضية المعتمدة: 1%، تبدأ قبل الإنجاز بشهر وتستمر 3 أشهر.</p>
+                    {hasBuildForSaleMarketingChanges && <Button type="button" size="sm" onClick={handleSaveBuildForSaleMarketing} disabled={updateProject.isPending} className="mt-2 h-6 w-full bg-emerald-700 text-[9px] hover:bg-emerald-800">حفظ إعدادات التسويق</Button>}
+                  </div>
                 </div>
               )}
               <div className={isBuildForSale ? "hidden" : "p-2"}>

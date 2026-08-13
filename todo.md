@@ -1150,3 +1150,4 @@
 - [ ] Replace the prior build-for-sale work with a clean independent model that uses only the user-approved rules and does not inspect or reuse existing non-Off-Plan logic
 - [ ] Show only build-for-sale pages after classification and hide all Off-Plan-only sales-flow and escrow pages
 - [ ] Keep all build-for-sale implementation and verification strictly inside the Financial Studies & Planning module; do not modify any other app icon or module
+- [ ] Classify the user-approved Nad Al Sheba project as build-for-sale inside Financial Studies, save, reload, and verify its isolated tabs and calculations

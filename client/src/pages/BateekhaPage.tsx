@@ -1,10 +1,11 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar, LogIn } from "lucide-react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getFallbackFinancialStudiesTab, isFinancialStudiesTabVisible, type FinancialStudiesTabId } from "@/lib/financialStudiesNavigation";
+import { getLoginUrl } from "@/const";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -96,6 +97,12 @@ export default function BateekhaPage() {
             <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
           </button>
           <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap ml-1">الدراسات والتخطيط المالي</span>
+          {!user && (
+            <button onClick={() => { window.location.href = getLoginUrl(); }} className="flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 hover:bg-emerald-100">
+              <LogIn className="h-2.5 w-2.5" />
+              تسجيل الدخول لعرض المشاريع
+            </button>
+          )}
           <div className="h-3 w-px bg-gray-200 mx-0.5 shrink-0" />
           {/* Input Tabs */}
           {inputTabs.map((tab) => {
