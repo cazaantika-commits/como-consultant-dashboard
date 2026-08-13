@@ -13,9 +13,10 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(isFinancialStudiesTabVisible("sales", "build_for_sale")).toBe(true);
     expect(isFinancialStudiesTabVisible("cashflows", "build_for_sale")).toBe(true);
     expect(isFinancialStudiesTabVisible("feasibility", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesTabVisible("settings", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesTabVisible("timeline", "build_for_sale")).toBe(true);
     expect(isFinancialStudiesTabVisible("marketing", "build_for_sale")).toBe(false);
     expect(isFinancialStudiesTabVisible("escrow", "build_for_sale")).toBe(false);
-    expect(isFinancialStudiesTabVisible("settings", "build_for_sale")).toBe(false);
   });
 
   it("returns General Inputs if a hidden Off-Plan tab was active during reclassification", () => {
@@ -39,6 +40,7 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(isFinancialStudiesTabVisible("marketing", "build_for_rent")).toBe(false);
     expect(isFinancialStudiesTabVisible("escrow", "build_for_rent")).toBe(false);
     expect(isFinancialStudiesTabVisible("construction", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesTabVisible("settings", "build_for_rent")).toBe(true);
     expect(isFinancialStudiesTabVisible("cashflows", "build_for_rent")).toBe(true);
     expect(isFinancialStudiesTabVisible("feasibility", "build_for_rent")).toBe(true);
     expect(isFinancialStudiesGeneralInputVisible("bankFees", "build_for_rent")).toBe(false);

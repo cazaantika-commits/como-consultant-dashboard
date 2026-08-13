@@ -16,8 +16,6 @@ export type FinancialStudiesTabId =
 
 const BUILD_FOR_SALE_HIDDEN_TABS: FinancialStudiesTabId[] = [
   "marketing",
-  "timeline",
-  "settings",
   "escrow",
   "mall",
 ];
@@ -26,7 +24,6 @@ const BUILD_FOR_RENT_HIDDEN_TABS: FinancialStudiesTabId[] = [
   "sales",
   "marketing",
   "timeline",
-  "settings",
   "escrow",
   "mall",
 ];

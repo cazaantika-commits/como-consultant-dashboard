@@ -4,6 +4,7 @@ import {
   type CashFlowResult,
   type CostRow,
 } from "../client/src/lib/investorCashFlowEngine";
+import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { isCapitalPortfolioEligibleScenario } from "../client/src/lib/portfolioReportRules";
 
 function row(overrides: Partial<CostRow>): CostRow {
@@ -63,5 +64,17 @@ describe("Financial Studies Capital Portfolio source rules", () => {
     expect(isCapitalPortfolioEligibleScenario("offplan_escrow")).toBe(true);
     expect(isCapitalPortfolioEligibleScenario("build_for_sale")).toBe(true);
     expect(isCapitalPortfolioEligibleScenario("build_for_rent")).toBe(false);
+  });
+
+  it("uses the saved Sales Pricing villa fields for Capital Portfolio project revenue", () => {
+    const costs = calculateProjectCosts({
+      financingScenario: "build_for_sale",
+      villaCount: "4",
+      villaArea: "4900",
+      villaPrice: "3800",
+      constructionScheduleJson: "{}",
+    });
+
+    expect(costs?.totalRevenue).toBe(74_480_000);
   });
 });

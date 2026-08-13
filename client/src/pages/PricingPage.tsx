@@ -19,21 +19,20 @@ interface UnitType {
   label: string;
   category: "residential" | "retail" | "office";
   defaultArea: number;
-  defaultPrice: number;
 }
 
 const UNIT_TYPES: UnitType[] = [
-  { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750, defaultPrice: 1550 },
-  { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300, defaultPrice: 1500 },
-  { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650, defaultPrice: 1450 },
-  { key: "villa", label: "فيلا", category: "residential", defaultArea: 0, defaultPrice: 0 },
-  { key: "townhouse", label: "تاون هاوس", category: "residential", defaultArea: 0, defaultPrice: 0 },
-  { key: "retail_small", label: "محل صغير", category: "retail", defaultArea: 850, defaultPrice: 3000 },
-  { key: "retail_medium", label: "محل متوسط", category: "retail", defaultArea: 1200, defaultPrice: 2500 },
-  { key: "retail_large", label: "محل كبير", category: "retail", defaultArea: 1800, defaultPrice: 2000 },
-  { key: "office_small", label: "مكتب صغير", category: "office", defaultArea: 1200, defaultPrice: 1900 },
-  { key: "office_medium", label: "مكتب متوسط", category: "office", defaultArea: 2000, defaultPrice: 1800 },
-  { key: "office_large", label: "مكتب كبير", category: "office", defaultArea: 3500, defaultPrice: 1700 },
+  { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750 },
+  { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300 },
+  { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650 },
+  { key: "villa", label: "فيلا", category: "residential", defaultArea: 0 },
+  { key: "townhouse", label: "تاون هاوس", category: "residential", defaultArea: 0 },
+  { key: "retail_small", label: "محل صغير", category: "retail", defaultArea: 850 },
+  { key: "retail_medium", label: "محل متوسط", category: "retail", defaultArea: 1200 },
+  { key: "retail_large", label: "محل كبير", category: "retail", defaultArea: 1800 },
+  { key: "office_small", label: "مكتب صغير", category: "office", defaultArea: 1200 },
+  { key: "office_medium", label: "مكتب متوسط", category: "office", defaultArea: 1200 },
+  { key: "office_large", label: "مكتب كبير", category: "office", defaultArea: 3500 },
 ];
 
 const DEFAULT_AREAS: Record<string, number> = {
@@ -41,13 +40,6 @@ const DEFAULT_AREAS: Record<string, number> = {
   villa: 0, townhouse: 0,
   retail_small: 850, retail_medium: 1200, retail_large: 1800,
   office_small: 1200, office_medium: 2000, office_large: 3500,
-};
-
-const DEFAULT_PRICES: Record<string, number> = {
-  onebed: 1550, twobed: 1500, threebed: 1450,
-  villa: 0, townhouse: 0,
-  retail_small: 3000, retail_medium: 2500, retail_large: 2000,
-  office_small: 1900, office_medium: 1800, office_large: 1700,
 };
 
 const COUNT_MAP: Record<string, string> = {
@@ -62,13 +54,6 @@ const AREA_MAP: Record<string, string> = {
   villa: 'villaArea', townhouse: 'townhouseArea',
   retail_small: 'retailSmallArea', retail_medium: 'retailMediumArea', retail_large: 'retailLargeArea',
   office_small: 'officeSmallArea', office_medium: 'officeMediumArea', office_large: 'officeLargeArea',
-};
-
-const PRICE_MAP: Record<string, string> = {
-  onebed: 'residential1brPrice', twobed: 'residential2brPrice', threebed: 'residential3brPrice',
-  villa: 'villaPrice', townhouse: 'townhousePrice',
-  retail_small: 'retailSmallPrice', retail_medium: 'retailMediumPrice', retail_large: 'retailLargePrice',
-  office_small: 'officeSmallPrice', office_medium: 'officeMediumPrice', office_large: 'officeLargePrice',
 };
 
 function fmt(n: number): string { return Math.round(n).toLocaleString("en-US"); }
@@ -100,7 +85,6 @@ export default function PricingPage() {
     office_small: 0, office_medium: 0, office_large: 0,
   });
   const [areas, setAreas] = useState<Record<string, number>>({ ...DEFAULT_AREAS });
-  const [prices, setPrices] = useState<Record<string, number>>({ ...DEFAULT_PRICES });
 
   useEffect(() => {
     if (!selectedProjectId || projectQuery.isLoading || !projectQuery.data) return;
@@ -109,11 +93,9 @@ export default function PricingPage() {
     if (hasSavedCounts) {
       const nc: Record<string, number> = {};
       const na: Record<string, number> = { ...DEFAULT_AREAS };
-      const np: Record<string, number> = { ...DEFAULT_PRICES };
       Object.entries(COUNT_MAP).forEach(([k, f]) => { nc[k] = Number(p[f]) || 0; });
       Object.entries(AREA_MAP).forEach(([k, f]) => { const v = Number(p[f]); if (v > 0) na[k] = v; });
-      Object.entries(PRICE_MAP).forEach(([k, f]) => { const v = Number(p[f]); if (v > 0) np[k] = v; });
-      setCounts(nc); setAreas(na); setPrices(np); setHasUnsavedChanges(false);
+      setCounts(nc); setAreas(na); setHasUnsavedChanges(false);
     } else {
       const sr = i.gfaResidential * i.efficiencyResidential;
       const srt = i.gfaRetail * i.efficiencyRetail;
@@ -122,13 +104,12 @@ export default function PricingPage() {
       if (sr > 0) { sc.onebed = Math.round(sr * 0.4 / 750); sc.twobed = Math.round(sr * 0.4 / 1300); sc.threebed = Math.round(sr * 0.2 / 1650); }
       if (srt > 0) { sc.retail_small = Math.round(srt * 0.4 / 850); sc.retail_medium = Math.round(srt * 0.4 / 1200); sc.retail_large = Math.round(srt * 0.2 / 1800); }
       if (so > 0) { sc.office_small = Math.round(so * 0.4 / 1200); sc.office_medium = Math.round(so * 0.4 / 2000); sc.office_large = Math.round(so * 0.2 / 3500); }
-      setCounts(sc); setAreas({ ...DEFAULT_AREAS }); setPrices({ ...DEFAULT_PRICES }); setHasUnsavedChanges(true);
+      setCounts(sc); setAreas({ ...DEFAULT_AREAS }); setHasUnsavedChanges(true);
     }
   }, [selectedProjectId, projectQuery.data, projectQuery.isLoading, i]);
 
   const updateCount = useCallback((key: string, val: number) => { setCounts(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
   const updateArea = useCallback((key: string, val: number) => { setAreas(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
-  const updatePrice = useCallback((key: string, val: number) => { setPrices(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
 
   const handleSave = useCallback(async () => {
     if (!selectedProjectId || !user) return;
@@ -137,14 +118,13 @@ export default function PricingPage() {
       const d: any = { id: selectedProjectId };
       Object.entries(COUNT_MAP).forEach(([k, f]) => { d[f] = String(counts[k] || 0); });
       Object.entries(AREA_MAP).forEach(([k, f]) => { d[f] = String(areas[k] || 0); });
-      Object.entries(PRICE_MAP).forEach(([k, f]) => { d[f] = String(prices[k] || 0); });
       await updateProject.mutateAsync(d);
       setHasUnsavedChanges(false);
       toast({ title: "تم الحفظ ✓" });
       projectQuery.refetch();
     } catch { toast({ title: "خطأ", variant: "destructive" }); }
     finally { setIsSaving(false); }
-  }, [selectedProjectId, user, counts, areas, prices, updateProject, toast, projectQuery]);
+  }, [selectedProjectId, user, counts, areas, updateProject, toast, projectQuery]);
 
   const calc = useMemo(() => {
     const r: Record<string, { used: number; available: number; diff: number; units: number; parking: number }> = {};
@@ -190,10 +170,6 @@ export default function PricingPage() {
               <input type="number" min={0} value={areas[ut.key] ?? ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
                 className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
-            <td className="py-[2px] px-2 text-center">
-              <input type="number" min={0} value={prices[ut.key] ?? ut.defaultPrice} onChange={e => updatePrice(ut.key, parseInt(e.target.value) || 0)}
-                className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
-            </td>
             <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] ?? ut.defaultArea)) : "—"}</td>
             <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
           </tr>
@@ -211,6 +187,7 @@ export default function PricingPage() {
           {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
         </Button>
         <span className="text-[11px] text-gray-500 mr-auto">{totalUnits} وحدة | {totalParking} موقف</span>
+        <span className="text-[10px] text-amber-700">سعر القدم² يُحدد حصراً من صفحة المبيعات والتسويق</span>
       </div>
 
       {/* Table in white rounded container */}
@@ -221,7 +198,6 @@ export default function PricingPage() {
               <th className="py-[4px] px-2 text-right text-[11px] font-bold text-gray-700">النوع</th>
               <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">العدد</th>
               <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-18">المساحة</th>
-              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700">سعر/قدم²</th>
               <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700">إجمالي المساحة</th>
               <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">مواقف</th>
             </tr>
@@ -235,7 +211,6 @@ export default function PricingPage() {
             <tr className="bg-teal-50 font-bold border-t-2 border-teal-200 text-[11px]">
               <td className="py-[4px] px-2 text-teal-800">الإجمالي</td>
               <td className="py-[4px] px-2 text-center text-teal-800">{totalUnits}</td>
-              <td className="py-[4px] px-2 text-center text-teal-800">—</td>
               <td className="py-[4px] px-2 text-center text-teal-800">—</td>
               <td className="py-[4px] px-2 text-center text-teal-800 tabular-nums">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))}</td>
               <td className="py-[4px] px-2 text-center text-teal-800">{totalParking}</td>

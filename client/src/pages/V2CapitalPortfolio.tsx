@@ -97,13 +97,13 @@ export default function V2CapitalPortfolio() {
     : [...current, projectId]);
 
   const exportTable = () => {
-    const headers = ["المشروع", "الخيار", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)), "الإجمالي"];
+    const headers = ["المشروع", "الخيار", "إجمالي الإيرادات", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)), "إجمالي التمويل المطلوب"];
     const detailRows = selectedProjects.map((project) => {
       const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId);
       const monthlyFunding = flowRow?.values || new Array(groupedPortfolio.periods.length).fill(0);
-      return [project.name || "", scenarioLabel(project.financingScenario), formatAmount(project.totalCosts), formatAmount(project.requiredCapital), formatAmount(project.paidCapital), formatAmount(project.remainingCapital), ...monthlyFunding.map((value) => value === 0 ? "—" : formatAmount(value)), formatAmount(monthlyFunding.reduce((sum, value) => sum + value, 0))];
+      return [project.name || "", scenarioLabel(project.financingScenario), formatAmount(project.totalRevenue), formatAmount(project.totalCosts), formatAmount(project.requiredCapital), formatAmount(project.paidCapital), formatAmount(project.remainingCapital), ...monthlyFunding.map((value) => value === 0 ? "—" : formatAmount(value)), formatAmount(monthlyFunding.reduce((sum, value) => sum + value, 0))];
     });
-    const totalRow = ["الإجمالي", "", formatAmount(totals.cost), formatAmount(totals.capital), formatAmount(totals.paid), formatAmount(totals.remaining), ...groupedPortfolio.totals.map((value) => value === 0 ? "—" : formatAmount(value)), formatAmount(groupedPortfolio.totals.reduce((sum, value) => sum + value, 0))];
+    const totalRow = ["الإجمالي", "", formatAmount(totals.revenue), formatAmount(totals.cost), formatAmount(totals.capital), formatAmount(totals.paid), formatAmount(totals.remaining), ...groupedPortfolio.totals.map((value) => value === 0 ? "—" : formatAmount(value)), formatAmount(groupedPortfolio.totals.reduce((sum, value) => sum + value, 0))];
     const cell = (value: string, header = false) => `<${header ? "th" : "td"}>${value}</${header ? "th" : "td"}>`;
     return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير محفظة رأس المال</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#0f172a}.header{background:#0f172a;color:#fff;padding:16px 20px;border-radius:8px}.header p{color:#cbd5e1;font-size:12px}.summary{background:#f8fafc;border:2px solid #0f172a;border-radius:8px;padding:16px;margin:16px 0}.cards{display:flex;gap:10px}.card{flex:1;background:#fff;border-right:4px solid #0ea5e9;padding:10px;border-radius:4px}.card b{display:block;font-size:16px;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#0f172a;color:#fff;padding:7px 4px;border:1px solid #334155}td{padding:6px 4px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.total td{background:#1e293b!important;color:#fff;font-weight:700}@media print{body{padding:8px}}</style></head><body><div class="header"><h1>تقرير محفظة رأس المال</h1><p>من مخرجات الدراسات والتخطيط المالي · التجميع: ${PERIOD_OPTIONS.find((item) => item.value === groupSize)?.label}</p></div><div class="summary"><h2>الملخص الإحصائي</h2><div class="cards"><div class="card">إجمالي الإيرادات<b>${formatAmount(totals.revenue)}</b></div><div class="card">إجمالي التكلفة<b>${formatAmount(totals.cost)}</b></div><div class="card">الأرباح قبل حصة المطور<b>${formatAmount(totals.profit)}</b></div><div class="card">رأس المال<b>${formatAmount(totals.capital)}</b><small>مدفوع ${formatAmount(totals.paid)} · متبقٍ ${formatAmount(totals.remaining)}</small></div></div></div><table><thead><tr>${headers.map((value) => cell(value, true)).join("")}</tr></thead><tbody>${detailRows.map((row) => `<tr>${row.map((value) => cell(value)).join("")}</tr>`).join("")}<tr class="total">${totalRow.map((value) => cell(value)).join("")}</tr></tbody></table></body></html>`;
   };
@@ -164,16 +164,17 @@ export default function V2CapitalPortfolio() {
         <section className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3"><BarChart3 className="h-4 w-4 text-slate-700" /><h2 className="text-sm font-extrabold text-slate-900">تفاصيل رأس المال حسب المشروع</h2></div>
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]" style={{ minWidth: 860 + groupedPortfolio.periods.length * 105 }}>
+            <table className="w-full text-[11px]" style={{ minWidth: 965 + groupedPortfolio.periods.length * 105 }}>
               <thead><tr className="bg-slate-900 text-white">
                 <th className="sticky right-0 z-20 min-w-[190px] border-l border-slate-700 bg-slate-900 px-3 py-2 text-right">المشروع</th>
                 <th className="min-w-[90px] border-l border-slate-700 px-2 py-2">الخيار</th>
+                <th className="min-w-[105px] border-l border-slate-700 px-2 py-2">إجمالي الإيرادات</th>
                 <th className="min-w-[105px] border-l border-slate-700 px-2 py-2">التكلفة الكلية</th>
                 <th className="min-w-[105px] border-l border-slate-700 px-2 py-2">رأس المال</th>
                 <th className="min-w-[90px] border-l border-slate-700 px-2 py-2">المدفوع</th>
                 <th className="min-w-[90px] border-l border-slate-700 px-2 py-2">المتبقي</th>
                 {groupedPortfolio.periods.map((period) => <th key={period.startDate} className="min-w-[105px] border-l border-slate-700 px-2 py-2">{formatPeriod(period.startDate, period.endDate)}</th>)}
-                <th className="min-w-[100px] px-2 py-2">الإجمالي</th>
+                <th className="min-w-[110px] px-2 py-2">إجمالي التمويل المطلوب</th>
               </tr></thead>
               <tbody>
                 {selectedProjects.map((project, index) => {
@@ -183,6 +184,7 @@ export default function V2CapitalPortfolio() {
                   return <tr key={project.projectId} className="border-b border-slate-100 even:bg-slate-50/80">
                     <td className="sticky right-0 z-10 border-l border-slate-200 bg-inherit px-3 py-2 text-right font-bold text-slate-800"><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{project.name}</span></td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-bold text-slate-600">{scenarioLabel(project.financingScenario)}</td>
+                    <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-emerald-700">{formatAmount(project.totalRevenue)}</td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold">{formatAmount(project.totalCosts)}</td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-slate-900">{formatAmount(project.requiredCapital)}</td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-emerald-700">{formatAmount(project.paidCapital)}</td>
@@ -193,6 +195,7 @@ export default function V2CapitalPortfolio() {
                 })}
                 <tr className="bg-slate-800 text-white">
                   <td className="sticky right-0 z-20 border-l border-slate-700 bg-slate-800 px-3 py-2 text-right font-extrabold">الإجمالي</td><td className="border-l border-slate-700" />
+                  <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold text-emerald-300">{formatAmount(totals.revenue)}</td>
                   <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold">{formatAmount(totals.cost)}</td>
                   <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold">{formatAmount(totals.capital)}</td>
                   <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold text-emerald-300">{formatAmount(totals.paid)}</td>

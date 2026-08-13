@@ -103,3 +103,19 @@ Authenticated browser verification loaded **تقرير محفظة رأس الم�
 The browser showed the approved top metrics from current Financial Studies sources: AED 1,118.0M revenue, AED 965.6M total cost, AED 152.4M profit before developer share, and AED 490.8M required capital split into AED 184.4M paid and AED 306.4M remaining. The detailed table retained the approved fixed column order — project, option, total cost, capital, paid, remaining, real calendar periods, final total — and includes a final aggregate row. The Excel export action was clicked from this active report state without leaving the page.
 
 The same Capital Portfolio report was verified in its six-month grouping. It condensed the live calendar into adjacent real periods from August 2026–January 2027 through the shorter final August–October 2030 period, without removing any fixed column, project row, or final total. Selecting HTML from the active report state opened a standalone “تقرير محفظة رأس المال” report window.
+
+## Villa build-for-sale — Settings & Rules visibility
+
+Authenticated browser verification on 13 August 2026 confirmed that **ند الشبا — قطعة 3 الفلل (6180578)** now shows the `الإعدادات والقواعد` tab in Financial Studies. The screen loaded the seven editable design-stage week inputs and displayed the saved total **26 أسبوع ≈ 7 شهر** as the project design duration source.
+
+## Villa build-for-sale — single-source unit pricing
+
+Authenticated browser verification on 13 August 2026 opened **توزيع الوحدات** for the villa project. Its table now contains only unit type, count, area, total area, and parking. It has no price-per-square-foot column or input, and it explicitly states that unit price is determined exclusively from the Sales & Marketing page.
+
+## Capital Portfolio — project revenue reconciliation
+
+Authenticated browser verification on 13 August 2026 confirmed that the detailed Capital Portfolio table now includes **إجمالي الإيرادات** as an added project-level column while retaining all previously approved columns in their existing order. The villa build-for-sale row displays **AED 74.5M**, which is the rounded display of the Sales Pricing source: 4 villas × 4,900 square feet × AED 3,800 per square foot = AED 74.48M. The report has five eligible investment projects and correctly excludes the commercial build-for-rent project.
+
+The browser also confirmed the current report total of AED 1,039.2M revenue, AED 891.8M cost, AED 147.3M profit before developer share, and AED 466.7M capital split into AED 184.4M paid and AED 282.3M remaining. The final monthly column is now explicitly labeled **إجمالي التمويل المطلوب**, which describes the gross future investor funding schedule rather than confusing it with net remaining capital. The updated Excel export action was triggered from this verified report state.
+
+The updated HTML export action was also triggered from the same verified report state and opened the standalone **تقرير محفظة رأس المال** window.
