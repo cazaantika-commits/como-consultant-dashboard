@@ -88,6 +88,7 @@ export interface SalesResult {
   marketingMonthlyAmounts?: number[]; // Monthly marketing amounts from marketing page (indexed from project month 1)
   ppDownPct?: number; // Down payment percentage from payment plan
   actualCashInflow?: number[]; // Actual monthly cash inflow from payment plan (indexed from project month 1)
+  offplanPct?: number; // Share of project revenue sold during construction and received through escrow
 }
 
 export interface CashFlowResult {
@@ -1138,15 +1139,52 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         // Revenue comes back at liquidation (month 3 post) and retention (month 13 post)
       }
       
-      // In S1/S2 with escrow: all buyer payments go to escrow
-      // Investor revenue = escrow liquidation at month 3 post + retention at month 13 post
-      // The escrowData tells us total income collected, which determines escrow balance
+      // Buyer payments for units sold during construction go to escrow. The remaining
+      // unsold share is sold after completion and is a direct investor credit, spread
+      // across post-completion months 4–9.
       const totalSalesIncome = salesResult.escrowData.reduce((s, e) => s + e.income, 0);
-      directRevenue = 0; // No direct revenue in escrow model - all goes through escrow
-      
+      const offplanPct = Math.max(0, Math.min(100, salesResult.offplanPct ?? 80));
+      directRevenue = totalRevenue * ((100 - offplanPct) / 100);
+      const directRevenuePost = emptyPost();
+      const directRevenuePerMonth = directRevenue / 6;
+      for (let idx = 3; idx < Math.min(9, postDuration); idx++) {
+        directRevenuePost[idx] = directRevenuePerMonth;
+      }
+      rows.push({
+        label: `مبيعات مباشرة بعد الإنجاز (${100 - offplanPct}%)`,
+        totalCost: directRevenue,
+        investorAmount: directRevenue,
+        paid: 0,
+        unpaid: directRevenue,
+        funder: "investor",
+        section: "الإيرادات",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: directRevenuePost,
+        isRevenue: true,
+      });
+      const directSalesCommission = directRevenue * r.salesCommission;
+      const directSalesCommissionPost = emptyPost();
+      const directSalesCommissionPerMonth = directSalesCommission / 6;
+      for (let idx = 3; idx < Math.min(9, postDuration); idx++) {
+        directSalesCommissionPost[idx] = directSalesCommissionPerMonth;
+      }
+      rows.push({
+        label: "عمولة مبيعات مباشرة بعد الإنجاز",
+        totalCost: directSalesCommission,
+        investorAmount: directSalesCommission,
+        paid: 0,
+        unpaid: directSalesCommission,
+        funder: "investor",
+        section: "المبيعات والتسويق",
+        designMonths: emptyDesign(),
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: directSalesCommissionPost,
+      });
+
       // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
       const escrowRevenue = totalSalesIncome; // Total collected from buyers through escrow
-      const revenueRetention = totalRevenue * 0.05; // DLD retention = 5% of TOTAL project revenue
+      const revenueRetention = escrowRevenue * 0.05; // Retention applies only to receipts held in escrow
       const completionPayment = constructionCost * 0.05;
       const openingBalance = constructionCost * 0.20;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
@@ -1191,8 +1229,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       // ─── Fallback: simplified revenue (no salesResult) ───
       directRevenue = totalRevenue * 0.20;
       const revenuePost = emptyPost();
-      const perMonth = directRevenue / 12;
-      for (let idx = 0; idx < 12; idx++) {
+      const perMonth = directRevenue / 6;
+      for (let idx = 3; idx < 9; idx++) {
         revenuePost[idx] = perMonth;
       }
       rows.push({
@@ -1211,7 +1249,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
       // ─── تصفية حساب الضمان (دفعة 1: شهر 3 بعد الإنجاز) ───
       const escrowRevenue = totalRevenue * 0.80;
-      const revenueRetention = totalRevenue * 0.05; // DLD retention = 5% of TOTAL project revenue
+      const revenueRetention = escrowRevenue * 0.05; // Retention applies only to receipts held in escrow
       const completionPayment = constructionCost * 0.05;
       const openingBalance = constructionCost * 0.20;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +

@@ -1110,3 +1110,6 @@
 - [x] Verify the Escrow Cash Flow closing balance reaches zero under the two-stage liquidation logic
 - [x] Add both escrow-liquidation payments as matching Investor Cash Flow credits in post-completion months 3 and 13
 - [x] Verify the Investor Cash Flow displays the same two settlement amounts as the Escrow Cash Flow
+- [x] Add direct investor revenue for the share of units sold after completion, separate from escrow collections
+- [x] Verify direct post-completion sales revenue and both escrow settlement credits appear together in Investor Cash Flow
+- [x] Schedule direct post-completion sales equally in months 4–9 after completion and charge the 5% commission in parallel

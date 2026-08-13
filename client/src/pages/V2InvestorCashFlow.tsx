@@ -101,6 +101,7 @@ export default function V2InvestorCashFlow() {
             marketingMonthlyAmounts,
             ppDownPct,
             actualCashInflow,
+            offplanPct: Number(plan.offplanPct ?? 80),
           };
         }
       } catch {}
