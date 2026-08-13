@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
 import { computeInvestorCashFlow } from "../client/src/lib/investorCashFlowEngine";
+import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 
 describe("calculateEscrowSettlement", () => {
   it("retains five percent of buyer collections, covers later obligations, and closes at zero in month thirteen", () => {
@@ -142,6 +143,33 @@ describe("calculateEscrowSettlement", () => {
 
     const investorAdvance = result.rows.find((row) => row.label === "دفعة مقدمة المقاول (10%)");
     expect(investorAdvance!.constructionMonths[0]).toBeGreaterThan(0);
+  });
+
+  it("uses saved quarterly RERA rates and the same payment count in Feasibility and Escrow Cash Flow", () => {
+    const project = {
+      constructionMonths: 30,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          configurableRates: {
+            reraAuditorQuarterlyFee: 4500,
+            reraInspectionQuarterlyFee: 18000,
+          },
+        },
+      }),
+    };
+    const feasibility = calculateProjectCosts(project)!;
+    const cashFlow = computeInvestorCashFlow(project, "offplan_escrow");
+    const auditor = cashFlow.rows.find((row) => row.label === "تقرير مدقق ريرا")!;
+    const inspection = cashFlow.rows.find((row) => row.label === "فحص ريرا")!;
+
+    expect(auditor.totalCost).toBe(45000);
+    expect(inspection.totalCost).toBe(180000);
+    expect(auditor.constructionMonths.filter((amount) => amount > 0)).toEqual(Array(10).fill(4500));
+    expect(inspection.constructionMonths.filter((amount) => amount > 0)).toEqual(Array(10).fill(18000));
+    expect(feasibility.reraAuditReportFee).toBe(auditor.totalCost);
+    expect(feasibility.reraInspectionReportFee).toBe(inspection.totalCost);
   });
 
   it("splits RERA-linked expenses between the first and second saved RERA months", () => {

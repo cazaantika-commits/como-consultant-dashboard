@@ -22,7 +22,7 @@ import {
   calculateCommunityFeeSchedule,
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
-import { getProjectMarketingTiming } from "@/lib/projectTiming";
+import { getProjectMarketingTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -278,12 +278,21 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
  */
 export function computeInvestorCashFlow(projectData: any, scenario: Scenario, timingRules?: TimingRules, salesResult?: SalesResult): CashFlowResult {
   const communityFeeSettings = getProjectCommunityFeeSettings(projectData);
+  const savedReraFees = getProjectReraQuarterlyFeeSettings(projectData);
   const tr = timingRules || {
     ...DEFAULT_TIMING_RULES,
     communityFeePerSqft: communityFeeSettings.ratePerSqft,
     communityFeeFrequency: communityFeeSettings.frequencyMonths,
+    reraAuditorQuarterlyFee: savedReraFees.auditorPerPayment,
+    reraInspectionQuarterlyFee: savedReraFees.inspectionPerPayment,
   };
-  const i: ProjectInputs = projectData ? dbProjectToInputs(projectData) : PROJECT_INPUTS;
+  const baseInputs: ProjectInputs = projectData ? dbProjectToInputs(projectData) : PROJECT_INPUTS;
+  const quarterlyPaymentCount = Math.ceil(Math.max(1, Number(baseInputs.constructionMonths || savedReraFees.constructionMonths)) / 3);
+  const i: ProjectInputs = {
+    ...baseInputs,
+    reraAuditorReport: tr.reraAuditorQuarterlyFee * quarterlyPaymentCount,
+    reraInspection: tr.reraInspectionQuarterlyFee * quarterlyPaymentCount,
+  };
   const r: ProjectRates = projectData ? dbProjectToRates(projectData) : RATES;
   const projectFormulas = calculateProjectFormulas(i, r);
 

@@ -36,3 +36,11 @@ The Sales page shows the saved sales distribution beginning in month 8 and endin
 The Majan project was reopened for the contractor-payment timing audit. General Inputs confirms the saved construction duration is thirty months and the construction value is AED 405,000,000. The next verification compares the saved Construction-page monthly progress with the shifted escrow-funded certificate row.
 
 Browser verification confirms the approved relationship. In the Construction page, month 1 contains the AED 40.5M investor-funded advance; the first work-progress certificate is AED 14.6M in construction month 2. In Escrow Cash Flow, the row **“مستخلصات المقاول (80% — بعد شهر من الإنجاز)”** is blank in construction month 1 and shows AED 14.6M in construction month 2, followed by the same deferred sequence across the remaining construction months. The rule also assigns the final construction-month certificate to post-completion month 1, as covered by the new regression test.
+
+## RERA Auditor and Inspection Fees — 13 August 2026
+
+The audit found a previous source-of-truth conflict: General Inputs displays legacy stored figures for the two RERA reports, while Settings defines a per-quarter payment rate and Escrow Cash Flow computes a quarterly schedule. The calculation was corrected so Feasibility Study and Escrow Cash Flow now use the saved Settings rate multiplied by `ceil(construction months ÷ 3)`. For Majan, the construction duration is thirty months, so there must be ten quarterly payments for each report.
+
+Browser verification of Majan’s Settings shows AED 3,500 per quarterly auditor report and AED 15,020 per quarterly inspection. With ten payments, the expected totals are AED 35,000 and AED 150,200. The active Feasibility Study now displays exactly **AED 35,000** for “تقرير مدقق ريرا” and **AED 150,200** for “تقارير فحص ريرا”.
+
+Escrow Cash Flow displays ten quarterly auditor payments of AED 3,500 (shown compactly as 4K) and ten quarterly inspection payments of AED 15,020 (shown compactly as 15K), starting from construction month 1 and repeating every three months through month 28. General Inputs now also displays the calculated totals AED 35,000 and AED 150,200 as read-only values, rather than the former legacy stored figures.

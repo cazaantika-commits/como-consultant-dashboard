@@ -7,7 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Save, Loader2, Pencil, X } from "lucide-react";
 import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@/lib/projectData";
-import { getProjectDesignTiming } from "@/lib/projectTiming";
+import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 
 const ALL_FIELDS = [
   { key: "plotAreaSqft", label: "مساحة الأرض", unit: "قدم²", type: "number" },
@@ -83,6 +83,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     try {
       const payload: any = { id: selectedProjectId };
       ALL_FIELDS.forEach(f => {
+        if ((f as any).computed) return;
         if (formData[f.key] === undefined || formData[f.key] === "") return;
         const val = formData[f.key];
         if (f.key === "preConMonths" || f.key === "constructionMonths" || f.key === "handoverMonths") {
@@ -108,6 +109,13 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     return calculateProjectFormulas(inputs, rates);
   }, [formData]);
   const designTiming = useMemo(() => getProjectDesignTiming(projectQuery.data), [projectQuery.data]);
+  const reraQuarterlyFees = useMemo(() => {
+    const project = {
+      ...(projectQuery.data as any),
+      constructionMonths: formData.constructionMonths || (projectQuery.data as any)?.constructionMonths,
+    };
+    return getProjectReraQuarterlyFeeSettings(project);
+  }, [formData.constructionMonths, projectQuery.data]);
 
   if (!selectedProjectId) {
     return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
@@ -126,12 +134,17 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {fields.map((field) => {
         const isComputed = (field as any).computed;
         const hint = (field as any).hint;
+        const displayValue = field.key === "reraAuditReportFee"
+          ? String(reraQuarterlyFees.auditorTotal)
+          : field.key === "reraInspectionReportFee"
+            ? String(reraQuarterlyFees.inspectionTotal)
+            : formData[field.key] || "";
         return (
           <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-gray-100 ${isComputed ? "bg-amber-50/50" : ""}`}>
             <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{field.label}</span>
             <input
               type={field.type === "date" ? "month" : "text"}
-              value={formData[field.key] || ""}
+              value={displayValue}
               onChange={e => updateField(field.key, e.target.value)}
               disabled={!isEditing || isComputed}
               className={`flex-1 h-[24px] px-2 text-[13px] rounded ${isComputed ? "bg-amber-50 text-amber-700 font-medium cursor-not-allowed" : !isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}

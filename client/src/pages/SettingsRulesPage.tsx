@@ -225,6 +225,17 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const designPaymentTotal = designPayments.reduce((s, d) => s + d.pct, 0);
   const totalDesignWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
   const totalDesignMonths = Math.ceil(totalDesignWeeks / 4.33);
+  const reraAuditorQuarterlyFee = configurableRates.find((rate) => rate.id === "reraAuditorQuarterlyFee")?.value ?? 3500;
+  const reraInspectionQuarterlyFee = configurableRates.find((rate) => rate.id === "reraInspectionQuarterlyFee")?.value ?? 15020;
+  const escrowRules = ESCROW_RULES.map((rule) => {
+    if (rule.id === "reraAuditor") {
+      return { ...rule, timing: `${reraAuditorQuarterlyFee.toLocaleString("en-US")} درهم لكل دفعة — كل 3 أشهر من بداية الإنشاء حتى نهايته` };
+    }
+    if (rule.id === "reraInspection") {
+      return { ...rule, timing: `${reraInspectionQuarterlyFee.toLocaleString("en-US")} درهم لكل دفعة — كل 3 أشهر من بداية الإنشاء حتى نهايته` };
+    }
+    return rule;
+  });
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -504,7 +515,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   <span>التوقيت</span>
                   <span>النوع</span>
                 </div>
-                {ESCROW_RULES.map((rule, idx) => (
+                {escrowRules.map((rule, idx) => (
                   <div key={rule.id} className={`grid grid-cols-[1fr_auto_auto] gap-x-3 items-center py-1.5 px-2 rounded ${idx % 2 === 0 ? 'bg-gray-50/50' : ''}`}>
                     <span className="text-[11px] font-medium text-gray-800">{rule.label}</span>
                     <span className="text-[9px] text-gray-500 max-w-[280px]">{rule.timing}</span>

@@ -114,6 +114,33 @@ export function getProjectMarketingTiming(project: any) {
   };
 }
 
+/**
+ * RERA auditor and inspection reports are paid once every three construction
+ * months. Their per-payment rates are saved in Settings and Rules, making the
+ * same total available to Feasibility Study and Escrow Cash Flow.
+ */
+export function getProjectReraQuarterlyFeeSettings(project: any) {
+  let savedRates: Record<string, unknown> | undefined;
+  try {
+    savedRates = JSON.parse(project?.constructionScheduleJson || "{}")?.settings?.configurableRates;
+  } catch {
+    savedRates = undefined;
+  }
+  const constructionMonths = Math.max(1, Number(project?.constructionMonths ?? 30));
+  const paymentCount = Math.ceil(constructionMonths / 3);
+  const auditorPerPayment = Math.max(0, Number(savedRates?.reraAuditorQuarterlyFee ?? 3500));
+  const inspectionPerPayment = Math.max(0, Number(savedRates?.reraInspectionQuarterlyFee ?? 15020));
+
+  return {
+    constructionMonths,
+    paymentCount,
+    auditorPerPayment,
+    inspectionPerPayment,
+    auditorTotal: auditorPerPayment * paymentCount,
+    inspectionTotal: inspectionPerPayment * paymentCount,
+  };
+}
+
 /** Drops any saved Marketing-page values that precede the permitted start. */
 export function clampMarketingDistributionToStart(
   distribution: Record<string, number[]> | undefined,

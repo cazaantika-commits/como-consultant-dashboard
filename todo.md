@@ -1138,3 +1138,4 @@
 - [x] Verify and align RERA registration-phase expense timing: sorting, developer NOC, and project registration in month 1; unit registration, escrow opening, and escrow deposit in month 2
 - [x] Make Timeline marketing and sales bar extents match the saved active-month windows in the Marketing and Sales pages while preserving Settings-derived earliest start months
 - [x] Make escrow contractor progress payments begin in construction month 2, one month after the corresponding work progress, while preserving the investor-funded month-1 advance
+- [x] Verify RERA auditor-report and inspection-report fee calculations in Settings, Feasibility Study, and Escrow Cash Flow, including their quarterly payment count and timing

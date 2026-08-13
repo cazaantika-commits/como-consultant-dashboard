@@ -8,7 +8,7 @@ import {
   calculateCommunityFeeSchedule,
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
-import { getProjectDesignTiming } from "@/lib/projectTiming";
+import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 
 /**
  * Calculate all project costs from raw data.
@@ -42,8 +42,6 @@ export function calculateProjectCosts(
   const escrowAccountFee = parseFloat(p.escrowAccountFee || "0");
   const bankFees = parseFloat(p.bankFees || "0");
 
-  const reraAuditReportFee = parseFloat(p.reraAuditReportFee || "0");
-  const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
   const designFeePct = parseFloat(p.designFeePct ?? "2");
   const designFeeFixed = parseFloat(p.designFeeFixed || "0");
   const supervisionFeePct = parseFloat(p.supervisionFeePct ?? "2");
@@ -143,11 +141,11 @@ export function calculateProjectCosts(
     getProjectCommunityFeeSettings(p),
   );
   const computedCommunityFees = communitySchedule.total;
-  const constructionMonths = parseInt(p.constructionMonths || "16");
-  const inspectionVisits = Math.floor(constructionMonths / 3) + 1;
-  const computedReraInspectionFee = inspectionVisits * 15000;
+  const reraQuarterlyFees = getProjectReraQuarterlyFeeSettings(p);
+  const computedReraAuditReportFee = reraQuarterlyFees.auditorTotal;
+  const computedReraInspectionFee = reraQuarterlyFees.inspectionTotal;
 
-  const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + reraAuditReportFee + computedReraInspectionFee;
+  const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
   const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + surveyorDwgFees + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
@@ -172,7 +170,7 @@ export function calculateProjectCosts(
     developerNocFee,
     escrowAccountFee,
     bankFees,
-    reraAuditReportFee,
+    reraAuditReportFee: computedReraAuditReportFee,
     reraInspectionReportFee: computedReraInspectionFee,
     revenueRes,
     revenueRet,
