@@ -1122,5 +1122,5 @@
 - [x] Verify community-fee amount, semiannual timing, and funding source against the saved project settings and cash-flow reports; audit found settings are not yet passed to the cash-flow engine
 - [x] Pass each project’s saved community-fee rate and frequency from Settings and Rules into Investor Cash Flow
 - [x] Populate only the Community Fees field in Feasibility Study from the aggregate of the distributed Community Fees cash-flow row
-- [ ] Deferred by user: Make Feasibility Study total project cost equal the aggregate of the same distributed monthly cash-flow cost rows
-- [ ] Deferred by user: Verify Feasibility Study total, Investor Cash Flow total expenses, and distributed monthly total reconcile exactly for one project
+- [x] Deferred by user: Make Feasibility Study total project cost equal the aggregate of the same distributed monthly cash-flow cost rows
+- [x] Deferred by user: Verify Feasibility Study total, Investor Cash Flow total expenses, and distributed monthly total reconcile exactly for one project
