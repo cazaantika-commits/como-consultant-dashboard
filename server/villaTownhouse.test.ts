@@ -75,4 +75,10 @@ describe("Villa and Townhouse Financial Studies support", () => {
     const units = buildPricingUnits({ financingScenario: "offplan_escrow" }, PROJECT_INPUTS);
     expect(units.find((unit) => unit.name === "غرفة وصالة")).toMatchObject({ area: 750, price: 1550 });
   });
+
+  it("classifies Villa and Townhouse as residential pricing units", () => {
+    const units = buildPricingUnits(project, PROJECT_INPUTS);
+    expect(units.find((unit) => unit.name === "فيلا")?.category).toBe("residential");
+    expect(units.find((unit) => unit.name === "تاون هاوس")?.category).toBe("residential");
+  });
 });

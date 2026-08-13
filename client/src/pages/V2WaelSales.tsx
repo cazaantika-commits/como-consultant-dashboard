@@ -39,15 +39,17 @@ import {
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 const UNIT_TYPES = [
-  { id: "residential1br", name: "غرفة وصالة", color: "#3b82f6", dbCount: "residential1brCount", dbArea: "residential1brArea", dbPrice: "residential1brPrice" },
-  { id: "residential2br", name: "غرفتين وصالة", color: "#8b5cf6", dbCount: "residential2brCount", dbArea: "residential2brArea", dbPrice: "residential2brPrice" },
-  { id: "residential3br", name: "ثلاث غرف", color: "#d946ef", dbCount: "residential3brCount", dbArea: "residential3brArea", dbPrice: "residential3brPrice" },
-  { id: "retailSmall", name: "تجزئة صغير", color: "#f59e0b", dbCount: "retailSmallCount", dbArea: "retailSmallArea", dbPrice: "retailSmallPrice" },
-  { id: "retailMedium", name: "تجزئة متوسط", color: "#f97316", dbCount: "retailMediumCount", dbArea: "retailMediumArea", dbPrice: "retailMediumPrice" },
-  { id: "retailLarge", name: "تجزئة كبير", color: "#ef4444", dbCount: "retailLargeCount", dbArea: "retailLargeArea", dbPrice: "retailLargePrice" },
-  { id: "officeSmall", name: "مكاتب صغير", color: "#10b981", dbCount: "officeSmallCount", dbArea: "officeSmallArea", dbPrice: "officeSmallPrice" },
-  { id: "officeMedium", name: "مكاتب متوسط", color: "#14b8a6", dbCount: "officeMediumCount", dbArea: "officeMediumArea", dbPrice: "officeMediumPrice" },
-  { id: "officeLarge", name: "مكاتب كبير", color: "#06b6d4", dbCount: "officeLargeCount", dbArea: "officeLargeArea", dbPrice: "officeLargePrice" },
+  { id: "residential1br", name: "غرفة وصالة", category: "residential", color: "#3b82f6", dbCount: "residential1brCount", dbArea: "residential1brArea", dbPrice: "residential1brPrice" },
+  { id: "residential2br", name: "غرفتين وصالة", category: "residential", color: "#8b5cf6", dbCount: "residential2brCount", dbArea: "residential2brArea", dbPrice: "residential2brPrice" },
+  { id: "residential3br", name: "ثلاث غرف", category: "residential", color: "#d946ef", dbCount: "residential3brCount", dbArea: "residential3brArea", dbPrice: "residential3brPrice" },
+  { id: "villa", name: "فيلا", category: "residential", color: "#0f766e", dbCount: "villaCount", dbArea: "villaArea", dbPrice: "villaPrice" },
+  { id: "townhouse", name: "تاون هاوس", category: "residential", color: "#0e7490", dbCount: "townhouseCount", dbArea: "townhouseArea", dbPrice: "townhousePrice" },
+  { id: "retailSmall", name: "تجزئة صغير", category: "retail", color: "#f59e0b", dbCount: "retailSmallCount", dbArea: "retailSmallArea", dbPrice: "retailSmallPrice" },
+  { id: "retailMedium", name: "تجزئة متوسط", category: "retail", color: "#f97316", dbCount: "retailMediumCount", dbArea: "retailMediumArea", dbPrice: "retailMediumPrice" },
+  { id: "retailLarge", name: "تجزئة كبير", category: "retail", color: "#ef4444", dbCount: "retailLargeCount", dbArea: "retailLargeArea", dbPrice: "retailLargePrice" },
+  { id: "officeSmall", name: "مكاتب صغير", category: "office", color: "#10b981", dbCount: "officeSmallCount", dbArea: "officeSmallArea", dbPrice: "officeSmallPrice" },
+  { id: "officeMedium", name: "مكاتب متوسط", category: "office", color: "#14b8a6", dbCount: "officeMediumCount", dbArea: "officeMediumArea", dbPrice: "officeMediumPrice" },
+  { id: "officeLarge", name: "مكاتب كبير", category: "office", color: "#06b6d4", dbCount: "officeLargeCount", dbArea: "officeLargeArea", dbPrice: "officeLargePrice" },
 ];
 
 
@@ -220,6 +222,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const totalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
   const totalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
   const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
+  const activeUnitRevenues = unitRevenues.filter((unit) => unit.count > 0);
+  const activeResidentialUnits = activeUnitRevenues.filter((unit) => unit.category === "residential");
+  const activeRetailUnits = activeUnitRevenues.filter((unit) => unit.category === "retail");
+  const activeOfficeUnits = activeUnitRevenues.filter((unit) => unit.category === "office");
 
   // ─── Computed: Full Costs from Feasibility ─────────────────────────────────
   const constructionCostPerSqft = projectQuery.data ? Number((projectQuery.data as any).estimatedConstructionPricePerSqft) || 400 : 400;
@@ -237,7 +243,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     // Build pricing units from current unitRevenues
     const pricingUnits = unitRevenues.map(u => ({
       name: u.name,
-      category: u.id.startsWith('residential') ? 'residential' as const : u.id.startsWith('retail') ? 'retail' as const : 'office' as const,
+      category: u.category as 'residential' | 'retail' | 'office',
       area: u.area,
       price: u.price,
       count: u.count,
@@ -582,9 +588,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* سكني */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
-                    {unitRevenues.filter(u => u.id.startsWith('residential')).map((u) => (
+                    {activeResidentialUnits.length > 0 && <><tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50/60 border-b border-blue-100">سكني</td></tr>
+                    {activeResidentialUnits.map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
                           <div className="flex items-center gap-1.5">
@@ -602,10 +607,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
                         <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
-                    ))}
-                    {/* تجزئة */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
-                    {unitRevenues.filter(u => u.id.startsWith('retail')).map((u) => (
+                    ))}</>}
+                    {activeRetailUnits.length > 0 && <><tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
+                    {activeRetailUnits.map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
                           <div className="flex items-center gap-1.5">
@@ -623,10 +627,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
                         <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
-                    ))}
-                    {/* مكاتب */}
-                    <tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
-                    {unitRevenues.filter(u => u.id.startsWith('office')).map((u) => (
+                    ))}</>}
+                    {activeOfficeUnits.length > 0 && <><tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
+                    {activeOfficeUnits.map((u) => (
                       <tr key={u.id} className="border-t border-gray-50 hover:bg-gray-50/50">
                         <td className="px-2 py-0.5">
                           <div className="flex items-center gap-1.5">
@@ -644,7 +647,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
                         <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
-                    ))}
+                    ))}</>}
                   </tbody>
                   <tfoot className="bg-teal-50 border-t-2 border-teal-200">
                     <tr>
