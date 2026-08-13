@@ -87,3 +87,19 @@ The corrected monthly view was refreshed once more and confirmed the signed conv
 The same corrected data was verified in grouped modes. The three-month view shows adjacent periods from “أغسطس 2026 – أكتوبر 2026” onward, with a highest required total of AED 193.5M and investor receipts of AED 461.7M. The four-month view similarly uses adjacent periods from “أغسطس 2026 – نوفمبر 2026” onward, with AED 222.3M as the largest required period and AED 458.0M as total investor receipts. Both views retain all six selected projects and the final aggregate row, using the signed Investor Cash Flow convention.
 
 The six-month signed view was then verified: it starts “أغسطس 2026 – يناير 2027”, retains all six rows, and reports AED 217.7M as the largest required period with AED 421.4M as total investor receipts. Selecting “تصدير HTML” from this exact view opened a standalone window titled “التدفقات النقدية المجمّعة”, confirming that the export action uses the active six-month selection and report state.
+
+## New month-first investor-flow report
+
+Authenticated browser verification on 13 August 2026 loaded the new **المحفظة الاستثمارية — العرض الشهري للتدفقات** report. It preserves six selected projects with stable colored dots, uses months as rows and projects as columns, exposes HTML and Excel controls, and includes a visible final total row. Its first live month is August 2026 and its monthly values match the Project Aggregation calendar source.
+
+The three-month control was then verified in the same session. It grouped adjacent real periods beginning “أغسطس 2026 – أكتوبر 2026” while keeping every selected project column, the color markers, and the final aggregate column. The report reported AED 193.5M as the largest required three-month period and AED 461.7M as the grouped received amount.
+
+The month-first report was reopened in monthly mode with all six project columns and its final total row still present. Its Excel export action was clicked from this live report state without changing the active selection or calendar view.
+
+## New detailed Capital Portfolio report
+
+Authenticated browser verification loaded **تقرير محفظة رأس المال** with five investment projects. The commercial-center build-for-rent project is not a selectable row, while the four Off-Plan projects and the verified build-for-sale project remain visible with stable colored dots.
+
+The browser showed the approved top metrics from current Financial Studies sources: AED 1,118.0M revenue, AED 965.6M total cost, AED 152.4M profit before developer share, and AED 490.8M required capital split into AED 184.4M paid and AED 306.4M remaining. The detailed table retained the approved fixed column order — project, option, total cost, capital, paid, remaining, real calendar periods, final total — and includes a final aggregate row. The Excel export action was clicked from this active report state without leaving the page.
+
+The same Capital Portfolio report was verified in its six-month grouping. It condensed the live calendar into adjacent real periods from August 2026–January 2027 through the shorter final August–October 2030 period, without removing any fixed column, project row, or final total. Selecting HTML from the active report state opened a standalone “تقرير محفظة رأس المال” report window.

@@ -32,9 +32,16 @@ import {
 } from "../investorCashFlow";
 import { computeFullFinancials, projectToInputs, calculateTimeline, monthToDate } from "../financialEngine";
 import { calculateWaelMonthlyRevenue } from "../waelRevenueEngine";
-import { computeInvestorCashFlow, type Scenario as FinancialStudiesScenario } from "../../client/src/lib/investorCashFlowEngine";
+import {
+  calculateInvestorCapitalSummary,
+  calculateInvestorMonthlyFundingRequirements,
+  computeInvestorCashFlow,
+  type Scenario as FinancialStudiesScenario,
+} from "../../client/src/lib/investorCashFlowEngine";
 import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
+import { calculateProjectCosts as calculateFinancialStudiesProjectCosts } from "../../client/src/lib/projectCostsCalc";
+import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2542,6 +2549,63 @@ export const cashFlowSettingsRouter = router({
         monthlyNet,
       };
     });
+  }),
+
+  /**
+   * Detailed Capital Portfolio source. Its visual report keeps the approved
+   * Capital Portfolio columns but all data is computed from the current
+   * Financial Studies engines and saved Sales Plan inputs.
+   */
+  getFinancialStudiesCapitalPortfolio: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    const db = await getDb();
+    if (!db) return [];
+
+    const [allProjects, allPlans] = await Promise.all([
+      db.select().from(projects),
+      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+    ]);
+    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
+    for (const plan of allPlans) {
+      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
+    }
+
+    return allProjects
+      .filter((project) => isCapitalPortfolioEligibleScenario((project.financingScenario || "offplan_escrow") as FinancialStudiesScenario))
+      .map((project) => {
+        const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
+        const salesResult = buildSalesResultFromSavedPlan(
+          newestPlanByProject.get(project.id),
+          project,
+          scenario,
+        );
+        const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
+        const capital = calculateInvestorCapitalSummary(cashFlow);
+        const costs = calculateFinancialStudiesProjectCosts(project);
+        const isBuildForSale = scenario === "build_for_sale";
+        const totalCosts = isBuildForSale
+          ? cashFlow.rows
+            .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
+            .reduce((sum, row) => sum + row.totalCost, 0)
+          : costs?.totalCosts || 0;
+        const totalRevenue = costs?.totalRevenue || 0;
+        const monthlyFunding = calculateInvestorMonthlyFundingRequirements(cashFlow);
+
+        return {
+          projectId: project.id,
+          name: project.name,
+          financingScenario: scenario,
+          startDate: cashFlow.startDate,
+          monthDates: cashFlow.monthDates.slice(0, monthlyFunding.length),
+          monthlyFunding,
+          totalRevenue,
+          totalCosts,
+          grossProfitBeforeDeveloperShare: totalRevenue - totalCosts,
+          requiredCapital: capital.requiredCapital,
+          paidCapital: capital.paidCapital,
+          remainingCapital: capital.remainingCapital,
+        };
+      });
   }),
 });
 

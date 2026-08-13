@@ -1,6 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar, LogIn } from "lucide-react";
+import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar, LogIn, TableProperties, WalletCards } from "lucide-react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -16,6 +16,8 @@ const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
 const V2EscrowCashFlow = lazy(() => import("./V2EscrowCashFlow"));
 const V2Feasibility = lazy(() => import("./V2Feasibility"));
 const V2Portfolio = lazy(() => import("./V2Portfolio"));
+const V2PortfolioMonthly = lazy(() => import("./V2PortfolioMonthly"));
+const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
 const MarketingPage = lazy(() => import("./MarketingPage"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
 
@@ -34,6 +36,8 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
   { id: "feasibility", label: "دراسة الجدوى", icon: FileText, group: "output" },
   { id: "mall", label: "المركز التجاري", icon: Building2, group: "output" },
   { id: "portfolio", label: "تجميع المشاريع", icon: Briefcase, group: "output" },
+  { id: "portfolio_monthly", label: "العرض الشهري", icon: TableProperties, group: "output" },
+  { id: "capital_portfolio", label: "محفظة رأس المال", icon: WalletCards, group: "output" },
 ];
 
 function TabContent({ tabId }: { tabId: TabId }) {
@@ -68,6 +72,10 @@ function TabContent({ tabId }: { tabId: TabId }) {
       );
     case "portfolio":
       return <V2Portfolio />;
+    case "portfolio_monthly":
+      return <V2PortfolioMonthly />;
+    case "capital_portfolio":
+      return <V2CapitalPortfolio />;
     default:
       return null;
   }

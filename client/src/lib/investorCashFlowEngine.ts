@@ -150,6 +150,26 @@ export interface InvestorCapitalSummary {
 }
 
 /**
+ * Returns the monthly investor funding requirements used by the capital view.
+ * Revenue and Como's post-sale profit allocation are intentionally excluded.
+ */
+export function calculateInvestorMonthlyFundingRequirements(cashFlow: CashFlowResult): number[] {
+  const totalMonths = cashFlow.designDuration + cashFlow.constructionDuration + cashFlow.postDuration;
+  const monthValues = (row: CostRow) => [
+    ...row.designMonths,
+    ...row.constructionMonths,
+    ...row.postConstructionMonths,
+  ].slice(0, totalMonths);
+  const futureInvestorDebitRows = cashFlow.rows.filter((row) =>
+    !row.isRevenue && !row.isProfitAllocation && row.funder === "investor" && !(row.paid > 0 && row.unpaid === 0),
+  );
+
+  return Array.from({ length: totalMonths }, (_, month) =>
+    futureInvestorDebitRows.reduce((sum, row) => sum + (monthValues(row)[month] || 0), 0),
+  );
+}
+
+/**
  * Produces the investor-capital view from the same cash-flow rows used by the
  * Investor Cash Flow report. Escrow deposits remain capital requirements but
  * are excluded from project spending because they are transfers, not costs.
