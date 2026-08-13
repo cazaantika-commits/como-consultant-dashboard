@@ -120,4 +120,44 @@ describe("calculateEscrowSettlement", () => {
     expect(paymentMonths[0].month).toBe(13);
     expect(paymentMonths[0].amount).toBe(commission!.totalCost);
   });
+
+  it("splits RERA-linked expenses between the first and second saved RERA months", () => {
+    const project = {
+      constructionMonths: 30,
+      manualBuaSqft: 100000,
+      estimatedConstructionPricePerSqft: 400,
+      gfaResidentialSqft: 90000,
+      residential1brCount: 10,
+      residential1brArea: 750,
+      residential1brPrice: 1550,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          designPayments: {
+            mobilization: { durationWeeks: 2 }, concept: { durationWeeks: 4 }, schematic: { durationWeeks: 4 },
+            dd: { durationWeeks: 6 }, authorities: { durationWeeks: 4 }, tender: { durationWeeks: 4 }, ifc: { durationWeeks: 2 },
+          },
+          projectPhases: {
+            marketingPrep: { durationMonths: 2, startOffsetMonths: 0 },
+            reraApprovals: { durationMonths: 2, startOffsetMonths: 1 },
+            marketingLaunch: { durationMonths: 0, startOffsetMonths: 0 },
+            salesStart: { durationMonths: 0, startOffsetMonths: 1 },
+            construction: { durationMonths: 0, startOffsetMonths: 1 },
+          },
+        },
+      }),
+    };
+    const result = computeInvestorCashFlow(project, "offplan_escrow");
+    const designMonthOf = (label: string) => {
+      const row = result.rows.find((item) => item.label === label);
+      return row?.designMonths.findIndex((amount) => amount > 0);
+    };
+
+    // RERA begins in project/design month 5 and ends in month 6.
+    expect(designMonthOf("رسوم الفرز")).toBe(4);
+    expect(designMonthOf("رسوم NOC المطور")).toBe(4);
+    expect(designMonthOf("تسجيل المشروع — ريرا")).toBe(4);
+    expect(designMonthOf("تسجيل الوحدات — ريرا")).toBe(5);
+    expect(designMonthOf("حساب الضمان (رسوم فتح)")).toBe(5);
+    expect(designMonthOf("إيداع حساب الضمان (20%)")).toBe(5);
+  });
 });

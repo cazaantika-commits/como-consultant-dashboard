@@ -1135,3 +1135,4 @@
 - [x] Make saved Settings and Rules phase durations and offsets the sole source for marketing preparation, RERA, sales, and construction dependencies
 - [x] Prevent Marketing page allocations and saved distributions before the Settings-defined marketing start month
 - [x] Verify the Marketing page lock and Investor Cash Flow marketing row begin in the same permitted month
+- [x] Verify and align RERA registration-phase expense timing: sorting, developer NOC, and project registration in month 1; unit registration, escrow opening, and escrow deposit in month 2

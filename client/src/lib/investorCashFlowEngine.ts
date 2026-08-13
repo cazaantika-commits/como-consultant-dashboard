@@ -590,8 +590,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const sortingDesign = emptyDesign();
     const sortingConstruction = emptyConstruction();
-    // Sorting happens at same time as RERA registration
-    const sortingMonthInDesign = reraPaymentInDesign;
+    // Sorting is due in the first month of the saved RERA approval phase.
+    const sortingMonthInDesign = reraStartInDesign;
     if (isScenario3 || isScenario4) {
       sortingConstruction[penultimateConstruction] = costs.sortingFee;
     } else if (isScenario2) {
@@ -617,8 +617,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const nocDesign = emptyDesign();
     const nocConstruction = emptyConstruction();
-    // NOC happens at same time as RERA registration
-    const nocMonthInDesign = reraPaymentInDesign;
+    // Developer NOC is due in the first month of the saved RERA approval phase.
+    const nocMonthInDesign = reraStartInDesign;
     if (isScenario3 || isScenario4) {
       nocConstruction[penultimateConstruction] = i.nocSale;
     } else if (isScenario2) {
@@ -644,8 +644,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const reraRegDesign = emptyDesign();
     const reraRegConstruction = emptyConstruction();
-    // RERA registration is paid in the final month of the saved RERA phase.
-    const reraMonthInDesign = reraPaymentInDesign;
+    // Project registration is due in the first month of the saved RERA phase.
+    const reraMonthInDesign = reraStartInDesign;
     if (isScenario2) {
       reraRegConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.reraProjectReg;
     } else {
