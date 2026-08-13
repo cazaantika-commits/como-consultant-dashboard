@@ -8,10 +8,9 @@ import {
   computeInvestorCashFlow,
   type Scenario,
   type CostRow,
-  type SalesResult,
 } from "@/lib/investorCashFlowEngine";
-import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
-import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
+import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
+import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -48,130 +47,10 @@ export default function V2InvestorCashFlow() {
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
 
   // ─── Parse salesResult from saved plan ─────────────────────────────────
-  const salesResult: SalesResult | undefined = useMemo(() => {
-    if (!plansQuery.data || plansQuery.data.length === 0) return undefined;
-    const plan = plansQuery.data[0] as any;
-
-    // Parse marketing monthly amounts from salesAbsorptionJson (saved from MarketingPage)
-    // marketingDistribution arrays are indexed from 0 = marketingActualStart month
-    // Engine expects marketingMonthlyAmounts indexed from 0 = project month 1
-    // So we offset by (marketingActualStart - 1)
-    let marketingMonthlyAmounts: number[] | undefined;
-    if (plan.salesAbsorptionJson) {
-      try {
-        const absorption = JSON.parse(plan.salesAbsorptionJson);
-        if (absorption.marketingDistribution) {
-          const minimumMarketingStart = getProjectMarketingTiming(projectQuery.data).marketingStartMonth;
-          const savedStart = Number(absorption.marketingActualStart || minimumMarketingStart);
-          const actualStart = Math.max(savedStart, minimumMarketingStart);
-          const distribution = clampMarketingDistributionToStart(
-            absorption.marketingDistribution,
-            savedStart,
-            minimumMarketingStart,
-          );
-          const channels = Object.values(distribution) as number[][];
-          const startOffset = actualStart - 1; // convert 1-indexed to 0-indexed
-          if (channels.length > 0) {
-            const maxLen = Math.max(...channels.map((c: number[]) => c.length));
-            // Total array length = offset + channel length
-            marketingMonthlyAmounts = new Array(startOffset + maxLen).fill(0);
-            for (const ch of channels) {
-              for (let m = 0; m < ch.length; m++) {
-                marketingMonthlyAmounts[startOffset + m] += (ch[m] || 0);
-              }
-            }
-          }
-        }
-      } catch {}
-    }
-
-    // Parse the exact saved payment schedule used for buyer collections.
-    let ppDownPct: number | undefined;
-    let paymentPlan: SalesResult["paymentPlan"];
-    let buildForSaleMonthlyUnits: number[] | undefined;
-    if (plan.paymentPlanJson) {
-      try {
-        paymentPlan = JSON.parse(plan.paymentPlanJson);
-        ppDownPct = paymentPlan?.downPct;
-      } catch {}
-    }
-    if (plan.salesAbsorptionJson) {
-      try {
-        const abs = JSON.parse(plan.salesAbsorptionJson);
-        ppDownPct = ppDownPct ?? abs.ppDownPct;
-        paymentPlan = paymentPlan ?? {
-          downPct: Number(abs.ppDownPct ?? 10),
-          secondPct: Number(abs.ppSecondPct ?? 0),
-          secondAfterMonths: Number(abs.ppSecondAfterMonths ?? 0),
-          duringTotalPct: 100 - Number(abs.ppDownPct ?? 10) - Number(abs.ppSecondPct ?? 0) - Number(abs.ppHandoverPct ?? 0),
-          installmentEveryMonths: Number(abs.ppInstallmentEvery ?? 1),
-          handoverPct: Number(abs.ppHandoverPct ?? 0),
-        };
-        if (Array.isArray(abs.buildForSaleMonthlyUnits)) {
-          buildForSaleMonthlyUnits = abs.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0));
-        }
-      } catch {}
-    }
-
-    let directSalesStartMonth = 4;
-    let directSalesInstallmentCount = 6;
-    try {
-      const schedule = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}");
-      const directSalesSettings = schedule?.settings?.directPostCompletionSales;
-      directSalesStartMonth = Number(directSalesSettings?.startMonth ?? directSalesStartMonth);
-      directSalesInstallmentCount = Number(directSalesSettings?.installmentCount ?? directSalesInstallmentCount);
-    } catch {}
-
-    // If resultsJson exists, use the saved buyer collections alongside
-    // escrowData and the sales distribution.
-    if (plan.resultsJson) {
-      try {
-        const parsed = JSON.parse(plan.resultsJson);
-        const parsedBuildForSaleUnits = Array.isArray(parsed.buildForSaleMonthlyUnits)
-          ? parsed.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0))
-          : undefined;
-        const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
-          || buildForSaleMonthlyUnits
-          || (scenario === "build_for_sale" && Array.isArray(parsed.salesDistribution)
-            ? parsed.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
-            : undefined);
-        const hasSavedSalesResult = scenario === "build_for_sale"
-          ? Array.isArray(parsed.actualCashInflow) || Array.isArray(parsed.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
-          : Array.isArray(parsed.escrowData) && Array.isArray(parsed.salesDistribution);
-        if (hasSavedSalesResult) {
-          const storedCashInflow = parsed.actualCashInflow || [];
-          const actualCashInflow = parsed.actualCashInflowVersion === 2
-            ? storedCashInflow
-            : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
-          return {
-            escrowData: Array.isArray(parsed.escrowData) ? parsed.escrowData : [],
-            salesDistribution: Array.isArray(parsed.salesDistribution) ? parsed.salesDistribution : [],
-            marketingMonthlyAmounts,
-            ppDownPct,
-            paymentPlan,
-            actualCashInflow,
-            offplanPct: Number(plan.offplanPct ?? 80),
-            directSalesStartMonth,
-            directSalesInstallmentCount,
-            buildForSaleMonthlyUnits: resolvedBuildForSaleUnits,
-          };
-        }
-      } catch {}
-    }
-
-    // Even without resultsJson, return marketing data so engine can use it
-    if (marketingMonthlyAmounts && marketingMonthlyAmounts.length > 0) {
-      return {
-        escrowData: [],
-        salesDistribution: [],
-        marketingMonthlyAmounts,
-        ppDownPct,
-        buildForSaleMonthlyUnits,
-      };
-    }
-
-    return undefined;
-  }, [plansQuery.data, projectQuery.data]);
+  const salesResult = useMemo(
+    () => buildSalesResultFromSavedPlan(plansQuery.data?.[0] as any, projectQuery.data, scenario),
+    [plansQuery.data, projectQuery.data, scenario],
+  );
 
   // ─── Compute cash flow from engine ─────────────────────────────────────
   const data = useMemo(() => {
@@ -206,88 +85,7 @@ export default function V2InvestorCashFlow() {
     ...row.postConstructionMonths,
   ];
 
-  // ─── Derive the two escrow settlements from the same source as the
-  // Escrow Cash Flow page. The engine's legacy liquidation rows are used only
-  // as labels; their displayed values are replaced with the actual settlements.
-  const postStartIdx = designDuration + constructionDuration;
-  const liq1MonthIdx = postStartIdx + 2;
-  const liq2MonthIdx = postStartIdx + 12;
-  const escrowOutflows = rows.filter((r) => r.funder === "escrow" && !r.isRevenue);
-  const transferRow = rows.find((r) => r.isTransfer);
-  const depositValues = new Array(totalMonths).fill(0);
-  if (transferRow) {
-    getRowValues(transferRow).slice(0, totalMonths).forEach((value, index) => {
-      depositValues[index] = value;
-    });
-  }
-  const effectiveSalesResult = data.usedSalesResult || salesResult;
-  const salesIncomeValues = new Array(totalMonths).fill(0);
-  const savedCashInflow = (effectiveSalesResult as any)?.actualCashInflow as number[] | undefined;
-  if (savedCashInflow && savedCashInflow.length > 0) {
-    savedCashInflow.slice(0, totalMonths).forEach((value, index) => {
-      salesIncomeValues[index] = value || 0;
-    });
-  } else {
-    for (const entry of effectiveSalesResult?.escrowData || []) {
-      const index = entry.month - 1;
-      if (index >= 0 && index < totalMonths) salesIncomeValues[index] += entry.income;
-    }
-  }
-  const escrowInflowTotals = depositValues.map((deposit, index) => deposit + salesIncomeValues[index]);
-  const escrowOutflowTotals = Array.from({ length: totalMonths }, (_, index) =>
-    escrowOutflows.reduce((sum, row) => sum + (getRowValues(row)[index] || 0), 0)
-  );
-  const cumulativeWithoutLiquidation = escrowOutflowTotals
-    .map((outflow, index) => escrowInflowTotals[index] - outflow)
-    .reduce<number[]>((accumulator, value) => {
-      accumulator.push((accumulator[accumulator.length - 1] || 0) + value);
-      return accumulator;
-    }, []);
-  const { firstLiquidation, finalLiquidation } = calculateEscrowSettlement({
-    cumulativeWithoutLiquidation,
-    firstLiquidationIndex: liq1MonthIdx,
-    finalLiquidationIndex: liq2MonthIdx,
-    actualSalesCashInflow: salesIncomeValues,
-  });
-  const liquidationTemplates = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
-  const settlementCredits = liquidationTemplates.map((template) => {
-    const isFirstSettlement = template.label.includes("دفعة 1");
-    const monthIndex = isFirstSettlement ? liq1MonthIdx : liq2MonthIdx;
-    const amount = isFirstSettlement ? firstLiquidation : finalLiquidation;
-    const postConstructionMonths = new Array(postDuration).fill(0);
-    postConstructionMonths[monthIndex - postStartIdx] = amount;
-    return {
-      ...template,
-      totalCost: amount,
-      investorAmount: amount,
-      paid: 0,
-      unpaid: amount,
-      postConstructionMonths,
-    };
-  });
-
-  // ─── Separate rows into debit (investor costs) and credit (revenue) ────
-  const debitRows = rows.filter((r) => !r.isRevenue && r.funder === "investor" && !(r.paid > 0 && r.unpaid === 0));
-  const creditRows = [
-    ...rows.filter((r) => r.isRevenue && !r.label.includes("تصفية حساب الضمان")),
-    ...settlementCredits,
-  ];
-  const paidRows = rows.filter((r) => r.paid > 0 && !r.isRevenue);
-
-  // ─── Debit totals per month ────────────────────────────────────────────
-  const debitTotals = Array.from({ length: totalMonths }, (_, i) =>
-    debitRows.reduce((s, r) => s + getRowValues(r)[i], 0)
-  );
-  // ─── Credit totals per month ───────────────────────────────────────────
-  const creditTotals = Array.from({ length: totalMonths }, (_, i) =>
-    creditRows.reduce((s, r) => s + getRowValues(r)[i], 0)
-  );
-  // ─── Net flow and cumulative ───────────────────────────────────────────
-  const netFlow = debitTotals.map((d, i) => creditTotals[i] - d);
-  const cumulative = netFlow.reduce<number[]>((acc, v) => {
-    acc.push((acc[acc.length - 1] || 0) + v);
-    return acc;
-  }, []);
+  const { debitRows, creditRows, paidRows, debitTotals, creditTotals, netFlow, cumulative } = calculateInvestorMonthlyNet(data, salesResult);
 
   const totalDebit = debitTotals.reduce((s, v) => s + v, 0);
   const totalCredit = creditTotals.reduce((s, v) => s + v, 0);

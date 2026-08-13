@@ -1162,3 +1162,9 @@
 - [x] Implement build-for-rent inside Financial Studies with investor-funded costs and no sales, marketing, commissions, or revenue; exclude rental income for now
 - [x] Make build-for-rent developer fees configurable from construction cost: 1.5% across design and 2.5% across supervision
 - [x] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
+
+- [x] Audit the current Project Aggregation page for management presentation without changing data, calculations, or layout until the user defines the desired output
+- [x] Preserve the Project Aggregation design while feeding one final investor-cash-flow row per project and aligning all project values to their actual named calendar months
+- [x] Audit every displayed Project Aggregation amount against the corresponding monthly net investor cash-flow rows, including the August 2026 to January 2027 period total
+- [x] Fix Project Aggregation to preserve the signed values of the Investor Cash Flow “صافي الشهر” row rather than using an inverted debit-minus-credit convention
+- [x] Make Project Aggregation visibly distinguish signed investor receipts from required funding and calculate its summary cards from those same signed row values
