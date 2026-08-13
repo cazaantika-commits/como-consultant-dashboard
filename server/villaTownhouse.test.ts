@@ -55,4 +55,24 @@ describe("Villa and Townhouse Financial Studies support", () => {
     expect(costs?.revenueRes).toBe(25_000_000);
     expect(costs?.totalRevenue).toBe(25_000_000);
   });
+
+  it("preserves explicitly zero build-for-sale fields without inheriting unit defaults", () => {
+    const zeroedProject = {
+      financingScenario: "build_for_sale",
+      residential1brCount: 0,
+      residential1brArea: 0,
+      residential1brPrice: 0,
+      villaCount: 0,
+      villaArea: 0,
+      villaPrice: 0,
+    };
+    const units = buildPricingUnits(zeroedProject, PROJECT_INPUTS);
+    expect(units.find((unit) => unit.name === "غرفة وصالة")).toMatchObject({ count: 0, area: 0, price: 0 });
+    expect(units.find((unit) => unit.name === "فيلا")).toMatchObject({ count: 0, area: 0, price: 0 });
+  });
+
+  it("retains legacy Off-Plan fallback unit defaults", () => {
+    const units = buildPricingUnits({ financingScenario: "offplan_escrow" }, PROJECT_INPUTS);
+    expect(units.find((unit) => unit.name === "غرفة وصالة")).toMatchObject({ area: 750, price: 1550 });
+  });
 });

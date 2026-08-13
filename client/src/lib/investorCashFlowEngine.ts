@@ -342,7 +342,17 @@ const DEF_PRICES = { res1: 1550, res2: 1500, res3: 1450, villa: 0, townhouse: 0,
 
 export function buildPricingUnits(project: any, inputs: ProjectInputs) {
   const p = project;
-  const hasSavedCounts = [p.residential1brCount, p.residential2brCount, p.residential3brCount, p.villaCount, p.townhouseCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
+  const countKeys = ["residential1brCount", "residential2brCount", "residential3brCount", "villaCount", "townhouseCount", "retailSmallCount", "retailMediumCount", "retailLargeCount", "officeSmallCount", "officeMediumCount", "officeLargeCount"];
+  const isBuildForSale = p?.financingScenario === "build_for_sale";
+  // Build-for-sale uses the user-entered unit distribution exactly, including an
+  // explicit all-zero distribution. Legacy Off-Plan fallback behavior is retained.
+  const hasSavedCounts = isBuildForSale
+    ? countKeys.some((key) => p?.[key] !== undefined && p?.[key] !== null)
+    : countKeys.some((key) => Number(p?.[key]) > 0);
+  const valueOrDefault = (key: string, fallback: number) => {
+    const value = p?.[key];
+    return value === undefined || value === null || value === "" ? fallback : Number(value);
+  };
   let c1 = Number(p?.residential1brCount) || 0;
   let c2 = Number(p?.residential2brCount) || 0;
   let c3 = Number(p?.residential3brCount) || 0;
@@ -363,17 +373,17 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
     if (sellOff > 0) { cOS = Math.round(sellOff * 0.4 / DEF_AREAS.offS); cOM = Math.round(sellOff * 0.4 / DEF_AREAS.offM); cOL = Math.round(sellOff * 0.2 / DEF_AREAS.offL); }
   }
   return [
-    { name: "غرفة وصالة", category: "residential" as const, area: Number(p?.residential1brArea) || DEF_AREAS.res1, price: Number(p?.residential1brPrice) || DEF_PRICES.res1, count: c1 },
-    { name: "غرفتين وصالة", category: "residential" as const, area: Number(p?.residential2brArea) || DEF_AREAS.res2, price: Number(p?.residential2brPrice) || DEF_PRICES.res2, count: c2 },
-    { name: "ثلاث غرف وصالة", category: "residential" as const, area: Number(p?.residential3brArea) || DEF_AREAS.res3, price: Number(p?.residential3brPrice) || DEF_PRICES.res3, count: c3 },
-    { name: "فيلا", category: "residential" as const, area: Number(p?.villaArea) || DEF_AREAS.villa, price: Number(p?.villaPrice) || DEF_PRICES.villa, count: cVilla },
-    { name: "تاون هاوس", category: "residential" as const, area: Number(p?.townhouseArea) || DEF_AREAS.townhouse, price: Number(p?.townhousePrice) || DEF_PRICES.townhouse, count: cTownhouse },
-    { name: "تجزئة / صغير", category: "retail" as const, area: Number(p?.retailSmallArea) || DEF_AREAS.retS, price: Number(p?.retailSmallPrice) || DEF_PRICES.retS, count: cRS },
-    { name: "تجزئة / متوسط", category: "retail" as const, area: Number(p?.retailMediumArea) || DEF_AREAS.retM, price: Number(p?.retailMediumPrice) || DEF_PRICES.retM, count: cRM },
-    { name: "تجزئة / كبير", category: "retail" as const, area: Number(p?.retailLargeArea) || DEF_AREAS.retL, price: Number(p?.retailLargePrice) || DEF_PRICES.retL, count: cRL },
-    { name: "مكاتب / صغير", category: "office" as const, area: Number(p?.officeSmallArea) || DEF_AREAS.offS, price: Number(p?.officeSmallPrice) || DEF_PRICES.offS, count: cOS },
-    { name: "مكاتب / متوسط", category: "office" as const, area: Number(p?.officeMediumArea) || DEF_AREAS.offM, price: Number(p?.officeMediumPrice) || DEF_PRICES.offM, count: cOM },
-    { name: "مكاتب / كبير", category: "office" as const, area: Number(p?.officeLargeArea) || DEF_AREAS.offL, price: Number(p?.officeLargePrice) || DEF_PRICES.offL, count: cOL },
+    { name: "غرفة وصالة", category: "residential" as const, area: valueOrDefault("residential1brArea", DEF_AREAS.res1), price: valueOrDefault("residential1brPrice", DEF_PRICES.res1), count: c1 },
+    { name: "غرفتين وصالة", category: "residential" as const, area: valueOrDefault("residential2brArea", DEF_AREAS.res2), price: valueOrDefault("residential2brPrice", DEF_PRICES.res2), count: c2 },
+    { name: "ثلاث غرف وصالة", category: "residential" as const, area: valueOrDefault("residential3brArea", DEF_AREAS.res3), price: valueOrDefault("residential3brPrice", DEF_PRICES.res3), count: c3 },
+    { name: "فيلا", category: "residential" as const, area: valueOrDefault("villaArea", DEF_AREAS.villa), price: valueOrDefault("villaPrice", DEF_PRICES.villa), count: cVilla },
+    { name: "تاون هاوس", category: "residential" as const, area: valueOrDefault("townhouseArea", DEF_AREAS.townhouse), price: valueOrDefault("townhousePrice", DEF_PRICES.townhouse), count: cTownhouse },
+    { name: "تجزئة / صغير", category: "retail" as const, area: valueOrDefault("retailSmallArea", DEF_AREAS.retS), price: valueOrDefault("retailSmallPrice", DEF_PRICES.retS), count: cRS },
+    { name: "تجزئة / متوسط", category: "retail" as const, area: valueOrDefault("retailMediumArea", DEF_AREAS.retM), price: valueOrDefault("retailMediumPrice", DEF_PRICES.retM), count: cRM },
+    { name: "تجزئة / كبير", category: "retail" as const, area: valueOrDefault("retailLargeArea", DEF_AREAS.retL), price: valueOrDefault("retailLargePrice", DEF_PRICES.retL), count: cRL },
+    { name: "مكاتب / صغير", category: "office" as const, area: valueOrDefault("officeSmallArea", DEF_AREAS.offS), price: valueOrDefault("officeSmallPrice", DEF_PRICES.offS), count: cOS },
+    { name: "مكاتب / متوسط", category: "office" as const, area: valueOrDefault("officeMediumArea", DEF_AREAS.offM), price: valueOrDefault("officeMediumPrice", DEF_PRICES.offM), count: cOM },
+    { name: "مكاتب / كبير", category: "office" as const, area: valueOrDefault("officeLargeArea", DEF_AREAS.offL), price: valueOrDefault("officeLargePrice", DEF_PRICES.offL), count: cOL },
   ];
 }
 

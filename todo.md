@@ -1156,3 +1156,7 @@
 - [ ] Audit every build-for-sale Investor Cash Flow row against approved rules, including the land-department unit-registration label and timing
 - [ ] Verify build-for-sale revenue begins only after completion, records each sale as a full direct investor payment, and contains no escrow receipts or settlements
 - [ ] Add Villa and Townhouse unit types to Financial Studies and link their quantity, area, pricing, sales, revenue, and feasibility calculations
+- [ ] Add Villa and Townhouse as visible editable pricing rows in the build-for-sale Sales page
+- [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
+- [ ] Add regression proof that the zero-value unit update does not change any Off-Plan calculations or rules
+- [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages

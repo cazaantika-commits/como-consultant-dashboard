@@ -67,13 +67,14 @@ export function calculateProjectCosts(
 
   // Get base prices - prefer project-level fields, fall back to cp fields
   const scenarioMultiplier = activeScenario === "optimistic" ? 1.10 : activeScenario === "conservative" ? 0.90 : 1.00;
+  const valueOrFallback = (value: unknown, fallback: number) => value === undefined || value === null || value === "" ? fallback : Number(value);
   const basePrices = {
     studioPrice: (cp?.baseStudioPrice || 0) * scenarioMultiplier,
-    oneBrPrice: (p.residential1brPrice || cp?.base1brPrice || 0) * scenarioMultiplier,
-    twoBrPrice: (p.residential2brPrice || cp?.base2brPrice || 0) * scenarioMultiplier,
-    threeBrPrice: (p.residential3brPrice || cp?.base3brPrice || 0) * scenarioMultiplier,
-    villaPrice: (p.villaPrice || 0) * scenarioMultiplier,
-    townhousePrice: (p.townhousePrice || 0) * scenarioMultiplier,
+    oneBrPrice: valueOrFallback(p.residential1brPrice, cp?.base1brPrice || 0) * scenarioMultiplier,
+    twoBrPrice: valueOrFallback(p.residential2brPrice, cp?.base2brPrice || 0) * scenarioMultiplier,
+    threeBrPrice: valueOrFallback(p.residential3brPrice, cp?.base3brPrice || 0) * scenarioMultiplier,
+    villaPrice: valueOrFallback(p.villaPrice, 0) * scenarioMultiplier,
+    townhousePrice: valueOrFallback(p.townhousePrice, 0) * scenarioMultiplier,
     retailSmallPrice: (p.retailSmallPrice || cp?.baseRetailSmallPrice || 0) * scenarioMultiplier,
     retailMediumPrice: (p.retailMediumPrice || cp?.baseRetailMediumPrice || 0) * scenarioMultiplier,
     retailLargePrice: (p.retailLargePrice || cp?.baseRetailLargePrice || 0) * scenarioMultiplier,
@@ -102,8 +103,8 @@ export function calculateProjectCosts(
 
   const unitData = UNIT_DEFS.map(def => {
     const count = Number(p[def.countKey]) || 0;
-    const area = Number(p[def.areaKey]) || def.defArea;
-    const price = prices[def.priceField] || def.defPrice;
+    const area = valueOrFallback(p[def.areaKey], def.defArea);
+    const price = valueOrFallback(prices[def.priceField], def.defPrice);
     return { ...def, count, area, price, revenue: count * area * price };
   });
 

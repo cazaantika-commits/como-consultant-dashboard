@@ -187,14 +187,14 @@ export default function PricingPage() {
                 className="w-14 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
             <td className="py-[2px] px-2 text-center">
-              <input type="number" min={0} value={areas[ut.key] || ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
+              <input type="number" min={0} value={areas[ut.key] ?? ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
                 className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
             <td className="py-[2px] px-2 text-center">
-              <input type="number" min={0} value={prices[ut.key] || ut.defaultPrice} onChange={e => updatePrice(ut.key, parseInt(e.target.value) || 0)}
+              <input type="number" min={0} value={prices[ut.key] ?? ut.defaultPrice} onChange={e => updatePrice(ut.key, parseInt(e.target.value) || 0)}
                 className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
             </td>
-            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] || ut.defaultArea)) : "—"}</td>
+            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] ?? ut.defaultArea)) : "—"}</td>
             <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
           </tr>
         ))}
