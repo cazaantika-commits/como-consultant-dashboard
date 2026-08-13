@@ -125,3 +125,63 @@ export function clampMarketingDistributionToStart(
     Object.entries(distribution ?? {}).map(([channel, values]) => [channel, (values ?? []).slice(offset)])
   );
 }
+
+export type TimelineActivityWindow = {
+  startMonth: number;
+  endMonth: number;
+  hasSavedActivity: boolean;
+};
+
+/**
+ * Returns the Marketing-page activity window without allowing it to precede the
+ * Settings-derived launch month or extend beyond the project horizon.
+ */
+export function getMarketingTimelineWindow({
+  settingsStartMonth,
+  projectEndMonth,
+  savedStartMonth,
+  savedEndMonth,
+}: {
+  settingsStartMonth: number;
+  projectEndMonth: number;
+  savedStartMonth?: number;
+  savedEndMonth?: number;
+}): TimelineActivityWindow {
+  const hasSavedActivity = Number.isFinite(savedStartMonth) || Number.isFinite(savedEndMonth);
+  const startMonth = Math.min(
+    projectEndMonth,
+    Math.max(settingsStartMonth, Number(savedStartMonth) || settingsStartMonth),
+  );
+  const endMonth = Math.min(
+    projectEndMonth,
+    Math.max(startMonth, Number(savedEndMonth) || projectEndMonth),
+  );
+  return { startMonth, endMonth, hasSavedActivity };
+}
+
+/**
+ * Converts the saved Sales Plan distribution into the true project-month window.
+ * Distribution index zero is the Settings-derived sales-start month.
+ */
+export function getSalesTimelineWindow({
+  settingsStartMonth,
+  projectEndMonth,
+  salesDistribution,
+}: {
+  settingsStartMonth: number;
+  projectEndMonth: number;
+  salesDistribution?: number[];
+}): TimelineActivityWindow {
+  const activeIndexes = (salesDistribution ?? [])
+    .map((amount, index) => ({ amount: Number(amount) || 0, index }))
+    .filter(({ amount }) => amount > 0)
+    .map(({ index }) => index);
+
+  if (activeIndexes.length === 0) {
+    return { startMonth: settingsStartMonth, endMonth: projectEndMonth, hasSavedActivity: false };
+  }
+
+  const startMonth = Math.min(projectEndMonth, Math.max(settingsStartMonth, settingsStartMonth + activeIndexes[0]));
+  const endMonth = Math.min(projectEndMonth, Math.max(startMonth, settingsStartMonth + activeIndexes[activeIndexes.length - 1]));
+  return { startMonth, endMonth, hasSavedActivity: true };
+}

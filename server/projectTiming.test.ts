@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   clampMarketingDistributionToStart,
   getProjectDesignTiming,
+  getMarketingTimelineWindow,
   getProjectMarketingTiming,
+  getSalesTimelineWindow,
 } from "../client/src/lib/projectTiming";
 
 describe("Settings-driven design duration", () => {
@@ -90,6 +92,25 @@ describe("Settings-driven phase offsets and durations", () => {
     expect(timing.reraEndMonth).toBe(3);
     expect(timing.salesStartMonth).toBe(5);
     expect(timing.constructionStartMonth).toBe(6);
+  });
+});
+
+describe("Timeline saved activity windows", () => {
+  it("uses the Marketing page end month without allowing an earlier-than-Settings start", () => {
+    expect(getMarketingTimelineWindow({
+      settingsStartMonth: 6,
+      projectEndMonth: 37,
+      savedStartMonth: 4,
+      savedEndMonth: 21,
+    })).toEqual({ startMonth: 6, endMonth: 21, hasSavedActivity: true });
+  });
+
+  it("derives the Sales bar from the first and last positive saved sale months", () => {
+    expect(getSalesTimelineWindow({
+      settingsStartMonth: 8,
+      projectEndMonth: 37,
+      salesDistribution: [0, 12, 0, 8, 0],
+    })).toEqual({ startMonth: 9, endMonth: 11, hasSavedActivity: true });
   });
 });
 

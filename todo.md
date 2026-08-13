@@ -1136,3 +1136,4 @@
 - [x] Prevent Marketing page allocations and saved distributions before the Settings-defined marketing start month
 - [x] Verify the Marketing page lock and Investor Cash Flow marketing row begin in the same permitted month
 - [x] Verify and align RERA registration-phase expense timing: sorting, developer NOC, and project registration in month 1; unit registration, escrow opening, and escrow deposit in month 2
+- [x] Make Timeline marketing and sales bar extents match the saved active-month windows in the Marketing and Sales pages while preserving Settings-derived earliest start months

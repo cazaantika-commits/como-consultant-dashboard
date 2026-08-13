@@ -29,6 +29,7 @@ import {
   calculatePricingFormulas,
   calculateCosts,
 } from "@/lib/projectData";
+import { getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, Cell,
@@ -231,16 +232,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const roiCosts = totalCosts > 0 ? ((profit / totalCosts) * 100).toFixed(0) : "0";
 
   // ─── Computed: Timeline ───────────────────────────────────────────────────
+  const sharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
   const timeline = useMemo(() => {
-    const designEnd = designMonths;
-    const materialsStart = Math.max(1, designEnd - marketingPrepLead);
-    const salesStart = designEnd - 1;
-    const reraStart = Math.max(1, salesStart - reraLead);
-    const marketingStart = Math.max(1, materialsStart + 1);
-    const constructionStart = designEnd + 1;
-    const projectEnd = constructionStart + constructionMonths - 1;
+    const designEnd = sharedTiming.designMonths;
+    const materialsStart = sharedTiming.materialsStartMonth;
+    const reraStart = sharedTiming.reraStartMonth;
+    const marketingStart = sharedTiming.marketingStartMonth;
+    const salesStart = sharedTiming.salesStartMonth;
+    const constructionStart = sharedTiming.constructionStartMonth;
+    const projectEnd = sharedTiming.projectEndMonth;
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [designMonths, constructionMonths, marketingPrepLead, reraLead]);
+  }, [sharedTiming]);
   const salesMonths = timeline.projectEnd - timeline.salesStart + 1;
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
@@ -269,6 +271,26 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   }, [salesMonths, offPlanUnits, speed, salesMode, manualUnits, curveTemplate]);
   const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
   const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+  const activityWindows = useMemo(() => {
+    const plan = (plansQuery.data?.[0] ?? {}) as any;
+    let absorption: any = {};
+    let results: any = {};
+    try { absorption = JSON.parse(plan.salesAbsorptionJson || "{}"); } catch {}
+    try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
+    return {
+      marketing: getMarketingTimelineWindow({
+        settingsStartMonth: timeline.marketingStart,
+        projectEndMonth: timeline.projectEnd,
+        savedStartMonth: absorption.marketingActualStart,
+        savedEndMonth: absorption.marketingActualEnd,
+      }),
+      sales: getSalesTimelineWindow({
+        settingsStartMonth: timeline.salesStart,
+        projectEndMonth: timeline.projectEnd,
+        salesDistribution: results.salesDistribution ?? salesDistribution,
+      }),
+    };
+  }, [plansQuery.data, salesDistribution, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
 
   // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
   const escrowInitial = constructionCost * 0.2;
@@ -367,15 +389,20 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const handleSavePlan = useCallback(async () => {
     if (!selectedProjectId) return;
     try {
+      let existingAbsorption: any = {};
+      const existingPlan = plansQuery.data?.[0] as any;
+      if (existingPlan?.salesAbsorptionJson) {
+        try { existingAbsorption = JSON.parse(existingPlan.salesAbsorptionJson); } catch {}
+      }
       const savedPlan = await savePlan.mutateAsync({
         id: planId,
         projectId: selectedProjectId,
         totalRevenue,
-        designMonths,
+        designMonths: timeline.designEnd,
         constructionMonths,
         offplanPct: offPlan,
         salesCommissionPct: String(commissionPct),
-        salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
+        salesAbsorptionJson: JSON.stringify({ ...existingAbsorption, mode: salesMode, speed, template: curveTemplate, manual: manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
         paymentPlanJson: JSON.stringify({ downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
         resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2 }),
       });
@@ -384,17 +411,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       setHasPlanChanges(false);
       await plansQuery.refetch();
 
-      // Store shared timeline settings only after the Sales Plan itself succeeds.
-      await updateProject.mutateAsync({
-        id: selectedProjectId,
-        marketingPrepMonths: marketingPrepLead,
-        reraLeadMonths: reraLead,
-      });
     } catch {
       // The mutations display the exact failure message. Keep the page marked as changed.
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, totalRevenue, designMonths, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, marketingPrepLead, reraLead, actualCashInflow, savePlan, updateProject]);
+  }, [selectedProjectId, planId, totalRevenue, timeline.designEnd, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, actualCashInflow, savePlan, plansQuery]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -661,7 +682,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">تصاميم:</span>
-                      <span className="text-[10px] font-bold text-blue-700">{designMonths} شهر</span>
+                      <span className="text-[10px] font-bold text-blue-700">{timeline.designEnd} شهر</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className="text-[10px] text-gray-500">إنشاء:</span>
@@ -674,8 +695,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
                     {Array.from({ length: timeline.projectEnd }, (_, i) => {
-                      const isDesign = i < designMonths;
-                      const displayNum = isDesign ? i + 1 : i - designMonths + 1;
+                      const isDesign = i < timeline.designEnd;
+                      const displayNum = isDesign ? i + 1 : i - timeline.designEnd + 1;
                       // Calculate actual month name from startDate
                       const MONTH_NAMES_AR = ["ينا", "فبر", "مار", "أبر", "ماي", "يون", "يول", "أغس", "سبت", "أكت", "نوف", "ديس"];
                       let monthLabel = "";
@@ -701,10 +722,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   {PROJECT_PHASES.map((phase) => {
                     let start = 0, end = 0;
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
-                    else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + marketingPrepLead - 1; }
-                    else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + reraLead - 1; }
-                    else if (phase.id === "marketing") { start = timeline.marketingStart; end = timeline.projectEnd; }
-                    else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
+                    else if (phase.id === "materials") { start = timeline.materialsStart; end = sharedTiming.materialsEndMonth; }
+                    else if (phase.id === "rera") { start = timeline.reraStart; end = sharedTiming.reraEndMonth; }
+                    else if (phase.id === "marketing") { start = activityWindows.marketing.startMonth; end = activityWindows.marketing.endMonth; }
+                    else if (phase.id === "sales") { start = activityWindows.sales.startMonth; end = activityWindows.sales.endMonth; }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
                     const total = timeline.projectEnd;
                     const rightPct = ((start - 1) / total) * 100;
@@ -726,9 +747,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 flex-wrap text-[10px] text-gray-500">
-                  <span>نقطة الانطلاق (اكتمال المخططات التخطيطية): <strong className="text-gray-800">شهر {designMonths - marketingPrepLead}</strong></span>
-                  <span>مدة تحضير المواد: <strong className="text-gray-800">{marketingPrepLead} شهر</strong></span>
-                  <span>مدة ريرا: <strong className="text-gray-800">{reraLead} شهر</strong></span>
+                  <span>نقطة الانطلاق (اكتمال المخططات التخطيطية): <strong className="text-gray-800">شهر {sharedTiming.schematicCompletionMonth}</strong></span>
+                  <span>مدة تحضير المواد: <strong className="text-gray-800">{sharedTiming.marketingPrepMonths} شهر</strong></span>
+                  <span>مدة ريرا: <strong className="text-gray-800">{sharedTiming.reraApprovalMonths} شهر</strong></span>
+                  <Badge className="text-[8px] bg-pink-100 text-pink-700">التسويق: {activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                  <Badge className="text-[8px] bg-emerald-100 text-emerald-700">المبيعات: {activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                 </div>
               </div>
             </section>
@@ -745,7 +768,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               </div>
               <div className="p-2 overflow-x-auto">
                 {(() => {
-                  const escrowStartMonth = timeline.reraStart + 1;
+                  const escrowStartMonth = timeline.salesStart;
                   const escrowEndMonth = timeline.projectEnd;
                   const escrowMonthCount = escrowEndMonth - escrowStartMonth + 1;
                   const colWidth = `minmax(42px, 1fr)`;

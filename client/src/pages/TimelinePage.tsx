@@ -7,7 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_DESIGN_PAYMENT_STAGES, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
+import { DEFAULT_DESIGN_PAYMENT_STAGES, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   Calendar, Palette, Rocket, FileCheck, Megaphone, Target, HardHat,
   Save, Loader2, Building2,
@@ -30,7 +30,6 @@ const PROJECT_PHASES = [
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
-  const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
 
   // ─── DB Queries ─────────────────────────────────────────────────────────────
@@ -41,10 +40,6 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
-  const savePlan = trpc.waelSalesPlan.save.useMutation({
-    onSuccess: () => { plansQuery.refetch(); toast({ title: "تم حفظ الجدول الزمني ✓" }); },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
-  });
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); },
   });
@@ -113,6 +108,27 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     constructionStart: sharedTiming.constructionStartMonth,
     projectEnd: sharedTiming.projectEndMonth,
   }), [sharedTiming]);
+  const activityWindows = useMemo(() => {
+    const plan = (plansQuery.data?.[0] ?? {}) as any;
+    let absorption: any = {};
+    let results: any = {};
+    try { absorption = JSON.parse(plan.salesAbsorptionJson || "{}"); } catch {}
+    try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
+
+    return {
+      marketing: getMarketingTimelineWindow({
+        settingsStartMonth: timeline.marketingStart,
+        projectEndMonth: timeline.projectEnd,
+        savedStartMonth: absorption.marketingActualStart,
+        savedEndMonth: absorption.marketingActualEnd,
+      }),
+      sales: getSalesTimelineWindow({
+        settingsStartMonth: timeline.salesStart,
+        projectEndMonth: timeline.projectEnd,
+        salesDistribution: results.salesDistribution ?? (absorption.mode === "manual" ? absorption.manual : undefined),
+      }),
+    };
+  }, [plansQuery.data, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
 
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -208,8 +224,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
                     else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + marketingPrepLead - 1; }
                     else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + reraLead - 1; }
-                    else if (phase.id === "marketing") { start = timeline.marketingStart; end = timeline.projectEnd; }
-                    else if (phase.id === "sales") { start = timeline.salesStart; end = timeline.projectEnd; }
+                    else if (phase.id === "marketing") { start = activityWindows.marketing.startMonth; end = activityWindows.marketing.endMonth; }
+                    else if (phase.id === "sales") { start = activityWindows.sales.startMonth; end = activityWindows.sales.endMonth; }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
                     const total = timeline.projectEnd;
                     const rightPct = ((start - 1) / total) * 100;
@@ -244,6 +260,14 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نقطة الانطلاق (اكتمال المخططات التخطيطية):</span>
                     <Badge className="text-[9px] bg-blue-100 text-blue-700">شهر {schematicCompletionMonth}</Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5 mr-4">
+                    <span className="text-[10px] text-gray-500">نطاق التسويق:</span>
+                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5 mr-4">
+                    <span className="text-[10px] text-gray-500">نطاق البيع:</span>
+                    <Badge className="text-[9px] bg-emerald-100 text-emerald-700">{activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                   </div>
                 </div>
               </div>
