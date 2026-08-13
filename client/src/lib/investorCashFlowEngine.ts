@@ -22,6 +22,7 @@ import {
   calculateCommunityFeeSchedule,
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
+import { getProjectMarketingTiming } from "@/lib/projectTiming";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -294,8 +295,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const { totalRevenue, totalUnits } = pricingFormulas;
   const designDuration = i.designDuration;
   const constructionDuration = i.constructionDuration;
-  const marketingPrepMonths = Number(projectData?.marketingPrepMonths) || 2;
-  const reraLeadMonths = Number(projectData?.reraLeadMonths) || 2;
+  const phaseTiming = getProjectMarketingTiming(projectData);
+  const reraStartInDesign = Math.min(designDuration - 1, Math.max(0, phaseTiming.reraStartMonth - 1));
+  const reraPaymentInDesign = Math.min(designDuration - 1, Math.max(0, phaseTiming.reraPaymentMonth - 1));
   const penultimateDesign = designDuration - 2;
   const penultimateConstruction = constructionDuration - 2;
 
@@ -462,7 +464,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   // ─── رسوم المساح DWG (مستثمر — شهر 1 من مرحلة تسجيل المشروع) ───
   const surveyorDwgDesign = emptyDesign();
-  const surveyorDwgMonth = Math.max(0, designDuration - reraLeadMonths);
+  const surveyorDwgMonth = reraStartInDesign;
   surveyorDwgDesign[surveyorDwgMonth] = i.surveyorDwgFee;
   rows.push({
     label: "رسوم المساح (DWG)",
@@ -589,11 +591,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     const sortingDesign = emptyDesign();
     const sortingConstruction = emptyConstruction();
     // Sorting happens at same time as RERA registration
-    const sortingMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
+    const sortingMonthInDesign = reraPaymentInDesign;
     if (isScenario3 || isScenario4) {
       sortingConstruction[penultimateConstruction] = costs.sortingFee;
     } else if (isScenario2) {
-      sortingConstruction[reraLeadMonths] = costs.sortingFee;
+      sortingConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = costs.sortingFee;
     } else {
       sortingDesign[sortingMonthInDesign] = costs.sortingFee;
     }
@@ -616,11 +618,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     const nocDesign = emptyDesign();
     const nocConstruction = emptyConstruction();
     // NOC happens at same time as RERA registration
-    const nocMonthInDesign = Math.max(0, designDuration - reraLeadMonths);
+    const nocMonthInDesign = reraPaymentInDesign;
     if (isScenario3 || isScenario4) {
       nocConstruction[penultimateConstruction] = i.nocSale;
     } else if (isScenario2) {
-      nocConstruction[reraLeadMonths] = i.nocSale;
+      nocConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.nocSale;
     } else {
       nocDesign[nocMonthInDesign] = i.nocSale;
     }
@@ -642,10 +644,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const reraRegDesign = emptyDesign();
     const reraRegConstruction = emptyConstruction();
-    // RERA registration happens at month 2 of RERA phase = (designDuration - reraLeadMonths + 1)
-    const reraMonthInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    // RERA registration is paid in the final month of the saved RERA phase.
+    const reraMonthInDesign = reraPaymentInDesign;
     if (isScenario2) {
-      reraRegConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = i.reraProjectReg;
+      reraRegConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.reraProjectReg;
     } else {
       reraRegDesign[reraMonthInDesign] = i.reraProjectReg;
     }
@@ -667,12 +669,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const reraUnitsDesign = emptyDesign();
     const reraUnitsConstruction = emptyConstruction();
-    // RERA unit registration at month 2 of RERA phase = (designDuration - reraLeadMonths + 1)
-    const reraMonthInDesign2 = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    // RERA unit registration is paid in the final month of the saved RERA phase.
+    const reraMonthInDesign2 = reraPaymentInDesign;
     if (isScenario3 || isScenario4) {
       reraUnitsConstruction[penultimateConstruction] = costs.reraUnits;
     } else if (isScenario2) {
-      reraUnitsConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = costs.reraUnits;
+      reraUnitsConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = costs.reraUnits;
     } else {
       reraUnitsDesign[reraMonthInDesign2] = costs.reraUnits;
     }
@@ -694,10 +696,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const escrowFeeDesign = emptyDesign();
     const escrowFeeConstruction = emptyConstruction();
-    // Escrow account opens at month 2 of RERA phase (same as RERA registration)
-    const escrowMonthInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    // Escrow account opens in the final month of the saved RERA phase.
+    const escrowMonthInDesign = reraPaymentInDesign;
     if (isScenario2) {
-      escrowFeeConstruction[Math.min(reraLeadMonths + 1, constructionDuration - 1)] = i.escrowAccountFee;
+      escrowFeeConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.escrowAccountFee;
     } else {
       escrowFeeDesign[escrowMonthInDesign] = i.escrowAccountFee;
     }
@@ -719,8 +721,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4) {
     const bankDesign = emptyDesign();
     const bankConstruction = emptyConstruction();
-    // Bank fees distributed from month 2 of RERA phase until end of construction
-    const bankStartInDesign = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    // Bank fees start in the final month of the saved RERA phase until construction completes.
+    const bankStartInDesign = reraPaymentInDesign;
     const remainingDesignMonths = designDuration - bankStartInDesign;
     const totalBankMonths = remainingDesignMonths + constructionDuration;
     const bankPerMonth = i.bankFees / totalBankMonths;
@@ -909,19 +911,18 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         }
       }
     } else {
-      // Fallback: use costs.marketing distributed equally over 12 months starting from marketingPrepMonths before construction
+      // Fallback: distribute after the Settings-defined marketing launch month.
       marketingTotal = costs.marketing;
       if (marketingTotal > 0) {
         const marketingPerMonth = marketingTotal / 12;
-        let placed = 0;
-        const marketingStartInDesign = Math.max(0, designDuration - marketingPrepMonths);
-        for (let idx = marketingStartInDesign; idx < designDuration && placed < 12; idx++) {
-          marketingDesign[idx] = marketingPerMonth;
-          placed++;
-        }
-        for (let idx = 0; idx < constructionDuration && placed < 12; idx++) {
-          marketingConstruction[idx] = marketingPerMonth;
-          placed++;
+        const startIndex = Math.max(0, phaseTiming.marketingStartMonth - 1);
+        for (let offset = 0; offset < 12; offset++) {
+          const projectMonthIndex = startIndex + offset;
+          if (projectMonthIndex < designDuration) {
+            marketingDesign[projectMonthIndex] = marketingPerMonth;
+          } else if (projectMonthIndex - designDuration < constructionDuration) {
+            marketingConstruction[projectMonthIndex - designDuration] = marketingPerMonth;
+          }
         }
       }
     }
@@ -1002,8 +1003,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     const depositConst = emptyConstruction();
     const depositPost = emptyPost();
     const escrowDepositAmount = constructionCost * r.escrowDeposit;
-    // Escrow deposit happens at month 2 of RERA phase (same as RERA registration and escrow account opening)
-    const escrowDepositMonth = Math.min(designDuration - 1, Math.max(0, designDuration - reraLeadMonths + 1));
+    // Escrow deposit occurs in the final month of the saved RERA approval phase.
+    const escrowDepositMonth = reraPaymentInDesign;
     depositDesign[escrowDepositMonth] = escrowDepositAmount;
     rows.push({
       label: "إيداع حساب الضمان (20%)",

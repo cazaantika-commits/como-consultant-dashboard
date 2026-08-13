@@ -57,3 +57,76 @@ describe("Settings-driven marketing start", () => {
       .toEqual({ digital: [300, 400] });
   });
 });
+
+describe("Settings-driven phase offsets and durations", () => {
+  it("uses saved phase timing instead of legacy General Inputs timing fields", () => {
+    const project = {
+      constructionMonths: 18,
+      marketingPrepMonths: 9,
+      reraLeadMonths: 9,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          designPayments: {
+            mobilization: { durationWeeks: 1 }, concept: { durationWeeks: 1 }, schematic: { durationWeeks: 2 },
+            dd: { durationWeeks: 4 }, authorities: { durationWeeks: 4 }, tender: { durationWeeks: 4 }, ifc: { durationWeeks: 4 },
+          },
+          projectPhases: {
+            marketingPrep: { durationMonths: 3, startOffsetMonths: 0 },
+            reraApprovals: { durationMonths: 1, startOffsetMonths: 1 },
+            marketingLaunch: { durationMonths: 0, startOffsetMonths: 0 },
+            salesStart: { durationMonths: 0, startOffsetMonths: 1 },
+            construction: { durationMonths: 0, startOffsetMonths: 1 },
+          },
+        },
+      }),
+    };
+
+    const timing = getProjectMarketingTiming(project);
+    expect(timing.designMonths).toBe(5);
+    expect(timing.materialsStartMonth).toBe(2);
+    expect(timing.materialsEndMonth).toBe(4);
+    expect(timing.marketingStartMonth).toBe(5);
+    expect(timing.reraStartMonth).toBe(3);
+    expect(timing.reraEndMonth).toBe(3);
+    expect(timing.salesStartMonth).toBe(5);
+    expect(timing.constructionStartMonth).toBe(6);
+  });
+});
+
+describe("Project-relative phase dependencies", () => {
+  function projectWithWeeks(weeks: number[]) {
+    const ids = ["mobilization", "concept", "schematic", "dd", "authorities", "tender", "ifc"];
+    return {
+      constructionMonths: 18,
+      marketingPrepMonths: 2,
+      reraLeadMonths: 2,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          designPayments: Object.fromEntries(ids.map((id, index) => [id, { durationWeeks: weeks[index] }])),
+        },
+      }),
+    };
+  }
+
+  it("calculates dependencies from a five-month design schedule without fixed project months", () => {
+    const timing = getProjectMarketingTiming(projectWithWeeks([1, 1, 2, 4, 4, 4, 4]));
+    expect(timing.designMonths).toBe(5);
+    expect(timing.schematicCompletionMonth).toBe(1);
+    expect(timing.materialsStartMonth).toBe(2);
+    expect(timing.marketingStartMonth).toBe(4);
+    expect(timing.reraStartMonth).toBe(3);
+    expect(timing.salesStartMonth).toBe(6);
+    expect(timing.constructionStartMonth).toBe(6);
+  });
+
+  it("calculates different phase months from a longer design schedule using the same rules", () => {
+    const timing = getProjectMarketingTiming(projectWithWeeks([1, 2, 3, 4, 4, 4, 4]));
+    expect(timing.designMonths).toBe(6);
+    expect(timing.schematicCompletionMonth).toBe(2);
+    expect(timing.materialsStartMonth).toBe(3);
+    expect(timing.marketingStartMonth).toBe(5);
+    expect(timing.reraStartMonth).toBe(4);
+    expect(timing.salesStartMonth).toBe(7);
+    expect(timing.constructionStartMonth).toBe(7);
+  });
+});

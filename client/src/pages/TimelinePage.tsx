@@ -7,7 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_DESIGN_PAYMENT_STAGES, getProjectDesignTiming } from "@/lib/projectTiming";
+import { DEFAULT_DESIGN_PAYMENT_STAGES, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
 import {
   Calendar, Palette, Rocket, FileCheck, Megaphone, Target, HardHat,
   Save, Loader2, Building2,
@@ -50,10 +50,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   });
 
   // ─── State ─────────────────────────────────────────────────────────────────
-  const [planId, setPlanId] = useState<number | undefined>(undefined);
   const [constructionMonths, setConstructionMonths] = useState(30);
-  const [marketingPrepLead, setMarketingPrepLead] = useState(2);
-  const [reraLead, setReraLead] = useState(2);
   const [projectStartDate, setProjectStartDate] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [designPayments, setDesignPayments] = useState(DEFAULT_DESIGN_PAYMENT_STAGES);
@@ -63,8 +60,6 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     if (projectQuery.data) {
       const p = projectQuery.data as any;
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
-      if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
-      if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
       if (p.startDate) setProjectStartDate(String(p.startDate));
       // Load design payments from constructionScheduleJson
       if (p.constructionScheduleJson) {
@@ -85,11 +80,10 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   useEffect(() => {
     if (plansQuery.data && plansQuery.data.length > 0) {
       const plan = plansQuery.data[0] as any;
-      setPlanId(plan.id);
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
-          // marketingPrepLead and reraLead now come from project settings (not salesAbsorptionJson)
+          // Relative phase rules are read from Settings and Rules.
         } catch {}
       }
       setHasChanges(false);
@@ -107,48 +101,29 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     return Math.ceil(totalWeeks / 4.33);
   }, [designPayments]);
 
-  const timeline = useMemo(() => {
-    const designEnd = totalDesignMonths;
-    const materialsStart = schematicCompletionMonth + 1;
-    const reraStart = schematicCompletionMonth + 2;
-    const marketingStart = materialsStart + marketingPrepLead;
-    const salesStart = reraStart + reraLead + 1;
-    const constructionStart = designEnd + 1;
-    const projectEnd = constructionStart + constructionMonths - 1;
-    return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [totalDesignMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
+  const sharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
+  const marketingPrepLead = sharedTiming.marketingPrepMonths;
+  const reraLead = sharedTiming.reraApprovalMonths;
+  const timeline = useMemo(() => ({
+    designEnd: sharedTiming.designMonths,
+    materialsStart: sharedTiming.materialsStartMonth,
+    reraStart: sharedTiming.reraStartMonth,
+    marketingStart: sharedTiming.marketingStartMonth,
+    salesStart: sharedTiming.salesStartMonth,
+    constructionStart: sharedTiming.constructionStartMonth,
+    projectEnd: sharedTiming.projectEndMonth,
+  }), [sharedTiming]);
 
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
     if (!selectedProjectId) return;
-    // Preserve existing salesAbsorptionJson and update timeline fields
-    let existingAbsorption: any = {};
-    if (plansQuery.data && plansQuery.data.length > 0) {
-      const plan = plansQuery.data[0] as any;
-      if (plan.salesAbsorptionJson) {
-        try { existingAbsorption = JSON.parse(plan.salesAbsorptionJson); } catch {}
-      }
-    }
-    const updatedAbsorption = {
-      ...existingAbsorption,
-      marketingPrepLead,
-      reraLead,
-    };
-    savePlan.mutate({
-      id: planId,
-      projectId: selectedProjectId,
-      constructionMonths,
-      salesAbsorptionJson: JSON.stringify(updatedAbsorption),
-    });
-    // Also save to projects table so all pages see the updated values
+    // Construction duration remains a General Inputs value; all other timing rules come from Settings.
     updateProject.mutate({
       id: selectedProjectId,
       constructionMonths,
-      marketingPrepMonths: marketingPrepLead,
-      reraLeadMonths: reraLead,
     });
     setHasChanges(false);
-  }, [selectedProjectId, planId, constructionMonths, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
+  }, [selectedProjectId, constructionMonths, updateProject]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -165,8 +140,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
           <div className="flex items-center gap-2">
             <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />
             {hasChanges && (
-              <Button size="sm" onClick={handleSave} disabled={savePlan.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
-                {savePlan.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              <Button size="sm" onClick={handleSave} disabled={updateProject.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
+                {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 حفظ
               </Button>
             )}

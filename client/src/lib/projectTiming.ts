@@ -35,6 +35,33 @@ function readSavedStages(project: any): DesignPaymentStage[] {
   });
 }
 
+type SavedPhaseTiming = {
+  durationMonths?: number;
+  startOffsetMonths?: number;
+};
+
+const DEFAULT_PHASE_TIMING: Record<string, Required<SavedPhaseTiming>> = {
+  marketingPrep: { durationMonths: 2, startOffsetMonths: 0 },
+  reraApprovals: { durationMonths: 2, startOffsetMonths: 1 },
+  marketingLaunch: { durationMonths: 0, startOffsetMonths: 0 },
+  salesStart: { durationMonths: 0, startOffsetMonths: 1 },
+  construction: { durationMonths: 0, startOffsetMonths: 1 },
+};
+
+function readSavedPhaseTiming(project: any, phaseId: string): Required<SavedPhaseTiming> {
+  let saved: SavedPhaseTiming | undefined;
+  try {
+    saved = JSON.parse(project?.constructionScheduleJson || "{}")?.settings?.projectPhases?.[phaseId];
+  } catch {
+    saved = undefined;
+  }
+  const fallback = DEFAULT_PHASE_TIMING[phaseId];
+  return {
+    durationMonths: Math.max(0, Number(saved?.durationMonths ?? fallback.durationMonths)),
+    startOffsetMonths: Math.max(0, Number(saved?.startOffsetMonths ?? fallback.startOffsetMonths)),
+  };
+}
+
 /**
  * Returns the design schedule saved in Settings and Rules. Design duration is
  * deliberately derived here rather than read from the legacy preConMonths field.
@@ -51,29 +78,36 @@ export function getProjectDesignTiming(project: any) {
 }
 
 /**
- * Returns the approved project timing rules that constrain Marketing-page
- * allocations. Marketing starts immediately after the marketing-material
- * preparation period, which starts one month after schematic completion.
+ * Returns all project-relative timing rules from the saved Settings and Rules
+ * phases. General Inputs supplies only the project start date and construction duration.
  */
 export function getProjectMarketingTiming(project: any) {
   const designTiming = getProjectDesignTiming(project);
-  const marketingPrepMonths = Math.max(1, Number(project?.marketingPrepMonths ?? 2));
-  const reraLeadMonths = Math.max(1, Number(project?.reraLeadMonths ?? 2));
+  const marketingPrep = readSavedPhaseTiming(project, "marketingPrep");
+  const reraApprovals = readSavedPhaseTiming(project, "reraApprovals");
+  const marketingLaunch = readSavedPhaseTiming(project, "marketingLaunch");
+  const salesStart = readSavedPhaseTiming(project, "salesStart");
+  const construction = readSavedPhaseTiming(project, "construction");
   const constructionMonths = Math.max(1, Number(project?.constructionMonths ?? 30));
-  const materialsStartMonth = designTiming.schematicCompletionMonth + 1;
-  const marketingStartMonth = materialsStartMonth + marketingPrepMonths;
-  const reraStartMonth = designTiming.schematicCompletionMonth + 2;
-  const salesStartMonth = reraStartMonth + reraLeadMonths + 1;
-  const constructionStartMonth = designTiming.designMonths + 1;
+  const materialsStartMonth = designTiming.schematicCompletionMonth + 1 + marketingPrep.startOffsetMonths;
+  const materialsEndMonth = materialsStartMonth + marketingPrep.durationMonths - 1;
+  const marketingStartMonth = materialsEndMonth + 1 + marketingLaunch.startOffsetMonths;
+  const reraStartMonth = designTiming.schematicCompletionMonth + 1 + reraApprovals.startOffsetMonths;
+  const reraEndMonth = reraStartMonth + reraApprovals.durationMonths - 1;
+  const salesStartMonth = reraEndMonth + 1 + salesStart.startOffsetMonths;
+  const constructionStartMonth = designTiming.designMonths + construction.startOffsetMonths;
   const projectEndMonth = constructionStartMonth + constructionMonths - 1;
 
   return {
     ...designTiming,
-    marketingPrepMonths,
-    reraLeadMonths,
+    marketingPrepMonths: marketingPrep.durationMonths,
+    reraApprovalMonths: reraApprovals.durationMonths,
+    reraPaymentMonth: reraEndMonth,
     materialsStartMonth,
+    materialsEndMonth,
     marketingStartMonth,
     reraStartMonth,
+    reraEndMonth,
     salesStartMonth,
     constructionStartMonth,
     projectEndMonth,
