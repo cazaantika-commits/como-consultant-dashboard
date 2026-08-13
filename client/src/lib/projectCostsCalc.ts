@@ -4,6 +4,10 @@
  * from بطاقة المشروع + دراسة الجدوى data.
  */
 import type { ProjectCosts } from "@/lib/cashFlowEngine";
+import {
+  calculateCommunityFeeSchedule,
+  getProjectCommunityFeeSettings,
+} from "@/lib/communityFee";
 
 /**
  * Calculate all project costs from raw data.
@@ -36,7 +40,6 @@ export function calculateProjectCosts(
   const developerNocFee = parseFloat(p.developerNocFee || "0");
   const escrowAccountFee = parseFloat(p.escrowAccountFee || "0");
   const bankFees = parseFloat(p.bankFees || "0");
-  const communityFees = parseFloat(p.communityFees || "0");
 
   const reraAuditReportFee = parseFloat(p.reraAuditReportFee || "0");
   const reraInspectionReportFee = parseFloat(p.reraInspectionReportFee || "0");
@@ -132,7 +135,12 @@ export function calculateProjectCosts(
   // رسوم ريرا المحسوبة (الصيغ الجديدة)
   const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
   const computedReraUnitRegFee = totalUnits > 0 ? totalUnits * 800 : reraUnitRegFee;
-  const computedCommunityFees = totalGfaSqft > 0 ? totalGfaSqft * (communityFees > 0 && totalGfaSqft > 0 ? communityFees / totalGfaSqft : 1) : communityFees;
+  const communitySchedule = calculateCommunityFeeSchedule(
+    totalGfaSqft,
+    parseInt(p.preConMonths || "6") + parseInt(p.constructionMonths || "16"),
+    getProjectCommunityFeeSettings(p),
+  );
+  const computedCommunityFees = communitySchedule.total;
   const constructionMonths = parseInt(p.constructionMonths || "16");
   const inspectionVisits = Math.floor(constructionMonths / 3) + 1;
   const computedReraInspectionFee = inspectionVisits * 15000;

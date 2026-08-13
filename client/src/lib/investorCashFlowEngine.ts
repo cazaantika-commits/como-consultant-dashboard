@@ -18,6 +18,10 @@ import {
   type ProjectInputs,
   type ProjectRates,
 } from "@/lib/projectData";
+import {
+  calculateCommunityFeeSchedule,
+  getProjectCommunityFeeSettings,
+} from "@/lib/communityFee";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -272,7 +276,12 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
  * @returns CashFlowResult with all rows, totals, and monthly distributions
  */
 export function computeInvestorCashFlow(projectData: any, scenario: Scenario, timingRules?: TimingRules, salesResult?: SalesResult): CashFlowResult {
-  const tr = timingRules || DEFAULT_TIMING_RULES;
+  const communityFeeSettings = getProjectCommunityFeeSettings(projectData);
+  const tr = timingRules || {
+    ...DEFAULT_TIMING_RULES,
+    communityFeePerSqft: communityFeeSettings.ratePerSqft,
+    communityFeeFrequency: communityFeeSettings.frequencyMonths,
+  };
   const i: ProjectInputs = projectData ? dbProjectToInputs(projectData) : PROJECT_INPUTS;
   const r: ProjectRates = projectData ? dbProjectToRates(projectData) : RATES;
   const projectFormulas = calculateProjectFormulas(i, r);
@@ -483,21 +492,26 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المجتمع (كل 6 أشهر من بدء التصاميم حتى الإنجاز) — GFA × المعدل لكل دفعة ───
-  const communityFeePerPayment = (gfaTotal || 0) * tr.communityFeePerSqft;
+  // ─── رسوم المجتمع (من إعدادات المشروع) ───
   const communityTotalMonths = designDuration + constructionDuration;
-  const communityPaymentMonths: number[] = [];
-  for (let m = 0; m < communityTotalMonths; m += tr.communityFeeFrequency) {
-    communityPaymentMonths.push(m);
-  }
-  const communityTotal = communityFeePerPayment * communityPaymentMonths.length;
+  const communitySchedule = calculateCommunityFeeSchedule(
+    gfaTotal || 0,
+    communityTotalMonths,
+    {
+      ratePerSqft: tr.communityFeePerSqft,
+      frequencyMonths: tr.communityFeeFrequency,
+    },
+  );
+  const communityTotal = communitySchedule.total;
   const communityDesign = new Array(designDuration).fill(0);
   const communityConstruction = new Array(constructionDuration).fill(0);
-  for (const m of communityPaymentMonths) {
+  for (let m = 0; m < communitySchedule.monthlyAmounts.length; m++) {
+    const amount = communitySchedule.monthlyAmounts[m];
+    if (!amount) continue;
     if (m < designDuration) {
-      communityDesign[m] = communityFeePerPayment;
+      communityDesign[m] = amount;
     } else {
-      communityConstruction[m - designDuration] = communityFeePerPayment;
+      communityConstruction[m - designDuration] = amount;
     }
   }
   rows.push({

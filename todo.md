@@ -1118,3 +1118,9 @@
 - [x] Make Investor Cash Flow use each project’s saved direct-sale schedule and verify it in the browser
 - [x] Calculate pre-completion sales-commission timing from the saved Sales Plan payment schedule when actual buyer receipts for each unit reach 20% of that unit’s price
 - [x] Verify in the browser that each commission payment occurs in the month when the buyer’s saved installments reach the 20% trigger
+- [x] Verify that Investor Cash Flow monthly marketing expenses use the saved Marketing page distribution; marketing is intentionally investor-funded and excluded from Escrow Cash Flow
+- [x] Verify community-fee amount, semiannual timing, and funding source against the saved project settings and cash-flow reports; audit found settings are not yet passed to the cash-flow engine
+- [x] Pass each project’s saved community-fee rate and frequency from Settings and Rules into Investor Cash Flow
+- [x] Populate only the Community Fees field in Feasibility Study from the aggregate of the distributed Community Fees cash-flow row
+- [ ] Deferred by user: Make Feasibility Study total project cost equal the aggregate of the same distributed monthly cash-flow cost rows
+- [ ] Deferred by user: Verify Feasibility Study total, Investor Cash Flow total expenses, and distributed monthly total reconcile exactly for one project
