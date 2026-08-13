@@ -1130,3 +1130,6 @@
 - [x] Resolve the Majan design-duration source conflict: Settings design stages total 7 months while General Inputs and cash flow use 8 months
 - [x] Make Settings design-stage weeks the sole source of design duration and remove the duplicate General Inputs design-duration control
 - [x] Verify Settings-derived design duration is used consistently in Investor Cash Flow, Escrow Cash Flow, Feasibility, and the timeline
+- [ ] Validate every timing business rule with the user before auditing its reflected cash-flow dates
+- [x] Prevent Marketing page allocations and saved distributions before the Settings-defined marketing start month
+- [x] Verify the Marketing page lock and Investor Cash Flow marketing row begin in the same permitted month

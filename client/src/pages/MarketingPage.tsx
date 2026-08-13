@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import {
   Megaphone, Save, Loader2, Building2, Percent, RefreshCw,
 } from "lucide-react";
+import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -61,25 +62,18 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   const [marketingActualEnd, setMarketingActualEnd] = useState(38);
   const [marketingDistribution, setMarketingDistribution] = useState<Record<string, number[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
-  const [designMonths, setDesignMonths] = useState(8);
-  const [constructionMonths, setConstructionMonths] = useState(30);
-  const [marketingPrepLead, setMarketingPrepLead] = useState(2);
-  const [reraLead, setReraLead] = useState(2);
   const [projectStartDate, setProjectStartDate] = useState("");
 
   // ─── Load from DB ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
-      if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
-      if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
       if (p.marketingPct) setMarketingPct(Number(p.marketingPct));
       if (p.startDate) setProjectStartDate(String(p.startDate));
-      if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
-      if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
-
     }
   }, [projectQuery.data]);
+
+  const timeline = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
 
   useEffect(() => {
     if (plansQuery.data && plansQuery.data.length > 0) {
@@ -91,10 +85,16 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
-          // marketingPrepLead and reraLead now come from project settings (not salesAbsorptionJson)
-          if (parsed.marketingActualStart) setMarketingActualStart(parsed.marketingActualStart);
-          if (parsed.marketingActualEnd) setMarketingActualEnd(parsed.marketingActualEnd);
-          if (parsed.marketingDistribution) setMarketingDistribution(parsed.marketingDistribution);
+          const savedStart = Number(parsed.marketingActualStart ?? timeline.marketingStartMonth);
+          const validStart = Math.max(savedStart, timeline.marketingStartMonth);
+          const savedEnd = Number(parsed.marketingActualEnd ?? timeline.projectEndMonth);
+          setMarketingActualStart(validStart);
+          setMarketingActualEnd(Math.max(validStart, Math.min(savedEnd, timeline.projectEndMonth)));
+          if (parsed.marketingDistribution) {
+            setMarketingDistribution(
+              clampMarketingDistributionToStart(parsed.marketingDistribution, savedStart, timeline.marketingStartMonth)
+            );
+          }
         } catch {}
       }
       setHasChanges(false);
@@ -122,46 +122,13 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
   const marketingCost = totalRevenue * (marketingPct / 100);
 
 
-  // Timeline computation (same as V2WaelSales)
-  const schematicCompletionMonth = useMemo(() => {
-    if (projectQuery.data) {
-      const p = projectQuery.data as any;
-      if (p.constructionScheduleJson) {
-        try {
-          const stored = JSON.parse(p.constructionScheduleJson);
-          if (stored.settings?.designPayments) {
-            const phases = ['mobilization', 'concept', 'schematic'];
-            let totalWeeks = 0;
-            for (const phId of phases) {
-              const ph = stored.settings.designPayments[phId];
-              totalWeeks += ph?.durationWeeks || (phId === 'mobilization' ? 2 : 4);
-            }
-            return Math.ceil(totalWeeks / 4.33);
-          }
-        } catch {}
-      }
-    }
-    return Math.ceil(designMonths * 0.4);
-  }, [projectQuery.data, designMonths]);
-
-  const timeline = useMemo(() => {
-    const designEnd = designMonths;
-    const materialsStart = schematicCompletionMonth + 1;
-    const reraStart = schematicCompletionMonth + 2;
-    const marketingStart = materialsStart + marketingPrepLead;
-    const salesStart = reraStart + reraLead + 1;
-    const constructionStart = designEnd + 1;
-    const projectEnd = constructionStart + constructionMonths - 1;
-    return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
-  }, [designMonths, constructionMonths, marketingPrepLead, reraLead, schematicCompletionMonth]);
-
   // Sync defaults
   useEffect(() => {
     if (!plansQuery.data || plansQuery.data.length === 0) {
-      setMarketingActualStart(timeline.marketingStart);
-      setMarketingActualEnd(timeline.projectEnd);
+      setMarketingActualStart(timeline.marketingStartMonth);
+      setMarketingActualEnd(timeline.projectEndMonth);
     }
-  }, [timeline.marketingStart, timeline.projectEnd, plansQuery.data]);
+  }, [timeline.marketingStartMonth, timeline.projectEndMonth, plansQuery.data]);
 
   // ─── Channel slider handler (FIX #2: cap total at 100%) ────────────────────
   const handleChannelSliderChange = useCallback((channelId: string, newValue: number) => {
@@ -208,13 +175,17 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
         try { existingAbsorption = JSON.parse(plan.salesAbsorptionJson); } catch {}
       }
     }
+    const validStart = timeline.marketingStartMonth;
+    const normalizedDistribution = clampMarketingDistributionToStart(
+      marketingDistribution,
+      marketingActualStart,
+      validStart,
+    );
     const updatedAbsorption = {
       ...existingAbsorption,
-      marketingPrepLead,
-      reraLead,
-      marketingActualStart,
-      marketingActualEnd,
-      marketingDistribution,
+      marketingActualStart: validStart,
+      marketingActualEnd: Math.max(validStart, marketingActualEnd),
+      marketingDistribution: normalizedDistribution,
     };
     savePlan.mutate({
       id: planId,
@@ -223,10 +194,9 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       salesAbsorptionJson: JSON.stringify(updatedAbsorption),
       channelsJson: JSON.stringify(channelPcts),
     });
-    // Also sync marketingPct + timeline settings to the project table so other pages read them correctly
-    updateProject.mutate({ id: selectedProjectId, marketingPct: String(marketingPct), marketingPrepMonths: marketingPrepLead, reraLeadMonths: reraLead });
+    updateProject.mutate({ id: selectedProjectId, marketingPct: String(marketingPct) });
     setHasChanges(false);
-  }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, marketingPrepLead, reraLead, plansQuery.data, savePlan, updateProject]);
+  }, [selectedProjectId, planId, marketingPct, channelPcts, marketingActualStart, marketingActualEnd, marketingDistribution, plansQuery.data, savePlan, timeline.marketingStartMonth, updateProject]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -376,12 +346,11 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
                   <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2">
                     <label className="text-[10px] font-medium text-gray-600 block mb-1">بداية التسويق (شهر)</label>
                     <div className="flex items-center gap-1">
-                      <input type="number" min={timeline.marketingStart} max={timeline.projectEnd} value={marketingActualStart}
-                        onChange={(e) => { setMarketingActualStart(Number(e.target.value) || timeline.marketingStart); setHasChanges(true); }}
-                        className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
+                      <input type="number" value={timeline.marketingStartMonth} readOnly
+                        className="w-14 h-6 text-[11px] text-center font-bold border border-gray-200 rounded bg-gray-100 text-gray-600 cursor-not-allowed" />
                       <span className="text-[9px] text-gray-400">→</span>
-                      <input type="number" min={marketingActualStart} max={timeline.projectEnd} value={marketingActualEnd}
-                        onChange={(e) => { setMarketingActualEnd(Number(e.target.value) || timeline.projectEnd); setHasChanges(true); }}
+                      <input type="number" min={timeline.marketingStartMonth} max={timeline.projectEndMonth} value={marketingActualEnd}
+                        onChange={(e) => { setMarketingActualEnd(Math.max(timeline.marketingStartMonth, Number(e.target.value) || timeline.projectEndMonth)); setHasChanges(true); }}
                         className="w-14 h-6 text-[11px] text-center font-bold border border-pink-300 rounded bg-white text-pink-700 focus:ring-1 focus:ring-pink-400" />
                       <span className="text-[9px] text-gray-400">({marketingActualEnd - marketingActualStart + 1} شهر)</span>
                     </div>

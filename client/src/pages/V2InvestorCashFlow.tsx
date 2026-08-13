@@ -11,6 +11,7 @@ import {
   type SalesResult,
 } from "@/lib/investorCashFlowEngine";
 import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
+import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -60,8 +61,16 @@ export default function V2InvestorCashFlow() {
       try {
         const absorption = JSON.parse(plan.salesAbsorptionJson);
         if (absorption.marketingDistribution) {
-          const channels = Object.values(absorption.marketingDistribution) as number[][];
-          const startOffset = (absorption.marketingActualStart || 1) - 1; // convert 1-indexed to 0-indexed
+          const minimumMarketingStart = getProjectMarketingTiming(projectQuery.data).marketingStartMonth;
+          const savedStart = Number(absorption.marketingActualStart || minimumMarketingStart);
+          const actualStart = Math.max(savedStart, minimumMarketingStart);
+          const distribution = clampMarketingDistributionToStart(
+            absorption.marketingDistribution,
+            savedStart,
+            minimumMarketingStart,
+          );
+          const channels = Object.values(distribution) as number[][];
+          const startOffset = actualStart - 1; // convert 1-indexed to 0-indexed
           if (channels.length > 0) {
             const maxLen = Math.max(...channels.map((c: number[]) => c.length));
             // Total array length = offset + channel length

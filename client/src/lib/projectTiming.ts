@@ -49,3 +49,45 @@ export function getProjectDesignTiming(project: any) {
     schematicCompletionMonth: Math.max(1, Math.ceil(stages.slice(0, 3).reduce((sum, stage) => sum + stage.durationWeeks, 0) / 4.33)),
   };
 }
+
+/**
+ * Returns the approved project timing rules that constrain Marketing-page
+ * allocations. Marketing starts immediately after the marketing-material
+ * preparation period, which starts one month after schematic completion.
+ */
+export function getProjectMarketingTiming(project: any) {
+  const designTiming = getProjectDesignTiming(project);
+  const marketingPrepMonths = Math.max(1, Number(project?.marketingPrepMonths ?? 2));
+  const reraLeadMonths = Math.max(1, Number(project?.reraLeadMonths ?? 2));
+  const constructionMonths = Math.max(1, Number(project?.constructionMonths ?? 30));
+  const materialsStartMonth = designTiming.schematicCompletionMonth + 1;
+  const marketingStartMonth = materialsStartMonth + marketingPrepMonths;
+  const reraStartMonth = designTiming.schematicCompletionMonth + 2;
+  const salesStartMonth = reraStartMonth + reraLeadMonths + 1;
+  const constructionStartMonth = designTiming.designMonths + 1;
+  const projectEndMonth = constructionStartMonth + constructionMonths - 1;
+
+  return {
+    ...designTiming,
+    marketingPrepMonths,
+    reraLeadMonths,
+    materialsStartMonth,
+    marketingStartMonth,
+    reraStartMonth,
+    salesStartMonth,
+    constructionStartMonth,
+    projectEndMonth,
+  };
+}
+
+/** Drops any saved Marketing-page values that precede the permitted start. */
+export function clampMarketingDistributionToStart(
+  distribution: Record<string, number[]> | undefined,
+  savedStartMonth: number,
+  minimumStartMonth: number,
+): Record<string, number[]> {
+  const offset = Math.max(0, minimumStartMonth - savedStartMonth);
+  return Object.fromEntries(
+    Object.entries(distribution ?? {}).map(([channel, values]) => [channel, (values ?? []).slice(offset)])
+  );
+}
