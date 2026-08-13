@@ -87,6 +87,14 @@ export interface SalesResult {
   salesDistribution: number[];
   marketingMonthlyAmounts?: number[]; // Monthly marketing amounts from marketing page (indexed from project month 1)
   ppDownPct?: number; // Down payment percentage from payment plan
+  paymentPlan?: {
+    downPct: number;
+    secondPct: number;
+    secondAfterMonths: number;
+    duringTotalPct: number;
+    installmentEveryMonths: number;
+    handoverPct: number;
+  }; // Exact buyer payment schedule saved from Sales Plan
   actualCashInflow?: number[]; // Actual monthly cash inflow from payment plan (indexed from project month 1)
   offplanPct?: number; // Share of project revenue sold during construction and received through escrow
   directSalesStartMonth?: number; // Post-completion month for the first direct sale receipt
@@ -783,38 +791,52 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     let commTotal = 0;
 
     if (salesResult && salesResult.escrowData.length > 0) {
-      // Calculate commission per month's sales batch, paid when buyer reaches 20%
-      // Parse payment plan from salesResult (saved from V2WaelSales)
-      const ppDownPct = salesResult.ppDownPct || 10;
+      // A sales commission becomes payable only in the month where the buyer's
+      // actual receipts for that unit batch reach the configured trigger.
+      // The dates and percentages come from the exact Sales Plan payment schedule.
+      const paymentPlan = salesResult.paymentPlan;
       const triggerPct = tr.salesCommissionTriggerPct; // 20%
       const commPct = r.salesCommission; // e.g. 0.05
-      
-      // For each month with sales, calculate:
-      // - Commission amount = units sold × avgPrice × commPct
-      // - When is it paid? When cumulative buyer payments reach triggerPct%
-      // If downPayment >= triggerPct, commission is paid same month as sale
-      // Otherwise, need to wait for installments to accumulate to triggerPct
-      
-      const monthlyInstallmentPct = (100 - ppDownPct - 30) / (constructionDuration || 1); // simplified
       const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+      const constructionEndMonth = designDuration + constructionDuration - 1;
       
       for (const entry of salesResult.escrowData) {
         if (entry.units <= 0) continue;
         const saleMonth = entry.month - 1; // convert from 1-indexed (V2WaelSales) to 0-indexed array position
         const commAmount = entry.units * avgUnitPrice * commPct; // commission = units sold × avg price × rate
-        
-        // When does buyer reach triggerPct? 
-        // After downPayment (ppDownPct%), then monthly installments
-        let paymentMonth = saleMonth;
-        if (ppDownPct >= triggerPct) {
-          // Down payment alone covers 20%, commission paid same month + 1
-          paymentMonth = saleMonth + 1;
+
+        const receiptEvents: Array<{ month: number; pct: number }> = [];
+        if (paymentPlan) {
+          receiptEvents.push({ month: saleMonth, pct: paymentPlan.downPct });
+          receiptEvents.push({ month: saleMonth + paymentPlan.secondAfterMonths, pct: paymentPlan.secondPct });
+
+          const installmentMonths: number[] = [];
+          const every = Math.max(1, paymentPlan.installmentEveryMonths);
+          for (let month = saleMonth + every + paymentPlan.secondAfterMonths; month <= constructionEndMonth; month += every) {
+            installmentMonths.push(month);
+          }
+          if (installmentMonths.length > 0) {
+            const installmentPct = paymentPlan.duringTotalPct / installmentMonths.length;
+            installmentMonths.forEach((month) => receiptEvents.push({ month, pct: installmentPct }));
+          } else if (paymentPlan.duringTotalPct > 0) {
+            receiptEvents.push({ month: constructionEndMonth, pct: paymentPlan.duringTotalPct });
+          }
+          receiptEvents.push({ month: constructionEndMonth, pct: paymentPlan.handoverPct });
         } else {
-          // Need additional months of installments
-          const remainingPct = triggerPct - ppDownPct;
-          const monthsNeeded = Math.ceil(remainingPct / (monthlyInstallmentPct || 1));
-          paymentMonth = saleMonth + monthsNeeded + 1; // +1 for processing
+          // Legacy plans without paymentPlanJson retain a transparent fallback.
+          receiptEvents.push({ month: saleMonth, pct: salesResult.ppDownPct || 10 });
         }
+
+        let cumulativeReceiptsPct = 0;
+        let paymentMonth: number | undefined;
+        for (const event of receiptEvents.sort((a, b) => a.month - b.month)) {
+          cumulativeReceiptsPct += event.pct;
+          if (cumulativeReceiptsPct + 1e-9 >= triggerPct) {
+            paymentMonth = event.month;
+            break;
+          }
+        }
+        if (paymentMonth === undefined) continue;
         
         // Place commission in the correct phase array
         if (paymentMonth < designDuration) {

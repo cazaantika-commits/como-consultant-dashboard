@@ -376,6 +376,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         offplanPct: offPlan,
         salesCommissionPct: String(commissionPct),
         salesAbsorptionJson: JSON.stringify({ mode: salesMode, speed, template: curveTemplate, manual: manualUnits, marketingPrepLead, reraLead, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
+        paymentPlanJson: JSON.stringify({ downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
         resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2 }),
       });
 

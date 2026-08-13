@@ -76,12 +76,27 @@ export default function V2InvestorCashFlow() {
       } catch {}
     }
 
-    // Parse ppDownPct from salesAbsorptionJson
+    // Parse the exact saved payment schedule used for buyer collections.
     let ppDownPct: number | undefined;
+    let paymentPlan: SalesResult["paymentPlan"];
+    if (plan.paymentPlanJson) {
+      try {
+        paymentPlan = JSON.parse(plan.paymentPlanJson);
+        ppDownPct = paymentPlan?.downPct;
+      } catch {}
+    }
     if (plan.salesAbsorptionJson) {
       try {
         const abs = JSON.parse(plan.salesAbsorptionJson);
-        ppDownPct = abs.ppDownPct;
+        ppDownPct = ppDownPct ?? abs.ppDownPct;
+        paymentPlan = paymentPlan ?? {
+          downPct: Number(abs.ppDownPct ?? 10),
+          secondPct: Number(abs.ppSecondPct ?? 0),
+          secondAfterMonths: Number(abs.ppSecondAfterMonths ?? 0),
+          duringTotalPct: 100 - Number(abs.ppDownPct ?? 10) - Number(abs.ppSecondPct ?? 0) - Number(abs.ppHandoverPct ?? 0),
+          installmentEveryMonths: Number(abs.ppInstallmentEvery ?? 1),
+          handoverPct: Number(abs.ppHandoverPct ?? 0),
+        };
       } catch {}
     }
 
@@ -109,6 +124,7 @@ export default function V2InvestorCashFlow() {
             salesDistribution: parsed.salesDistribution,
             marketingMonthlyAmounts,
             ppDownPct,
+            paymentPlan,
             actualCashInflow,
             offplanPct: Number(plan.offplanPct ?? 80),
             directSalesStartMonth,

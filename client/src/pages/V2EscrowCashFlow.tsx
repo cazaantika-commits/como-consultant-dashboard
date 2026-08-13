@@ -51,10 +51,25 @@ export default function V2EscrowCashFlow() {
     // So we offset by (marketingActualStart - 1)
     let marketingMonthlyAmounts: number[] | undefined;
     let ppDownPct: number | undefined;
+    let paymentPlan: SalesResult["paymentPlan"];
+    if (plan.paymentPlanJson) {
+      try {
+        paymentPlan = JSON.parse(plan.paymentPlanJson);
+        ppDownPct = paymentPlan?.downPct;
+      } catch {}
+    }
     if (plan.salesAbsorptionJson) {
       try {
         const absorption = JSON.parse(plan.salesAbsorptionJson);
-        ppDownPct = absorption.ppDownPct;
+        ppDownPct = ppDownPct ?? absorption.ppDownPct;
+        paymentPlan = paymentPlan ?? {
+          downPct: Number(absorption.ppDownPct ?? 10),
+          secondPct: Number(absorption.ppSecondPct ?? 0),
+          secondAfterMonths: Number(absorption.ppSecondAfterMonths ?? 0),
+          duringTotalPct: 100 - Number(absorption.ppDownPct ?? 10) - Number(absorption.ppSecondPct ?? 0) - Number(absorption.ppHandoverPct ?? 0),
+          installmentEveryMonths: Number(absorption.ppInstallmentEvery ?? 1),
+          handoverPct: Number(absorption.ppHandoverPct ?? 0),
+        };
         if (absorption.marketingDistribution) {
           const channels = Object.values(absorption.marketingDistribution) as number[][];
           const startOffset = (absorption.marketingActualStart || 1) - 1; // convert 1-indexed to 0-indexed
@@ -90,6 +105,7 @@ export default function V2EscrowCashFlow() {
             salesDistribution: parsed.salesDistribution,
             marketingMonthlyAmounts,
             ppDownPct,
+            paymentPlan,
             actualCashInflow, // Pass the actual cash inflow from sales plan
           };
         }

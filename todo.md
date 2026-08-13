@@ -1116,3 +1116,5 @@
 - [x] Add per-project settings for direct-sale start month after completion and number of equal installments
 - [x] Add Settings page controls for these direct post-completion sales settings
 - [x] Make Investor Cash Flow use each project’s saved direct-sale schedule and verify it in the browser
+- [x] Calculate pre-completion sales-commission timing from the saved Sales Plan payment schedule when actual buyer receipts for each unit reach 20% of that unit’s price
+- [x] Verify in the browser that each commission payment occurs in the month when the buyer’s saved installments reach the 20% trigger

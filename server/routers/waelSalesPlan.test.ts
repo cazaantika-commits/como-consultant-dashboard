@@ -28,6 +28,7 @@ describe("waelSalesPlan.save", () => {
       totalRevenue: 804_600_000,
       salesCommissionPct: "5",
       salesAbsorptionJson: "{\"manual\":[7,8,9]}",
+      paymentPlanJson: "{\"downPct\":10,\"secondPct\":10,\"secondAfterMonths\":1,\"duringTotalPct\":40,\"installmentEveryMonths\":6,\"handoverPct\":40}",
       resultsJson: "{\"actualCashInflow\":[0,2200000]}",
     });
 
@@ -46,6 +47,7 @@ describe("waelSalesPlan.save", () => {
       postCompletionMonths: 12,
       offplanPct: 80,
       salesCommissionPct: "5",
+      paymentPlanJson: "{\"downPct\":10,\"secondPct\":10,\"secondAfterMonths\":1,\"duringTotalPct\":40,\"installmentEveryMonths\":6,\"handoverPct\":40}",
       resultsJson: "{\"actualCashInflow\":[0,2200000]}",
     }));
   });
@@ -61,6 +63,7 @@ describe("waelSalesPlan.save", () => {
       id: 73,
       projectId: 2,
       offplanPct: 75,
+      paymentPlanJson: "{\"downPct\":20,\"secondPct\":0,\"secondAfterMonths\":0,\"duringTotalPct\":40,\"installmentEveryMonths\":3,\"handoverPct\":40}",
       resultsJson: "{\"actualCashInflow\":[0,2500000]}",
     });
 
@@ -69,6 +72,7 @@ describe("waelSalesPlan.save", () => {
       projectId: 2,
       userId: 91,
       offplanPct: 75,
+      paymentPlanJson: "{\"downPct\":20,\"secondPct\":0,\"secondAfterMonths\":0,\"duringTotalPct\":40,\"installmentEveryMonths\":3,\"handoverPct\":40}",
       resultsJson: "{\"actualCashInflow\":[0,2500000]}",
     }));
     expect(where).toHaveBeenCalledTimes(1);

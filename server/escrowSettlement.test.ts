@@ -78,4 +78,46 @@ describe("calculateEscrowSettlement", () => {
       0,
     ]);
   });
+
+  it("pays pre-completion sales commission only when actual buyer receipts reach 20 percent", () => {
+    const result = computeInvestorCashFlow({
+      preConMonths: 8,
+      constructionMonths: 30,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 100,
+      residential1brArea: 750,
+      residential1brPrice: 1550,
+      salesCommissionPct: 5,
+    }, "offplan_escrow", undefined, {
+      escrowData: [{ month: 9, units: 10, income: 100000, downPayment: 0, installments: 0, withdrawal: 0, balance: 0, cumulativeSold: 10 }],
+      salesDistribution: [10],
+      paymentPlan: {
+        downPct: 10,
+        secondPct: 5,
+        secondAfterMonths: 2,
+        duringTotalPct: 45,
+        installmentEveryMonths: 3,
+        handoverPct: 40,
+      },
+    });
+
+    const commission = result.rows.find((row) => row.label === "عمولة المبيعات");
+    expect(commission).toBeDefined();
+    const allMonths = [
+      ...commission!.designMonths,
+      ...commission!.constructionMonths,
+      ...commission!.postConstructionMonths,
+    ];
+    const paymentMonths = allMonths
+      .map((amount, month) => ({ amount, month }))
+      .filter(({ amount }) => amount > 0);
+
+    // 10% is received at sale, 5% two months later, then the first 15%
+    // installment takes receipts past the 20% trigger. The commission is not
+    // payable before that actual receipt month.
+    expect(paymentMonths).toHaveLength(1);
+    expect(paymentMonths[0].month).toBe(13);
+    expect(paymentMonths[0].amount).toBe(commission!.totalCost);
+  });
 });
