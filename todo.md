@@ -1145,3 +1145,8 @@
 - [x] Redesign Feasibility Study with net investor profit after Como’s 15% share, required-capital paid and remaining amounts, funding-source summary, and saleable-area metrics; remove break-even and annual-return sections
 - [x] Redesign Feasibility Study profit and capital summaries so profit distribution, capital requirement, and cost funding sources are distinct and immediately understandable
 - [x] Prepare a complete current cost-item, funding-source, and payment-rule table for user decisions on build-for-sale and build-for-rent project types
+- [ ] Implement the approved build-for-sale project type: no escrow/RERA off-plan costs, investor-funded construction, configurable 1% three-month marketing, full-payment direct sales, and deferred Como profit share
+- [ ] Verify the build-for-sale implementation only on an independent project while preserving all existing Off-Plan calculations and project data unchanged
+- [ ] Replace the prior build-for-sale work with a clean independent model that uses only the user-approved rules and does not inspect or reuse existing non-Off-Plan logic
+- [ ] Show only build-for-sale pages after classification and hide all Off-Plan-only sales-flow and escrow pages
+- [ ] Keep all build-for-sale implementation and verification strictly inside the Financial Studies & Planning module; do not modify any other app icon or module

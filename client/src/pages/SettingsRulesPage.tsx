@@ -60,6 +60,9 @@ const DEFAULT_CONFIGURABLE_RATES: ConfigurableRate[] = [
   { id: "reraInspectionQuarterlyFee", label: "فحص ريرا (لكل دفعة)", description: "مبلغ كل دفعة ربع سنوية — يُدفع كل 3 أشهر من بداية الإنشاء حتى نهايته", value: 15020, unit: "درهم", min: 1000, max: 100000, step: 100 },
   { id: "escrowDepositPct", label: "إيداع حساب الضمان", description: "نسبة من تكلفة الإنشاء — ليس مصروفاً", value: 20, unit: "%", min: 5, max: 50, step: 5 },
   { id: "communityFeeFrequency", label: "دورية رسوم المجتمع", description: "كل X أشهر من بدء التصاميم", value: 6, unit: "شهر", min: 3, max: 12, step: 3 },
+  { id: "buildForSaleMarketingRate", label: "تسويق البناء للبيع", description: "نسبة من القيمة التقديرية للمبيعات — التوزيع يبدأ قبل شهر من اكتمال الإنشاء", value: 1, unit: "%", min: 0, max: 10, step: 0.25 },
+  { id: "buildForSaleMarketingStartMonthsBeforeCompletion", label: "بدء تسويق البناء للبيع", description: "عدد الأشهر قبل اكتمال الإنشاء التي يبدأ فيها التسويق", value: 1, unit: "شهر قبل الإنجاز", min: 0, max: 12, step: 1 },
+  { id: "buildForSaleMarketingDurationMonths", label: "مدة تسويق البناء للبيع", description: "عدد أشهر توزيع مصروف التسويق", value: 3, unit: "شهر", min: 1, max: 24, step: 1 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -10,7 +10,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 import { clampMarketingDistributionToStart, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
-import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesResult } from "@/lib/investorCashFlowEngine";
+import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import {
   DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
@@ -38,6 +38,8 @@ export default function V2Feasibility() {
     { enabled: !!selectedProjectId && !!user },
   );
   const project = projectQuery.data;
+  const scenario = ((project as any)?.financingScenario || "offplan_escrow") as Scenario;
+  const isBuildForSale = scenario === "build_for_sale";
   const costs = project ? calculateProjectCosts(project) : null;
   const designDuration = getProjectDesignTiming(project).designMonths;
 
@@ -49,6 +51,7 @@ export default function V2Feasibility() {
     let marketingMonthlyAmounts: number[] | undefined;
     let paymentPlan: SalesResult["paymentPlan"];
     let ppDownPct: number | undefined;
+    let buildForSaleMonthlyUnits: number[] | undefined;
 
     try {
       const absorption = plan.salesAbsorptionJson ? JSON.parse(plan.salesAbsorptionJson) : null;
@@ -66,6 +69,9 @@ export default function V2Feasibility() {
         }
       }
       ppDownPct = absorption?.ppDownPct;
+      if (Array.isArray(absorption?.buildForSaleMonthlyUnits)) {
+        buildForSaleMonthlyUnits = absorption.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0));
+      }
       paymentPlan = absorption ? {
         downPct: Number(absorption.ppDownPct ?? 10),
         secondPct: Number(absorption.ppSecondPct ?? 0),
@@ -82,7 +88,9 @@ export default function V2Feasibility() {
         ppDownPct = paymentPlan?.downPct;
       }
       const results = plan.resultsJson ? JSON.parse(plan.resultsJson) : null;
-      if (!results?.escrowData || !results?.salesDistribution) return marketingMonthlyAmounts ? { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, paymentPlan } : undefined;
+      if (!results?.escrowData || !results?.salesDistribution) return (marketingMonthlyAmounts || buildForSaleMonthlyUnits)
+        ? { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, paymentPlan, buildForSaleMonthlyUnits }
+        : undefined;
       const storedCash = results.actualCashInflow || [];
       const actualCashInflow = results.actualCashInflowVersion === 2
         ? storedCash
@@ -98,6 +106,7 @@ export default function V2Feasibility() {
         offplanPct: Number(plan.offplanPct ?? 80),
         directSalesStartMonth: Number(directSales.startMonth ?? 4),
         directSalesInstallmentCount: Number(directSales.installmentCount ?? 6),
+        buildForSaleMonthlyUnits: buildForSaleMonthlyUnits || results.buildForSaleMonthlyUnits,
       };
     } catch {
       return undefined;
@@ -105,14 +114,18 @@ export default function V2Feasibility() {
   }, [plansQuery.data, project]);
 
   const cashFlow = useMemo(
-    () => computeInvestorCashFlow(project || null, "offplan_escrow", undefined, salesResult),
-    [project, salesResult],
+    () => computeInvestorCashFlow(project || null, scenario, undefined, salesResult),
+    [project, scenario, salesResult],
   );
   const capital = useMemo(() => calculateInvestorCapitalSummary(cashFlow), [cashFlow]);
 
   // Computed values
   const totalRevenue = costs?.totalRevenue || 0;
-  const totalCosts = costs?.totalCosts || 0;
+  const totalCosts = isBuildForSale
+    ? cashFlow.rows
+      .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
+      .reduce((sum, row) => sum + row.totalCost, 0)
+    : costs?.totalCosts || 0;
   const profit = totalRevenue - totalCosts;
   const comoFee = profit > 0 ? profit * 0.15 : 0;
   const investorProfit = profit - comoFee;

@@ -234,4 +234,58 @@ describe("calculateEscrowSettlement", () => {
     expect(summary.totalProjectSpend).toBe(180);
   });
 
+  it("applies the approved build-for-sale rules without an escrow account", () => {
+    const project = {
+      financingScenario: "build_for_sale",
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      gfaResidentialSqft: 9000,
+      residential1brCount: 10,
+      residential1brArea: 750,
+      residential1brPrice: 5000,
+      constructionScheduleJson: JSON.stringify({
+        monthlyProgress: [10, 20, 70],
+        settings: {
+          configurableRates: {
+            buildForSaleMarketingRate: 2,
+            buildForSaleMarketingStartMonthsBeforeCompletion: 1,
+            buildForSaleMarketingDurationMonths: 3,
+          },
+        },
+      }),
+    };
+    const result = computeInvestorCashFlow(project, "build_for_sale", undefined, {
+      escrowData: [],
+      salesDistribution: [],
+      buildForSaleMonthlyUnits: [3, 7],
+    });
+
+    expect(result.rows.some((row) => row.label.includes("حساب الضمان"))).toBe(false);
+    expect(result.rows.some((row) => row.label === "تسجيل المشروع — ريرا")).toBe(false);
+    expect(result.rows.some((row) => row.label === "تقرير مدقق ريرا")).toBe(false);
+    expect(result.rows.some((row) => row.funder === "escrow")).toBe(false);
+
+    const contractor = result.rows.find((row) => row.label.startsWith("مستخلصات المقاول"))!;
+    expect(contractor.funder).toBe("investor");
+    expect(contractor.constructionMonths[0]).toBe(0);
+    expect(contractor.postConstructionMonths[0]).toBeGreaterThan(0);
+
+    const sales = result.rows.find((row) => row.label === "إيرادات المبيعات")!;
+    const commission = result.rows.find((row) => row.label.includes("بعد تحصيل كامل"))!;
+    const marketing = result.rows.find((row) => row.label === "التسويق")!;
+    expect(sales.postConstructionMonths.slice(0, 2)).toEqual([
+      sales.totalCost * 0.3,
+      sales.totalCost * 0.7,
+    ]);
+    expect(commission.postConstructionMonths.slice(0, 2)).toEqual([
+      commission.totalCost * 0.3,
+      commission.totalCost * 0.7,
+    ]);
+    expect(marketing.totalCost).toBe(sales.totalCost * 0.02);
+    expect(marketing.constructionMonths).toEqual([0, marketing.totalCost / 3, marketing.totalCost / 3]);
+    expect(marketing.postConstructionMonths[0]).toBe(marketing.totalCost / 3);
+    expect(result.rows.some((row) => row.label.includes("حصة كومو") && row.postConstructionMonths[1] > 0)).toBe(true);
+  });
+
 });

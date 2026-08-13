@@ -89,6 +89,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
+  const isBuildForSale = (projectQuery.data as any)?.financingScenario === "build_for_sale";
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -243,10 +244,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     const projectEnd = sharedTiming.projectEndMonth;
     return { designEnd, materialsStart, reraStart, marketingStart, salesStart, constructionStart, projectEnd };
   }, [sharedTiming]);
-  const salesMonths = timeline.projectEnd - timeline.salesStart + 1;
+  const buildForSaleStartMonth = timeline.projectEnd + 1;
+  const salesMonths = isBuildForSale
+    ? Math.max(3, manualUnits.length || 0)
+    : timeline.projectEnd - timeline.salesStart + 1;
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
-  const offPlanUnits = Math.round((totalUnits * offPlan) / 100);
+  const offPlanUnits = isBuildForSale ? totalUnits : Math.round((totalUnits * offPlan) / 100);
   const salesDistribution = useMemo(() => {
     if (salesMode === "manual" && manualUnits.length === salesMonths) return manualUnits;
     const n = salesMonths;
@@ -285,12 +289,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         savedEndMonth: absorption.marketingActualEnd,
       }),
       sales: getSalesTimelineWindow({
-        settingsStartMonth: timeline.salesStart,
-        projectEndMonth: timeline.projectEnd,
+        settingsStartMonth: isBuildForSale ? buildForSaleStartMonth : timeline.salesStart,
+        projectEndMonth: isBuildForSale ? buildForSaleStartMonth + salesMonths - 1 : timeline.projectEnd,
         salesDistribution: results.salesDistribution ?? salesDistribution,
       }),
     };
-  }, [plansQuery.data, salesDistribution, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
+  }, [plansQuery.data, salesDistribution, timeline.marketingStart, timeline.salesStart, timeline.projectEnd, isBuildForSale, buildForSaleStartMonth, salesMonths]);
 
   // ─── Computed: Escrow with Payment Plan ────────────────────────────────────
   const escrowInitial = constructionCost * 0.2;
@@ -325,11 +329,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
   // ─── Computed: Cash Inflow (Payment Plan × Sales) + Detailed Grid ────────
   const { cashInflowData, perSaleGrid, activeSaleMonths, actualCashInflow } = useMemo(() => {
-    const totalMonths = timeline.projectEnd;
+    const totalMonths = isBuildForSale ? timeline.projectEnd + salesMonths : timeline.projectEnd;
     const cashFlowHorizon = totalMonths + 13;
     const monthlySales: number[] = Array(totalMonths + 1).fill(0);
     salesDistribution.forEach((units, i) => {
-      const m = timeline.salesStart + i;
+      const m = (isBuildForSale ? buildForSaleStartMonth : timeline.salesStart) + i;
       if (m <= totalMonths) monthlySales[m] = units * avgUnitPrice;
     });
     const cashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
@@ -340,26 +344,33 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (saleAmount <= 0) continue;
       saleMonthsList.push(saleMonth);
       grid[saleMonth] = Array(totalMonths + 1).fill(0);
-      const downAmount = saleAmount * (ppDownPct / 100);
-      if (saleMonth < cashPerMonth.length) { cashPerMonth[saleMonth] += downAmount; grid[saleMonth][saleMonth] += downAmount; }
-      const secondAmount = saleAmount * (ppSecondPct / 100);
-      const secondMonth = saleMonth + ppSecondAfterMonths;
-      if (secondMonth < cashPerMonth.length) { cashPerMonth[secondMonth] += secondAmount; if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount; }
-      const installmentTotal = saleAmount * (ppDuringTotal / 100);
-      const constructionEnd = timeline.constructionStart + constructionMonths - 1;
-      const installmentMonthsList: number[] = [];
-      for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) installmentMonthsList.push(im);
-      if (installmentMonthsList.length > 0) {
-        const perInstallment = installmentTotal / installmentMonthsList.length;
-        installmentMonthsList.forEach(im => { if (im < cashPerMonth.length) { cashPerMonth[im] += perInstallment; if (im <= totalMonths) grid[saleMonth][im] += perInstallment; } });
+      if (isBuildForSale) {
+        if (saleMonth < cashPerMonth.length) {
+          cashPerMonth[saleMonth] += saleAmount;
+          grid[saleMonth][saleMonth] += saleAmount;
+        }
       } else {
-        const ce = Math.min(constructionEnd, totalMonths);
-        cashPerMonth[ce] += installmentTotal;
-        grid[saleMonth][ce] += installmentTotal;
+        const downAmount = saleAmount * (ppDownPct / 100);
+        if (saleMonth < cashPerMonth.length) { cashPerMonth[saleMonth] += downAmount; grid[saleMonth][saleMonth] += downAmount; }
+        const secondAmount = saleAmount * (ppSecondPct / 100);
+        const secondMonth = saleMonth + ppSecondAfterMonths;
+        if (secondMonth < cashPerMonth.length) { cashPerMonth[secondMonth] += secondAmount; if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount; }
+        const installmentTotal = saleAmount * (ppDuringTotal / 100);
+        const constructionEnd = timeline.constructionStart + constructionMonths - 1;
+        const installmentMonthsList: number[] = [];
+        for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) installmentMonthsList.push(im);
+        if (installmentMonthsList.length > 0) {
+          const perInstallment = installmentTotal / installmentMonthsList.length;
+          installmentMonthsList.forEach(im => { if (im < cashPerMonth.length) { cashPerMonth[im] += perInstallment; if (im <= totalMonths) grid[saleMonth][im] += perInstallment; } });
+        } else {
+          const ce = Math.min(constructionEnd, totalMonths);
+          cashPerMonth[ce] += installmentTotal;
+          grid[saleMonth][ce] += installmentTotal;
+        }
+        const handoverAmount = saleAmount * (ppHandoverPct / 100);
+        const handoverMonth = Math.min(timeline.constructionStart + constructionMonths - 1, totalMonths);
+        if (handoverMonth < cashPerMonth.length) { cashPerMonth[handoverMonth] += handoverAmount; if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount; }
       }
-      const handoverAmount = saleAmount * (ppHandoverPct / 100);
-      const handoverMonth = Math.min(timeline.constructionStart + constructionMonths - 1, totalMonths);
-      if (handoverMonth < cashPerMonth.length) { cashPerMonth[handoverMonth] += handoverAmount; if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount; }
     }
     const data: { month: number; salesThisMonth: number; cashInflow: number; cumSales: number; cumCash: number }[] = [];
     let cumSales = 0, cumCash = 0;
@@ -371,7 +382,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     // the same convention consumed by the Escrow Cash Flow page and engine.
     const persistedCashInflow = Array.from({ length: cashFlowHorizon }, (_, i) => cashPerMonth[i + 1] || 0);
     return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList, actualCashInflow: persistedCashInflow };
-  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct, isBuildForSale, buildForSaleStartMonth, salesMonths]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
   const handleSaveUnits = useCallback(() => {
@@ -402,9 +413,24 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         constructionMonths,
         offplanPct: offPlan,
         salesCommissionPct: String(commissionPct),
-        salesAbsorptionJson: JSON.stringify({ ...existingAbsorption, mode: salesMode, speed, template: curveTemplate, manual: manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct }),
-        paymentPlanJson: JSON.stringify({ downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
-        resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2 }),
+        salesAbsorptionJson: JSON.stringify({
+          ...existingAbsorption,
+          mode: salesMode,
+          speed,
+          template: curveTemplate,
+          manual: manualUnits,
+          ppDownPct,
+          ppSecondPct,
+          ppSecondAfterMonths,
+          ppInstallmentPct,
+          ppInstallmentEvery,
+          ppHandoverPct,
+          ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}),
+        }),
+        paymentPlanJson: JSON.stringify(isBuildForSale
+          ? { downPct: 100, secondPct: 0, secondAfterMonths: 0, duringTotalPct: 0, installmentEveryMonths: 1, handoverPct: 0 }
+          : { downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
+        resultsJson: JSON.stringify({ escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2, ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}) }),
       });
 
       setPlanId(savedPlan.id);
@@ -415,7 +441,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       // The mutations display the exact failure message. Keep the page marked as changed.
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, totalRevenue, timeline.designEnd, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, actualCashInflow, savePlan, plansQuery]);
+  }, [selectedProjectId, planId, totalRevenue, timeline.designEnd, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, actualCashInflow, savePlan, plansQuery, isBuildForSale]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -591,10 +617,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             <section className="col-span-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
-                <h2 className="text-[11px] font-bold text-gray-800">خطة الدفع</h2>
-                <Badge variant={ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{ppTotal}%</Badge>
+                <h2 className="text-[11px] font-bold text-gray-800">{isBuildForSale ? "تحصيل البيع" : "خطة الدفع"}</h2>
+                <Badge variant={isBuildForSale || ppTotal === 100 ? "secondary" : "destructive"} className="text-[9px]">{isBuildForSale ? "100%" : `${ppTotal}%`}</Badge>
               </div>
-              <div className="p-2">
+              {isBuildForSale && (
+                <div className="border-b border-emerald-100 bg-emerald-50 px-3 py-3 text-center">
+                  <p className="text-[11px] font-bold text-emerald-800">دفعة كاملة عند بيع الوحدة</p>
+                  <p className="mt-1 text-[9px] leading-4 text-emerald-700">تبدأ المبيعات بعد الإنجاز، وتدخل الحصيلة كاملة مباشرة إلى حساب المستثمر.</p>
+                </div>
+              )}
+              <div className={isBuildForSale ? "hidden" : "p-2"}>
                 <table className="w-full text-[9px]">
                   <thead>
                     <tr className="bg-gray-50">

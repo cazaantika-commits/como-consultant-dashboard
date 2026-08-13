@@ -36,7 +36,6 @@ export default function V2InvestorCashFlow() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
-  const scenario: Scenario = "offplan_escrow";
 
   // ─── DB Queries ─────────────────────────────────────────────────────────
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
@@ -46,6 +45,7 @@ export default function V2InvestorCashFlow() {
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
+  const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
 
   // ─── Parse salesResult from saved plan ─────────────────────────────────
   const salesResult: SalesResult | undefined = useMemo(() => {
@@ -88,6 +88,7 @@ export default function V2InvestorCashFlow() {
     // Parse the exact saved payment schedule used for buyer collections.
     let ppDownPct: number | undefined;
     let paymentPlan: SalesResult["paymentPlan"];
+    let buildForSaleMonthlyUnits: number[] | undefined;
     if (plan.paymentPlanJson) {
       try {
         paymentPlan = JSON.parse(plan.paymentPlanJson);
@@ -106,6 +107,9 @@ export default function V2InvestorCashFlow() {
           installmentEveryMonths: Number(abs.ppInstallmentEvery ?? 1),
           handoverPct: Number(abs.ppHandoverPct ?? 0),
         };
+        if (Array.isArray(abs.buildForSaleMonthlyUnits)) {
+          buildForSaleMonthlyUnits = abs.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0));
+        }
       } catch {}
     }
 
@@ -138,6 +142,7 @@ export default function V2InvestorCashFlow() {
             offplanPct: Number(plan.offplanPct ?? 80),
             directSalesStartMonth,
             directSalesInstallmentCount,
+            buildForSaleMonthlyUnits,
           };
         }
       } catch {}
@@ -150,6 +155,7 @@ export default function V2InvestorCashFlow() {
         salesDistribution: [],
         marketingMonthlyAmounts,
         ppDownPct,
+        buildForSaleMonthlyUnits,
       };
     }
 

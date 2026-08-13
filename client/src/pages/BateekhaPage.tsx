@@ -1,6 +1,9 @@
-import { useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar } from "lucide-react";
+import { useProjectContext } from "@/contexts/ProjectContext";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -71,9 +74,18 @@ function TabContent({ tabId }: { tabId: TabId }) {
 export default function BateekhaPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<TabId>("general");
+  const { user } = useAuth();
+  const { selectedProjectId } = useProjectContext();
+  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+  const isBuildForSale = (projectQuery.data as any)?.financingScenario === "build_for_sale";
+  const buildForSaleHiddenTabs: TabId[] = ["marketing", "timeline", "settings", "escrow", "mall"];
 
-  const inputTabs = TABS.filter(t => t.group === "input");
-  const outputTabs = TABS.filter(t => t.group === "output");
+  useEffect(() => {
+    if (isBuildForSale && buildForSaleHiddenTabs.includes(activeTab)) setActiveTab("general");
+  }, [isBuildForSale, activeTab]);
+
+  const inputTabs = TABS.filter(t => t.group === "input" && (!isBuildForSale || !buildForSaleHiddenTabs.includes(t.id)));
+  const outputTabs = TABS.filter(t => t.group === "output" && (!isBuildForSale || !buildForSaleHiddenTabs.includes(t.id)));
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">

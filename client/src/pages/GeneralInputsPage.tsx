@@ -68,6 +68,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         if (val != null && val !== "") data[f.key] = String(val);
         else if (f.defaultValue) data[f.key] = f.defaultValue;
       });
+      data.financingScenario = p.financingScenario || "offplan_escrow";
       setFormData(data);
       setHasChanges(false);
     }
@@ -92,6 +93,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
           payload[f.key] = val;
         }
       });
+      payload.financingScenario = formData.financingScenario || "offplan_escrow";
       await updateProject.mutateAsync(payload);
       setHasChanges(false);
       setIsEditing(false);
@@ -164,6 +166,19 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {/* Toolbar */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
         <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
+        <label className="flex items-center gap-2 text-[12px] text-gray-600">
+          <span className="font-medium">نوع التطوير</span>
+          <select
+            value={formData.financingScenario || "offplan_escrow"}
+            onChange={e => updateField("financingScenario", e.target.value)}
+            disabled={!isEditing}
+            className="h-7 rounded border border-gray-200 bg-white px-2 text-[12px] text-gray-800 disabled:cursor-not-allowed disabled:bg-gray-50"
+          >
+            <option value="offplan_escrow">أوف بلان</option>
+            <option value="build_for_sale">بناء للبيع</option>
+            <option value="rental">بناء للتأجير</option>
+          </select>
+        </label>
         <span className="text-[11px] text-blue-700 font-medium">مدة التصاميم: {designTiming.designMonths} شهر <span className="text-gray-400">(من الإعدادات والقواعد)</span></span>
         {!isEditing ? (
           <Button variant="outline" size="sm" onClick={() => setIsEditing(true)} className="h-7 text-[12px] px-3 gap-1 border-gray-200 hover:bg-gray-50">

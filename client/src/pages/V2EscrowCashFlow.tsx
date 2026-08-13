@@ -29,7 +29,6 @@ export default function V2EscrowCashFlow() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
-  const scenario: Scenario = "offplan_escrow";
 
   // ─── DB Queries ─────────────────────────────────────────────────────────
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
@@ -39,6 +38,7 @@ export default function V2EscrowCashFlow() {
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
+  const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
 
   // ─── Parse salesResult from saved plan ─────────────────────────────────
   const salesResult: SalesResult | undefined = useMemo(() => {
@@ -280,6 +280,19 @@ export default function V2EscrowCashFlow() {
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         <span className="mr-2 text-gray-500 text-sm">جاري تحميل البيانات...</span>
+      </div>
+    );
+  }
+
+  if (scenario === "no_offplan") {
+    return (
+      <div className="min-h-[320px] bg-gray-50 p-6" dir="rtl">
+        <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center shadow-sm">
+          <h1 className="text-base font-bold text-amber-950">حساب الضمان غير منطبق</h1>
+          <p className="mt-3 text-sm leading-7 text-amber-900">
+            هذا المشروع من نوع البناء للبيع؛ لذلك يمول المستثمر الإنشاء مباشرة وتدخل حصيلة بيع الوحدات إلى حسابه بعد الإنجاز، من دون حساب ضمان.
+          </p>
+        </div>
       </div>
     );
   }
