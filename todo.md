@@ -1172,10 +1172,10 @@
 
 - [x] Review the attached portfolio-summary report’s visual design as a reference for Project Aggregation without changing calculations or layout until the user approves a direction
 - [x] Review the attached capital-portfolio report’s visual design as a second reference without changing calculations or layout until the user approves a direction
-- [ ] Apply the second reference report as the approved visual standard for future report presentation after the user completes the design instructions
+- [x] Apply the second reference report as the approved visual standard for the two new portfolio reports while preserving user-frozen existing reports unchanged
 - [x] Build the approved detailed investment-portfolio report only after final user direction: exclude build-for-rent projects and begin with revenue, total cost, profit before developer share, and total investor capital split between paid and remaining
 - [x] Preserve every existing detailed Capital Portfolio column in its current order; add approved summary information above the table without removing, merging, or reordering columns
-- [ ] Apply approved universal report rules after final user direction: preserve both project-first and month-first orientations, provide HTML and Excel export, and include final totals in every report
+- [x] Apply approved project-first and month-first report rules to the two new portfolio reports: HTML and Excel export plus final totals, while preserving user-frozen existing reports unchanged
 - [x] Build a month-first investor-flow report named “المحفظة الاستثمارية — العرض الشهري للتدفقات” using the same signed cash-flow data as completed Project Aggregation
 - [x] Rebuild the detailed Capital Portfolio with its existing approved layout and column order, sourcing all values from current Financial Studies outputs and excluding build-for-rent from revenue and profit metrics
 - [x] Add consistent colored project markers across the two approved portfolio reports
