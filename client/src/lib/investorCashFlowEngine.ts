@@ -337,15 +337,17 @@ export function distributeCommunityFee(
 // ═══════════════════════════════════════════
 // PRICING UNITS BUILDER
 // ═══════════════════════════════════════════
-const DEF_AREAS = { res1: 750, res2: 1300, res3: 1650, retS: 850, retM: 1200, retL: 1800, offS: 1200, offM: 2000, offL: 3500 };
-const DEF_PRICES = { res1: 1550, res2: 1500, res3: 1450, retS: 3000, retM: 2500, retL: 2000, offS: 1900, offM: 1800, offL: 1700 };
+const DEF_AREAS = { res1: 750, res2: 1300, res3: 1650, villa: 0, townhouse: 0, retS: 850, retM: 1200, retL: 1800, offS: 1200, offM: 2000, offL: 3500 };
+const DEF_PRICES = { res1: 1550, res2: 1500, res3: 1450, villa: 0, townhouse: 0, retS: 3000, retM: 2500, retL: 2000, offS: 1900, offM: 1800, offL: 1700 };
 
 export function buildPricingUnits(project: any, inputs: ProjectInputs) {
   const p = project;
-  const hasSavedCounts = [p.residential1brCount, p.residential2brCount, p.residential3brCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
+  const hasSavedCounts = [p.residential1brCount, p.residential2brCount, p.residential3brCount, p.villaCount, p.townhouseCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
   let c1 = Number(p?.residential1brCount) || 0;
   let c2 = Number(p?.residential2brCount) || 0;
   let c3 = Number(p?.residential3brCount) || 0;
+  const cVilla = Number(p?.villaCount) || 0;
+  const cTownhouse = Number(p?.townhouseCount) || 0;
   let cRS = Number(p?.retailSmallCount) || 0;
   let cRM = Number(p?.retailMediumCount) || 0;
   let cRL = Number(p?.retailLargeCount) || 0;
@@ -364,6 +366,8 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
     { name: "غرفة وصالة", category: "residential" as const, area: Number(p?.residential1brArea) || DEF_AREAS.res1, price: Number(p?.residential1brPrice) || DEF_PRICES.res1, count: c1 },
     { name: "غرفتين وصالة", category: "residential" as const, area: Number(p?.residential2brArea) || DEF_AREAS.res2, price: Number(p?.residential2brPrice) || DEF_PRICES.res2, count: c2 },
     { name: "ثلاث غرف وصالة", category: "residential" as const, area: Number(p?.residential3brArea) || DEF_AREAS.res3, price: Number(p?.residential3brPrice) || DEF_PRICES.res3, count: c3 },
+    { name: "فيلا", category: "residential" as const, area: Number(p?.villaArea) || DEF_AREAS.villa, price: Number(p?.villaPrice) || DEF_PRICES.villa, count: cVilla },
+    { name: "تاون هاوس", category: "residential" as const, area: Number(p?.townhouseArea) || DEF_AREAS.townhouse, price: Number(p?.townhousePrice) || DEF_PRICES.townhouse, count: cTownhouse },
     { name: "تجزئة / صغير", category: "retail" as const, area: Number(p?.retailSmallArea) || DEF_AREAS.retS, price: Number(p?.retailSmallPrice) || DEF_PRICES.retS, count: cRS },
     { name: "تجزئة / متوسط", category: "retail" as const, area: Number(p?.retailMediumArea) || DEF_AREAS.retM, price: Number(p?.retailMediumPrice) || DEF_PRICES.retM, count: cRM },
     { name: "تجزئة / كبير", category: "retail" as const, area: Number(p?.retailLargeArea) || DEF_AREAS.retL, price: Number(p?.retailLargePrice) || DEF_PRICES.retL, count: cRL },

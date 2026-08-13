@@ -245,6 +245,8 @@ export const PRICING_DEFAULTS: UnitType[] = [
   { name: "غرفة وصالة", category: "residential", defaultArea: 750, defaultPrice: 1650, defaultCount: 30 },
   { name: "غرفتين وصالة", category: "residential", defaultArea: 1300, defaultPrice: 1550, defaultCount: 30 },
   { name: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650, defaultPrice: 1450, defaultCount: 15 },
+  { name: "فيلا", category: "residential", defaultArea: 0, defaultPrice: 0, defaultCount: 0 },
+  { name: "تاون هاوس", category: "residential", defaultArea: 0, defaultPrice: 0, defaultCount: 0 },
   // تجزئة
   { name: "تجزئة / صغير", category: "retail", defaultArea: 850, defaultPrice: 3000, defaultCount: 18 },
   { name: "تجزئة / متوسط", category: "retail", defaultArea: 1200, defaultPrice: 2500, defaultCount: 12 },

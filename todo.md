@@ -1153,3 +1153,6 @@
 - [ ] Classify the user-approved Nad Al Sheba project as build-for-sale inside Financial Studies, save, reload, and verify its isolated tabs and calculations
 - [ ] Remove all Off-Plan-only RERA, escrow, bank, and report fields from General Inputs when a project is classified as build-for-sale
 - [ ] Diagnose and fix the stale Financial Studies interface that still shows Off-Plan fields after a build-for-sale project reload
+- [ ] Audit every build-for-sale Investor Cash Flow row against approved rules, including the land-department unit-registration label and timing
+- [ ] Verify build-for-sale revenue begins only after completion, records each sale as a full direct investor payment, and contains no escrow receipts or settlements
+- [ ] Add Villa and Townhouse unit types to Financial Studies and link their quantity, area, pricing, sales, revenue, and feasibility calculations

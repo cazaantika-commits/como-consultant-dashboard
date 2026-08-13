@@ -109,6 +109,8 @@ export default function MarketingPage({ embedded }: { embedded?: boolean } = {})
       { dbCount: "residential1brCount", dbArea: "residential1brArea", dbPrice: "residential1brPrice" },
       { dbCount: "residential2brCount", dbArea: "residential2brArea", dbPrice: "residential2brPrice" },
       { dbCount: "residential3brCount", dbArea: "residential3brArea", dbPrice: "residential3brPrice" },
+      { dbCount: "villaCount", dbArea: "villaArea", dbPrice: "villaPrice" },
+      { dbCount: "townhouseCount", dbArea: "townhouseArea", dbPrice: "townhousePrice" },
       { dbCount: "retailSmallCount", dbArea: "retailSmallArea", dbPrice: "retailSmallPrice" },
       { dbCount: "retailMediumCount", dbArea: "retailMediumArea", dbPrice: "retailMediumPrice" },
       { dbCount: "retailLargeCount", dbArea: "retailLargeArea", dbPrice: "retailLargePrice" },
