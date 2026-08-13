@@ -1151,3 +1151,5 @@
 - [ ] Show only build-for-sale pages after classification and hide all Off-Plan-only sales-flow and escrow pages
 - [ ] Keep all build-for-sale implementation and verification strictly inside the Financial Studies & Planning module; do not modify any other app icon or module
 - [ ] Classify the user-approved Nad Al Sheba project as build-for-sale inside Financial Studies, save, reload, and verify its isolated tabs and calculations
+- [ ] Remove all Off-Plan-only RERA, escrow, bank, and report fields from General Inputs when a project is classified as build-for-sale
+- [ ] Diagnose and fix the stale Financial Studies interface that still shows Off-Plan fields after a build-for-sale project reload

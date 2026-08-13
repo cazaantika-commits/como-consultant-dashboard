@@ -286,6 +286,22 @@ describe("calculateEscrowSettlement", () => {
     expect(marketing.constructionMonths).toEqual([0, marketing.totalCost / 3, marketing.totalCost / 3]);
     expect(marketing.postConstructionMonths[0]).toBe(marketing.totalCost / 3);
     expect(result.rows.some((row) => row.label.includes("حصة كومو") && row.postConstructionMonths[1] > 0)).toBe(true);
+
+    const feasibility = calculateProjectCosts({
+      ...project,
+      reraProjectRegFee: 150000,
+      escrowAccountFee: 180000,
+      bankFees: 35000,
+      surveyorDwgFees: 12000,
+    })!;
+    expect(feasibility.reraProjectRegFee).toBe(0);
+    expect(feasibility.escrowAccountFee).toBe(0);
+    expect(feasibility.bankFees).toBe(0);
+    expect(feasibility.reraAuditReportFee).toBe(0);
+    expect(feasibility.reraInspectionReportFee).toBe(0);
+    expect(feasibility.surveyorDwgFees).toBe(0);
+    expect(feasibility.developerFee).toBe(feasibility.totalRevenue * 0.03);
+    expect(feasibility.marketingCost).toBe(feasibility.totalRevenue * 0.02);
   });
 
 });

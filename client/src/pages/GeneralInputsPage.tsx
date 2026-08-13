@@ -43,6 +43,14 @@ const ALL_FIELDS = [
   { key: "reraInspectionReportFee", label: "تقرير فحص ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "150000", computed: true, hint: "= 15,020 × عدد الدفعات الربع سنوية (من الإعدادات)" },
 ];
 
+const BUILD_FOR_SALE_HIDDEN_FIELDS = new Set([
+  "reraProjectRegFee",
+  "escrowAccountFee",
+  "bankFees",
+  "reraAuditReportFee",
+  "reraInspectionReportFee",
+]);
+
 function fmt(n: number): string {
   if (!n || isNaN(n)) return "0";
   return Math.round(n).toLocaleString("en-US");
@@ -69,6 +77,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         else if (f.defaultValue) data[f.key] = f.defaultValue;
       });
       data.financingScenario = p.financingScenario || "offplan_escrow";
+      if (data.financingScenario === "build_for_sale") data.developerFeePct = "3";
       setFormData(data);
       setHasChanges(false);
     }
@@ -126,16 +135,23 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     return <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
   }
 
-  // Split into 3 columns
-  const col1 = ALL_FIELDS.slice(0, 10);
-  const col2 = ALL_FIELDS.slice(10, 20);
-  const col3 = ALL_FIELDS.slice(20, 30);
+  const isBuildForSale = formData.financingScenario === "build_for_sale";
+  const visibleFields = isBuildForSale
+    ? ALL_FIELDS.filter((field) => !BUILD_FOR_SALE_HIDDEN_FIELDS.has(field.key))
+    : ALL_FIELDS;
+  const columnSize = Math.ceil(visibleFields.length / 3);
+  const col1 = visibleFields.slice(0, columnSize);
+  const col2 = visibleFields.slice(columnSize, columnSize * 2);
+  const col3 = visibleFields.slice(columnSize * 2);
 
   const renderCol = (fields: typeof ALL_FIELDS) => (
     <div className="space-y-[2px]">
       {fields.map((field) => {
         const isComputed = (field as any).computed;
         const hint = (field as any).hint;
+        const displayLabel = isBuildForSale && field.key === "developerFeePct"
+          ? "أتعاب المطور (1% تصميم + 2% تنفيذ)"
+          : field.label;
         const displayValue = field.key === "reraAuditReportFee"
           ? String(reraQuarterlyFees.auditorTotal)
           : field.key === "reraInspectionReportFee"
@@ -143,7 +159,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
             : formData[field.key] || "";
         return (
           <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-gray-100 ${isComputed ? "bg-amber-50/50" : ""}`}>
-            <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{field.label}</span>
+            <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{displayLabel}</span>
             <input
               type={field.type === "date" ? "month" : "text"}
               value={displayValue}
@@ -195,6 +211,12 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
           </>
         )}
       </div>
+
+      {isBuildForSale && (
+        <div className="mb-3 rounded-lg border border-teal-100 bg-teal-50/60 px-4 py-2 text-[12px] text-teal-900">
+          <span className="font-semibold">قواعد البناء للبيع:</span> لا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ، بينما التسويق والمبيعات بعد الإنجاز يُداران من صفحة المبيعات.
+        </div>
+      )}
 
       {/* 3-column grid inside white rounded container */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">

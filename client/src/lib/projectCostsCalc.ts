@@ -123,13 +123,18 @@ export function calculateProjectCosts(
   const surveyorFees = parseFloat(p.surveyorFees || "0");
   const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || 12000;
 
-  // أتعاب المطور حسب السيناريو: O3 (no_offplan) = 3% max
   const financingScenario = p.financingScenario || "offplan_escrow";
-  const effectiveDeveloperFeePct = financingScenario === "no_offplan" 
+  const isBuildForSale = financingScenario === "build_for_sale";
+  let buildForSaleMarketingRate = 1;
+  try {
+    buildForSaleMarketingRate = Number(JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates?.buildForSaleMarketingRate ?? 1);
+  } catch { /* use the approved 1% default */ }
+  const effectiveDeveloperFeePct = isBuildForSale ? 3 : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
+  const effectiveMarketingPct = isBuildForSale ? buildForSaleMarketingRate : marketingPct;
   const developerFee = totalRevenue * (effectiveDeveloperFeePct / 100);
   const salesCommission = totalRevenue * (salesCommissionPct / 100);
-  const marketingCost = totalRevenue * (marketingPct / 100);
+  const marketingCost = totalRevenue * (effectiveMarketingPct / 100);
 
   // رسوم ريرا المحسوبة (الصيغ الجديدة)
   const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
@@ -145,8 +150,10 @@ export function calculateProjectCosts(
   const computedReraAuditReportFee = reraQuarterlyFees.auditorTotal;
   const computedReraInspectionFee = reraQuarterlyFees.inspectionTotal;
 
-  const totalRegulatory = computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
-  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + surveyorDwgFees + developerFee + salesCommission + marketingCost + totalRegulatory;
+  const totalRegulatory = isBuildForSale
+    ? computedReraUnitRegFee + developerNocFee
+    : computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
+  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isBuildForSale ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
     landPrice,
@@ -161,17 +168,17 @@ export function calculateProjectCosts(
     constructionCost,
     communityFees: computedCommunityFees,
     surveyorFees,
-    surveyorDwgFees,
+    surveyorDwgFees: isBuildForSale ? 0 : surveyorDwgFees,
     developerFee,
     salesCommission,
     marketingCost,
     reraUnitRegFee: computedReraUnitRegFee,
-    reraProjectRegFee,
+    reraProjectRegFee: isBuildForSale ? 0 : reraProjectRegFee,
     developerNocFee,
-    escrowAccountFee,
-    bankFees,
-    reraAuditReportFee: computedReraAuditReportFee,
-    reraInspectionReportFee: computedReraInspectionFee,
+    escrowAccountFee: isBuildForSale ? 0 : escrowAccountFee,
+    bankFees: isBuildForSale ? 0 : bankFees,
+    reraAuditReportFee: isBuildForSale ? 0 : computedReraAuditReportFee,
+    reraInspectionReportFee: isBuildForSale ? 0 : computedReraInspectionFee,
     revenueRes,
     revenueRet,
     revenueOff,
