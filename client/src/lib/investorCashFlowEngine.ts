@@ -437,6 +437,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const isScenario2 = scenario === "offplan_construction";
   const isScenario3 = scenario === "no_offplan";
   const isBuildForSale = scenario === "build_for_sale";
+  const isBuildForRent = scenario === "build_for_rent";
   const isScenario4 = scenario === "rental" || scenario === "build_for_rent";
 
   // Post-construction months:
@@ -1142,12 +1143,21 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     }
   }
 
-  // ─── أتعاب المطور: البناء للبيع = 1% تصميم + 2% تنفيذ ───
+  // ─── أتعاب المطور: البناء للبيع من الإيراد، والبناء للتأجير من تكلفة الإنشاء ───
   {
     const devFeeDesign = emptyDesign();
     const devFeeConstruction = emptyConstruction();
     const totalDevFee = costs.developerFee;
-    const devFeeDesignTotal = totalDevFee * (isBuildForSale ? (1 / 3) : 0.4);
+    let buildForRentDesignShare = 1.5 / 4;
+    if (isBuildForRent && projectData?.constructionScheduleJson) {
+      try {
+        const savedRates = JSON.parse(projectData.constructionScheduleJson)?.settings?.configurableRates || {};
+        const designRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
+        const supervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+        buildForRentDesignShare = designRate / Math.max(designRate + supervisionRate, 0.0001);
+      } catch { /* retain approved defaults */ }
+    }
+    const devFeeDesignTotal = totalDevFee * (isBuildForRent ? buildForRentDesignShare : isBuildForSale ? (1 / 3) : 0.4);
     const devFeeConstructionTotal = totalDevFee - devFeeDesignTotal;
     distributeEqual(devFeeDesignTotal, designDuration, devFeeDesign, 0);
     distributeEqual(devFeeConstructionTotal, constructionDuration, devFeeConstruction, 0);

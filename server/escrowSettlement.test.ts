@@ -314,7 +314,10 @@ describe("calculateEscrowSettlement", () => {
       residential1brCount: 10,
       residential1brArea: 750,
       residential1brPrice: 5000,
-      constructionScheduleJson: JSON.stringify({ monthlyProgress: [10, 20, 70] }),
+      constructionScheduleJson: JSON.stringify({
+        monthlyProgress: [10, 20, 70],
+        settings: { configurableRates: { buildForRentDeveloperFeeDesignRate: 1.5, buildForRentDeveloperFeeSupervisionRate: 2.5 } },
+      }),
     };
     const result = computeInvestorCashFlow(project, "build_for_rent");
     const labels = result.rows.map((row) => row.label);
@@ -334,6 +337,10 @@ describe("calculateEscrowSettlement", () => {
     expect(feasibility.marketingCost).toBe(0);
     expect(feasibility.escrowAccountFee).toBe(0);
     expect(feasibility.bankFees).toBe(0);
+    expect(feasibility.developerFee).toBe(160000);
+    const developerFee = result.rows.find((row) => row.label === "أتعاب المطور")!;
+    expect(developerFee.designMonths.reduce((sum, amount) => sum + amount, 0)).toBe(60000);
+    expect(developerFee.constructionMonths.reduce((sum, amount) => sum + amount, 0)).toBe(100000);
   });
 
 });

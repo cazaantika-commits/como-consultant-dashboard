@@ -195,7 +195,15 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
   const marketingPct = isBuildForRent ? 0 : isBuildForSale
     ? Number(savedRates.buildForSaleMarketingRate ?? 1)
     : (parseFloat(dbProject.marketingPct || '0') || 2);
-  const developerPct = isIndependentNoOffPlan ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
+  const buildForRentDeveloperFeeDesignPct = isBuildForRent
+    ? Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5)
+    : 1;
+  const buildForRentDeveloperFeeSupervisionPct = isBuildForRent
+    ? Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5)
+    : 2;
+  const developerPct = isBuildForRent
+    ? buildForRentDeveloperFeeDesignPct + buildForRentDeveloperFeeSupervisionPct
+    : isIndependentNoOffPlan ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
   const sortingPerSqft = parseFloat(dbProject.separationFeePerSqft || '0') || 40;
   const landBrokerPct = parseFloat(dbProject.agentCommissionLandPct || '0') || 1;
 
@@ -210,9 +218,11 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     sortingFeePerSqft: sortingPerSqft,
     reraUnitFee: 800,
     developerFeeRate: developerPct / 100,
-    developerFeeDesign: 0.01,
+    developerFeeDesign: isBuildForRent ? buildForRentDeveloperFeeDesignPct / 100 : 0.01,
     developerFeeOffplan: isIndependentNoOffPlan ? 0 : 0.01,
-    developerFeeSupervision: isIndependentNoOffPlan ? 0.02 : (developerPct / 100) - 0.02,
+    developerFeeSupervision: isBuildForRent
+      ? buildForRentDeveloperFeeSupervisionPct / 100
+      : isIndependentNoOffPlan ? 0.02 : (developerPct / 100) - 0.02,
     marketingRate: marketingPct / 100,
     marketingOffplanShare: 0.25,
     marketingConstructionShare: 0.75,
@@ -355,13 +365,15 @@ export function calculateCosts(
   const reraUnits = totalUnits * rates.reraUnitFee;
   const salesCommission = totalRevenue * rates.salesCommission;
   const marketing = totalRevenue * rates.marketingRate;
-  const developerFee = totalRevenue * rates.developerFeeRate;
+  const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent";
+  const isBuildForRent = rates.projectType === "build_for_rent";
+  const developerFee = isBuildForRent
+    ? constructionCost * (rates.developerFeeDesign + rates.developerFeeSupervision)
+    : totalRevenue * rates.developerFeeRate;
   const constructionInvestor = constructionCost * rates.constructionInvestorShare;
   const constructionEscrow = constructionCost * rates.constructionEscrowShare;
   const govFeesInvestor = inputs.govFeesTotal * rates.govFeesInvestorShare;
   const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
-  const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent";
-  const isBuildForRent = rates.projectType === "build_for_rent";
   const effectiveMarketing = isBuildForRent ? 0 : marketing;
   const effectiveSalesCommission = isBuildForRent ? 0 : salesCommission;
   const totalInvestor = isIndependentNoOffPlan

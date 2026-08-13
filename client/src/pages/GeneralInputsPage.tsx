@@ -31,6 +31,8 @@ const ALL_FIELDS = [
   { key: "supervisionFeeFixed", label: "أتعاب الإشراف (مقطوع)", unit: "درهم", type: "number" },
   { key: "separationFeePerSqft", label: "رسوم الفرز", unit: "درهم/قدم²", type: "number", defaultValue: "40" },
   { key: "developerFeePct", label: "أتعاب المطور", unit: "%", type: "number", defaultValue: "5" },
+  { key: "buildForRentDeveloperFeeDesignRate", label: "أتعاب المطور — التصاميم", unit: "% من تكلفة الإنشاء", type: "number", defaultValue: "1.5", buildForRentOnly: true },
+  { key: "buildForRentDeveloperFeeSupervisionRate", label: "أتعاب المطور — الإشراف", unit: "% من تكلفة الإنشاء", type: "number", defaultValue: "2.5", buildForRentOnly: true },
   { key: "soilTestFee", label: "فحص التربة", unit: "درهم", type: "number", defaultValue: "45000" },
   { key: "topographicSurveyFee", label: "المسح الطبوغرافي", unit: "درهم", type: "number", defaultValue: "12000" },
 
@@ -64,6 +66,10 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     if (projectQuery.data) {
       const p = projectQuery.data as any;
       const data: Record<string, string> = {};
+      let savedRates: Record<string, unknown> = {};
+      try {
+        savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+      } catch { /* use approved defaults */ }
       ALL_FIELDS.forEach(f => {
         const val = p[f.key];
         if (val != null && val !== "") data[f.key] = String(val);
@@ -71,6 +77,10 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       });
       data.financingScenario = p.financingScenario || "offplan_escrow";
       if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
+      if (data.financingScenario === "build_for_rent") {
+        data.buildForRentDeveloperFeeDesignRate = String(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
+        data.buildForRentDeveloperFeeSupervisionRate = String(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+      }
       setFormData(data);
       setHasChanges(false);
     }
@@ -86,6 +96,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     try {
       const payload: any = { id: selectedProjectId };
       ALL_FIELDS.forEach(f => {
+        if ((f as any).buildForRentOnly) return;
         if ((f as any).computed) return;
         if (formData[f.key] === undefined || formData[f.key] === "") return;
         const val = formData[f.key];
@@ -96,6 +107,15 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         }
       });
       payload.financingScenario = formData.financingScenario || "offplan_escrow";
+      if (payload.financingScenario === "build_for_rent") {
+        let schedule: any = {};
+        try { schedule = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}"); } catch {}
+        schedule.settings ||= {};
+        schedule.settings.configurableRates ||= {};
+        schedule.settings.configurableRates.buildForRentDeveloperFeeDesignRate = Number(formData.buildForRentDeveloperFeeDesignRate ?? 1.5);
+        schedule.settings.configurableRates.buildForRentDeveloperFeeSupervisionRate = Number(formData.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+        payload.constructionScheduleJson = JSON.stringify(schedule);
+      }
       await updateProject.mutateAsync(payload);
       setHasChanges(false);
       setIsEditing(false);
@@ -108,6 +128,15 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
     const mockDb: any = {};
     ALL_FIELDS.forEach(f => { mockDb[f.key] = formData[f.key] || f.defaultValue || ""; });
     mockDb.constructionScheduleJson = (projectQuery.data as any)?.constructionScheduleJson;
+    if (formData.financingScenario === "build_for_rent") {
+      let schedule: any = {};
+      try { schedule = JSON.parse(mockDb.constructionScheduleJson || "{}"); } catch {}
+      schedule.settings ||= {};
+      schedule.settings.configurableRates ||= {};
+      schedule.settings.configurableRates.buildForRentDeveloperFeeDesignRate = Number(formData.buildForRentDeveloperFeeDesignRate ?? 1.5);
+      schedule.settings.configurableRates.buildForRentDeveloperFeeSupervisionRate = Number(formData.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+      mockDb.constructionScheduleJson = JSON.stringify(schedule);
+    }
     const inputs = dbProjectToInputs(mockDb);
     const rates = dbProjectToRates(mockDb);
     return calculateProjectFormulas(inputs, rates);
@@ -132,8 +161,13 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   const isBuildForRent = formData.financingScenario === "build_for_rent";
   const isIndependentType = isBuildForSale || isBuildForRent;
   const visibleFields = isIndependentType
-    ? ALL_FIELDS.filter((field) => isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario))
-    : ALL_FIELDS;
+    ? ALL_FIELDS.filter((field) => {
+        if (isBuildForRent && (field as any).buildForRentOnly) return true;
+        if ((field as any).buildForRentOnly) return false;
+        if (isBuildForRent && field.key === "developerFeePct") return false;
+        return isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario);
+      })
+    : ALL_FIELDS.filter((field) => !(field as any).buildForRentOnly);
   const columnSize = Math.ceil(visibleFields.length / 3);
   const col1 = visibleFields.slice(0, columnSize);
   const col2 = visibleFields.slice(columnSize, columnSize * 2);
@@ -144,7 +178,9 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {fields.map((field) => {
         const isComputed = (field as any).computed;
         const hint = (field as any).hint;
-        const displayLabel = isIndependentType && field.key === "developerFeePct"
+        const displayLabel = isBuildForRent && (field as any).buildForRentOnly
+          ? field.label
+          : isIndependentType && field.key === "developerFeePct"
           ? "أتعاب المطور (1% تصميم + 2% تنفيذ)"
           : field.label;
         const displayValue = field.key === "reraAuditReportFee"
@@ -214,7 +250,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       )}
       {isBuildForRent && (
         <div className="mb-3 rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-2 text-[12px] text-indigo-900">
-          <span className="font-semibold">قواعد البناء للتأجير:</span> لا توجد مبيعات أو تسويق أو عمولات أو إيرادات في هذه المرحلة، ولا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ.
+          <span className="font-semibold">قواعد البناء للتأجير:</span> لا توجد مبيعات أو تسويق أو عمولات أو إيرادات في هذه المرحلة، ولا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور قابلة للتعديل: 1.5% في التصميم و2.5% في الإشراف من تكلفة الإنشاء.
         </div>
       )}
 

@@ -133,13 +133,20 @@ export function calculateProjectCosts(
   const isBuildForRent = financingScenario === "build_for_rent";
   const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   let buildForSaleMarketingRate = 1;
+  let buildForRentDeveloperFeeDesignRate = 1.5;
+  let buildForRentDeveloperFeeSupervisionRate = 2.5;
   try {
-    buildForSaleMarketingRate = Number(JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates?.buildForSaleMarketingRate ?? 1);
+    const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+    buildForSaleMarketingRate = Number(savedRates.buildForSaleMarketingRate ?? 1);
+    buildForRentDeveloperFeeDesignRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
+    buildForRentDeveloperFeeSupervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
   } catch { /* use the approved 1% default */ }
   const effectiveDeveloperFeePct = isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
   const effectiveMarketingPct = isBuildForRent ? 0 : isBuildForSale ? buildForSaleMarketingRate : marketingPct;
-  const developerFee = calculatedRevenue * (effectiveDeveloperFeePct / 100);
+  const developerFee = isBuildForRent
+    ? constructionCost * ((buildForRentDeveloperFeeDesignRate + buildForRentDeveloperFeeSupervisionRate) / 100)
+    : calculatedRevenue * (effectiveDeveloperFeePct / 100);
   const salesCommission = isBuildForRent ? 0 : calculatedRevenue * (salesCommissionPct / 100);
   const marketingCost = isBuildForRent ? 0 : calculatedRevenue * (effectiveMarketingPct / 100);
   const totalRevenue = isBuildForRent ? 0 : calculatedRevenue;

@@ -43,6 +43,16 @@ export default function V2Feasibility() {
   const isBuildForRent = scenario === "build_for_rent";
   const costs = project ? calculateProjectCosts(project) : null;
   const designDuration = getProjectDesignTiming(project).designMonths;
+  const buildForRentDeveloperFees = useMemo(() => {
+    let designRate = 1.5;
+    let supervisionRate = 2.5;
+    try {
+      const savedRates = JSON.parse((project as any)?.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+      designRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? designRate);
+      supervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? supervisionRate);
+    } catch { /* retain approved defaults when historic settings JSON is absent */ }
+    return { designRate, supervisionRate, totalRate: designRate + supervisionRate };
+  }, [project]);
 
   // Use the saved Sales Plan inputs so the Feasibility Study's capital number
   // has the same cash-flow source as Investor and Escrow Cash Flow.
@@ -370,7 +380,12 @@ export default function V2Feasibility() {
                   <DetailRow label="مدة التصاميم" value={`${designDuration} شهر`} />
                   <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
 
-                  <DetailRow label="أتعاب المطور" value={project.developerFeePct ? `${project.developerFeePct}%` : "—"} />
+                  <DetailRow
+                    label={isBuildForRent ? "أتعاب المطور (تصميم + إشراف)" : "أتعاب المطور"}
+                    value={isBuildForRent
+                      ? `${buildForRentDeveloperFees.totalRate.toFixed(2)}% من تكلفة الإنشاء (${buildForRentDeveloperFees.designRate}% + ${buildForRentDeveloperFees.supervisionRate}%)`
+                      : project.developerFeePct ? `${project.developerFeePct}%` : "—"}
+                  />
                   <DetailRow label="عمولة المبيعات" value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
                   <DetailRow label="أتعاب التصميم" value={project.designFeePct ? `${project.designFeePct}%` : "—"} />
                   <DetailRow label="أتعاب الإشراف" value={project.supervisionFeePct ? `${project.supervisionFeePct}%` : "—"} />
@@ -419,7 +434,11 @@ export default function V2Feasibility() {
                     <div className="bg-slate-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.paidCapital / capital.requiredCapital) * 100 : 0}%` }} />
                     <div className="bg-amber-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.remainingCapital / capital.requiredCapital) * 100 : 0}%` }} />
                   </div>
-                  <p className="text-[8px] leading-relaxed text-gray-500">يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر.</p>
+                  <p className="text-[8px] leading-relaxed text-gray-500">
+                    {isBuildForRent
+                      ? "لا يوجد حساب ضمان في البناء للتأجير؛ رأس المال المطلوب يمثل مصروفات المستثمر فقط."
+                      : "يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر."}
+                  </p>
                 </div>
               </SectionCard>
 
@@ -432,36 +451,62 @@ export default function V2Feasibility() {
                     </div>
                     <span className="text-sm font-black text-slate-800 tabular-nums" dir="ltr">{fmt(capital.totalProjectSpend)} AED</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  {isBuildForRent ? (
                     <div className="rounded-md bg-slate-50 px-2.5 py-2">
                       <p className="text-[9px] text-slate-500">يدفعه المستثمر</p>
                       <p className="text-[11px] font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.investorProjectSpend)} AED</p>
                     </div>
-                    <div className="rounded-md bg-cyan-50 px-2.5 py-2">
-                      <p className="text-[9px] text-cyan-700">يدفعه حساب الضمان</p>
-                      <p className="text-[11px] font-black text-cyan-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.escrowProjectSpend)} AED</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-md bg-slate-50 px-2.5 py-2">
+                        <p className="text-[9px] text-slate-500">يدفعه المستثمر</p>
+                        <p className="text-[11px] font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.investorProjectSpend)} AED</p>
+                      </div>
+                      <div className="rounded-md bg-cyan-50 px-2.5 py-2">
+                        <p className="text-[9px] text-cyan-700">يدفعه حساب الضمان</p>
+                        <p className="text-[11px] font-black text-cyan-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.escrowProjectSpend)} AED</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <p className="text-[8px] leading-relaxed text-gray-500">هذا توزيع لمصروفات المشروع، وليس رأس المال المطلوب من المستثمر.</p>
                 </div>
               </SectionCard>
 
-              <SectionCard title="اقتصاديات القدم² القابل للبيع" icon={<Activity className="w-3.5 h-3.5 text-white" />} gradient="from-cyan-600 to-sky-700" borderColor="border-sky-200/60">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">تكلفة القدم² القابل للبيع</span>
-                    <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{costPerSaleableSqft > 0 ? `${costPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
+              {isBuildForRent ? (
+                <SectionCard title="مؤشرات تكلفة البناء للتأجير" icon={<Activity className="w-3.5 h-3.5 text-white" />} gradient="from-cyan-600 to-sky-700" borderColor="border-sky-200/60">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-600">تكلفة القدم² من BUA</span>
+                      <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{project.manualBuaSqft && totalCosts > 0 ? `${(totalCosts / Number(project.manualBuaSqft)).toFixed(0)} AED` : "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-600">تكلفة الإنشاء/قدم²</span>
+                      <span className="font-bold text-slate-700 tabular-nums" dir="ltr">{costs?.constructionCost && project.manualBuaSqft ? `${(costs.constructionCost / Number(project.manualBuaSqft)).toFixed(0)} AED` : "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] bg-cyan-50/60 rounded px-2 py-1 -mx-1">
+                      <span className="font-bold text-cyan-800">مساحة البناء (BUA)</span>
+                      <span className="font-black text-cyan-700 tabular-nums" dir="ltr">{project.manualBuaSqft ? `${fmt(Number(project.manualBuaSqft))} قدم²` : "—"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">متوسط سعر البيع/قدم²</span>
-                    <span className="font-bold text-teal-700 tabular-nums" dir="ltr">{sellingPricePerSqft > 0 ? `${sellingPricePerSqft.toFixed(0)} AED` : "—"}</span>
+                </SectionCard>
+              ) : (
+                <SectionCard title="اقتصاديات القدم² القابل للبيع" icon={<Activity className="w-3.5 h-3.5 text-white" />} gradient="from-cyan-600 to-sky-700" borderColor="border-sky-200/60">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-600">تكلفة القدم² القابل للبيع</span>
+                      <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{costPerSaleableSqft > 0 ? `${costPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-gray-600">متوسط سعر البيع/قدم²</span>
+                      <span className="font-bold text-teal-700 tabular-nums" dir="ltr">{sellingPricePerSqft > 0 ? `${sellingPricePerSqft.toFixed(0)} AED` : "—"}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] bg-teal-50/60 rounded px-2 py-1 -mx-1">
+                      <span className="font-bold text-teal-800">الربح لكل قدم²</span>
+                      <span className={`font-black tabular-nums ${profitPerSaleableSqft >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{profitPerSaleableSqft !== 0 ? `${profitPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between text-[11px] bg-teal-50/60 rounded px-2 py-1 -mx-1">
-                    <span className="font-bold text-teal-800">الربح لكل قدم²</span>
-                    <span className={`font-black tabular-nums ${profitPerSaleableSqft >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{profitPerSaleableSqft !== 0 ? `${profitPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
-                  </div>
-                </div>
-              </SectionCard>
+                </SectionCard>
+              )}
             </div>
           </div>
         </div>
