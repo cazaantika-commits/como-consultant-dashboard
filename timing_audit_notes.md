@@ -30,3 +30,9 @@ The Majan project was reopened in the browser for verification after replacing t
 Browser verification confirms that the Timeline now shows **Marketing: month 6–22** and labels its source as **Marketing page**. The Marketing page shows the identical saved period, month **6 → 22**, with seventeen months of entered monthly allocations totaling AED 16,091,064. The Timeline no longer extends the marketing bar mechanically to the end of construction.
 
 The Sales page shows the saved sales distribution beginning in month 8 and ending in month 25; months 26–37 have zero units. After correction, both the Sales page’s internal timeline and the main Timeline display **Sales: month 8–25** and identify the source as **Sales Plan**. They also display the same Settings-driven design duration (seven months), materials phase (months 4–5), RERA phase (months 5–6), and construction phase (months 8–37).
+
+## Deferred Escrow Contractor Certificates — 13 August 2026
+
+The Majan project was reopened for the contractor-payment timing audit. General Inputs confirms the saved construction duration is thirty months and the construction value is AED 405,000,000. The next verification compares the saved Construction-page monthly progress with the shifted escrow-funded certificate row.
+
+Browser verification confirms the approved relationship. In the Construction page, month 1 contains the AED 40.5M investor-funded advance; the first work-progress certificate is AED 14.6M in construction month 2. In Escrow Cash Flow, the row **“مستخلصات المقاول (80% — بعد شهر من الإنجاز)”** is blank in construction month 1 and shows AED 14.6M in construction month 2, followed by the same deferred sequence across the remaining construction months. The rule also assigns the final construction-month certificate to post-completion month 1, as covered by the new regression test.

@@ -1020,27 +1020,36 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       isTransfer: true,
     });
 
-    // 3. مستخلصات المقاول (80%) — الضمان — شهرياً حسب نسبة الإنجاز
+    // 3. مستخلصات المقاول (80%) — الضمان — تستحق في الشهر التالي لكل إنجاز
     const progressDesign = emptyDesign();
     const progressConst = emptyConstruction();
     const progressPost = emptyPost();
     const progressTotal = constructionCost * 0.80;
+    const recordDeferredProgressPayment = (workMonth: number, amount: number) => {
+      const paymentMonth = workMonth + 1;
+      if (paymentMonth < constructionDuration) {
+        progressConst[paymentMonth] += amount;
+      } else {
+        // The final construction-month certificate is paid in post-completion month 1.
+        progressPost[paymentMonth - constructionDuration] += amount;
+      }
+    };
     if (monthlyProgressPcts) {
-      // Use actual progress percentages from ConstructionInputsPage
+      // Work completed in each construction month is paid from escrow in the following month.
       const totalPct = monthlyProgressPcts.reduce((s, v) => s + v, 0);
       for (let m = 0; m < constructionDuration; m++) {
         const pct = monthlyProgressPcts[m] || 0;
-        progressConst[m] = totalPct > 0 ? progressTotal * (pct / totalPct) : 0;
+        recordDeferredProgressPayment(m, totalPct > 0 ? progressTotal * (pct / totalPct) : 0);
       }
     } else {
-      // Fallback: S-Curve distribution
+      // Fallback: defer the S-Curve payment schedule by the same one-month rule.
       const sCurveWeights = generateSCurve(constructionDuration);
       for (let m = 0; m < constructionDuration; m++) {
-        progressConst[m] = progressTotal * sCurveWeights[m];
+        recordDeferredProgressPayment(m, progressTotal * sCurveWeights[m]);
       }
     }
     rows.push({
-      label: "مستخلصات المقاول (80%)",
+      label: "مستخلصات المقاول (80% — بعد شهر من الإنجاز)",
       totalCost: progressTotal,
       investorAmount: 0,
       paid: 0,

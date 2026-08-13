@@ -121,6 +121,29 @@ describe("calculateEscrowSettlement", () => {
     expect(paymentMonths[0].amount).toBe(commission!.totalCost);
   });
 
+  it("pays every escrow-funded construction certificate one month after the corresponding work", () => {
+    const project = {
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      constructionScheduleJson: JSON.stringify({ monthlyProgress: [10, 20, 70] }),
+    };
+    const result = computeInvestorCashFlow(project, "offplan_escrow");
+    const contractorProgress = result.rows.find((row) => row.label.startsWith("مستخلصات المقاول"));
+
+    expect(contractorProgress).toBeDefined();
+    const progressTotal = contractorProgress!.totalCost;
+    expect(contractorProgress!.constructionMonths).toEqual([
+      0,
+      progressTotal * 0.1,
+      progressTotal * 0.2,
+    ]);
+    expect(contractorProgress!.postConstructionMonths[0]).toBe(progressTotal * 0.7);
+
+    const investorAdvance = result.rows.find((row) => row.label === "دفعة مقدمة المقاول (10%)");
+    expect(investorAdvance!.constructionMonths[0]).toBeGreaterThan(0);
+  });
+
   it("splits RERA-linked expenses between the first and second saved RERA months", () => {
     const project = {
       constructionMonths: 30,
