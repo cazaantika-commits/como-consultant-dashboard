@@ -252,33 +252,45 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              {/* Profit allocation and investor return */}
-              <SectionCard title="الأرباح وتوزيعها" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                    <span className="text-[11px] font-bold text-gray-700">ربح المشروع قبل حصة كومو</span>
-                    <span className={`text-lg font-black tabular-nums ${profit >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{fmt(profit)} <span className="text-[9px] text-gray-400">AED</span></span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <RatioBox label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" />
-                    <RatioBox label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" />
-                  </div>
-                  {/* Developer / Investor split */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
-                    <div className="bg-amber-50/80 border border-amber-200/60 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <Sparkles className="w-3 h-3 text-amber-600" />
-                        <span className="text-[10px] font-bold text-amber-800">أتعاب المطور (15%)</span>
+              {/* Investor return: a simple profit waterfall, not disconnected ratio cards. */}
+              <SectionCard title="عائد المستثمر" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
+                <div className="space-y-2.5">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-700">الربح الإجمالي للمشروع</p>
+                        <p className="text-[9px] text-slate-500 mt-0.5">الإيرادات ناقص إجمالي التكاليف</p>
                       </div>
-                      <div className="text-sm font-black text-amber-900 tabular-nums" dir="ltr">{fmt(comoFee)}</div>
+                      <span className={`text-base font-black tabular-nums ${profit >= 0 ? 'text-slate-800' : 'text-red-700'}`} dir="ltr">{fmt(profit)} AED</span>
                     </div>
-                    <div className="bg-teal-50/80 border border-teal-200/60 rounded-lg px-3 py-2">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <Users className="w-3 h-3 text-teal-600" />
-                        <span className="text-[10px] font-bold text-teal-800">ربح المستثمر (85%)</span>
+                  </div>
+                  <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-amber-100 pb-2 px-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-800">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      <span>حصة كومو من الربح (15%)</span>
+                    </div>
+                    <span className="text-sm font-black text-amber-800 tabular-nums" dir="ltr">{fmt(comoFee)} AED</span>
+                  </div>
+                  <div className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-2.5">
+                    <div className="flex items-end justify-between gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-teal-700" />
+                        <div>
+                          <p className="text-[11px] font-black text-teal-900">صافي ربح المستثمر</p>
+                          <p className="text-[9px] text-teal-700 mt-0.5">بعد خصم حصة كومو</p>
+                        </div>
                       </div>
-                      <div className="text-sm font-black text-teal-900 tabular-nums" dir="ltr">{fmt(investorProfit)}</div>
-                      <div className="text-[9px] text-teal-600 mt-0.5">بعد خصم حصة كومو 15%</div>
+                      <span className="text-lg font-black text-teal-800 tabular-nums" dir="ltr">{fmt(investorProfit)} AED</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="rounded-md bg-gray-50 px-2 py-1.5">
+                      <p className="text-[9px] text-gray-500">عائد المستثمر على التكلفة</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(profitOnCost)}</p>
+                    </div>
+                    <div className="rounded-md bg-gray-50 px-2 py-1.5">
+                      <p className="text-[9px] text-gray-500">عائد المستثمر على رأس المال</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(profitOnCapital)}</p>
                     </div>
                   </div>
                 </div>
@@ -364,18 +376,51 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              <SectionCard title="رأس المال ومصادر الصرف" icon={<Briefcase className="w-3.5 h-3.5 text-white" />} gradient="from-amber-500 to-amber-700" borderColor="border-amber-200/60">
-                <div className="space-y-1.5">
-                  <DetailRow label="رأس المال المطلوب (ذروة التمويل)" value={`${fmt(capital.requiredCapital)} AED`} />
-                  <DetailRow label="مدفوع سابقاً" value={`${fmt(capital.paidCapital)} AED`} />
-                  <DetailRow label="المتبقي المطلوب تمويله" value={`${fmt(capital.remainingCapital)} AED`} />
-                  <DetailRow label="توقيت الذروة" value={capital.peakMonthDate || "—"} />
-                  <div className="border-t border-gray-100 pt-1.5 mt-1.5">
-                    <DetailRow label="مصروفات المستثمر" value={`${fmt(capital.investorProjectSpend)} AED`} />
-                    <DetailRow label="مصروفات الضمان" value={`${fmt(capital.escrowProjectSpend)} AED`} />
-                    <DetailRow label="إجمالي الصرف المطابق للتكلفة" value={`${fmt(capital.totalProjectSpend)} AED`} />
+              <SectionCard title="رأس المال المطلوب" icon={<Briefcase className="w-3.5 h-3.5 text-white" />} gradient="from-amber-500 to-amber-700" borderColor="border-amber-200/60">
+                <div className="space-y-2.5">
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                    <p className="text-[10px] font-bold text-amber-900">السيولة القصوى التي يحتاجها المستثمر</p>
+                    <p className="text-lg font-black text-amber-900 tabular-nums mt-1" dir="ltr">{fmt(capital.requiredCapital)} AED</p>
+                    <p className="text-[9px] text-amber-700 mt-1">تصل الذروة في {capital.peakMonthDate || "—"}</p>
                   </div>
-                  <p className="text-[8px] text-gray-400 leading-relaxed">إيداع الضمان ضمن رأس المال المطلوب، لكنه ليس مصروفاً ضمن تكلفة المشروع.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+                      <p className="text-[9px] text-slate-500">مدفوع حتى الآن</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.paidCapital)} AED</p>
+                    </div>
+                    <div className="rounded-md border border-amber-200 bg-amber-50/60 px-2.5 py-2">
+                      <p className="text-[9px] text-amber-700">المتبقي للتمويل</p>
+                      <p className="text-sm font-black text-amber-900 tabular-nums mt-0.5" dir="ltr">{fmt(capital.remainingCapital)} AED</p>
+                    </div>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-slate-100 flex" title="توزيع رأس المال بين المدفوع والمتبقي">
+                    <div className="bg-slate-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.paidCapital / capital.requiredCapital) * 100 : 0}%` }} />
+                    <div className="bg-amber-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.remainingCapital / capital.requiredCapital) * 100 : 0}%` }} />
+                  </div>
+                  <p className="text-[8px] leading-relaxed text-gray-500">يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر.</p>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="تمويل تكلفة المشروع" icon={<Landmark className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200">
+                <div className="space-y-2">
+                  <div className="flex items-end justify-between border-b border-gray-100 pb-2">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-700">إجمالي مصروفات المشروع</p>
+                      <p className="text-[9px] text-slate-500 mt-0.5">مطابق لإجمالي التكاليف في الدراسة</p>
+                    </div>
+                    <span className="text-sm font-black text-slate-800 tabular-nums" dir="ltr">{fmt(capital.totalProjectSpend)} AED</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-md bg-slate-50 px-2.5 py-2">
+                      <p className="text-[9px] text-slate-500">يدفعه المستثمر</p>
+                      <p className="text-[11px] font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.investorProjectSpend)} AED</p>
+                    </div>
+                    <div className="rounded-md bg-cyan-50 px-2.5 py-2">
+                      <p className="text-[9px] text-cyan-700">يدفعه حساب الضمان</p>
+                      <p className="text-[11px] font-black text-cyan-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.escrowProjectSpend)} AED</p>
+                    </div>
+                  </div>
+                  <p className="text-[8px] leading-relaxed text-gray-500">هذا توزيع لمصروفات المشروع، وليس رأس المال المطلوب من المستثمر.</p>
                 </div>
               </SectionCard>
 

@@ -21,3 +21,7 @@ Using the live Investor Cash Flow engine with the active Majan project and saved
 ## Feasibility Study redesign verification
 
 The revised browser view displays the investor-focused metrics. It reports AED 804,553,210 revenues, AED 666,858,262 total costs, AED 137,694,948 pre-Como project profit, AED 20,654,242 Como profit share, and AED 117,040,706 net investor profit. The shared funding summary now reconciles exactly: investor spending AED 278,955,933 plus escrow spending AED 387,902,328 equals the Feasibility total of AED 666,858,262. The page shows the required capital peak (AED 331,172,793 in the current live calculation), paid capital, remaining funding, saleable-area cost per square foot, average selling price per square foot, and profit per square foot. Break-even and annual-return sections are absent.
+
+## Clarity redesign verification
+
+Browser verification confirmed that the feasibility view now uses three distinct explanations rather than one mixed card: **Investor Return** (gross profit, Como's 15% share, net investor profit, and the two net-return ratios); **Required Capital** (peak liquidity, paid capital, remaining funding, peak timing, and the escrow-deposit note); and **Project-Cost Funding** (the investor- and escrow-funded spending split that reconciles to total cost). This removes the previous ambiguity between the investor's required liquidity and the source used to pay project costs.
