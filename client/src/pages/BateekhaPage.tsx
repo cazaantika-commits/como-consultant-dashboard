@@ -79,12 +79,14 @@ export default function BateekhaPage() {
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
-  const isBuildForSale = (projectQuery.data as any)?.financingScenario === "build_for_sale";
+  const financingScenario = (projectQuery.data as any)?.financingScenario;
+  const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent"
+    ? financingScenario
+    : undefined;
   useEffect(() => {
-    setActiveTab((currentTab) => getFallbackFinancialStudiesTab(currentTab, isBuildForSale ? "build_for_sale" : undefined));
-  }, [isBuildForSale, activeTab]);
+    setActiveTab((currentTab) => getFallbackFinancialStudiesTab(currentTab, projectType));
+  }, [projectType, activeTab]);
 
-  const projectType = isBuildForSale ? "build_for_sale" : undefined;
   const inputTabs = TABS.filter(t => t.group === "input" && isFinancialStudiesTabVisible(t.id, projectType));
   const outputTabs = TABS.filter(t => t.group === "output" && isFinancialStudiesTabVisible(t.id, projectType));
 

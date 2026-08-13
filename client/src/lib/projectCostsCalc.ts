@@ -115,7 +115,7 @@ export function calculateProjectCosts(
     else revenueOff += u.revenue;
   }
 
-  const totalRevenue = revenueRes + revenueRet + revenueOff;
+  const calculatedRevenue = revenueRes + revenueRet + revenueOff;
 
   // CALCULATED COSTS (using corrected formulas from new engine)
   const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
@@ -130,16 +130,19 @@ export function calculateProjectCosts(
 
   const financingScenario = p.financingScenario || "offplan_escrow";
   const isBuildForSale = financingScenario === "build_for_sale";
+  const isBuildForRent = financingScenario === "build_for_rent";
+  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   let buildForSaleMarketingRate = 1;
   try {
     buildForSaleMarketingRate = Number(JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates?.buildForSaleMarketingRate ?? 1);
   } catch { /* use the approved 1% default */ }
-  const effectiveDeveloperFeePct = isBuildForSale ? 3 : financingScenario === "no_offplan"
+  const effectiveDeveloperFeePct = isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
-  const effectiveMarketingPct = isBuildForSale ? buildForSaleMarketingRate : marketingPct;
-  const developerFee = totalRevenue * (effectiveDeveloperFeePct / 100);
-  const salesCommission = totalRevenue * (salesCommissionPct / 100);
-  const marketingCost = totalRevenue * (effectiveMarketingPct / 100);
+  const effectiveMarketingPct = isBuildForRent ? 0 : isBuildForSale ? buildForSaleMarketingRate : marketingPct;
+  const developerFee = calculatedRevenue * (effectiveDeveloperFeePct / 100);
+  const salesCommission = isBuildForRent ? 0 : calculatedRevenue * (salesCommissionPct / 100);
+  const marketingCost = isBuildForRent ? 0 : calculatedRevenue * (effectiveMarketingPct / 100);
+  const totalRevenue = isBuildForRent ? 0 : calculatedRevenue;
 
   // رسوم ريرا المحسوبة (الصيغ الجديدة)
   const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
@@ -155,10 +158,10 @@ export function calculateProjectCosts(
   const computedReraAuditReportFee = reraQuarterlyFees.auditorTotal;
   const computedReraInspectionFee = reraQuarterlyFees.inspectionTotal;
 
-  const totalRegulatory = isBuildForSale
+  const totalRegulatory = isIndependentNoOffPlan
     ? computedReraUnitRegFee + developerNocFee
     : computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
-  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isBuildForSale ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
+  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
     landPrice,
@@ -173,20 +176,20 @@ export function calculateProjectCosts(
     constructionCost,
     communityFees: computedCommunityFees,
     surveyorFees,
-    surveyorDwgFees: isBuildForSale ? 0 : surveyorDwgFees,
+    surveyorDwgFees: isIndependentNoOffPlan ? 0 : surveyorDwgFees,
     developerFee,
     salesCommission,
     marketingCost,
     reraUnitRegFee: computedReraUnitRegFee,
-    reraProjectRegFee: isBuildForSale ? 0 : reraProjectRegFee,
+    reraProjectRegFee: isIndependentNoOffPlan ? 0 : reraProjectRegFee,
     developerNocFee,
-    escrowAccountFee: isBuildForSale ? 0 : escrowAccountFee,
-    bankFees: isBuildForSale ? 0 : bankFees,
-    reraAuditReportFee: isBuildForSale ? 0 : computedReraAuditReportFee,
-    reraInspectionReportFee: isBuildForSale ? 0 : computedReraInspectionFee,
-    revenueRes,
-    revenueRet,
-    revenueOff,
+    escrowAccountFee: isIndependentNoOffPlan ? 0 : escrowAccountFee,
+    bankFees: isIndependentNoOffPlan ? 0 : bankFees,
+    reraAuditReportFee: isIndependentNoOffPlan ? 0 : computedReraAuditReportFee,
+    reraInspectionReportFee: isIndependentNoOffPlan ? 0 : computedReraInspectionFee,
+    revenueRes: isBuildForRent ? 0 : revenueRes,
+    revenueRet: isBuildForRent ? 0 : revenueRet,
+    revenueOff: isBuildForRent ? 0 : revenueOff,
     totalRevenue,
     totalCosts,
   };

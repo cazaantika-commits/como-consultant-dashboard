@@ -106,7 +106,7 @@ const factSheetFields = {
   reraLeadMonths: z.coerce.number().int().optional(),
   startDate: z.string().optional(),
   // سيناريو التمويل
-  financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "build_for_sale", "rental"]).optional(),
+  financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "build_for_sale", "build_for_rent", "rental"]).optional(),
   // Unit distribution - counts
   residential1brCount: z.coerce.number().int().optional(),
   residential2brCount: z.coerce.number().int().optional(),

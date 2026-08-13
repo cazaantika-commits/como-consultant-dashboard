@@ -1159,4 +1159,5 @@
 - [ ] Add Villa and Townhouse as visible editable pricing rows in the build-for-sale Sales page
 - [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages
 - [ ] Add regression proof that the zero-value unit update does not change any Off-Plan calculations or rules
+- [ ] Implement build-for-rent inside Financial Studies with investor-funded costs and no sales, marketing, commissions, or revenue; exclude rental income for now
 - [ ] Preserve zero as a valid count, area, and price for unused unit types and hide those types from downstream Financial Studies pages

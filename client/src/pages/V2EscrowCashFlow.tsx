@@ -284,7 +284,7 @@ export default function V2EscrowCashFlow() {
     );
   }
 
-  if (scenario === "no_offplan") {
+  if (scenario === "no_offplan" || scenario === "build_for_sale" || scenario === "build_for_rent") {
     return (
       <div className="min-h-[320px] bg-gray-50 p-6" dir="rtl">
         <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center shadow-sm">

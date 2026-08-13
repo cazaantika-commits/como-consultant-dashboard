@@ -28,7 +28,7 @@ import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 // ═══════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════
-export type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan" | "build_for_sale" | "rental";
+export type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan" | "build_for_sale" | "build_for_rent" | "rental";
 export type Funder = "investor" | "escrow" | "split";
 
 export interface CostRow {
@@ -437,7 +437,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const isScenario2 = scenario === "offplan_construction";
   const isScenario3 = scenario === "no_offplan";
   const isBuildForSale = scenario === "build_for_sale";
-  const isScenario4 = scenario === "rental";
+  const isScenario4 = scenario === "rental" || scenario === "build_for_rent";
 
   // Post-construction months:
   // All scenarios: 13 months post-construction
@@ -598,8 +598,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     postConstructionMonths: emptyPost(),
   });
 
-  // ─── رسوم المساح DWG: غير منطبقة في البناء للبيع ───
-  if (!isScenario3 && !isBuildForSale) {
+  // ─── رسوم المساح DWG: غير منطبقة في البناء للبيع أو التأجير ───
+  if (!isScenario3 && !isScenario4 && !isBuildForSale) {
     const surveyorDwgDesign = emptyDesign();
     surveyorDwgDesign[reraStartInDesign] = i.surveyorDwgFee;
     rows.push({
@@ -621,10 +621,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   rows.push({
     label: "رسوم المساح (As-Built)",
     totalCost: i.surveyorFee,
-    investorAmount: (isScenario3 || isBuildForSale) ? i.surveyorFee : 0,
+    investorAmount: (isScenario3 || isScenario4 || isBuildForSale) ? i.surveyorFee : 0,
     paid: 0,
     unpaid: 0,
-    funder: (isScenario3 || isBuildForSale) ? "investor" : "escrow",
+    funder: (isScenario3 || isScenario4 || isBuildForSale) ? "investor" : "escrow",
     section: "الدراسات والمسوحات",
     designMonths: emptyDesign(),
     constructionMonths: surveyorAsbuiltConst,
@@ -667,7 +667,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   });
 
   // ─── رسوم الجهات الحكومية ───
-  if (isScenario3 || isBuildForSale) {
+  if (isScenario3 || isScenario4 || isBuildForSale) {
     const govDesign = emptyDesign();
     const govConst = emptyConstruction();
     const month80pct = Math.max(0, Math.round(constructionDuration * 0.8) - 1);
@@ -819,13 +819,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       reraUnitsDesign[reraMonthInDesign2] = costs.reraUnits;
     }
     rows.push({
-      label: "تسجيل الوحدات — ريرا",
+      label: "تسجيل الوحدات — دائرة الأراضي والأملاك",
       totalCost: costs.reraUnits,
       investorAmount: costs.reraUnits,
       paid: 0,
       unpaid: costs.reraUnits,
       funder: "investor",
-      section: "ريرا (التنظيم العقاري)",
+      section: "الرسوم الحكومية والتنظيمية",
       designMonths: reraUnitsDesign,
       constructionMonths: reraUnitsConstruction,
       postConstructionMonths: emptyPost(),
@@ -1198,7 +1198,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
 
     // 2. إيداع حساب الضمان: غير منطبق في البناء للبيع المستقل.
-    if (!isScenario3 && !isBuildForSale) {
+    // Build-for-rent has no escrow account or deposit.
+    if (!isScenario3 && !isScenario4 && !isBuildForSale) {
       const depositDesign = emptyDesign();
       const depositConst = emptyConstruction();
       const depositPost = emptyPost();
@@ -1250,10 +1251,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     rows.push({
       label: "مستخلصات المقاول (80% — بعد شهر من الإنجاز)",
       totalCost: progressTotal,
-      investorAmount: (isScenario3 || isBuildForSale) ? progressTotal : 0,
+      investorAmount: (isScenario3 || isScenario4 || isBuildForSale) ? progressTotal : 0,
       paid: 0,
       unpaid: progressTotal,
-      funder: (isScenario3 || isBuildForSale) ? "investor" : "escrow",
+      funder: (isScenario3 || isScenario4 || isBuildForSale) ? "investor" : "escrow",
       section: "الإنشاء",
       designMonths: progressDesign,
       constructionMonths: progressConst,
@@ -1269,10 +1270,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     rows.push({
       label: "ريتنشن المقاول الأولى (5%)",
       totalCost: retention1Amount,
-      investorAmount: (isScenario3 || isBuildForSale) ? retention1Amount : 0,
+      investorAmount: (isScenario3 || isScenario4 || isBuildForSale) ? retention1Amount : 0,
       paid: 0,
       unpaid: retention1Amount,
-      funder: (isScenario3 || isBuildForSale) ? "investor" : "escrow",
+      funder: (isScenario3 || isScenario4 || isBuildForSale) ? "investor" : "escrow",
       section: "الإنشاء",
       designMonths: ret1Design,
       constructionMonths: ret1Const,

@@ -33,4 +33,14 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(isFinancialStudiesGeneralInputVisible("developerNocFee", "build_for_sale")).toBe(true);
     expect(isFinancialStudiesGeneralInputVisible("bankFees", "offplan_escrow")).toBe(true);
   });
+
+  it("hides sales, marketing, and escrow for build-for-rent projects", () => {
+    expect(isFinancialStudiesTabVisible("sales", "build_for_rent")).toBe(false);
+    expect(isFinancialStudiesTabVisible("marketing", "build_for_rent")).toBe(false);
+    expect(isFinancialStudiesTabVisible("escrow", "build_for_rent")).toBe(false);
+    expect(isFinancialStudiesTabVisible("construction", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesTabVisible("cashflows", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesTabVisible("feasibility", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesGeneralInputVisible("bankFees", "build_for_rent")).toBe(false);
+  });
 });

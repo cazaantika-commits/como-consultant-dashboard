@@ -40,6 +40,7 @@ export default function V2Feasibility() {
   const project = projectQuery.data;
   const scenario = ((project as any)?.financingScenario || "offplan_escrow") as Scenario;
   const isBuildForSale = scenario === "build_for_sale";
+  const isBuildForRent = scenario === "build_for_rent";
   const costs = project ? calculateProjectCosts(project) : null;
   const designDuration = getProjectDesignTiming(project).designMonths;
 
@@ -121,7 +122,7 @@ export default function V2Feasibility() {
 
   // Computed values
   const totalRevenue = costs?.totalRevenue || 0;
-  const totalCosts = isBuildForSale
+  const totalCosts = (isBuildForSale || isBuildForRent)
     ? cashFlow.rows
       .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
       .reduce((sum, row) => sum + row.totalCost, 0)
@@ -199,14 +200,22 @@ export default function V2Feasibility() {
         <div className="max-w-[1100px] mx-auto px-4 py-3 space-y-3">
 
           {/* ═══ KPI STRIP ═══ */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-            <KpiMini label="الإيرادات" value={fmtM(totalRevenue)} color="teal" icon={<TrendingUp className="w-3 h-3" />} />
-            <KpiMini label="التكاليف" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
-            <KpiMini label="ربح المستثمر الصافي" value={fmtM(investorProfit)} color={investorProfit >= 0 ? "gold" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
-            <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
-            <KpiMini label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" icon={<Percent className="w-3 h-3" />} />
-            <KpiMini label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" icon={<Sparkles className="w-3 h-3" />} />
-          </div>
+          {isBuildForRent ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <KpiMini label="إجمالي تكاليف البناء للتأجير" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
+              <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
+              <KpiMini label="الإيرادات والإيجار" value="غير مدرج حالياً" color="teal" icon={<TrendingUp className="w-3 h-3" />} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+              <KpiMini label="الإيرادات" value={fmtM(totalRevenue)} color="teal" icon={<TrendingUp className="w-3 h-3" />} />
+              <KpiMini label="التكاليف" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
+              <KpiMini label="ربح المستثمر الصافي" value={fmtM(investorProfit)} color={investorProfit >= 0 ? "gold" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
+              <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
+              <KpiMini label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" icon={<Percent className="w-3 h-3" />} />
+              <KpiMini label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" icon={<Sparkles className="w-3 h-3" />} />
+            </div>
+          )}
 
           {/* ═══ TWO COLUMNS ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
@@ -215,14 +224,14 @@ export default function V2Feasibility() {
             <div className="space-y-3">
 
               {/* Revenue */}
-              <SectionCard title="الإيرادات" icon={<TrendingUp className="w-3.5 h-3.5 text-white" />} gradient="from-teal-600 to-teal-800" borderColor="border-teal-200/60">
+              {!isBuildForRent && <SectionCard title="الإيرادات" icon={<TrendingUp className="w-3.5 h-3.5 text-white" />} gradient="from-teal-600 to-teal-800" borderColor="border-teal-200/60">
                 <div className="space-y-1">
                   <Row label="سكني" value={fmt(revRes)} pct={totalRevenue > 0 ? (revRes / totalRevenue * 100) : 0} color="text-teal-700" />
                   <Row label="تجزئة" value={fmt(revRet)} pct={totalRevenue > 0 ? (revRet / totalRevenue * 100) : 0} color="text-teal-700" />
                   <Row label="مكاتب" value={fmt(revOff)} pct={totalRevenue > 0 ? (revOff / totalRevenue * 100) : 0} color="text-teal-700" />
                   <TotalRow label="إجمالي الإيرادات" value={fmt(totalRevenue)} bgColor="bg-teal-50" textColor="text-teal-800" />
                 </div>
-              </SectionCard>
+              </SectionCard>}
 
               {/* Costs - كل بند مفصل */}
               <SectionCard title="التكاليف" icon={<DollarSign className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200/60">
@@ -248,25 +257,25 @@ export default function V2Feasibility() {
                   <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم المجتمع" value={fmt(costs?.communityFees || 0)} pct={totalCosts > 0 ? ((costs?.communityFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم الجهات الحكومية" value={fmt(costs?.officialBodiesFees || 0)} pct={totalCosts > 0 ? ((costs?.officialBodiesFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="تسجيل الوحدات (ريرا)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  <Row label="تسجيل الوحدات (دائرة الأراضي والأملاك)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* المبيعات */}
-                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">المبيعات والتسويق</div>
+                  <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">{isBuildForRent ? "أتعاب التطوير" : "المبيعات والتسويق"}</div>
                   <Row label="أتعاب المطور" value={fmt(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="عمولة المبيعات" value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="التسويق" value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="عمولة المبيعات" value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label="التسويق" value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* الإجمالي */}
                   <TotalRow label="إجمالي التكاليف" value={fmt(totalCosts)} bgColor="bg-slate-100" textColor="text-slate-800" />
                 </div>
               </SectionCard>
 
               {/* Investor return: a simple profit waterfall, not disconnected ratio cards. */}
-              <SectionCard title="عائد المستثمر" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
+              {!isBuildForRent && <SectionCard title="عائد المستثمر" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
                 <div className="space-y-2.5">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                     <div className="flex items-end justify-between gap-3">
@@ -307,10 +316,10 @@ export default function V2Feasibility() {
                     </div>
                   </div>
                 </div>
-              </SectionCard>
+              </SectionCard>}
 
               {/* ═══ SCENARIO COMPARISON ═══ */}
-              <SectionCard title="مقارنة السيناريوهات" icon={<Layers className="w-3.5 h-3.5 text-white" />} gradient="from-indigo-600 to-violet-700" borderColor="border-indigo-200/60">
+              {!isBuildForRent && <SectionCard title="مقارنة السيناريوهات" icon={<Layers className="w-3.5 h-3.5 text-white" />} gradient="from-indigo-600 to-violet-700" borderColor="border-indigo-200/60">
                 <div className="overflow-hidden rounded-lg border border-gray-100">
                   <table className="w-full text-[10px]">
                     <thead>
@@ -343,7 +352,7 @@ export default function V2Feasibility() {
                     </tbody>
                   </table>
                 </div>
-              </SectionCard>
+              </SectionCard>}
             </div>
 
             {/* ─── RIGHT: PROJECT DETAILS ─── */}

@@ -207,7 +207,7 @@ describe("calculateEscrowSettlement", () => {
     expect(designMonthOf("رسوم الفرز")).toBe(4);
     expect(designMonthOf("رسوم NOC المطور")).toBe(4);
     expect(designMonthOf("تسجيل المشروع — ريرا")).toBe(4);
-    expect(designMonthOf("تسجيل الوحدات — ريرا")).toBe(5);
+    expect(designMonthOf("تسجيل الوحدات — دائرة الأراضي والأملاك")).toBe(5);
     expect(designMonthOf("حساب الضمان (رسوم فتح)")).toBe(5);
     expect(designMonthOf("إيداع حساب الضمان (20%)")).toBe(5);
   });
@@ -302,6 +302,38 @@ describe("calculateEscrowSettlement", () => {
     expect(feasibility.surveyorDwgFees).toBe(0);
     expect(feasibility.developerFee).toBe(feasibility.totalRevenue * 0.03);
     expect(feasibility.marketingCost).toBe(feasibility.totalRevenue * 0.02);
+  });
+
+  it("applies the approved build-for-rent rules with no sales, marketing, commissions, revenue, or escrow", () => {
+    const project = {
+      financingScenario: "build_for_rent",
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      gfaResidentialSqft: 9000,
+      residential1brCount: 10,
+      residential1brArea: 750,
+      residential1brPrice: 5000,
+      constructionScheduleJson: JSON.stringify({ monthlyProgress: [10, 20, 70] }),
+    };
+    const result = computeInvestorCashFlow(project, "build_for_rent");
+    const labels = result.rows.map((row) => row.label);
+
+    expect(labels.some((label) => label.includes("حساب الضمان"))).toBe(false);
+    expect(labels.some((label) => label.includes("تسجيل المشروع — ريرا"))).toBe(false);
+    expect(labels.some((label) => label.includes("إيرادات المبيعات"))).toBe(false);
+    expect(labels.some((label) => label.includes("عمولة المبيعات"))).toBe(false);
+    expect(labels).not.toContain("التسويق");
+    expect(result.rows.some((row) => row.funder === "escrow")).toBe(false);
+    expect(result.rows.find((row) => row.label.startsWith("مستخلصات المقاول"))?.funder).toBe("investor");
+    expect(result.rows.find((row) => row.label === "تسجيل الوحدات — دائرة الأراضي والأملاك")?.constructionMonths[1]).toBeGreaterThan(0);
+
+    const feasibility = calculateProjectCosts(project)!;
+    expect(feasibility.totalRevenue).toBe(0);
+    expect(feasibility.salesCommission).toBe(0);
+    expect(feasibility.marketingCost).toBe(0);
+    expect(feasibility.escrowAccountFee).toBe(0);
+    expect(feasibility.bankFees).toBe(0);
   });
 
 });

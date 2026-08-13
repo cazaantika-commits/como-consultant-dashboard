@@ -41,7 +41,7 @@ export interface ProjectInputs {
 }
 
 export interface ProjectRates {
-  projectType: "offplan" | "build_for_sale" | "rental";
+  projectType: "offplan" | "build_for_sale" | "build_for_rent" | "rental";
   buildForSaleMarketingStartMonthsBeforeCompletion: number;
   buildForSaleMarketingDurationMonths: number;
   landRegistration: number;
@@ -183,6 +183,8 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
 
 export function dbProjectToRates(dbProject: any): ProjectRates {
   const isBuildForSale = dbProject.financingScenario === "build_for_sale";
+  const isBuildForRent = dbProject.financingScenario === "build_for_rent";
+  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   let savedRates: Record<string, unknown> = {};
   try {
     savedRates = JSON.parse(dbProject.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
@@ -190,15 +192,15 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
   const designPct = parseFloat(dbProject.designFeePct || '0') || 1.8;
   const supervisionPct = parseFloat(dbProject.supervisionFeePct || '0') || 2;
   const salesPct = parseFloat(dbProject.salesCommissionPct || '0') || 5;
-  const marketingPct = isBuildForSale
+  const marketingPct = isBuildForRent ? 0 : isBuildForSale
     ? Number(savedRates.buildForSaleMarketingRate ?? 1)
     : (parseFloat(dbProject.marketingPct || '0') || 2);
-  const developerPct = isBuildForSale ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
+  const developerPct = isIndependentNoOffPlan ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
   const sortingPerSqft = parseFloat(dbProject.separationFeePerSqft || '0') || 40;
   const landBrokerPct = parseFloat(dbProject.agentCommissionLandPct || '0') || 1;
 
   return {
-    projectType: isBuildForSale ? "build_for_sale" : dbProject.financingScenario === "rental" ? "rental" : "offplan",
+    projectType: isBuildForSale ? "build_for_sale" : isBuildForRent ? "build_for_rent" : dbProject.financingScenario === "rental" ? "rental" : "offplan",
     buildForSaleMarketingStartMonthsBeforeCompletion: Math.max(0, Number(savedRates.buildForSaleMarketingStartMonthsBeforeCompletion ?? 1)),
     buildForSaleMarketingDurationMonths: Math.max(1, Number(savedRates.buildForSaleMarketingDurationMonths ?? 3)),
     landRegistration: 0.04,
@@ -209,19 +211,19 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     reraUnitFee: 800,
     developerFeeRate: developerPct / 100,
     developerFeeDesign: 0.01,
-    developerFeeOffplan: isBuildForSale ? 0 : 0.01,
-    developerFeeSupervision: isBuildForSale ? 0.02 : (developerPct / 100) - 0.02,
+    developerFeeOffplan: isIndependentNoOffPlan ? 0 : 0.01,
+    developerFeeSupervision: isIndependentNoOffPlan ? 0.02 : (developerPct / 100) - 0.02,
     marketingRate: marketingPct / 100,
     marketingOffplanShare: 0.25,
     marketingConstructionShare: 0.75,
     salesCommission: salesPct / 100,
     salesCommissionPostCompletion: 0.02,
-    constructionInvestorShare: isBuildForSale ? 1 : 0.15,
-    constructionEscrowShare: isBuildForSale ? 0 : 0.85,
-    govFeesInvestorShare: isBuildForSale ? 1 : 0.10,
-    govFeesEscrowShare: isBuildForSale ? 0 : 0.90,
+    constructionInvestorShare: isIndependentNoOffPlan ? 1 : 0.15,
+    constructionEscrowShare: isIndependentNoOffPlan ? 0 : 0.85,
+    govFeesInvestorShare: isIndependentNoOffPlan ? 1 : 0.10,
+    govFeesEscrowShare: isIndependentNoOffPlan ? 0 : 0.90,
     advancePayment: 0.10,
-    escrowDeposit: isBuildForSale ? 0 : 0.20,
+    escrowDeposit: isIndependentNoOffPlan ? 0 : 0.20,
     contingency: 0.02,
     communityOffplanShare: 0.25,
     communityConstructionShare: 0.75,
@@ -358,19 +360,22 @@ export function calculateCosts(
   const constructionEscrow = constructionCost * rates.constructionEscrowShare;
   const govFeesInvestor = inputs.govFeesTotal * rates.govFeesInvestorShare;
   const govFeesEscrow = inputs.govFeesTotal * rates.govFeesEscrowShare;  // ─── إجمالي المستثمر (نفس معادلة البطاقة بالضبط) ───
-  const isBuildForSale = rates.projectType === "build_for_sale";
-  const totalInvestor = isBuildForSale
+  const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent";
+  const isBuildForRent = rates.projectType === "build_for_rent";
+  const effectiveMarketing = isBuildForRent ? 0 : marketing;
+  const effectiveSalesCommission = isBuildForRent ? 0 : salesCommission;
+  const totalInvestor = isIndependentNoOffPlan
     ? landPrice + landRegistration + landBroker + designFee + supervisionFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
-      sortingFee + inputs.nocSale + reraUnits + marketing + developerFee +
-      salesCommission + inputs.surveyorFee + constructionInvestor
+      sortingFee + inputs.nocSale + reraUnits + effectiveMarketing + developerFee +
+      effectiveSalesCommission + inputs.surveyorFee + constructionInvestor
     : landPrice + landRegistration + landBroker + designFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
       sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
       inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee +
       inputs.surveyorDwgFee + constructionInvestor;
   // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
-  const totalEscrow = isBuildForSale ? 0 : supervisionFee + govFeesEscrow + salesCommission +
+  const totalEscrow = isIndependentNoOffPlan ? 0 : supervisionFee + govFeesEscrow + salesCommission +
     inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorFee + constructionEscrow;
 
   const totalCosts = totalInvestor + totalEscrow;
@@ -383,8 +388,8 @@ export function calculateCosts(
     supervisionFee,
     sortingFee,
     reraUnits,
-    salesCommission,
-    marketing,
+    salesCommission: effectiveSalesCommission,
+    marketing: effectiveMarketing,
     developerFee,
     constructionInvestor,
     constructionEscrow,

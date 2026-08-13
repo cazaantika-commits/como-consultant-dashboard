@@ -20,6 +20,15 @@ const BUILD_FOR_SALE_HIDDEN_TABS: FinancialStudiesTabId[] = [
   "mall",
 ];
 
+const BUILD_FOR_RENT_HIDDEN_TABS: FinancialStudiesTabId[] = [
+  "sales",
+  "marketing",
+  "timeline",
+  "settings",
+  "escrow",
+  "mall",
+];
+
 export const BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS = [
   "reraProjectRegFee",
   "escrowAccountFee",
@@ -32,7 +41,9 @@ export function isFinancialStudiesTabVisible(
   tabId: FinancialStudiesTabId,
   projectType?: string | null,
 ): boolean {
-  return projectType !== "build_for_sale" || !BUILD_FOR_SALE_HIDDEN_TABS.includes(tabId);
+  if (projectType === "build_for_sale") return !BUILD_FOR_SALE_HIDDEN_TABS.includes(tabId);
+  if (projectType === "build_for_rent") return !BUILD_FOR_RENT_HIDDEN_TABS.includes(tabId);
+  return true;
 }
 
 export function getFallbackFinancialStudiesTab(
@@ -46,6 +57,7 @@ export function isFinancialStudiesGeneralInputVisible(
   fieldKey: string,
   projectType?: string | null,
 ): boolean {
-  return projectType !== "build_for_sale"
+  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
+  return !isNoOffPlanType
     || !BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS.includes(fieldKey as typeof BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS[number]);
 }

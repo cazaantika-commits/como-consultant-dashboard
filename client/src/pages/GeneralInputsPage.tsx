@@ -70,7 +70,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
         else if (f.defaultValue) data[f.key] = f.defaultValue;
       });
       data.financingScenario = p.financingScenario || "offplan_escrow";
-      if (data.financingScenario === "build_for_sale") data.developerFeePct = "3";
+      if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
       setFormData(data);
       setHasChanges(false);
     }
@@ -129,7 +129,9 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   }
 
   const isBuildForSale = formData.financingScenario === "build_for_sale";
-  const visibleFields = isBuildForSale
+  const isBuildForRent = formData.financingScenario === "build_for_rent";
+  const isIndependentType = isBuildForSale || isBuildForRent;
+  const visibleFields = isIndependentType
     ? ALL_FIELDS.filter((field) => isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario))
     : ALL_FIELDS;
   const columnSize = Math.ceil(visibleFields.length / 3);
@@ -142,7 +144,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {fields.map((field) => {
         const isComputed = (field as any).computed;
         const hint = (field as any).hint;
-        const displayLabel = isBuildForSale && field.key === "developerFeePct"
+        const displayLabel = isIndependentType && field.key === "developerFeePct"
           ? "أتعاب المطور (1% تصميم + 2% تنفيذ)"
           : field.label;
         const displayValue = field.key === "reraAuditReportFee"
@@ -185,7 +187,7 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
           >
             <option value="offplan_escrow">أوف بلان</option>
             <option value="build_for_sale">بناء للبيع</option>
-            <option value="rental">بناء للتأجير</option>
+            <option value="build_for_rent">بناء للتأجير</option>
           </select>
         </label>
         <span className="text-[11px] text-blue-700 font-medium">مدة التصاميم: {designTiming.designMonths} شهر <span className="text-gray-400">(من الإعدادات والقواعد)</span></span>
@@ -208,6 +210,11 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
       {isBuildForSale && (
         <div className="mb-3 rounded-lg border border-teal-100 bg-teal-50/60 px-4 py-2 text-[12px] text-teal-900">
           <span className="font-semibold">قواعد البناء للبيع:</span> لا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ، بينما التسويق والمبيعات بعد الإنجاز يُداران من صفحة المبيعات.
+        </div>
+      )}
+      {isBuildForRent && (
+        <div className="mb-3 rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-2 text-[12px] text-indigo-900">
+          <span className="font-semibold">قواعد البناء للتأجير:</span> لا توجد مبيعات أو تسويق أو عمولات أو إيرادات في هذه المرحلة، ولا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ.
         </div>
       )}
 
