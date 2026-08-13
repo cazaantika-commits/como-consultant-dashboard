@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
-import { computeInvestorCashFlow } from "../client/src/lib/investorCashFlowEngine";
+import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 
 describe("calculateEscrowSettlement", () => {
@@ -211,4 +211,27 @@ describe("calculateEscrowSettlement", () => {
     expect(designMonthOf("حساب الضمان (رسوم فتح)")).toBe(5);
     expect(designMonthOf("إيداع حساب الضمان (20%)")).toBe(5);
   });
+
+  it("defines required capital as paid capital plus the maximum future investor deficit", () => {
+    const empty = [0, 0];
+    const cashFlow = {
+      rows: [
+        { label: "مدفوع سابقاً", totalCost: 100, investorAmount: 100, paid: 100, unpaid: 0, funder: "investor", section: "الأرض", designMonths: empty, constructionMonths: [], postConstructionMonths: [] },
+        { label: "إيداع حساب الضمان (20%)", totalCost: 20, investorAmount: 20, paid: 0, unpaid: 20, funder: "investor", section: "الإنشاء", designMonths: [20, 0], constructionMonths: [], postConstructionMonths: [], isTransfer: true },
+        { label: "مصروف المستثمر", totalCost: 30, investorAmount: 30, paid: 0, unpaid: 30, funder: "investor", section: "الإنشاء", designMonths: [0, 30], constructionMonths: [], postConstructionMonths: [] },
+        { label: "مصروف الضمان", totalCost: 50, investorAmount: 0, paid: 0, unpaid: 50, funder: "escrow", section: "الإنشاء", designMonths: empty, constructionMonths: [], postConstructionMonths: [] },
+        { label: "إيراد المستثمر", totalCost: 10, investorAmount: 10, paid: 0, unpaid: 10, funder: "investor", section: "الإيرادات", designMonths: [0, 10], constructionMonths: [], postConstructionMonths: [], isRevenue: true },
+      ],
+      designDuration: 2, constructionDuration: 0, postDuration: 0, monthDates: ["2026-01", "2026-02"],
+    } as CashFlowResult;
+
+    const summary = calculateInvestorCapitalSummary(cashFlow);
+    expect(summary.paidCapital).toBe(100);
+    expect(summary.remainingCapital).toBe(40);
+    expect(summary.requiredCapital).toBe(140);
+    expect(summary.investorProjectSpend).toBe(130);
+    expect(summary.escrowProjectSpend).toBe(50);
+    expect(summary.totalProjectSpend).toBe(180);
+  });
+
 });

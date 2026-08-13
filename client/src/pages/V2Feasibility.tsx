@@ -1,19 +1,20 @@
 /**
  * V2Feasibility — دراسة الجدوى المالية (Bateekha tab)
  * Professional compact two-column layout with real project data
- * Includes: revenues, costs, profits, ratios, developer/investor split,
- * break-even, scenario comparison, IRR estimate, cost/sqft vs selling price
+ * Includes investor-focused revenues, spending, capital, profit allocation,
+ * funding sources, and economics per saleable square foot.
  */
+import { useMemo } from "react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
-import { getProjectDesignTiming } from "@/lib/projectTiming";
+import { clampMarketingDistributionToStart, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
+import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesResult } from "@/lib/investorCashFlowEngine";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import {
   DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
-  Percent, Users, Sparkles, Target, Landmark, Info, ArrowDownCircle,
-  Scale, Activity, Layers, CheckCircle2
+  Percent, Users, Sparkles, Landmark, Activity, Layers
 } from "lucide-react";
 
 const fmt = (n: number) =>
@@ -32,20 +33,91 @@ export default function V2Feasibility() {
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+  const plansQuery = trpc.waelSalesPlan.getByProject.useQuery(
+    { projectId: selectedProjectId! },
+    { enabled: !!selectedProjectId && !!user },
+  );
   const project = projectQuery.data;
   const costs = project ? calculateProjectCosts(project) : null;
   const designDuration = getProjectDesignTiming(project).designMonths;
+
+  // Use the saved Sales Plan inputs so the Feasibility Study's capital number
+  // has the same cash-flow source as Investor and Escrow Cash Flow.
+  const salesResult = useMemo<SalesResult | undefined>(() => {
+    const plan = plansQuery.data?.[0] as any;
+    if (!plan || !project) return undefined;
+    let marketingMonthlyAmounts: number[] | undefined;
+    let paymentPlan: SalesResult["paymentPlan"];
+    let ppDownPct: number | undefined;
+
+    try {
+      const absorption = plan.salesAbsorptionJson ? JSON.parse(plan.salesAbsorptionJson) : null;
+      if (absorption?.marketingDistribution) {
+        const minimumStart = getProjectMarketingTiming(project).marketingStartMonth;
+        const savedStart = Number(absorption.marketingActualStart || minimumStart);
+        const actualStart = Math.max(savedStart, minimumStart);
+        const distribution = clampMarketingDistributionToStart(absorption.marketingDistribution, savedStart, minimumStart);
+        const channels = Object.values(distribution) as number[][];
+        if (channels.length) {
+          marketingMonthlyAmounts = new Array(actualStart - 1 + Math.max(...channels.map((channel) => channel.length))).fill(0);
+          for (const channel of channels) {
+            channel.forEach((value, index) => { marketingMonthlyAmounts![actualStart - 1 + index] += Number(value || 0); });
+          }
+        }
+      }
+      ppDownPct = absorption?.ppDownPct;
+      paymentPlan = absorption ? {
+        downPct: Number(absorption.ppDownPct ?? 10),
+        secondPct: Number(absorption.ppSecondPct ?? 0),
+        secondAfterMonths: Number(absorption.ppSecondAfterMonths ?? 0),
+        duringTotalPct: 100 - Number(absorption.ppDownPct ?? 10) - Number(absorption.ppSecondPct ?? 0) - Number(absorption.ppHandoverPct ?? 0),
+        installmentEveryMonths: Number(absorption.ppInstallmentEvery ?? 1),
+        handoverPct: Number(absorption.ppHandoverPct ?? 0),
+      } : undefined;
+    } catch {}
+
+    try {
+      if (plan.paymentPlanJson) {
+        paymentPlan = JSON.parse(plan.paymentPlanJson);
+        ppDownPct = paymentPlan?.downPct;
+      }
+      const results = plan.resultsJson ? JSON.parse(plan.resultsJson) : null;
+      if (!results?.escrowData || !results?.salesDistribution) return marketingMonthlyAmounts ? { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, paymentPlan } : undefined;
+      const storedCash = results.actualCashInflow || [];
+      const actualCashInflow = results.actualCashInflowVersion === 2
+        ? storedCash
+        : (storedCash.length > 0 && storedCash[0] === 0 ? storedCash.slice(1) : storedCash);
+      const directSales = JSON.parse((project as any).constructionScheduleJson || "{}")?.settings?.directPostCompletionSales || {};
+      return {
+        escrowData: results.escrowData,
+        salesDistribution: results.salesDistribution,
+        marketingMonthlyAmounts,
+        ppDownPct,
+        paymentPlan,
+        actualCashInflow,
+        offplanPct: Number(plan.offplanPct ?? 80),
+        directSalesStartMonth: Number(directSales.startMonth ?? 4),
+        directSalesInstallmentCount: Number(directSales.installmentCount ?? 6),
+      };
+    } catch {
+      return undefined;
+    }
+  }, [plansQuery.data, project]);
+
+  const cashFlow = useMemo(
+    () => computeInvestorCashFlow(project || null, "offplan_escrow", undefined, salesResult),
+    [project, salesResult],
+  );
+  const capital = useMemo(() => calculateInvestorCapitalSummary(cashFlow), [cashFlow]);
 
   // Computed values
   const totalRevenue = costs?.totalRevenue || 0;
   const totalCosts = costs?.totalCosts || 0;
   const profit = totalRevenue - totalCosts;
-  const profitOnCost = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-  const profitOnCapital = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
-  const profitMargin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
   const comoFee = profit > 0 ? profit * 0.15 : 0;
   const investorProfit = profit - comoFee;
-  const investorROI = totalCosts > 0 ? (investorProfit / totalCosts) * 100 : 0;
+  const profitOnCost = totalCosts > 0 ? (investorProfit / totalCosts) * 100 : 0;
+  const profitOnCapital = capital.requiredCapital > 0 ? (investorProfit / capital.requiredCapital) * 100 : 0;
 
   // Revenue breakdown
   const revRes = costs?.revenueRes || 0;
@@ -59,8 +131,7 @@ export default function V2Feasibility() {
   const regulatoryCosts = (costs?.communityFees || 0) + (costs?.officialBodiesFees || 0) + (costs?.reraUnitRegFee || 0) + (costs?.reraProjectRegFee || 0) + (costs?.developerNocFee || 0) + (costs?.escrowAccountFee || 0) + (costs?.bankFees || 0) + (costs?.reraAuditReportFee || 0) + (costs?.reraInspectionReportFee || 0);
   const salesCosts = (costs?.developerFee || 0) + (costs?.salesCommission || 0) + (costs?.marketingCost || 0);
 
-  // ═══ BREAK-EVEN ═══
-  // Average revenue per sqft sold
+  // ═══ SALEABLE-AREA ECONOMICS ═══
   const gfaResSqft = parseFloat(project?.gfaResidentialSqft || "0");
   const gfaRetSqft = parseFloat(project?.gfaRetailSqft || "0");
   const gfaOffSqft = parseFloat(project?.gfaOfficesSqft || "0");
@@ -68,9 +139,9 @@ export default function V2Feasibility() {
   const saleableRetPct = parseFloat(project?.saleableRetailPct ?? "97") / 100;
   const saleableOffPct = parseFloat(project?.saleableOfficesPct ?? "95") / 100;
   const totalSellableSqft = (gfaResSqft * saleableResPct) + (gfaRetSqft * saleableRetPct) + (gfaOffSqft * saleableOffPct);
-  const avgRevenuePerSqft = totalSellableSqft > 0 ? totalRevenue / totalSellableSqft : 0;
-  const breakEvenSqft = avgRevenuePerSqft > 0 ? totalCosts / avgRevenuePerSqft : 0;
-  const breakEvenPct = totalSellableSqft > 0 ? (breakEvenSqft / totalSellableSqft) * 100 : 0;
+  const costPerSaleableSqft = totalSellableSqft > 0 ? totalCosts / totalSellableSqft : 0;
+  const sellingPricePerSqft = totalSellableSqft > 0 ? totalRevenue / totalSellableSqft : 0;
+  const profitPerSaleableSqft = sellingPricePerSqft - costPerSaleableSqft;
 
   // ═══ SCENARIO COMPARISON ═══
   const scenarioCalc = (factor: number) => {
@@ -79,23 +150,14 @@ export default function V2Feasibility() {
     const como = p > 0 ? p * 0.15 : 0;
     const invP = p - como;
     const roi = totalCosts > 0 ? (invP / totalCosts) * 100 : 0;
-    return { revenue: rev, profit: p, margin: rev > 0 ? (p / rev) * 100 : 0, investorProfit: invP, roi };
+    return { revenue: rev, investorProfit: invP, roi };
   };
   const optimistic = scenarioCalc(1.10);
   const base = scenarioCalc(1.00);
   const conservative = scenarioCalc(0.90);
 
-  // ═══ IRR ESTIMATE ═══
-  // Simple annualized ROI based on project duration
   const totalMonths = designDuration + parseInt(project?.constructionMonths || "18");
   const totalYears = totalMonths / 12;
-  const annualizedROI = totalYears > 0 && investorROI > 0 ? investorROI / totalYears : 0;
-
-  // ═══ COST/SQFT vs SELLING PRICE ═══
-  const buaSqft = parseFloat(project?.manualBuaSqft || "0");
-  const costPerSqft = buaSqft > 0 ? totalCosts / buaSqft : 0;
-  const sellingPricePerSqft = totalSellableSqft > 0 ? totalRevenue / totalSellableSqft : 0;
-  const spreadPerSqft = sellingPricePerSqft - costPerSqft;
 
   return (
     <div className="bg-gradient-to-b from-slate-50 to-white min-h-[400px]" dir="rtl">
@@ -124,13 +186,13 @@ export default function V2Feasibility() {
         <div className="max-w-[1100px] mx-auto px-4 py-3 space-y-3">
 
           {/* ═══ KPI STRIP ═══ */}
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
             <KpiMini label="الإيرادات" value={fmtM(totalRevenue)} color="teal" icon={<TrendingUp className="w-3 h-3" />} />
             <KpiMini label="التكاليف" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
-            <KpiMini label="صافي الربح" value={fmtM(profit)} color={profit >= 0 ? "gold" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
+            <KpiMini label="ربح المستثمر الصافي" value={fmtM(investorProfit)} color={investorProfit >= 0 ? "gold" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
+            <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
             <KpiMini label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" icon={<Percent className="w-3 h-3" />} />
-            <KpiMini label="ROI المستثمر" value={fmtPct(investorROI)} color="gold" icon={<Sparkles className="w-3 h-3" />} />
-            <KpiMini label="نقطة التعادل" value={breakEvenPct > 0 ? `${breakEvenPct.toFixed(0)}%` : "—"} color="slate" icon={<Scale className="w-3 h-3" />} />
+            <KpiMini label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" icon={<Sparkles className="w-3 h-3" />} />
           </div>
 
           {/* ═══ TWO COLUMNS ═══ */}
@@ -190,17 +252,16 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              {/* Profit & Ratios */}
-              <SectionCard title="الأرباح والعوائد" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
+              {/* Profit allocation and investor return */}
+              <SectionCard title="الأرباح وتوزيعها" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                    <span className="text-[11px] font-bold text-gray-700">صافي الربح</span>
+                    <span className="text-[11px] font-bold text-gray-700">ربح المشروع قبل حصة كومو</span>
                     <span className={`text-lg font-black tabular-nums ${profit >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{fmt(profit)} <span className="text-[9px] text-gray-400">AED</span></span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <RatioBox label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" />
                     <RatioBox label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" />
-                    <RatioBox label="هامش الربح" value={fmtPct(profitMargin)} color="slate" />
                   </div>
                   {/* Developer / Investor split */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
@@ -217,7 +278,7 @@ export default function V2Feasibility() {
                         <span className="text-[10px] font-bold text-teal-800">ربح المستثمر (85%)</span>
                       </div>
                       <div className="text-sm font-black text-teal-900 tabular-nums" dir="ltr">{fmt(investorProfit)}</div>
-                      <div className="text-[9px] text-teal-600 mt-0.5">ROI: {fmtPct(investorROI)}</div>
+                      <div className="text-[9px] text-teal-600 mt-0.5">بعد خصم حصة كومو 15%</div>
                     </div>
                   </div>
                 </div>
@@ -231,27 +292,27 @@ export default function V2Feasibility() {
                       <tr className="bg-gray-50/80 text-gray-500">
                         <th className="py-1.5 px-2 text-right font-medium">السيناريو</th>
                         <th className="py-1.5 px-2 text-center font-medium">الإيرادات</th>
-                        <th className="py-1.5 px-2 text-center font-medium">الربح</th>
-                        <th className="py-1.5 px-2 text-center font-medium">ROI المستثمر</th>
+                        <th className="py-1.5 px-2 text-center font-medium">ربح المستثمر</th>
+                        <th className="py-1.5 px-2 text-center font-medium">ربح/تكلفة</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-t border-gray-50 bg-green-50/30">
                         <td className="py-1.5 px-2 font-bold text-green-700">متفائل (+10%)</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(optimistic.revenue)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700" dir="ltr">{fmtM(optimistic.profit)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700" dir="ltr">{fmtM(optimistic.investorProfit)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700">{fmtPct(optimistic.roi)}</td>
                       </tr>
                       <tr className="border-t border-gray-100 bg-blue-50/30">
                         <td className="py-1.5 px-2 font-bold text-blue-700">أساسي</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(base.revenue)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700" dir="ltr">{fmtM(base.profit)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700" dir="ltr">{fmtM(base.investorProfit)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700">{fmtPct(base.roi)}</td>
                       </tr>
                       <tr className="border-t border-gray-100 bg-orange-50/30">
                         <td className="py-1.5 px-2 font-bold text-orange-700">متحفظ (-10%)</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(conservative.revenue)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700" dir="ltr">{fmtM(conservative.profit)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700" dir="ltr">{fmtM(conservative.investorProfit)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700">{fmtPct(conservative.roi)}</td>
                       </tr>
                     </tbody>
@@ -303,69 +364,35 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              {/* ═══ BREAK-EVEN ═══ */}
-              <SectionCard title="نقطة التعادل (Break-even)" icon={<Scale className="w-3.5 h-3.5 text-white" />} gradient="from-amber-500 to-amber-700" borderColor="border-amber-200/60">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">المساحة المطلوب بيعها لتغطية التكاليف</span>
-                    <span className="font-black text-amber-800 tabular-nums" dir="ltr">{breakEvenSqft > 0 ? `${fmt(breakEvenSqft)} قدم²` : "—"}</span>
+              <SectionCard title="رأس المال ومصادر الصرف" icon={<Briefcase className="w-3.5 h-3.5 text-white" />} gradient="from-amber-500 to-amber-700" borderColor="border-amber-200/60">
+                <div className="space-y-1.5">
+                  <DetailRow label="رأس المال المطلوب (ذروة التمويل)" value={`${fmt(capital.requiredCapital)} AED`} />
+                  <DetailRow label="مدفوع سابقاً" value={`${fmt(capital.paidCapital)} AED`} />
+                  <DetailRow label="المتبقي المطلوب تمويله" value={`${fmt(capital.remainingCapital)} AED`} />
+                  <DetailRow label="توقيت الذروة" value={capital.peakMonthDate || "—"} />
+                  <div className="border-t border-gray-100 pt-1.5 mt-1.5">
+                    <DetailRow label="مصروفات المستثمر" value={`${fmt(capital.investorProjectSpend)} AED`} />
+                    <DetailRow label="مصروفات الضمان" value={`${fmt(capital.escrowProjectSpend)} AED`} />
+                    <DetailRow label="إجمالي الصرف المطابق للتكلفة" value={`${fmt(capital.totalProjectSpend)} AED`} />
                   </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">نسبة التعادل من إجمالي القابل للبيع</span>
-                    <span className="font-black text-amber-800 tabular-nums">{breakEvenPct > 0 ? `${breakEvenPct.toFixed(1)}%` : "—"}</span>
-                  </div>
-                  {/* Visual bar */}
-                  {breakEvenPct > 0 && (
-                    <div className="mt-1">
-                      <div className="h-3 bg-gray-100 rounded-full overflow-hidden relative">
-                        <div className="h-full bg-gradient-to-l from-amber-400 to-amber-600 rounded-full transition-all" style={{ width: `${Math.min(breakEvenPct, 100)}%` }} />
-                        <div className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-gray-700">
-                          {breakEvenPct.toFixed(0)}% من المبيعات = تغطية التكاليف
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-[8px] text-gray-400 mt-0.5">
-                        <span>0%</span>
-                        <span>100% مباع</span>
-                      </div>
-                    </div>
-                  )}
+                  <p className="text-[8px] text-gray-400 leading-relaxed">إيداع الضمان ضمن رأس المال المطلوب، لكنه ليس مصروفاً ضمن تكلفة المشروع.</p>
                 </div>
               </SectionCard>
 
-              {/* ═══ COST/SQFT vs SELLING PRICE ═══ */}
-              <SectionCard title="تكلفة القدم² مقابل سعر البيع" icon={<Activity className="w-3.5 h-3.5 text-white" />} gradient="from-cyan-600 to-sky-700" borderColor="border-sky-200/60">
+              <SectionCard title="اقتصاديات القدم² القابل للبيع" icon={<Activity className="w-3.5 h-3.5 text-white" />} gradient="from-cyan-600 to-sky-700" borderColor="border-sky-200/60">
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">تكلفة القدم² (إجمالي التكاليف / BUA)</span>
-                    <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{costPerSqft > 0 ? `${costPerSqft.toFixed(0)} AED` : "—"}</span>
+                    <span className="text-gray-600">تكلفة القدم² القابل للبيع</span>
+                    <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{costPerSaleableSqft > 0 ? `${costPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-gray-600">متوسط سعر البيع/قدم²</span>
                     <span className="font-bold text-teal-700 tabular-nums" dir="ltr">{sellingPricePerSqft > 0 ? `${sellingPricePerSqft.toFixed(0)} AED` : "—"}</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] bg-teal-50/60 rounded px-2 py-1 -mx-1">
-                    <span className="font-bold text-teal-800">الفارق (Spread)</span>
-                    <span className={`font-black tabular-nums ${spreadPerSqft >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{spreadPerSqft !== 0 ? `${spreadPerSqft.toFixed(0)} AED/sqft` : "—"}</span>
+                    <span className="font-bold text-teal-800">الربح لكل قدم²</span>
+                    <span className={`font-black tabular-nums ${profitPerSaleableSqft >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{profitPerSaleableSqft !== 0 ? `${profitPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
                   </div>
-                </div>
-              </SectionCard>
-
-              {/* ═══ IRR / ANNUALIZED ═══ */}
-              <SectionCard title="العائد السنوي التقديري" icon={<Target className="w-3.5 h-3.5 text-white" />} gradient="from-violet-600 to-purple-700" borderColor="border-violet-200/60">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">مدة المشروع الإجمالية</span>
-                    <span className="font-bold text-gray-800">{totalMonths} شهر ({totalYears.toFixed(1)} سنة)</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-gray-600">ROI إجمالي للمستثمر</span>
-                    <span className="font-bold text-violet-700 tabular-nums">{fmtPct(investorROI)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] bg-violet-50/60 rounded px-2 py-1 -mx-1">
-                    <span className="font-bold text-violet-800">العائد السنوي التقديري (IRR مبسط)</span>
-                    <span className="font-black text-violet-700 tabular-nums text-sm">{fmtPct(annualizedROI)}</span>
-                  </div>
-                  <div className="text-[9px] text-gray-400 mt-1">* تقدير مبسط = ROI المستثمر ÷ عدد السنوات</div>
                 </div>
               </SectionCard>
             </div>

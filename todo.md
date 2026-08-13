@@ -1139,3 +1139,7 @@
 - [x] Make Timeline marketing and sales bar extents match the saved active-month windows in the Marketing and Sales pages while preserving Settings-derived earliest start months
 - [x] Make escrow contractor progress payments begin in construction month 2, one month after the corresponding work progress, while preserving the investor-funded month-1 advance
 - [x] Verify RERA auditor-report and inspection-report fee calculations in Settings, Feasibility Study, and Escrow Cash Flow, including their quarterly payment count and timing
+- [x] Reconcile and explain Majan’s investor paid and future capital requirements separately from escrow movements and project revenues
+- [x] Reconcile Majan investor and escrow spending to the Feasibility Study with zero difference after excluding escrow deposits from spending totals
+- [x] Calculate Majan required capital as the maximum cumulative investor funding deficit and separate its paid and remaining components
+- [x] Redesign Feasibility Study with net investor profit after Como’s 15% share, required-capital paid and remaining amounts, funding-source summary, and saleable-area metrics; remove break-even and annual-return sections

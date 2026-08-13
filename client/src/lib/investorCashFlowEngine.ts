@@ -23,6 +23,7 @@ import {
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
 import { getProjectMarketingTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
+import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -127,6 +128,113 @@ export interface CashFlowResult {
   monthDates: string[];
   startDate: string;
   usedSalesResult?: SalesResult;
+}
+
+export interface InvestorCapitalSummary {
+  /** Capital already paid before the monthly investor schedule starts. */
+  paidCapital: number;
+  /** Largest remaining monthly funding deficit before later investor credits. */
+  remainingCapital: number;
+  /** Paid capital plus the maximum future funding deficit. */
+  requiredCapital: number;
+  /** Zero-based project-month index when funding reaches its peak. */
+  peakMonthIndex: number;
+  peakMonthDate: string;
+  investorProjectSpend: number;
+  escrowProjectSpend: number;
+  totalProjectSpend: number;
+}
+
+/**
+ * Produces the investor-capital view from the same cash-flow rows used by the
+ * Investor Cash Flow report. Escrow deposits remain capital requirements but
+ * are excluded from project spending because they are transfers, not costs.
+ */
+export function calculateInvestorCapitalSummary(cashFlow: CashFlowResult): InvestorCapitalSummary {
+  const totalMonths = cashFlow.designDuration + cashFlow.constructionDuration + cashFlow.postDuration;
+  const monthValues = (row: CostRow) => [
+    ...row.designMonths,
+    ...row.constructionMonths,
+    ...row.postConstructionMonths,
+  ].slice(0, totalMonths);
+
+  const paidCapital = cashFlow.rows
+    .filter((row) => row.paid > 0 && !row.isRevenue)
+    .reduce((sum, row) => sum + row.paid, 0);
+
+  const futureInvestorDebitRows = cashFlow.rows.filter((row) =>
+    !row.isRevenue && row.funder === "investor" && !(row.paid > 0 && row.unpaid === 0)
+  );
+  const investorCreditRows = cashFlow.rows.filter((row) => row.isRevenue && !row.label.includes("تصفية حساب الضمان"));
+
+  // Match the two dynamic settlement credits displayed in Investor Cash Flow.
+  // The engine's legacy settlement rows are only templates; their amounts must
+  // be recalculated from the actual escrow inflows and outflows.
+  const postStartIndex = cashFlow.designDuration + cashFlow.constructionDuration;
+  const firstSettlementIndex = postStartIndex + 2;
+  const finalSettlementIndex = postStartIndex + 12;
+  const transferRow = cashFlow.rows.find((row) => row.isTransfer);
+  const depositValues = transferRow ? monthValues(transferRow) : new Array(totalMonths).fill(0);
+  const savedCashInflow = cashFlow.usedSalesResult?.actualCashInflow;
+  const salesCashInflow = new Array(totalMonths).fill(0);
+  if (savedCashInflow && savedCashInflow.length > 0) {
+    savedCashInflow.slice(0, totalMonths).forEach((value, index) => { salesCashInflow[index] = value || 0; });
+  } else {
+    for (const entry of cashFlow.usedSalesResult?.escrowData || []) {
+      const index = entry.month - 1;
+      if (index >= 0 && index < totalMonths) salesCashInflow[index] += entry.income;
+    }
+  }
+  const escrowOutflowRows = cashFlow.rows.filter((row) => row.funder === "escrow" && !row.isRevenue);
+  const cumulativeWithoutLiquidation: number[] = [];
+  let escrowRunningBalance = 0;
+  for (let month = 0; month < totalMonths; month++) {
+    const outflow = escrowOutflowRows.reduce((sum, row) => sum + (monthValues(row)[month] || 0), 0);
+    escrowRunningBalance += (depositValues[month] || 0) + salesCashInflow[month] - outflow;
+    cumulativeWithoutLiquidation.push(escrowRunningBalance);
+  }
+  const settlement = calculateEscrowSettlement({
+    cumulativeWithoutLiquidation,
+    firstLiquidationIndex: firstSettlementIndex,
+    finalLiquidationIndex: finalSettlementIndex,
+    actualSalesCashInflow: salesCashInflow,
+  });
+
+  let runningBalance = 0;
+  let minimumBalance = 0;
+  let peakMonthIndex = 0;
+  for (let month = 0; month < totalMonths; month++) {
+    const debit = futureInvestorDebitRows.reduce((sum, row) => sum + (monthValues(row)[month] || 0), 0);
+    const settlementCredit = month === firstSettlementIndex
+      ? settlement.firstLiquidation
+      : month === finalSettlementIndex
+        ? settlement.finalLiquidation
+        : 0;
+    const credit = investorCreditRows.reduce((sum, row) => sum + (monthValues(row)[month] || 0), 0) + settlementCredit;
+    runningBalance += credit - debit;
+    if (runningBalance < minimumBalance) {
+      minimumBalance = runningBalance;
+      peakMonthIndex = month;
+    }
+  }
+
+  const investorProjectSpend = cashFlow.rows
+    .filter((row) => !row.isRevenue && row.funder === "investor" && !row.isTransfer)
+    .reduce((sum, row) => sum + row.totalCost, 0);
+  const escrowProjectSpend = cashFlow.rows
+    .filter((row) => !row.isRevenue && row.funder === "escrow")
+    .reduce((sum, row) => sum + row.totalCost, 0);
+
+  return {
+    paidCapital,
+    remainingCapital: -minimumBalance,
+    requiredCapital: paidCapital - minimumBalance,
+    peakMonthIndex,
+    peakMonthDate: cashFlow.monthDates[peakMonthIndex] || "",
+    investorProjectSpend,
+    escrowProjectSpend,
+    totalProjectSpend: investorProjectSpend + escrowProjectSpend,
+  };
 }
 
 // ═══════════════════════════════════════════
@@ -881,6 +989,19 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       commTotal = costs.salesCommission;
       const commMonth = Math.min(2, constructionDuration - 1);
       commConst[commMonth] = commTotal;
+    }
+
+    if (salesResult && salesResult.escrowData.length > 0 && commTotal > 0) {
+      // Saved unit batches can contain rounded unit quantities. Keep the
+      // receipt-trigger timing from those batches, but scale their commission
+      // amounts to the project revenue source used by Feasibility Study.
+      const offplanShare = Math.max(0, Math.min(1, Number(salesResult.offplanPct ?? 80) / 100));
+      const targetOffplanCommission = costs.salesCommission * offplanShare;
+      const scale = targetOffplanCommission / commTotal;
+      [commDesign, commConst, commPost].forEach((months) => {
+        for (let index = 0; index < months.length; index++) months[index] *= scale;
+      });
+      commTotal = targetOffplanCommission;
     }
 
     if (commTotal > 0) {
