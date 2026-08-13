@@ -89,6 +89,8 @@ export interface SalesResult {
   ppDownPct?: number; // Down payment percentage from payment plan
   actualCashInflow?: number[]; // Actual monthly cash inflow from payment plan (indexed from project month 1)
   offplanPct?: number; // Share of project revenue sold during construction and received through escrow
+  directSalesStartMonth?: number; // Post-completion month for the first direct sale receipt
+  directSalesInstallmentCount?: number; // Number of equal direct-sale receipts
 }
 
 export interface CashFlowResult {
@@ -1141,13 +1143,15 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       
       // Buyer payments for units sold during construction go to escrow. The remaining
       // unsold share is sold after completion and is a direct investor credit, spread
-      // across post-completion months 4–9.
+      // over the project-specific post-completion receipt schedule.
       const totalSalesIncome = salesResult.escrowData.reduce((s, e) => s + e.income, 0);
       const offplanPct = Math.max(0, Math.min(100, salesResult.offplanPct ?? 80));
       directRevenue = totalRevenue * ((100 - offplanPct) / 100);
       const directRevenuePost = emptyPost();
-      const directRevenuePerMonth = directRevenue / 6;
-      for (let idx = 3; idx < Math.min(9, postDuration); idx++) {
+      const directSalesStartMonth = Math.max(1, Math.min(postDuration, salesResult.directSalesStartMonth ?? 4));
+      const directSalesInstallmentCount = Math.max(1, Math.min(postDuration - directSalesStartMonth + 1, salesResult.directSalesInstallmentCount ?? 6));
+      const directRevenuePerMonth = directRevenue / directSalesInstallmentCount;
+      for (let idx = directSalesStartMonth - 1; idx < directSalesStartMonth - 1 + directSalesInstallmentCount; idx++) {
         directRevenuePost[idx] = directRevenuePerMonth;
       }
       rows.push({
@@ -1165,8 +1169,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       });
       const directSalesCommission = directRevenue * r.salesCommission;
       const directSalesCommissionPost = emptyPost();
-      const directSalesCommissionPerMonth = directSalesCommission / 6;
-      for (let idx = 3; idx < Math.min(9, postDuration); idx++) {
+      const directSalesCommissionPerMonth = directSalesCommission / directSalesInstallmentCount;
+      for (let idx = directSalesStartMonth - 1; idx < directSalesStartMonth - 1 + directSalesInstallmentCount; idx++) {
         directSalesCommissionPost[idx] = directSalesCommissionPerMonth;
       }
       rows.push({

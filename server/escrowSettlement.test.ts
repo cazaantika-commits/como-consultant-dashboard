@@ -45,4 +45,37 @@ describe("calculateEscrowSettlement", () => {
       Array(6).fill((directSalesCommission?.totalCost || 0) / 6)
     );
   });
+
+  it("uses each project’s configured direct-sale start month and equal installment count", () => {
+    const result = computeInvestorCashFlow(null, "offplan_escrow", undefined, {
+      escrowData: [{ month: 1, units: 1, income: 100, downPayment: 10, installments: 90, withdrawal: 0, balance: 0, cumulativeSold: 1 }],
+      salesDistribution: [1],
+      actualCashInflow: [100],
+      offplanPct: 80,
+      directSalesStartMonth: 2,
+      directSalesInstallmentCount: 4,
+    });
+
+    const directSalesRow = result.rows.find((row) => row.label.includes("مبيعات مباشرة بعد الإنجاز"));
+    const directSalesCommission = result.rows.find((row) => row.label === "عمولة مبيعات مباشرة بعد الإنجاز");
+    const expectedRevenueInstallment = (directSalesRow?.totalCost || 0) / 4;
+    const expectedCommissionInstallment = (directSalesCommission?.totalCost || 0) / 4;
+
+    expect(directSalesRow?.postConstructionMonths.slice(0, 6)).toEqual([
+      0,
+      expectedRevenueInstallment,
+      expectedRevenueInstallment,
+      expectedRevenueInstallment,
+      expectedRevenueInstallment,
+      0,
+    ]);
+    expect(directSalesCommission?.postConstructionMonths.slice(0, 6)).toEqual([
+      0,
+      expectedCommissionInstallment,
+      expectedCommissionInstallment,
+      expectedCommissionInstallment,
+      expectedCommissionInstallment,
+      0,
+    ]);
+  });
 });

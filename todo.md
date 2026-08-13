@@ -1113,3 +1113,6 @@
 - [x] Add direct investor revenue for the share of units sold after completion, separate from escrow collections
 - [x] Verify direct post-completion sales revenue and both escrow settlement credits appear together in Investor Cash Flow
 - [x] Schedule direct post-completion sales equally in months 4–9 after completion and charge the 5% commission in parallel
+- [x] Add per-project settings for direct-sale start month after completion and number of equal installments
+- [x] Add Settings page controls for these direct post-completion sales settings
+- [x] Make Investor Cash Flow use each project’s saved direct-sale schedule and verify it in the browser

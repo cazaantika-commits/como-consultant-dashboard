@@ -85,6 +85,15 @@ export default function V2InvestorCashFlow() {
       } catch {}
     }
 
+    let directSalesStartMonth = 4;
+    let directSalesInstallmentCount = 6;
+    try {
+      const schedule = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}");
+      const directSalesSettings = schedule?.settings?.directPostCompletionSales;
+      directSalesStartMonth = Number(directSalesSettings?.startMonth ?? directSalesStartMonth);
+      directSalesInstallmentCount = Number(directSalesSettings?.installmentCount ?? directSalesInstallmentCount);
+    } catch {}
+
     // If resultsJson exists, use the saved buyer collections alongside
     // escrowData and the sales distribution.
     if (plan.resultsJson) {
@@ -102,6 +111,8 @@ export default function V2InvestorCashFlow() {
             ppDownPct,
             actualCashInflow,
             offplanPct: Number(plan.offplanPct ?? 80),
+            directSalesStartMonth,
+            directSalesInstallmentCount,
           };
         }
       } catch {}
@@ -118,7 +129,7 @@ export default function V2InvestorCashFlow() {
     }
 
     return undefined;
-  }, [plansQuery.data]);
+  }, [plansQuery.data, projectQuery.data]);
 
   // ─── Compute cash flow from engine ─────────────────────────────────────
   const data = useMemo(() => {

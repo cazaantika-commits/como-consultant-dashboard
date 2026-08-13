@@ -145,12 +145,16 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const [projectPhases, setProjectPhases] = useState<ProjectPhase[]>(DEFAULT_PROJECT_PHASES);
   const [designPayments, setDesignPayments] = useState<DesignPaymentPhase[]>(DEFAULT_DESIGN_PAYMENTS);
   const [configurableRates, setConfigurableRates] = useState<ConfigurableRate[]>(DEFAULT_CONFIGURABLE_RATES);
+  const [directSalesStartMonth, setDirectSalesStartMonth] = useState(4);
+  const [directSalesInstallmentCount, setDirectSalesInstallmentCount] = useState(6);
   const [hasChanges, setHasChanges] = useState(false);
 
   // ─── Load from DB ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
+      setDirectSalesStartMonth(4);
+      setDirectSalesInstallmentCount(6);
       if (p.constructionScheduleJson) {
         try {
           const stored = JSON.parse(p.constructionScheduleJson);
@@ -185,6 +189,8 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 prev.map((r) => ({ ...r, value: s.configurableRates[r.id] ?? r.value }))
               );
             }
+            setDirectSalesStartMonth(Math.max(1, Math.min(13, Number(s.directPostCompletionSales?.startMonth ?? 4))));
+            setDirectSalesInstallmentCount(Math.max(1, Number(s.directPostCompletionSales?.installmentCount ?? 6)));
           }
         } catch {}
       }
@@ -202,10 +208,14 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
       projectPhases: Object.fromEntries(projectPhases.map((ph) => [ph.id, { durationMonths: ph.durationMonths, startOffsetMonths: ph.startOffsetMonths }])),
       designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
       configurableRates: Object.fromEntries(configurableRates.map((r) => [r.id, r.value])),
+      directPostCompletionSales: {
+        startMonth: directSalesStartMonth,
+        installmentCount: directSalesInstallmentCount,
+      },
     };
     updateProject.mutate({ id: selectedProjectId, constructionScheduleJson: JSON.stringify(existing) } as any);
     setHasChanges(false);
-  }, [selectedProjectId, projectPhases, designPayments, configurableRates, projectQuery.data, updateProject]);
+  }, [selectedProjectId, projectPhases, designPayments, configurableRates, directSalesStartMonth, directSalesInstallmentCount, projectQuery.data, updateProject]);
 
   // ─── Updaters ──────────────────────────────────────────────────────────────
   const updatePhaseDuration = (id: string, val: number) => {
@@ -423,6 +433,55 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                     </div>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* ═══ SECTION 4: DIRECT POST-COMPLETION SALES ═══ */}
+            <section className="rounded-xl border border-sky-100 shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-sky-700" />
+                <h2 className="text-sm font-bold text-sky-800">المبيعات المباشرة بعد الإنجاز</h2>
+                <Badge className="text-[10px] bg-sky-100 text-sky-700 mr-auto">حساب المستثمر</Badge>
+              </div>
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-lg border border-sky-100 p-3">
+                  <p className="text-[11px] font-bold text-gray-800">أول شهر للتحصيل بعد الإنجاز</p>
+                  <p className="text-[9px] text-gray-400 mb-2">يبدأ ترحيل إيراد الوحدات غير المباعة أثناء المشروع إلى حساب المستثمر.</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={directSalesStartMonth}
+                      min={1}
+                      max={13}
+                      onChange={(e) => {
+                        const startMonth = Math.max(1, Math.min(13, parseInt(e.target.value) || 1));
+                        setDirectSalesStartMonth(startMonth);
+                        setDirectSalesInstallmentCount((count) => Math.min(count, 14 - startMonth));
+                        setHasChanges(true);
+                      }}
+                      className="w-16 text-center text-xs font-mono border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                    <span className="text-[10px] text-gray-500">شهر بعد الإنجاز</span>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-sky-100 p-3">
+                  <p className="text-[11px] font-bold text-gray-800">عدد الدفعات المتساوية</p>
+                  <p className="text-[9px] text-gray-400 mb-2">يتوزع إيراد المبيعات المباشرة وعمولة الوسيط 5% بالتوازي على هذه الدفعات.</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={directSalesInstallmentCount}
+                      min={1}
+                      max={14 - directSalesStartMonth}
+                      onChange={(e) => {
+                        setDirectSalesInstallmentCount(Math.max(1, Math.min(14 - directSalesStartMonth, parseInt(e.target.value) || 1)));
+                        setHasChanges(true);
+                      }}
+                      className="w-16 text-center text-xs font-mono border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                    />
+                    <span className="text-[10px] text-gray-500">دفعات</span>
+                  </div>
+                </div>
               </div>
             </section>
 
