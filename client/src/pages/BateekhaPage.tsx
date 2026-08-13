@@ -4,6 +4,7 @@ import { ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, Fil
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { getFallbackFinancialStudiesTab, isFinancialStudiesTabVisible, type FinancialStudiesTabId } from "@/lib/financialStudiesNavigation";
 
 const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -17,7 +18,7 @@ const V2Portfolio = lazy(() => import("./V2Portfolio"));
 const MarketingPage = lazy(() => import("./MarketingPage"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
 
-type TabId = "general" | "units" | "construction" | "sales" | "marketing" | "timeline" | "settings" | "cashflows" | "escrow" | "feasibility" | "mall" | "portfolio";
+type TabId = FinancialStudiesTabId;
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
   { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
@@ -78,14 +79,13 @@ export default function BateekhaPage() {
   const { selectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const isBuildForSale = (projectQuery.data as any)?.financingScenario === "build_for_sale";
-  const buildForSaleHiddenTabs: TabId[] = ["marketing", "timeline", "settings", "escrow", "mall"];
-
   useEffect(() => {
-    if (isBuildForSale && buildForSaleHiddenTabs.includes(activeTab)) setActiveTab("general");
+    setActiveTab((currentTab) => getFallbackFinancialStudiesTab(currentTab, isBuildForSale ? "build_for_sale" : undefined));
   }, [isBuildForSale, activeTab]);
 
-  const inputTabs = TABS.filter(t => t.group === "input" && (!isBuildForSale || !buildForSaleHiddenTabs.includes(t.id)));
-  const outputTabs = TABS.filter(t => t.group === "output" && (!isBuildForSale || !buildForSaleHiddenTabs.includes(t.id)));
+  const projectType = isBuildForSale ? "build_for_sale" : undefined;
+  const inputTabs = TABS.filter(t => t.group === "input" && isFinancialStudiesTabVisible(t.id, projectType));
+  const outputTabs = TABS.filter(t => t.group === "output" && isFinancialStudiesTabVisible(t.id, projectType));
 
   return (
     <div className="min-h-screen bg-white" dir="rtl">
