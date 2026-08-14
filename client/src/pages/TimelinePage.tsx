@@ -25,6 +25,8 @@ const PROJECT_PHASES = [
   { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
 ];
 
+const BUILD_FOR_SALE_PHASE_IDS = new Set(["design", "marketing", "sales", "construction"]);
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -96,6 +98,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     return Math.ceil(totalWeeks / 4.33);
   }, [designPayments]);
 
+  const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
+  const isBuildForSale = projectType === "build_for_sale";
   const sharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
   const marketingPrepLead = sharedTiming.marketingPrepMonths;
   const reraLead = sharedTiming.reraApprovalMonths;
@@ -129,6 +133,31 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       }),
     };
   }, [plansQuery.data, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
+  const buildForSaleMarketing = useMemo(() => {
+    try {
+      const rates = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+      return {
+        startMonthsBeforeCompletion: Math.max(0, Number(rates.buildForSaleMarketingStartMonthsBeforeCompletion ?? 1)),
+        durationMonths: Math.max(1, Number(rates.buildForSaleMarketingDurationMonths ?? 3)),
+      };
+    } catch {
+      return { startMonthsBeforeCompletion: 1, durationMonths: 3 };
+    }
+  }, [projectQuery.data]);
+  const buildForSaleMarketingWindow = useMemo(() => {
+    const startMonth = Math.max(1, timeline.projectEnd - buildForSaleMarketing.startMonthsBeforeCompletion);
+    return { startMonth, endMonth: startMonth + buildForSaleMarketing.durationMonths - 1 };
+  }, [timeline.projectEnd, buildForSaleMarketing]);
+  const buildForSaleSalesWindow = useMemo(() => {
+    if (activityWindows.sales.hasSavedActivity) return activityWindows.sales;
+    return { startMonth: timeline.projectEnd + 1, endMonth: timeline.projectEnd + 1, hasSavedActivity: false };
+  }, [activityWindows.sales, timeline.projectEnd]);
+  const displayProjectEnd = isBuildForSale
+    ? Math.max(timeline.projectEnd, buildForSaleMarketingWindow.endMonth, buildForSaleSalesWindow.endMonth)
+    : timeline.projectEnd;
+  const visibleProjectPhases = isBuildForSale
+    ? PROJECT_PHASES.filter((phase) => BUILD_FOR_SALE_PHASE_IDS.has(phase.id))
+    : PROJECT_PHASES;
 
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -202,7 +231,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                 <div className="flex items-center gap-2">
                   <div className="w-32 flex-shrink-0" />
                   <div className="flex-1 flex">
-                    {Array.from({ length: timeline.projectEnd }, (_, i) => {
+                    {Array.from({ length: displayProjectEnd }, (_, i) => {
                       const isDesign = i < totalDesignMonths;
                       const displayNum = isDesign ? i + 1 : i - totalDesignMonths + 1;
                       const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
@@ -219,15 +248,21 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
               </div>
               <div className="p-2">
                 <div className="space-y-1.5">
-                  {PROJECT_PHASES.map((phase) => {
+                  {visibleProjectPhases.map((phase) => {
                     let start = 0, end = 0;
                     if (phase.id === "design") { start = 1; end = timeline.designEnd; }
                     else if (phase.id === "materials") { start = timeline.materialsStart; end = timeline.materialsStart + marketingPrepLead - 1; }
                     else if (phase.id === "rera") { start = timeline.reraStart; end = timeline.reraStart + reraLead - 1; }
-                    else if (phase.id === "marketing") { start = activityWindows.marketing.startMonth; end = activityWindows.marketing.endMonth; }
-                    else if (phase.id === "sales") { start = activityWindows.sales.startMonth; end = activityWindows.sales.endMonth; }
+                    else if (phase.id === "marketing") {
+                      start = isBuildForSale ? buildForSaleMarketingWindow.startMonth : activityWindows.marketing.startMonth;
+                      end = isBuildForSale ? buildForSaleMarketingWindow.endMonth : activityWindows.marketing.endMonth;
+                    }
+                    else if (phase.id === "sales") {
+                      start = isBuildForSale ? buildForSaleSalesWindow.startMonth : activityWindows.sales.startMonth;
+                      end = isBuildForSale ? buildForSaleSalesWindow.endMonth : activityWindows.sales.endMonth;
+                    }
                     else if (phase.id === "construction") { start = timeline.constructionStart; end = timeline.projectEnd; }
-                    const total = timeline.projectEnd;
+                    const total = displayProjectEnd;
                     const rightPct = ((start - 1) / total) * 100;
                     const widthPct = ((end - start + 1) / total) * 100;
                     const Icon = phase.icon;
@@ -237,7 +272,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + timeline.projectEnd + '))' }}>
+                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + displayProjectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + displayProjectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + displayProjectEnd + '))' }}>
                           <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
                           <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
                         </div>
@@ -247,27 +282,31 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                 </div>
 
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1 flex-wrap">
-                  <div className="flex items-center gap-1.5">
+                  {!isBuildForSale && <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">مدة تحضير المواد:</span>
                     <span className="text-[10px] font-bold text-gray-800">{marketingPrepLead}</span>
                     <span className="text-[10px] text-gray-400">شهر</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
+                  </div>}
+                  {!isBuildForSale && <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">مدة ريرا:</span>
                     <span className="text-[10px] font-bold text-gray-800">{reraLead}</span>
                     <span className="text-[10px] text-gray-400">شهر</span>
-                  </div>
+                  </div>}
+                  {isBuildForSale && <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-500">تسويق البناء للبيع:</span>
+                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{buildForSaleMarketing.durationMonths} أشهر بدءًا قبل {buildForSaleMarketing.startMonthsBeforeCompletion} شهر من الإنجاز</Badge>
+                  </div>}
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نقطة الانطلاق (اكتمال المخططات التخطيطية):</span>
                     <Badge className="text-[9px] bg-blue-100 text-blue-700">شهر {schematicCompletionMonth}</Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق التسويق:</span>
-                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{isBuildForSale ? "إعدادات البناء للبيع" : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق البيع:</span>
-                    <Badge className="text-[9px] bg-emerald-100 text-emerald-700">{activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
+                    <Badge className="text-[9px] bg-emerald-100 text-emerald-700">{isBuildForSale ? buildForSaleSalesWindow.hasSavedActivity ? "خطة البيع المباشر" : "البيع المباشر بعد الإنجاز" : activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                   </div>
                 </div>
               </div>

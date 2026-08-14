@@ -31,6 +31,33 @@ describe("Settings-driven design duration", () => {
     expect(timing.designMonths).toBe(7);
     expect(timing.schematicCompletionMonth).toBe(3);
   });
+
+  it("uses saved Settings design weeks for build-for-sale regardless of legacy duration fields", () => {
+    const project = {
+      financingScenario: "build_for_sale",
+      preConMonths: 24,
+      constructionMonths: 14,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          designPayments: {
+            mobilization: { durationWeeks: 2 }, concept: { durationWeeks: 2 }, schematic: { durationWeeks: 2 },
+            dd: { durationWeeks: 4 }, authorities: { durationWeeks: 4 }, tender: { durationWeeks: 4 }, ifc: { durationWeeks: 2 },
+          },
+          projectPhases: {
+            marketingPrep: { durationMonths: 2, startOffsetMonths: 0 },
+            reraApprovals: { durationMonths: 2, startOffsetMonths: 1 },
+            marketingLaunch: { durationMonths: 0, startOffsetMonths: 0 },
+            salesStart: { durationMonths: 0, startOffsetMonths: 1 },
+            construction: { durationMonths: 0, startOffsetMonths: 1 },
+          },
+        },
+      }),
+    };
+
+    const timing = getProjectMarketingTiming(project);
+    expect(timing.designMonths).toBe(5);
+    expect(timing.constructionStartMonth).toBe(6);
+  });
 });
 
 describe("Settings-driven marketing start", () => {

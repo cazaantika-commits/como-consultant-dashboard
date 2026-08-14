@@ -1179,9 +1179,11 @@
 - [x] Build a month-first investor-flow report named “المحفظة الاستثمارية — العرض الشهري للتدفقات” using the same signed cash-flow data as completed Project Aggregation
 - [x] Rebuild the detailed Capital Portfolio with its existing approved layout and column order, sourcing all values from current Financial Studies outputs and excluding build-for-rent from revenue and profit metrics
 - [x] Add consistent colored project markers across the two approved portfolio reports
-- [ ] Verify and restore Settings & Rules visibility for the villa build-for-sale project so saved design-stage durations remain editable from their single source
+- [x] Verify and restore Settings & Rules visibility for the villa build-for-sale project so saved design-stage durations remain editable from their single source
 - [ ] Restore Timeline visibility for the villa build-for-sale project and verify its saved design-stage duration propagates to Sales, Investor Cash Flow, Feasibility, and Timeline
-- [ ] Make Pricing the sole source of unit price per square foot; remove price entry, persistence, display ownership, and calculation fallback from Unit Distribution
+- [x] Make Pricing the sole source of unit price per square foot; remove price entry, persistence, display ownership, and calculation fallback from Unit Distribution
+- [ ] Save the approved 17-week villa design-stage allocation as four months and verify its propagation across Financial Studies
+- [ ] Hide Off-Plan-only investor payment, RERA, and escrow rules from Settings & Rules for build-for-sale projects
 - [x] Reconcile Capital Portfolio project-level revenue with Sales Pricing, beginning with the villa project’s AED 74.48M revenue
 - [x] Investigate and reconcile the zero-revenue Capital Portfolio row for Nad Al Sheba plot 1 against its saved unit pricing and sales inputs
-- [ ] Independently audit and reconcile all three portfolio reports: Project Aggregation, Month-First Investor Flows, and Capital Portfolio, including sources, months, totals, exclusions, and exports
+- [x] Independently audit and reconcile all three portfolio reports: Project Aggregation, Month-First Investor Flows, and Capital Portfolio, including sources, months, totals, exclusions, and exports

@@ -1,5 +1,15 @@
 # Financial Studies Verification Notes
 
+## Villa build-for-sale timing verification — 14 August 2026
+
+- Settings & Rules for `ند الشبا — قطعة 3 الفلل (6180578)` visibly shows the saved design source as **17 weeks ≈ 4 months**. General Inputs separately displays the same derived value: `مدة التصاميم: 4 شهر (من الإعدادات والقواعد)`.
+- The Settings phase list is now restricted to design and construction for this build-for-sale project. It retains the editable seven design stages and applicable rates, including Dubai Land Department unit registration, build-for-sale marketing controls, and community fees.
+- The view no longer shows RERA project registration, RERA auditor/inspection fees, escrow deposit, bank fees, the escrow rules section, or Off-Plan direct post-completion sales controls.
+- The visible build-for-sale investor rules now describe the actual shared-engine timing: government fees split 10%/45%/45%, sorting/NOC/Land Department registration in the penultimate construction month, direct-sales commission after full receipt, and developer fees split 1% design / 2% construction.
+- The final Timeline browser click was temporarily blocked by a My Browser extension timeout. Shared timing regression tests pass; visual Timeline confirmation remains pending once the browser session reconnects.
+- After the independent build-for-sale Timeline presentation update, the focused timing, navigation, pricing, capital-portfolio, and portfolio-aggregation suite passed **21/21**. The remaining browser check is limited to confirming the live Timeline bar view after authentication is restored.
+
+
 ## Active browser verification — Majan Mixed-Use (G+4P+25)
 
 On 12 August 2026, the development build accepted and stored a controlled Sales Plan save for project ID `2`. The saved plan used a valid 100% payment plan: first payment `11%`, second payment `10%`, four installments of `10%`, and handover `39%`. The first two saved monthly sales allocations were `6` and `9` units, preserving the total off-plan sales allocation.
@@ -119,3 +129,9 @@ Authenticated browser verification on 13 August 2026 confirmed that the detailed
 The browser also confirmed the current report total of AED 1,039.2M revenue, AED 891.8M cost, AED 147.3M profit before developer share, and AED 466.7M capital split into AED 184.4M paid and AED 282.3M remaining. The final monthly column is now explicitly labeled **إجمالي التمويل المطلوب**, which describes the gross future investor funding schedule rather than confusing it with net remaining capital. The updated Excel export action was triggered from this verified report state.
 
 The updated HTML export action was also triggered from the same verified report state and opened the standalone **تقرير محفظة رأس المال** window.
+
+## Villa build-for-sale timing source audit — 13 August 2026
+
+The villa build-for-sale project (**ند الشبا — قطعة 3 الفلل**, ID 6) now exposes both **Settings & Rules** and **Timeline** in Financial Studies. Its currently saved `constructionScheduleJson` contains only the approved build-for-sale marketing settings and does **not** yet contain saved `designPayments` stage durations. Therefore, no user-specific design duration has been configured for this project yet; the project must be configured from Settings & Rules before any duration should be treated as final.
+
+Code-path review confirms that Timeline uses `getProjectMarketingTiming(projectQuery.data)`, Investor Cash Flow uses the same helper through the shared engine, Feasibility uses `getProjectDesignTiming`, and Sales uses the shared timing helper when mapping saved Sales Plan data. The added build-for-sale regression proves legacy `preConMonths` is ignored once stage weeks are saved.

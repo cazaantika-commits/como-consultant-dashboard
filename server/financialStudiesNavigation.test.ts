@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getFallbackFinancialStudiesTab,
   isFinancialStudiesGeneralInputVisible,
+  isFinancialStudiesSettingsItemVisible,
   isFinancialStudiesTabVisible,
 } from "../client/src/lib/financialStudiesNavigation";
 
@@ -33,6 +34,20 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(isFinancialStudiesGeneralInputVisible("reraInspectionReportFee", "build_for_sale")).toBe(false);
     expect(isFinancialStudiesGeneralInputVisible("developerNocFee", "build_for_sale")).toBe(true);
     expect(isFinancialStudiesGeneralInputVisible("bankFees", "offplan_escrow")).toBe(true);
+  });
+
+  it("hides Off-Plan settings rules while retaining build-for-sale design and construction controls", () => {
+    expect(isFinancialStudiesSettingsItemVisible("designs", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("construction", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("reraApprovals", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("reraProjectReg", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("escrowDeposit", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("bankFees", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("reraAuditorQuarterlyFee", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("surveyorDwg", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("reraUnitReg", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("reraUnitRegistrationFee", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("reraProjectReg", "offplan_escrow")).toBe(true);
   });
 
   it("hides sales, marketing, and escrow for build-for-rent projects", () => {

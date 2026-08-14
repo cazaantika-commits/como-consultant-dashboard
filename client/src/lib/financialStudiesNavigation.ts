@@ -36,6 +36,21 @@ export const BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS = [
   "reraInspectionReportFee",
 ] as const;
 
+const OFFPLAN_ONLY_SETTINGS_ITEM_IDS = [
+  "marketingPrep",
+  "reraApprovals",
+  "marketingLaunch",
+  "salesStart",
+  "reraAuditorQuarterlyFee",
+  "reraInspectionQuarterlyFee",
+  "escrowDepositPct",
+  "surveyorDwg",
+  "reraProjectReg",
+  "escrowDeposit",
+  "bankFees",
+  "marketingPrep",
+] as const;
+
 export function isFinancialStudiesTabVisible(
   tabId: FinancialStudiesTabId,
   projectType?: string | null,
@@ -59,4 +74,14 @@ export function isFinancialStudiesGeneralInputVisible(
   const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
   return !isNoOffPlanType
     || !BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS.includes(fieldKey as typeof BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS[number]);
+}
+
+/** Keeps Settings & Rules aligned with the same no-Off-Plan scope as General Inputs. */
+export function isFinancialStudiesSettingsItemVisible(
+  itemId: string,
+  projectType?: string | null,
+): boolean {
+  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
+  return !isNoOffPlanType
+    || !OFFPLAN_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof OFFPLAN_ONLY_SETTINGS_ITEM_IDS[number]);
 }

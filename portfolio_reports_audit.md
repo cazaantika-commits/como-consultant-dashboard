@@ -43,3 +43,7 @@ However, the detailed Capital Portfolio table currently has no **project revenue
 ## Nad Al Sheba plot 1 zero-revenue audit
 
 The Capital Portfolio row for **Nad Al Sheba — plot 1 (6185392)** correctly shows zero revenue under the currently saved source data. All residential, villa, townhouse, retail, and office unit counts are zero, even though default areas and saved price-per-square-foot values exist. With no active unit count, the shared Pricing calculation produces zero revenue. This is a data-entry state rather than a disconnected Capital Portfolio calculation.
+
+## Post-correction verification
+
+The detailed Capital Portfolio now displays **إجمالي الإيرادات** immediately after the existing scenario column, preserving the order of every pre-existing column. The villa row visibly reports AED 74.48M, matching Sales Pricing exactly. The portfolio total remains AED 1,039.2M; build-for-rent remains excluded from revenue and profit metrics; and the final monthly column is explicitly named **إجمالي التمويل المطلوب** to distinguish gross scheduled funding from net remaining capital. Browser checks confirmed the updated detail table, six-month grouping, and both HTML and Excel export actions.

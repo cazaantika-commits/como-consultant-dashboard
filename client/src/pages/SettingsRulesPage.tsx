@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_DESIGN_PAYMENT_STAGES, type DesignPaymentStage } from "@/lib/projectTiming";
+import { isFinancialStudiesSettingsItemVisible } from "@/lib/financialStudiesNavigation";
 import {
   Settings, Save, Loader2, Building2, Calendar,
   Percent, Clock, Banknote, HardHat, Megaphone,
@@ -230,6 +231,34 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const totalDesignMonths = Math.ceil(totalDesignWeeks / 4.33);
   const reraAuditorQuarterlyFee = configurableRates.find((rate) => rate.id === "reraAuditorQuarterlyFee")?.value ?? 3500;
   const reraInspectionQuarterlyFee = configurableRates.find((rate) => rate.id === "reraInspectionQuarterlyFee")?.value ?? 15020;
+  const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
+  const isBuildForSale = projectType === "build_for_sale";
+  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
+  const visibleProjectPhases = projectPhases.filter((phase) => isFinancialStudiesSettingsItemVisible(phase.id, projectType));
+  const visibleConfigurableRates = configurableRates
+    .filter((rate) => isFinancialStudiesSettingsItemVisible(rate.id, projectType))
+    .map((rate) => isBuildForSale && rate.id === "reraUnitRegistrationFee"
+      ? { ...rate, label: "رسوم تسجيل الوحدات — دائرة الأراضي والأملاك", description: "عدد الوحدات × هذا المبلغ — تُسدد قبل شهر من نهاية الإنشاء" }
+      : rate);
+  const visibleInvestorRules = INVESTOR_RULES
+    .filter((rule) => isFinancialStudiesSettingsItemVisible(rule.id, projectType))
+    .map((rule) => {
+      if (!isBuildForSale) return rule;
+      if (rule.id === "govFees10") return { ...rule, label: "رسوم الجهات الحكومية", timing: "10% عند اكتمال التصميم التخطيطي + 45% عند 80% إنجاز الإنشاء + 45% عند 90%", type: "موزعة" };
+      if (rule.id === "sortingFees") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
+      if (rule.id === "nocDeveloper") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
+      if (rule.id === "reraUnitReg") return { ...rule, label: "تسجيل الوحدات — دائرة الأراضي والأملاك", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء (عدد الوحدات × الرسم المحدد)", type: "محسوبة" };
+      if (rule.id === "marketing") return { ...rule, timing: "نسبة التسويق المحددة من القيمة التقديرية للمبيعات — موزعة وفق بداية ومدة تسويق البناء للبيع", type: "من الإعدادات" };
+      if (rule.id === "developerFees") return { ...rule, timing: "1% من القيمة التقديرية للمبيعات موزعة على التصميم + 2% موزعة على الإنشاء — تُدفع من المستثمر", type: "موزعة" };
+      if (rule.id === "developerProfitShare") return { ...rule, timing: "تُدفع بعد تحصيل آخر مبيعات مباشرة، وفق حصة المطور المعتمدة من الربح", type: "مرتبطة بالأرباح" };
+      return rule;
+    });
+  if (isBuildForSale) {
+    visibleInvestorRules.push(
+      { id: "surveyorAsbuilt", label: "رسوم المساح (As-Built)", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" },
+      { id: "salesCommissionDirect", label: "عمولة المبيعات", timing: "5% من كل تحصيل بيع مباشر — تُدفع بالتوازي بعد تحصيل كامل قيمة الوحدة", type: "مرتبطة بالمبيعات" },
+    );
+  }
   const escrowRules = ESCROW_RULES.map((rule) => {
     if (rule.id === "reraAuditor") {
       return { ...rule, timing: `${reraAuditorQuarterlyFee.toLocaleString("en-US")} درهم لكل دفعة — كل 3 أشهر من بداية الإنشاء حتى نهايته` };
@@ -294,7 +323,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   <span className="text-center">البداية</span>
                   <span className="text-center">المدة (أشهر)</span>
                 </div>
-                {projectPhases.map((phase, idx) => (
+                {visibleProjectPhases.map((phase, idx) => (
                   <div key={phase.id} className="grid grid-cols-[auto_1fr_120px_120px] gap-x-3 gap-y-0 items-center py-2 border-b border-gray-50 last:border-b-0">
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ backgroundColor: phase.color }}>
                       {idx + 1}
@@ -335,7 +364,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 ))}
                 {/* Visual timeline bar */}
                 <div className="mt-3 h-5 rounded-full overflow-hidden flex bg-gray-50 border border-gray-100">
-                  {projectPhases.map((phase) => {
+                  {visibleProjectPhases.map((phase) => {
                     const dur = phase.id === "designs" ? totalDesignMonths : phase.durationMonths;
                     const total = totalDesignMonths + projectPhases.filter(p => p.id !== "designs" && p.id !== "salesStart").reduce((s, p) => s + p.durationMonths, 0);
                     const widthPct = total > 0 ? (dur / total) * 100 : 0;
@@ -415,7 +444,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                 <h2 className="text-sm font-bold text-amber-800">المعدلات والرسوم القابلة للتعديل</h2>
               </div>
               <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                {configurableRates.map((rate) => (
+                {visibleConfigurableRates.map((rate) => (
                   <div key={rate.id} className="rounded-lg border border-gray-100 p-2.5 hover:border-amber-200 transition-colors">
                     <p className="text-[11px] font-bold text-gray-800 mb-0.5">{rate.label}</p>
                     <p className="text-[9px] text-gray-400 mb-2">{rate.description}</p>
@@ -434,7 +463,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 4: DIRECT POST-COMPLETION SALES ═══ */}
-            <section className="rounded-xl border border-sky-100 shadow-sm overflow-hidden">
+            {!isNoOffPlanType && <section className="rounded-xl border border-sky-100 shadow-sm overflow-hidden">
               <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center gap-2">
                 <Megaphone className="w-4 h-4 text-sky-700" />
                 <h2 className="text-sm font-bold text-sky-800">المبيعات المباشرة بعد الإنجاز</h2>
@@ -480,14 +509,14 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   </div>
                 </div>
               </div>
-            </section>
+            </section>}
 
             {/* ═══ SECTION 4: INVESTOR PAYMENT RULES ═══ */}
             <section className="rounded-xl border border-emerald-100 shadow-sm overflow-hidden">
               <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
                 <Landmark className="w-4 h-4 text-emerald-700" />
                 <h2 className="text-sm font-bold text-emerald-800">قواعد الدفع — حساب المستثمر</h2>
-                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 mr-auto">{INVESTOR_RULES.length} بند</Badge>
+                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 mr-auto">{visibleInvestorRules.length} بند</Badge>
               </div>
               <div className="p-2">
                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-1 mb-1 px-2">
@@ -495,7 +524,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   <span>التوقيت</span>
                   <span>النوع</span>
                 </div>
-                {INVESTOR_RULES.map((rule, idx) => (
+                {visibleInvestorRules.map((rule, idx) => (
                   <div key={rule.id} className={`grid grid-cols-[1fr_auto_auto] gap-x-3 items-center py-1.5 px-2 rounded ${idx % 2 === 0 ? 'bg-gray-50/50' : ''}`}>
                     <span className="text-[11px] font-medium text-gray-800">{rule.label}</span>
                     <span className="text-[9px] text-gray-500 max-w-[280px]">{rule.timing}</span>
@@ -506,7 +535,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 5: ESCROW PAYMENT RULES ═══ */}
-            <section className="rounded-xl border border-violet-100 shadow-sm overflow-hidden">
+            {!isNoOffPlanType && <section className="rounded-xl border border-violet-100 shadow-sm overflow-hidden">
               <div className="px-4 py-2.5 bg-violet-50 border-b border-violet-100 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-violet-700" />
                 <h2 className="text-sm font-bold text-violet-800">قواعد الدفع — حساب الضمان (Escrow)</h2>
@@ -526,7 +555,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   </div>
                 ))}
               </div>
-            </section>
+            </section>}
 
           </div>
         )}
