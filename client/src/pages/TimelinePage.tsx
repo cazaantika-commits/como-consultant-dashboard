@@ -7,7 +7,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_DESIGN_PAYMENT_STAGES, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
+import { DEFAULT_DESIGN_PAYMENT_STAGES, getBuildForSaleSalesTimelineWindow, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   Calendar, Palette, Rocket, FileCheck, Megaphone, Target, HardHat,
   Save, Loader2, Building2,
@@ -149,9 +149,20 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     return { startMonth, endMonth: startMonth + buildForSaleMarketing.durationMonths - 1 };
   }, [timeline.projectEnd, buildForSaleMarketing]);
   const buildForSaleSalesWindow = useMemo(() => {
-    if (activityWindows.sales.hasSavedActivity) return activityWindows.sales;
-    return { startMonth: timeline.projectEnd + 1, endMonth: timeline.projectEnd + 1, hasSavedActivity: false };
-  }, [activityWindows.sales, timeline.projectEnd]);
+    const plan = (plansQuery.data?.[0] ?? {}) as any;
+    let results: any = {};
+    let absorption: any = {};
+    try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
+    try { absorption = JSON.parse(plan.salesAbsorptionJson || "{}"); } catch {}
+    const directUnits = results.buildForSaleMonthlyUnits
+      ?? absorption.buildForSaleMonthlyUnits
+      ?? results.salesDistribution
+      ?? [];
+    return getBuildForSaleSalesTimelineWindow({
+      projectEndMonth: timeline.projectEnd,
+      directSalesUnits: Array.isArray(directUnits) ? directUnits : [],
+    });
+  }, [plansQuery.data, timeline.projectEnd]);
   const displayProjectEnd = isBuildForSale
     ? Math.max(timeline.projectEnd, buildForSaleMarketingWindow.endMonth, buildForSaleSalesWindow.endMonth)
     : timeline.projectEnd;

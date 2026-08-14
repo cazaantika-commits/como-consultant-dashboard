@@ -212,3 +212,31 @@ export function getSalesTimelineWindow({
   const endMonth = Math.min(projectEndMonth, Math.max(startMonth, settingsStartMonth + activeIndexes[activeIndexes.length - 1]));
   return { startMonth, endMonth, hasSavedActivity: true };
 }
+
+/**
+ * Build-for-sale unit allocations are saved relative to the first direct-sale
+ * month after completion. Convert their positive indexes into true project
+ * months without applying Off-Plan sales-start rules.
+ */
+export function getBuildForSaleSalesTimelineWindow({
+  projectEndMonth,
+  directSalesUnits,
+}: {
+  projectEndMonth: number;
+  directSalesUnits?: number[];
+}): TimelineActivityWindow {
+  const activeIndexes = (directSalesUnits ?? [])
+    .map((amount, index) => ({ amount: Number(amount) || 0, index }))
+    .filter(({ amount }) => amount > 0)
+    .map(({ index }) => index);
+
+  if (activeIndexes.length === 0) {
+    return { startMonth: projectEndMonth + 1, endMonth: projectEndMonth + 1, hasSavedActivity: false };
+  }
+
+  return {
+    startMonth: projectEndMonth + activeIndexes[0] + 1,
+    endMonth: projectEndMonth + activeIndexes[activeIndexes.length - 1] + 1,
+    hasSavedActivity: true,
+  };
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clampMarketingDistributionToStart,
+  getBuildForSaleSalesTimelineWindow,
   getProjectDesignTiming,
   getMarketingTimelineWindow,
   getProjectMarketingTiming,
@@ -138,6 +139,13 @@ describe("Timeline saved activity windows", () => {
       projectEndMonth: 37,
       salesDistribution: [0, 12, 0, 8, 0],
     })).toEqual({ startMonth: 9, endMonth: 11, hasSavedActivity: true });
+  });
+
+  it("anchors build-for-sale direct sale units after completion instead of treating relative indexes as project months", () => {
+    expect(getBuildForSaleSalesTimelineWindow({
+      projectEndMonth: 18,
+      directSalesUnits: [0, 4, 0, 6],
+    })).toEqual({ startMonth: 20, endMonth: 22, hasSavedActivity: true });
   });
 });
 
