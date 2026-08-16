@@ -40,15 +40,15 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
   { id: "capital_portfolio", label: "محفظة رأس المال", icon: WalletCards, group: "output" },
 ];
 
-const NAVIGATION_GROUPS: { id: string; label: string; icon: any; tabs: TabId[] }[] = [
-  { id: "project-data", label: "بيانات المشروع", icon: ClipboardList, tabs: ["general", "units"] },
-  { id: "construction", label: "الإنشاء", icon: HardHat, tabs: ["construction"] },
-  { id: "sales", label: "المبيعات والتسعير", icon: Target, tabs: ["sales"] },
-  { id: "marketing", label: "التسويق", icon: Megaphone, tabs: ["marketing"] },
-  { id: "timeline", label: "الجدول الزمني", icon: Calendar, tabs: ["timeline"] },
-  { id: "cash-flow", label: "التدفقات", icon: TrendingDown, tabs: ["cashflows", "escrow"] },
-  { id: "settings", label: "الإعدادات", icon: Settings, tabs: ["settings"] },
-  { id: "reports", label: "التقارير", icon: FileText, tabs: ["feasibility", "mall", "portfolio", "portfolio_monthly", "capital_portfolio"] },
+const NAVIGATION_GROUPS: { id: string; label: string; icon: any; tabs: TabId[]; iconClass: string; activeClass: string }[] = [
+  { id: "project-data", label: "بيانات المشروع", icon: ClipboardList, tabs: ["general", "units"], iconClass: "bg-emerald-100 text-emerald-700", activeClass: "border-emerald-400 bg-emerald-50" },
+  { id: "construction", label: "الإنشاء", icon: HardHat, tabs: ["construction"], iconClass: "bg-slate-100 text-slate-700", activeClass: "border-slate-400 bg-slate-50" },
+  { id: "sales", label: "المبيعات والتسعير", icon: Target, tabs: ["sales"], iconClass: "bg-orange-100 text-orange-700", activeClass: "border-orange-400 bg-orange-50" },
+  { id: "marketing", label: "التسويق", icon: Megaphone, tabs: ["marketing"], iconClass: "bg-pink-100 text-pink-700", activeClass: "border-pink-400 bg-pink-50" },
+  { id: "timeline", label: "الجدول الزمني", icon: Calendar, tabs: ["timeline"], iconClass: "bg-sky-100 text-sky-700", activeClass: "border-sky-400 bg-sky-50" },
+  { id: "cash-flow", label: "التدفقات النقدية", icon: TrendingDown, tabs: ["cashflows", "escrow"], iconClass: "bg-teal-100 text-teal-700", activeClass: "border-teal-400 bg-teal-50" },
+  { id: "settings", label: "الإعدادات والقواعد", icon: Settings, tabs: ["settings"], iconClass: "bg-violet-100 text-violet-700", activeClass: "border-violet-400 bg-violet-50" },
+  { id: "reports", label: "التقارير", icon: FileText, tabs: ["feasibility", "mall", "portfolio", "portfolio_monthly", "capital_portfolio"], iconClass: "bg-indigo-100 text-indigo-700", activeClass: "border-indigo-400 bg-indigo-50" },
 ];
 
 function TabContent({ tabId }: { tabId: TabId }) {
@@ -130,7 +130,7 @@ export default function BateekhaPage() {
   return (
     <div className="min-h-screen bg-white" dir="rtl">
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center min-h-14 px-2 gap-2 overflow-x-auto">
+        <div className="flex items-center min-h-[76px] px-3 gap-3 overflow-x-auto">
           <button onClick={() => navigate("/")} title="العودة" aria-label="العودة" className="p-1.5 rounded-lg hover:bg-gray-100 shrink-0">
             <ArrowRight className="w-4 h-4 text-gray-500" />
           </button>
@@ -141,15 +141,14 @@ export default function BateekhaPage() {
               تسجيل الدخول لعرض المشاريع
             </button>
           )}
-          <div className="h-7 w-px bg-gray-200 shrink-0" />
-          <div className="flex items-center gap-1.5 min-w-max py-1">
+          <div className="h-10 w-px bg-gray-200 shrink-0" />
+          <div className="flex items-center gap-2 min-w-max py-2">
             {navigationGroups.map((group) => {
               const Icon = group.icon;
               const isGrouped = group.tabs.length > 1;
               const isActive = group.tabs.includes(activeTab);
               const isOpen = openGroupId === group.id;
-              const activeClass = isActive || isOpen ? "bg-emerald-600 text-white shadow-sm" : "bg-gray-50 text-gray-600 hover:bg-emerald-50 hover:text-emerald-700";
-              const sizeClass = isGrouped ? "h-10 w-10" : "h-8 w-8";
+              const sizeClass = isGrouped ? "min-w-36 h-14" : "min-w-28 h-12";
               return (
                 <button
                   key={group.id}
@@ -157,19 +156,24 @@ export default function BateekhaPage() {
                   title={group.label}
                   aria-label={group.label}
                   aria-expanded={isGrouped ? isOpen : undefined}
-                  className={`${sizeClass} relative rounded-xl transition-all flex items-center justify-center shrink-0 ${activeClass}`}
+                  className={`${sizeClass} relative rounded-xl border shadow-sm transition-all flex items-center gap-2 px-2.5 shrink-0 ${
+                    isActive || isOpen ? group.activeClass : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
+                  }`}
                 >
-                  <Icon className={isGrouped ? "w-5 h-5" : "w-4 h-4"} />
-                  {isGrouped && <ChevronDown className={`absolute bottom-0.5 w-2.5 h-2.5 ${isOpen ? "rotate-180" : ""} transition-transform`} />}
+                  <span className={`flex items-center justify-center rounded-lg ${isGrouped ? "w-10 h-10" : "w-8 h-8"} ${group.iconClass}`}>
+                    <Icon className={isGrouped ? "w-5 h-5" : "w-4 h-4"} />
+                  </span>
+                  <span className={`text-right leading-tight ${isGrouped ? "text-[11px] font-bold" : "text-[10px] font-semibold"}`}>{group.label}</span>
+                  {isGrouped && <ChevronDown className={`absolute left-1.5 bottom-1.5 w-3 h-3 text-gray-400 ${isOpen ? "rotate-180" : ""} transition-transform`} />}
                 </button>
               );
             })}
           </div>
         </div>
         {openGroup && (
-          <div className="border-t border-gray-100 bg-gray-50 px-3 py-2">
+          <div className="border-t border-gray-100 bg-slate-50 px-3 py-2.5">
             <div className="flex items-center gap-2 overflow-x-auto">
-              <span className="text-[10px] font-bold text-emerald-800 whitespace-nowrap ml-1">{openGroup.label}</span>
+              <span className="text-[11px] font-bold text-gray-700 whitespace-nowrap ml-1">{openGroup.label}</span>
               {openGroup.tabs.map((tabId) => {
                 const tab = TABS.find((item) => item.id === tabId)!;
                 const Icon = tab.icon;
@@ -178,11 +182,11 @@ export default function BateekhaPage() {
                   <button
                     key={tab.id}
                     onClick={() => selectTab(tab.id)}
-                    className={`min-w-20 rounded-lg border px-2.5 py-1.5 text-[10px] font-medium transition-colors flex items-center gap-1.5 justify-center whitespace-nowrap ${
-                      isActive ? "border-emerald-500 bg-emerald-100 text-emerald-800" : "border-gray-200 bg-white text-gray-600 hover:border-emerald-300 hover:text-emerald-700"
+                    className={`min-w-24 h-10 rounded-lg border px-2.5 text-[10px] font-semibold transition-colors flex items-center gap-1.5 justify-center whitespace-nowrap ${
+                      isActive ? `${openGroup.activeClass} text-gray-800` : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800"
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <span className={`w-6 h-6 rounded-md flex items-center justify-center ${openGroup.iconClass}`}><Icon className="w-3.5 h-3.5" /></span>
                     {tab.label}
                   </button>
                 );

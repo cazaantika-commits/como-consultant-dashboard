@@ -1189,3 +1189,4 @@
 - [x] Investigate and reconcile the zero-revenue Capital Portfolio row for Nad Al Sheba plot 1 against its saved unit pricing and sales inputs
 - [x] Independently audit and reconcile all three portfolio reports: Project Aggregation, Month-First Investor Flows, and Capital Portfolio, including sources, months, totals, exclusions, and exports
 - [x] Replace the crowded Financial Studies title bar with large icons for multi-page groups and smaller labeled sub-icons for the pages inside each group, without changing any financial logic
+- [x] Replace the incorrect bare icon strip with colorful labeled card-style group navigation matching the approved visual reference, with smaller labeled sub-cards for nested pages
