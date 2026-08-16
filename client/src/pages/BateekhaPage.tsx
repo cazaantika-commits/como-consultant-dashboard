@@ -148,7 +148,7 @@ export default function BateekhaPage() {
               const isGrouped = group.tabs.length > 1;
               const isActive = group.tabs.includes(activeTab);
               const isOpen = openGroupId === group.id;
-              const sizeClass = isGrouped ? "min-w-36 h-14" : "min-w-28 h-12";
+              const sizeClass = isGrouped ? "w-[82px] h-16" : "w-[68px] h-14";
               return (
                 <button
                   key={group.id}
@@ -156,15 +156,15 @@ export default function BateekhaPage() {
                   title={group.label}
                   aria-label={group.label}
                   aria-expanded={isGrouped ? isOpen : undefined}
-                  className={`${sizeClass} relative rounded-xl border shadow-sm transition-all flex items-center gap-2 px-2.5 shrink-0 ${
+                  className={`${sizeClass} relative rounded-xl border shadow-sm transition-all flex flex-col items-center justify-center gap-1 px-1.5 shrink-0 ${
                     isActive || isOpen ? group.activeClass : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
                   }`}
                 >
-                  <span className={`flex items-center justify-center rounded-lg ${isGrouped ? "w-10 h-10" : "w-8 h-8"} ${group.iconClass}`}>
-                    <Icon className={isGrouped ? "w-5 h-5" : "w-4 h-4"} />
+                  <span className={`flex items-center justify-center rounded-lg ${isGrouped ? "w-9 h-9" : "w-7 h-7"} ${group.iconClass}`}>
+                    <Icon className={isGrouped ? "w-5 h-5" : "w-3.5 h-3.5"} />
                   </span>
-                  <span className={`text-right leading-tight ${isGrouped ? "text-[11px] font-bold" : "text-[10px] font-semibold"}`}>{group.label}</span>
-                  {isGrouped && <ChevronDown className={`absolute left-1.5 bottom-1.5 w-3 h-3 text-gray-400 ${isOpen ? "rotate-180" : ""} transition-transform`} />}
+                  <span className={`text-center leading-tight ${isGrouped ? "text-[10px] font-bold" : "text-[9px] font-semibold"}`}>{group.label}</span>
+                  {isGrouped && <ChevronDown className={`absolute left-1.5 top-1.5 w-3 h-3 text-gray-400 ${isOpen ? "rotate-180" : ""} transition-transform`} />}
                 </button>
               );
             })}
@@ -182,11 +182,11 @@ export default function BateekhaPage() {
                   <button
                     key={tab.id}
                     onClick={() => selectTab(tab.id)}
-                    className={`min-w-24 h-10 rounded-lg border px-2.5 text-[10px] font-semibold transition-colors flex items-center gap-1.5 justify-center whitespace-nowrap ${
+                    className={`w-[82px] h-14 rounded-lg border px-1.5 text-[9px] font-semibold transition-colors flex flex-col gap-1 items-center justify-center text-center ${
                       isActive ? `${openGroup.activeClass} text-gray-800` : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800"
                     }`}
                   >
-                    <span className={`w-6 h-6 rounded-md flex items-center justify-center ${openGroup.iconClass}`}><Icon className="w-3.5 h-3.5" /></span>
+                    <span className={`w-7 h-7 rounded-md flex items-center justify-center ${openGroup.iconClass}`}><Icon className="w-3.5 h-3.5" /></span>
                     {tab.label}
                   </button>
                 );
