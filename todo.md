@@ -1188,3 +1188,4 @@
 - [x] Reconcile Capital Portfolio project-level revenue with Sales Pricing, beginning with the villa project’s AED 74.48M revenue
 - [x] Investigate and reconcile the zero-revenue Capital Portfolio row for Nad Al Sheba plot 1 against its saved unit pricing and sales inputs
 - [x] Independently audit and reconcile all three portfolio reports: Project Aggregation, Month-First Investor Flows, and Capital Portfolio, including sources, months, totals, exclusions, and exports
+- [x] Replace the crowded Financial Studies title bar with large icons for multi-page groups and smaller labeled sub-icons for the pages inside each group, without changing any financial logic
