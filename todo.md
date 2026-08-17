@@ -1191,6 +1191,8 @@
 - [x] Replace the crowded Financial Studies title bar with large icons for multi-page groups and smaller labeled sub-icons for the pages inside each group, without changing any financial logic
 - [x] Replace the incorrect bare icon strip with colorful labeled card-style group navigation matching the approved visual reference, with smaller labeled sub-cards for nested pages
 - [x] Replace horizontal title cards with standalone compact colorful icon tiles and labels, with group tiles opening smaller standalone page tiles
-- [ ] Redesign Investor Cash Flow readability by preserving valid groupings while removing meaningless headings and visual clutter without changing calculations
-- [ ] Remove the non-decision Government and Regulatory Fees heading from Investor Cash Flow while retaining its item-level rows and timing
-- [ ] Increase Investor Cash Flow typography, contrast, spacing, and visual hierarchy so key rows and monthly values are easy to read
+- [x] Redesign Investor Cash Flow readability by preserving valid groupings while removing meaningless headings and visual clutter without changing calculations
+- [x] Remove the non-decision Government and Regulatory Fees heading from Investor Cash Flow while retaining its item-level rows and timing
+- [x] Increase Investor Cash Flow typography, contrast, spacing, and visual hierarchy so key rows and monthly values are easy to read
+- [x] Reduce Investor Cash Flow vertical row height while keeping the improved text size and contrast readable
+- [ ] Reconcile Financial Studies navigation with the requested two-tier tile design: large colorful group tiles containing smaller independent page tiles

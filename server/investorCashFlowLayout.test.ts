@@ -19,4 +19,12 @@ describe("Investor Cash Flow readability layout", () => {
     expect(source).toContain("المبالغ المستلمة للمستثمر");
     expect(source).toContain("calculateInvestorMonthlyNet(data, salesResult)");
   });
+
+  it("keeps readable table text with compact one-unit vertical data-row padding", () => {
+    expect(source).toContain('className="w-full text-xs border-collapse min-w-max"');
+    expect(source).toContain('px-3 py-1 text-gray-800 font-semibold');
+    expect(source).toContain('px-1.5 py-1 text-center tabular-nums');
+    expect(source).not.toContain('px-3 py-2 text-gray-800 font-semibold');
+    expect(source).not.toContain('px-1.5 py-2 text-center tabular-nums');
+  });
 });
