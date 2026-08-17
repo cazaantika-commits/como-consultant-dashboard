@@ -153,3 +153,15 @@ The authenticated development-preview page was refreshed to the Financial Studie
 Clicking the large **التدفقات النقدية** tile expanded a separate panel immediately beneath it containing two smaller independent tiles: **تدفقات المستثمر** and **تدفقات الإسكرو**. The original project-type visibility filtering remains in place in the code and is covered by the focused regression suite, which passed **27/27** after the redesign.
 
 Selecting the smaller **تدفقات المستثمر** tile opened the live Majan Investor Cash Flow page directly, with the new **العودة إلى دليل الدراسات** control visible above the report. The previously verified live figures and compact row layout remained available after this new navigation path, confirming that the redesign changed presentation and access only, not the underlying Financial Studies source or report data.
+
+## Financial Studies reference-style card interface — 17 August 2026
+
+The Financial Studies entry page was visually rebuilt against the user-supplied Strategic Studies reference. The browser now shows a centred, spacious three-column card composition with five large softly tinted cards, coloured square icon blocks, bold titles, explanatory descriptions, and a clear **فتح القسم** action. The cards are: **بطاقة المشروع**; **الإعداد والتخطيط**; **التخطيط المالي**; **دراسة جدوى المستثمر**; and **محفظة رأس المال الديناميكية**.
+
+The browser check opened **الإعداد والتخطيط** and showed its five child pages as full, readable section cards: construction, sales, marketing, timeline, and Settings & Rules. This confirms the presentation has the requested visual level while retaining all existing page access.
+
+## Exact Strategic Studies card-system alignment — 17 August 2026
+
+The Financial Studies entry interface was aligned to the actual in-app Strategic Studies card system rather than only approximating its look. Browser verification now shows the same compact sticky header, centred five-card grid, neutral card surfaces with low-opacity gradient overlays, three-pixel accent lines, 16×16 coloured icon blocks, and the **فتح القسم** treatment. The card order matches the reference composition: project card, preparation and planning, Financial Planning, Dynamic Capital Portfolio, then Investor Feasibility.
+
+Clicking **التخطيط المالي** revealed its two child cards—**تدفقات المستثمر** and **تدفقات الإسكرو**—within the same established visual language. The visual change does not alter the Financial Studies data source, report routes, calculations, or project-type visibility rules.

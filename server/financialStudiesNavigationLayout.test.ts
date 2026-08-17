@@ -8,23 +8,37 @@ describe("Financial Studies two-tier tile navigation", () => {
     "utf8",
   );
 
-  it("opens to an independent tile guide instead of a preselected report", () => {
+  it("opens to a reference-style independent card guide instead of a preselected report", () => {
     expect(source).toContain("useState<TabId | null>(null)");
-    expect(source).toContain("اختر مجال العمل");
+    expect(source).toContain("اختر القسم المطلوب للبدء");
     expect(source).toContain("العودة إلى دليل الدراسات");
   });
 
-  it("renders larger group tiles that reveal smaller independent page tiles", () => {
-    expect(source).toContain('isGrouped ? "col-span-2" : "col-span-1"');
-    expect(source).toContain('isGrouped ? "min-h-[156px] gap-2" : "min-h-[118px] gap-1.5"');
-    expect(source).toContain('isGrouped && isOpen');
-    expect(source).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5');
-    expect(source).toContain('min-h-[96px] flex-col items-center justify-center');
+  it("renders the five spacious descriptive cards from the supplied reference style", () => {
+    expect(source).toContain('max-w-5xl');
+    expect(source).toContain('grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3');
+    expect(source).toContain('rounded-2xl border bg-card p-6 text-right');
+    expect(source).toContain('opacity-5 transition-opacity group-hover:opacity-10');
+    expect(source).toContain('h-[3px] rounded-t-2xl');
+    expect(source).toContain("بطاقة المشروع");
+    expect(source).toContain("الإعداد والتخطيط");
+    expect(source).toContain("التخطيط المالي");
+    expect(source).toContain("دراسة جدوى المستثمر");
+    expect(source).toContain("محفظة رأس المال الديناميكية");
+    expect(source).toContain("فتح القسم");
   });
 
-  it("does not revert to the old sticky horizontal strip and retains type-aware navigation", () => {
+  it("reveals child pages in a premium section panel", () => {
+    expect(source).toContain("openGroup && (");
+    expect(source).toContain('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3');
+    expect(source).toContain("فتح الصفحة");
+  });
+
+  it("does not revert to compact tile strips and retains type-aware navigation", () => {
     expect(source).not.toContain("sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm");
+    expect(source).not.toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5');
     expect(source).toContain("isFinancialStudiesTabVisible");
     expect(source).toContain("getFallbackFinancialStudiesTab");
+    expect(source).toContain('sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-sm');
   });
 });
