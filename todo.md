@@ -1195,4 +1195,4 @@
 - [x] Remove the non-decision Government and Regulatory Fees heading from Investor Cash Flow while retaining its item-level rows and timing
 - [x] Increase Investor Cash Flow typography, contrast, spacing, and visual hierarchy so key rows and monthly values are easy to read
 - [x] Reduce Investor Cash Flow vertical row height while keeping the improved text size and contrast readable
-- [ ] Reconcile Financial Studies navigation with the requested two-tier tile design: large colorful group tiles containing smaller independent page tiles
+- [x] Reconcile Financial Studies navigation with the requested two-tier tile design: large colorful group tiles containing smaller independent page tiles

@@ -94,7 +94,7 @@ function TabContent({ tabId }: { tabId: TabId }) {
 
 export default function BateekhaPage() {
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<TabId>("general");
+  const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
@@ -104,8 +104,8 @@ export default function BateekhaPage() {
     ? financingScenario
     : undefined;
   useEffect(() => {
-    setActiveTab((currentTab) => getFallbackFinancialStudiesTab(currentTab, projectType));
-  }, [projectType, activeTab]);
+    setActiveTab((currentTab) => currentTab ? getFallbackFinancialStudiesTab(currentTab, projectType) : null);
+  }, [projectType]);
 
   const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
   const visibleTabIds = new Set(visibleTabs.map((tab) => tab.id));
@@ -128,84 +128,116 @@ export default function BateekhaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl">
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-        <div className="flex items-center min-h-[76px] px-3 gap-3 overflow-x-auto">
-          <button onClick={() => navigate("/")} title="العودة" aria-label="العودة" className="p-1.5 rounded-lg hover:bg-gray-100 shrink-0">
-            <ArrowRight className="w-4 h-4 text-gray-500" />
-          </button>
-          <span className="text-xs font-bold text-gray-700 whitespace-nowrap ml-1 shrink-0">الدراسات والتخطيط المالي</span>
+    <div className="min-h-screen bg-slate-50" dir="rtl">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button onClick={() => navigate("/")} title="العودة" aria-label="العودة" className="rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900">
+              <ArrowRight className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <h1 className="truncate text-base font-extrabold text-slate-900 sm:text-lg">الدراسات والتخطيط المالي</h1>
+              <p className="hidden text-xs text-slate-500 sm:block">بوابة مستقلة لإعداد المشروع ومراجعة تدفقاته وتقاريره</p>
+            </div>
+          </div>
           {!user && (
-            <button onClick={() => { window.location.href = getLoginUrl(); }} className="flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 shrink-0">
-              <LogIn className="h-3 w-3" />
-              تسجيل الدخول لعرض المشاريع
+            <button onClick={() => { window.location.href = getLoginUrl(); }} className="flex shrink-0 items-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100">
+              <LogIn className="h-3.5 w-3.5" />
+              تسجيل الدخول
             </button>
           )}
-          <div className="h-10 w-px bg-gray-200 shrink-0" />
-          <div className="flex items-center gap-2 min-w-max py-2">
+        </div>
+      </header>
+
+      {!activeTab ? (
+        <main className="mx-auto max-w-[1500px] px-4 py-7 sm:px-6 sm:py-10">
+          <div className="mb-6 flex flex-col gap-1">
+            <h2 className="text-lg font-extrabold text-slate-900">اختر مجال العمل</h2>
+            <p className="text-sm text-slate-500">اضغط الأيقونة الكبيرة لعرض صفحاتها، أو افتح صفحة مستقلة مباشرة.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
             {navigationGroups.map((group) => {
               const Icon = group.icon;
               const isGrouped = group.tabs.length > 1;
-              const isActive = group.tabs.includes(activeTab);
               const isOpen = openGroupId === group.id;
-              const sizeClass = isGrouped ? "w-[82px] h-16" : "w-[68px] h-14";
+              const isActive = activeTab !== null && group.tabs.includes(activeTab);
               return (
-                <button
-                  key={group.id}
-                  onClick={() => handleGroupClick(group.id, group.tabs)}
-                  title={group.label}
-                  aria-label={group.label}
-                  aria-expanded={isGrouped ? isOpen : undefined}
-                  className={`${sizeClass} relative rounded-xl border shadow-sm transition-all flex flex-col items-center justify-center gap-1 px-1.5 shrink-0 ${
-                    isActive || isOpen ? group.activeClass : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className={`flex items-center justify-center rounded-lg ${isGrouped ? "w-9 h-9" : "w-7 h-7"} ${group.iconClass}`}>
-                    <Icon className={isGrouped ? "w-5 h-5" : "w-3.5 h-3.5"} />
-                  </span>
-                  <span className={`text-center leading-tight ${isGrouped ? "text-[10px] font-bold" : "text-[9px] font-semibold"}`}>{group.label}</span>
-                  {isGrouped && <ChevronDown className={`absolute left-1.5 top-1.5 w-3 h-3 text-gray-400 ${isOpen ? "rotate-180" : ""} transition-transform`} />}
-                </button>
+                <div key={group.id} className={isGrouped && isOpen ? "col-span-full" : isGrouped ? "col-span-2" : "col-span-1"}>
+                  <button
+                    type="button"
+                    onClick={() => handleGroupClick(group.id, group.tabs)}
+                    aria-label={group.label}
+                    aria-expanded={isGrouped ? isOpen : undefined}
+                    className={`relative flex w-full flex-col items-center justify-center rounded-2xl border px-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+                      isGrouped ? "min-h-[156px] gap-2" : "min-h-[118px] gap-1.5"
+                    } ${isActive || isOpen ? group.activeClass : "border-slate-200 bg-white hover:border-slate-300"}`}
+                  >
+                    <span className={`flex items-center justify-center rounded-2xl shadow-sm ${isGrouped ? "h-14 w-14" : "h-10 w-10 rounded-xl"} ${group.iconClass}`}>
+                      <Icon className={isGrouped ? "h-7 w-7" : "h-5 w-5"} />
+                    </span>
+                    <span className={`${isGrouped ? "text-sm" : "text-xs"} font-extrabold leading-tight text-slate-800`}>{group.label}</span>
+                    {isGrouped && (
+                      <>
+                        <span className="text-[10px] font-medium text-slate-500">{group.tabs.length} صفحات</span>
+                        <ChevronDown className={`absolute left-3 top-3 h-4 w-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      </>
+                    )}
+                  </button>
+
+                  {isGrouped && isOpen && (
+                    <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${group.iconClass}`}><Icon className="h-4 w-4" /></span>
+                          <span className="text-sm font-extrabold text-slate-800">{group.label}</span>
+                        </div>
+                        <span className="text-xs text-slate-500">اختر الصفحة</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                        {group.tabs.map((tabId) => {
+                          const tab = TABS.find((item) => item.id === tabId)!;
+                          const TabIcon = tab.icon;
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => selectTab(tab.id)}
+                              className="flex min-h-[96px] flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-sm"
+                            >
+                              <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${group.iconClass}`}><TabIcon className="h-4 w-4" /></span>
+                              <span className="leading-tight">{tab.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
-        </div>
-        {openGroup && (
-          <div className="border-t border-gray-100 bg-slate-50 px-3 py-2.5">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              <span className="text-[11px] font-bold text-gray-700 whitespace-nowrap ml-1">{openGroup.label}</span>
-              {openGroup.tabs.map((tabId) => {
-                const tab = TABS.find((item) => item.id === tabId)!;
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => selectTab(tab.id)}
-                    className={`w-[82px] h-14 rounded-lg border px-1.5 text-[9px] font-semibold transition-colors flex flex-col gap-1 items-center justify-center text-center ${
-                      isActive ? `${openGroup.activeClass} text-gray-800` : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-gray-800"
-                    }`}
-                  >
-                    <span className={`w-7 h-7 rounded-md flex items-center justify-center ${openGroup.iconClass}`}><Icon className="w-3.5 h-3.5" /></span>
-                    {tab.label}
-                  </button>
-                );
-              })}
+        </main>
+      ) : (
+        <div className="w-full">
+          <div className="border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
+            <div className="mx-auto flex max-w-[1500px] items-center gap-3">
+              <button type="button" onClick={() => { setActiveTab(null); setOpenGroupId(null); }} className="rounded-lg px-2 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">
+                العودة إلى دليل الدراسات
+              </button>
+              <span className="h-4 w-px bg-slate-200" />
+              <span className="text-xs font-bold text-slate-800">{TABS.find((tab) => tab.id === activeTab)?.label}</span>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Content - no padding, full width, white bg */}
-      <div className="w-full">
-        <Suspense fallback={
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin w-5 h-5 border-2 border-gray-200 border-t-emerald-600 rounded-full" />
-          </div>
-        }>
-          <TabContent tabId={activeTab} />
-        </Suspense>
-      </div>
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-8">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600" />
+            </div>
+          }>
+            <TabContent tabId={activeTab} />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 }

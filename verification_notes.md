@@ -145,3 +145,11 @@ Direct browser access to the unauthenticated development preview reached the Fin
 Authenticated preview access was restored on 17 August 2026. The Financial Studies module loaded successfully, and **مجان متعدد الاستخدامات (G+4P+25)** was selected as the off-plan project for the live Investor Cash Flow layout review.
 
 The live Investor Cash Flow page was opened for Majan. The browser visibly shows compact, closely spaced data rows while retaining the readable enlarged figures and labels. The report keeps the direct headings **المبالغ المطلوبة من المستثمر** and **المبالغ المستلمة للمستثمر**, shows item-level rows without the removed Government and Regulatory Fees grouping, and preserves totals, **صافي الشهر**, and **التراكمي**. The page displays AED 202.2M required from the investor, AED 526.5M received by the investor, and AED 324.4M net, confirming the presentation review used loaded project data rather than an empty state.
+
+## Financial Studies two-tier navigation — 17 August 2026
+
+The authenticated development-preview page was refreshed to the Financial Studies entry point after the navigation redesign. It now opens as an independent tile guide rather than preloading General Inputs or showing the prior horizontal strip. The browser visibly shows larger two-column tiles for **بيانات المشروع**, **التدفقات النقدية**, and **التقارير**, alongside smaller direct tiles for the individual pages.
+
+Clicking the large **التدفقات النقدية** tile expanded a separate panel immediately beneath it containing two smaller independent tiles: **تدفقات المستثمر** and **تدفقات الإسكرو**. The original project-type visibility filtering remains in place in the code and is covered by the focused regression suite, which passed **27/27** after the redesign.
+
+Selecting the smaller **تدفقات المستثمر** tile opened the live Majan Investor Cash Flow page directly, with the new **العودة إلى دليل الدراسات** control visible above the report. The previously verified live figures and compact row layout remained available after this new navigation path, confirming that the redesign changed presentation and access only, not the underlying Financial Studies source or report data.
