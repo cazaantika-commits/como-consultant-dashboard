@@ -121,7 +121,7 @@ export default function BateekhaPage() {
       selectTab(tabIds[0]);
       return;
     }
-    setOpenGroupId((current) => current === groupId ? null : groupId);
+    setOpenGroupId(groupId);
   };
 
   return (
@@ -140,7 +140,7 @@ export default function BateekhaPage() {
         </div>
       </header>
 
-      {!activeTab ? (
+      {!activeTab && !openGroup ? (
         <main className="mx-auto max-w-5xl px-6 py-12">
           <div className="mb-10 text-center">
             <h2 className="mb-2 text-2xl font-bold text-foreground">الدراسات والتخطيط المالي</h2>
@@ -173,41 +173,42 @@ export default function BateekhaPage() {
               );
             })}
           </div>
-
-          {openGroup && (
-            <section className="mt-8 rounded-2xl border bg-card p-6 shadow-xl" style={{ borderColor: openGroup.borderColor + "40", boxShadow: `0 4px 20px ${openGroup.shadow}` }}>
-              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-md" style={{ background: openGroup.gradient, boxShadow: `0 6px 20px ${openGroup.shadow}` }}>{OpenGroupIcon && <OpenGroupIcon className="h-6 w-6" />}</span>
-                  <div>
-                    <h3 className="text-lg font-extrabold text-foreground">{openGroup.label}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">{openGroup.description}</p>
-                  </div>
-                </div>
-                <button type="button" onClick={() => setOpenGroupId(null)} className="self-start text-xs font-bold text-muted-foreground transition-colors hover:text-foreground sm:self-auto">إغلاق القسم</button>
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {openGroup.tabs.map((tabId) => {
-                  const tab = TABS.find((item) => item.id === tabId)!;
-                  const TabIcon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => selectTab(tab.id)}
-                      className="group flex min-h-[132px] items-center gap-4 rounded-2xl border border-border bg-background/60 p-4 text-right shadow-sm transition-all hover:-translate-y-0.5 hover:bg-card hover:shadow-md"
-                    >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-sm" style={{ background: openGroup.gradient, boxShadow: `0 4px 12px ${openGroup.shadow}` }}><TabIcon className="h-5 w-5" /></span>
-                      <span className="flex min-w-0 flex-1 flex-col gap-1">
-                        <span className="text-base font-extrabold text-foreground">{tab.label}</span>
-                        <span className="flex items-center gap-1 text-xs font-bold" style={{ color: openGroup.borderColor }}><ArrowLeft className="h-3.5 w-3.5" /> فتح الصفحة</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+        </main>
+      ) : !activeTab && openGroup ? (
+        <main className="mx-auto max-w-5xl px-6 py-12">
+          <button type="button" onClick={() => setOpenGroupId(null)} className="mb-8 inline-flex items-center gap-1.5 text-sm font-bold text-muted-foreground transition-colors hover:text-foreground">
+            <ArrowRight className="h-4 w-4" />
+            العودة إلى جميع الأقسام
+          </button>
+          <div className="mb-10 text-center">
+            <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg" style={{ background: openGroup.gradient, boxShadow: `0 6px 20px ${openGroup.shadow}` }}>{OpenGroupIcon && <OpenGroupIcon className="h-7 w-7" />}</span>
+            <h2 className="mb-2 text-2xl font-bold text-foreground">{openGroup.label}</h2>
+            <p className="text-sm text-muted-foreground">{openGroup.description}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {openGroup.tabs.map((tabId) => {
+              const tab = TABS.find((item) => item.id === tabId)!;
+              const TabIcon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => selectTab(tab.id)}
+                  className="group relative overflow-hidden rounded-2xl border bg-card p-6 text-right transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                  style={{ borderColor: openGroup.borderColor + "40", boxShadow: `0 4px 20px ${openGroup.shadow}` }}
+                >
+                  <span className="absolute inset-0 opacity-5 transition-opacity group-hover:opacity-10" style={{ background: openGroup.gradient }} />
+                  <span className="absolute inset-x-0 top-0 h-[3px] rounded-t-2xl" style={{ backgroundColor: openGroup.borderColor }} />
+                  <span className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg transition-transform duration-300 group-hover:scale-110" style={{ background: openGroup.gradient, boxShadow: `0 6px 20px ${openGroup.shadow}` }}><TabIcon className="h-7 w-7" /></span>
+                  <h3 className="relative z-10 mb-1 text-base font-bold text-foreground">{tab.label}</h3>
+                  <span className="relative z-10 mt-4 flex items-center gap-1 text-xs font-medium" style={{ color: openGroup.borderColor }}>
+                    <span>فتح الصفحة</span>
+                    <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </main>
       ) : (
         <div className="w-full">

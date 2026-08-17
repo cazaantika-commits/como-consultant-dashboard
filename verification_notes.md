@@ -165,3 +165,17 @@ The browser check opened **الإعداد والتخطيط** and showed its five
 The Financial Studies entry interface was aligned to the actual in-app Strategic Studies card system rather than only approximating its look. Browser verification now shows the same compact sticky header, centred five-card grid, neutral card surfaces with low-opacity gradient overlays, three-pixel accent lines, 16×16 coloured icon blocks, and the **فتح القسم** treatment. The card order matches the reference composition: project card, preparation and planning, Financial Planning, Dynamic Capital Portfolio, then Investor Feasibility.
 
 Clicking **التخطيط المالي** revealed its two child cards—**تدفقات المستثمر** and **تدفقات الإسكرو**—within the same established visual language. The visual change does not alter the Financial Studies data source, report routes, calculations, or project-type visibility rules.
+
+## Dedicated Financial Studies child-page guides — 17 August 2026
+
+The production-flow inspection identified that the earlier child pages were displayed below the primary-card grid, which could make them appear absent after entering the Financial Studies module. Each multi-page card now opens a dedicated guide page instead. The browser verified that opening **التخطيط المالي** replaces the main card grid with a clearly labelled page containing the visible **تدفقات المستثمر** and **تدفقات الإسكرو** cards, as well as a prominent **العودة إلى جميع الأقسام** control. This keeps the reference-style card treatment while making every available child page explicit and reachable.
+
+The **تدفقات المستثمر** child card opened the live Investor Cash Flow report for Majan, including its current project data and export control. Its report-level back action returned successfully to the main Financial Studies card guide. This confirms the complete path: main guide → dedicated Financial Planning guide → Investor Cash Flow → main guide.
+
+The browser also opened the dedicated **الإعداد والتخطيط** guide. It visibly presents all five expected operational pages as independent cards: **الإنشاء**; **المبيعات**; **التسويق**; **الجدول الزمني**; and **الإعدادات والقواعد**. The guide’s back action returned to the main Financial Studies guide successfully.
+
+The dedicated **محفظة رأس المال الديناميكية** guide was also verified. It makes all four available report entries visible: **تجميع المشاريع**; **العرض الشهري**; **محفظة رأس المال**; and **المركز التجاري**.
+
+The dedicated **بطاقة المشروع** guide was verified as well. It clearly displays both expected project-data pages—**المدخلات العامة** and **توزيع الوحدات**—as separate visible cards rather than hiding them beneath the main Financial Studies interface.
+
+Finally, the direct **دراسة جدوى المستثمر** card was opened from the main guide. It reached the live Feasibility Study page for Majan and displayed the saved project’s revenue, costs, net investor profit, capital requirement, and project details. All five main Financial Studies sections are therefore visible and reachable from the corrected card system.

@@ -1198,3 +1198,4 @@
 - [x] Reconcile Financial Studies navigation with the requested two-tier tile design: large colorful group tiles containing smaller independent page tiles
 - [x] Rebuild the Financial Studies entry page to match the supplied Strategic Studies reference: spacious premium three-column cards with large colored icon blocks, title, description, and "فتح القسم" action
 - [x] Align the Financial Studies card system exactly with the existing Strategic Studies implementation: shared proportions, neutral cards with gradient overlays, accent lines, card order, and header hierarchy
+- [x] Diagnose and restore the expected Financial Studies sections and child pages that are missing or unreachable after entering the new card interface

@@ -28,10 +28,12 @@ describe("Financial Studies two-tier tile navigation", () => {
     expect(source).toContain("فتح القسم");
   });
 
-  it("reveals child pages in a premium section panel", () => {
-    expect(source).toContain("openGroup && (");
-    expect(source).toContain('grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3');
+  it("opens each group into a dedicated child-page guide", () => {
+    expect(source).toContain("!activeTab && openGroup ? (");
+    expect(source).toContain("العودة إلى جميع الأقسام");
+    expect(source).toContain('grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3');
     expect(source).toContain("فتح الصفحة");
+    expect(source).toContain("setOpenGroupId(groupId)");
   });
 
   it("does not revert to compact tile strips and retains type-aware navigation", () => {
