@@ -1250,3 +1250,6 @@
 - [x] Require a protected pilot, save-reload checks, and complete downstream report reconciliation before replacing any existing Sales or Marketing interface
 - [x] Independently manage implementation safeguards and report only verified business outcomes or material decisions that require the owner’s direction
 - [x] Repair and prove preservation of every saved marketing allocation through a price-only Wael workspace scenario save
+- [x] Rebuild Wael’s Sales and Marketing experience as a professional multi-screen decision workflow rather than a collapsed collection of existing grids
+- [x] Preserve every existing Sales, Marketing, payment-plan, collection, escrow, and investor-cash-flow data contract while replacing only the interaction and visual presentation
+- [x] Replace the default dense month-by-month Sales Plan grid with a goal-and-pace planner, leaving the raw synchronized unit/percentage editor only for explicit precision editing

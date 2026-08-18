@@ -5,19 +5,25 @@ import { describe, expect, it } from "vitest";
 const readSource = (relativePath: string) =>
   fs.readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 
-describe("Wael decision-first workspace", () => {
+describe("Wael professional decision workspace", () => {
   const workspaceSource = readSource("client/src/pages/V2WaelSales.tsx");
   const navigationSource = readSource("client/src/pages/BateekhaPage.tsx");
 
-  it("keeps decision controls and live scenario outcomes ahead of detailed grids", () => {
-    expect(workspaceSource).toContain("مركز قرار وائل");
+  it("uses focused decision rooms and live scenario outcomes instead of a collapsed grid collection", () => {
+    expect(workspaceSource).toContain("WAEL_STUDIO_ROOMS");
+    expect(workspaceSource).toContain("لوحة السيناريو");
+    expect(workspaceSource).toContain("المنتج والسعر");
+    expect(workspaceSource).toContain("خطة البيع");
+    expect(workspaceSource).toContain("تحصيل المشتري");
+    expect(workspaceSource).toContain("حملة التسويق");
+    expect(workspaceSource).toContain("أثر القرار");
+    expect(workspaceSource).toContain("activeStudioRoom");
     expect(workspaceSource).toContain("applySalesPace");
     expect(workspaceSource).toContain("adjustAllPrices");
     expect(workspaceSource).toContain("applyPaymentPreset");
     expect(workspaceSource).toContain("أول تحصيل فعلي");
     expect(workspaceSource).toContain("الشهر الحرج");
-    expect(workspaceSource).toContain("تفاصيل التحكم الدقيق");
-    expect(workspaceSource).toContain("إظهار التفاصيل");
+    expect(workspaceSource).not.toContain("تفاصيل التحكم الدقيق");
   });
 
   it("preserves a single approved scenario save and one visible Sales and Marketing entry", () => {
