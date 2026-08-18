@@ -1264,3 +1264,6 @@
 - [x] Inspect the current Feasibility Study screen and verify how revenue, total cost, required capital, paid capital, remaining capital, and profit ratios are sourced
 - [x] Benchmark professional investment-committee feasibility presentations and define an investor-first decision hierarchy
 - [x] Redesign Feasibility Study so profit on total project cost and profit on required investor capital are prominent, clearly explained, and sourced from unchanged calculations
+- [x] Audit the current aggregated project cash-flow report, existing Sheikh Issa alert, data lineage, and role access before changing any presentation
+- [x] Benchmark professional executive portfolio-liquidity reporting and define the information Sheikh Issa needs first
+- [x] Redesign the aggregated project cash-flow report and Sheikh Issa’s Command Center view with next-four-month commitments, project drivers, timing, and safe drill-downs without changing any financial calculations or frozen data contracts

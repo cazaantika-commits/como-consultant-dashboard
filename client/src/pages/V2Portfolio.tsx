@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Download } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { ArrowRight, CalendarDays, ChevronDown, ChevronUp, Download, Landmark, TrendingDown, TrendingUp } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import {
@@ -7,6 +7,7 @@ import {
   groupCalendarAlignedPortfolio,
   type PortfolioProjectMonthlyNet,
 } from "@/lib/portfolioAggregation";
+import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";
 
 const MONTH_NAMES = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -52,6 +53,7 @@ export default function V2Portfolio() {
   const projects = (portfolioQuery.data || []) as PortfolioProjectMonthlyNet[];
   const [selected, setSelected] = useState<number[]>([]);
   const [groupSize, setGroupSize] = useState<1 | 3 | 4 | 6>(1);
+  const [openExecutiveMonth, setOpenExecutiveMonth] = useState<string | null>(null);
 
   useEffect(() => {
     if (projects.length > 0 && selected.length === 0) {
@@ -70,6 +72,10 @@ export default function V2Portfolio() {
   const groupedPortfolio = useMemo(
     () => groupCalendarAlignedPortfolio(monthlyPortfolio, groupSize),
     [monthlyPortfolio, groupSize],
+  );
+  const executiveLiquidity = useMemo(
+    () => buildExecutivePortfolioLiquidity(selectedProjects, { horizon: 4 }),
+    [selectedProjects],
   );
 
   const largestRequired = Math.max(...groupedPortfolio.totals.map((value) => Math.max(-value, 0)), 0);
@@ -150,14 +156,64 @@ export default function V2Portfolio() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm"><p className="text-[10px] text-red-600 mb-0.5">أكبر مبلغ مطلوب من المستثمر</p><p className="text-base font-bold text-red-700">{formatAmount(largestRequired)}</p></div>
-          <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm"><p className="text-[10px] text-teal-600 mb-0.5">إجمالي المستلم للمستثمر</p><p className="text-base font-bold text-teal-700">{formatAmount(totalReturned)}</p></div>
-          <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"><p className="text-[10px] text-gray-600 mb-0.5">عدد المشاريع</p><p className="text-base font-bold text-gray-800">{selectedProjects.length} / {projects.length}</p></div>
-        </div>
+        <section className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_35px_rgba(15,23,42,0.07)]" dir="rtl" data-testid="portfolio-liquidity-decision-panel">
+          <div className="relative overflow-hidden bg-gradient-to-l from-slate-950 via-slate-900 to-indigo-950 px-4 py-4 text-white sm:px-5">
+            <div className="absolute -left-12 -top-16 h-44 w-44 rounded-full bg-amber-400/15 blur-3xl" />
+            <div className="absolute -bottom-20 right-1/3 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-400/15 text-amber-300"><Landmark className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-[10px] font-semibold tracking-[0.12em] text-amber-200">قرار السيولة التنفيذي</p>
+                  <h2 className="mt-1 text-lg font-black">ما الذي تحتاجه المحفظة خلال الأشهر القادمة؟</h2>
+                  <p className="mt-1 text-xs text-slate-300">التزامات المستثمر، العوائد، ومحركات القرار من صف صافي التدفق المعتمد.</p>
+                </div>
+              </div>
+              {executiveLiquidity.months.length > 0 && <div className="flex items-center gap-2 self-start rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs text-slate-100"><CalendarDays className="h-4 w-4 text-amber-200" /> {formatMonth(executiveLiquidity.months[0].monthDate)} – {formatMonth(executiveLiquidity.months[executiveLiquidity.months.length - 1].monthDate)}</div>}
+            </div>
+
+            <div className="relative mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <ExecutiveMetric label="مطلوب من المستثمرين" value={formatAmount(executiveLiquidity.summary.required)} tone="required" icon={<TrendingDown className="h-4 w-4" />} />
+              <ExecutiveMetric label="مستلم للمستثمرين" value={formatAmount(executiveLiquidity.summary.returned)} tone="returned" icon={<TrendingUp className="h-4 w-4" />} />
+              <ExecutiveMetric label={executiveLiquidity.summary.netFunding > 0 ? "صافي التمويل بعد العوائد" : "صافي العائد بعد الالتزامات"} value={formatAmount(executiveLiquidity.summary.netFunding)} tone={executiveLiquidity.summary.netFunding > 0 ? "required" : "returned"} icon={<Landmark className="h-4 w-4" />} />
+              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
+                <p className="text-[10px] font-bold text-slate-300">{executiveLiquidity.peakKind === "required" ? "شهر أعلى ضغط تمويلي" : "شهر أعلى عائد متوقع"}</p>
+                {executiveLiquidity.peakMonth ? <><p className="mt-1 text-base font-black text-white">{formatMonth(executiveLiquidity.peakMonth.monthDate)}</p><p className={`mt-1 text-sm font-black ${executiveLiquidity.peakKind === "required" ? "text-red-200" : "text-emerald-200"}`}>{formatAmount(executiveLiquidity.peakKind === "required" ? executiveLiquidity.peakMonth.required : executiveLiquidity.peakMonth.returned)} <span className="text-[10px] font-semibold">درهم</span></p></> : <p className="mt-2 text-sm font-bold text-slate-400">لا بيانات قادمة</p>}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 p-4 lg:grid-cols-[1.55fr_0.95fr]">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {executiveLiquidity.months.map((month) => {
+                const isOpen = openExecutiveMonth === month.monthDate;
+                const isRequired = month.required > 0;
+                return <div key={month.monthDate} className={`rounded-xl border p-3 transition ${isRequired ? "border-red-100 bg-red-50/70" : month.returned > 0 ? "border-emerald-100 bg-emerald-50/70" : "border-slate-100 bg-slate-50"}`}>
+                  <button className="w-full text-right" onClick={() => setOpenExecutiveMonth(isOpen ? null : month.monthDate)}>
+                    <div className="flex items-center justify-between gap-2"><span className="text-sm font-black text-slate-800">{formatMonth(month.monthDate)}</span>{isOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}</div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><div><p className="text-red-600">مطلوب</p><p className="mt-0.5 font-black text-red-700">{month.required ? formatAmount(month.required) : "—"}</p></div><div><p className="text-emerald-600">مستلم</p><p className="mt-0.5 font-black text-emerald-700">{month.returned ? formatAmount(month.returned) : "—"}</p></div></div>
+                    <p className={`mt-2 border-t pt-2 text-[10px] font-bold ${month.netFunding > 0 ? "border-red-100 text-red-700" : month.netFunding < 0 ? "border-emerald-100 text-emerald-700" : "border-slate-100 text-slate-500"}`}>{month.netFunding > 0 ? "صافي تمويل " : month.netFunding < 0 ? "صافي عائد " : "لا التزام صافٍ"}{month.netFunding !== 0 ? formatAmount(month.netFunding) : ""}</p>
+                  </button>
+                  {isOpen && <div className="mt-3 space-y-1.5 border-t border-slate-200 pt-2 text-[10px]">
+                    {month.drivers.map((driver) => <div key={driver.projectId} className="flex items-center justify-between gap-2"><span className="line-clamp-1 text-slate-600">{driver.name}</span><span className={`font-bold ${driver.value < 0 ? "text-red-700" : "text-emerald-700"}`}>{driver.value < 0 ? "مطلوب " : "مستلم "}{formatAmount(driver.value)}</span></div>)}
+                  </div>}
+                </div>;
+              })}
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[10px] font-bold text-slate-500">{executiveLiquidity.peakKind === "required" ? "المشاريع التي تقود شهر الذروة" : "المشاريع التي تقود أعلى عائد"}</p>
+              {executiveLiquidity.peakMonth ? <><p className="mt-1 text-sm font-black text-slate-800">{formatMonth(executiveLiquidity.peakMonth.monthDate)}</p><div className="mt-3 space-y-2">{(executiveLiquidity.peakKind === "required" ? executiveLiquidity.peakMonth.requiredDrivers : executiveLiquidity.peakMonth.returnedDrivers).slice(0, 3).map((driver, index) => <div key={driver.projectId} className="flex items-center justify-between gap-3 rounded-lg bg-white px-2.5 py-2"><div className="flex min-w-0 items-center gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">{index + 1}</span><span className="truncate text-[11px] font-semibold text-slate-700">{driver.name}</span></div><span className={`shrink-0 text-xs font-black ${driver.value < 0 ? "text-red-700" : "text-emerald-700"}`}>{formatAmount(driver.value)}</span></div>)}</div></> : <p className="mt-3 text-xs text-slate-400">لا توجد تدفقات ضمن الفترة المختارة.</p>}
+            </div>
+          </div>
+        </section>
 
         <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden"><div className="overflow-x-auto"><table className="w-full text-[11px]" style={{ minWidth: groupedPortfolio.periods.length * 105 + 180 }}><thead><tr className="bg-gray-50"><th className="sticky right-0 z-10 bg-gray-50 px-3 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[160px] text-xs">المشروع</th>{groupedPortfolio.periods.map((period) => <th key={period.startDate} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap">{formatPeriod(period.startDate, period.endDate)}</th>)}</tr></thead><tbody>{groupedPortfolio.rows.map((project, index) => <tr key={project.projectId} className="hover:bg-gray-50/50 border-b border-gray-50"><td className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right border-l border-gray-100 whitespace-nowrap"><div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} /><span className="font-medium text-gray-800">{project.name}</span></div></td>{project.values.map((value, valueIndex) => { const kind = cellKind(value); return <td key={valueIndex} className={`px-1.5 py-[5px] text-center tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-teal-700" : "text-gray-300"}`}>{kind === "zero" ? "—" : formatAmount(value)}</td>; })}</tr>)}<tr className="bg-teal-50 font-bold border-t-2 border-teal-200"><td className="sticky right-0 z-10 bg-teal-50 px-3 py-1.5 text-right text-teal-800 border-l border-teal-200">الإجمالي المجمّع</td>{groupedPortfolio.totals.map((value, index) => { const kind = cellKind(value); return <td key={index} className={`px-1.5 py-1.5 text-center tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-teal-700" : "text-gray-300"}`}>{kind === "zero" ? "—" : formatAmount(value)}</td>; })}</tr></tbody></table></div></div>
       </div>
     </div>
   );
+}
+
+function ExecutiveMetric({ label, value, tone, icon }: { label: string; value: string; tone: "required" | "returned"; icon: ReactNode }) {
+  const tones = tone === "required" ? "border-red-300/20 bg-red-400/10 text-red-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
+  return <div className={`rounded-2xl border p-3 ${tones}`}><div className="flex items-center gap-1.5 text-[10px] font-bold">{icon}{label}</div><p className="mt-1.5 text-xl font-black text-white">{value} <span className="text-[10px] font-semibold">درهم</span></p></div>;
 }
