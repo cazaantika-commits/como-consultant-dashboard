@@ -13,7 +13,7 @@ describe("approved Financial Studies navigation consolidation", () => {
   it("removes only the approved V2 duplicate icon from the main dashboard", () => {
     expect(homeSource).not.toContain('id: "main-v2"');
     expect(homeSource).toContain('id: "main-bateekha"');
-    expect(homeSource).toContain('id: "main-portfolio"');
+    expect(homeSource).not.toContain('id: "main-portfolio"');
     expect(homeSource).not.toContain('id: "tool-wael-sales"');
   });
 

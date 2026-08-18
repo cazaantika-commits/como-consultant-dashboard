@@ -51,8 +51,6 @@ import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 import ProgramCashFlowPage from "./pages/ProgramCashFlowPage";
 import ExcelCashFlowPage from "./pages/ExcelCashFlowPage";
 import EscrowCashFlowPage from "./pages/EscrowCashFlowPage";
-import CapitalPlanningDashboard from "./pages/CapitalPlanningDashboard";
-import CapitalSchedulingPage from "./pages/CapitalSchedulingPage";
 import ConsultantsRegistry from "./pages/ConsultantsRegistry";
 import BusinessPartnersRegistry from "./pages/BusinessPartnersRegistry";
 import PaymentRequests from "./pages/PaymentRequests";
@@ -67,7 +65,6 @@ import WorkSchedulePage from "./pages/WorkSchedulePage";
 import CashFlowSettingsPage from "./pages/CashFlowSettingsPage";
 import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
 import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
-import PortfolioSummaryReport from "./pages/PortfolioSummaryReport";
 import EngineComparisonPage from "./pages/EngineComparisonPage";
 import ProjectCardOffplanPage from "./pages/ProjectCardOffplanPage";
 import ProjectCardPostCompletionPage from "./pages/ProjectCardPostCompletionPage";
@@ -75,7 +72,6 @@ import PricingPage from "./pages/PricingPage";
 import InvestorCapitalPlanPage from "./pages/InvestorCapitalPlanPage";
 import InvestorCashFlowSchedulePage from "./pages/InvestorCashFlowSchedulePage";
 import EscrowCashFlowSchedulePage2 from "./pages/EscrowCashFlowSchedulePage2";
-import ConsolidatedInvestorCashFlowPage from "./pages/ConsolidatedInvestorCashFlowPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
@@ -109,8 +105,6 @@ function Router() {
       <Route path="/program-cashflow" component={ProgramCashFlowPage} />
       <Route path="/excel-cashflow" component={ExcelCashFlowPage} />
       <Route path="/escrow-cashflow" component={EscrowCashFlowPage} />
-      <Route path="/capital-planning" component={CapitalPlanningDashboard} />
-      <Route path="/capital-scheduling" component={CapitalSchedulingPage} />
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
       <Route path="/business-partners-registry" component={BusinessPartnersRegistry} />
       <Route path="/payment-requests" component={PaymentRequests} />
@@ -157,7 +151,6 @@ function Router() {
       <Route path="/cashflow-settings" component={CashFlowSettingsPage} />
       <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
       <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
-      <Route path="/portfolio-summary-report" component={PortfolioSummaryReport} />
       <Route path="/engine-comparison" component={EngineComparisonPage} />
       <Route path="/project-card" component={ProjectCardOffplanPage} />
       <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
@@ -166,7 +159,6 @@ function Router() {
       <Route path="/investor-capital-plan" component={InvestorCapitalPlanPage} />
       <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
       <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
-      <Route path="/consolidated-investor-cashflow" component={ConsolidatedInvestorCashFlowPage} />
       <Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />
       <Route path="/v2/portfolio" component={V2Portfolio} />
       <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />

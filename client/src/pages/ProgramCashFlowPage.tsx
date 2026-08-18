@@ -1,7 +1,6 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import PortfolioView from "./PortfolioView";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ import {
   ChevronLeft, Save, RefreshCw, Download, AlertTriangle, CheckCircle2,
   Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet,
   GitCompare, Wallet, Building, ShieldCheck, ArrowUpDown, Info, ListChecks,
-  CircleDollarSign, LayoutDashboard
+  CircleDollarSign
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -104,7 +103,6 @@ function formatFullAED(amount: number): string {
 export default function ProgramCashFlowPage() {
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showPortfolio, setShowPortfolio] = useState(false);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
   const deleteMutation = trpc.cashFlowProgram.deleteProject.useMutation({
@@ -116,10 +114,6 @@ export default function ProgramCashFlowPage() {
   });
 
   const projects = projectsQuery.data || [];
-
-  if (showPortfolio) {
-    return <PortfolioView onBack={() => setShowPortfolio(false)} />;
-  }
 
   if (selectedProjectId) {
     return (
@@ -185,12 +179,6 @@ export default function ProgramCashFlowPage() {
           <Badge variant="secondary" className="text-xs">{projects.length}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          {projects.length > 1 && (
-            <Button variant="outline" size="sm" onClick={() => setShowPortfolio(true)}>
-              <LayoutDashboard className="h-4 w-4 ml-2" />
-              محفظة المشاريع
-            </Button>
-          )}
           <CreateProjectDialog
             open={showCreateDialog}
             onOpenChange={setShowCreateDialog}

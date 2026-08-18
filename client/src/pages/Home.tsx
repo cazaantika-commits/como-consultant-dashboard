@@ -410,7 +410,6 @@ export default function Home() {
     { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)", badge: 5 },
     { id: "main-kb", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
     { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
-    { id: "main-portfolio", label: "المحفظة الاستثمارية", icon: Wallet, path: "/consolidated-investor-cashflow", borderColor: "#0d9488", iconBg: "linear-gradient(135deg, #0d9488, #0f766e)", shadow: "rgba(13, 148, 136, 0.25)" },
     { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
   ];
 

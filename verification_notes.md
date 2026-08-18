@@ -197,3 +197,9 @@ The current **تدفقات المستثمر** card was opened directly after the
 ## External legacy Sales and Marketing Plan cleanup — 18 August 2026
 
 The approved external **خطة المبيعات والتسويق** navigation entry was removed from the dashboard and its `/wael-sales-plan` route was checked directly in the browser. It now returns the application's 404 page rather than the obsolete sales-planning interface. The current Sales and Marketing workflow remains inside **الدراسات والتخطيط المالي ← الإعداد والتخطيط** and was intentionally not changed.
+
+## External portfolio consolidation — 18 August 2026
+
+The former external investment-portfolio route, `/consolidated-investor-cashflow`, was opened directly and now returns the application's 404 page. The Financial Studies entry page was then opened in the browser. Its sole **محفظة رأس المال الديناميكية** group remains visible alongside the other four Financial Studies groups, confirming that portfolio reporting is available only through **الدراسات والتخطيط المالي**.
+
+The Dynamic Capital Portfolio group was opened and showed its four current in-module cards: **تجميع المشاريع**; **العرض الشهري**; **محفظة رأس المال**; and **المركز التجاري**. Selecting **محفظة رأس المال** loaded the current Capital Portfolio report with five investment projects, AED 1.013B in revenue, AED 893.7M in total cost, AED 119.0M pre-developer-share profit, and AED 469.8M total capital. This confirms that the portfolio reports remain intact at their sole approved location.

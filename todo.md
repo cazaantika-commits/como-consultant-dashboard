@@ -1214,3 +1214,5 @@
 - [x] Audit the external legacy Sales and Marketing Plan entry and compare it with the Sales and Marketing pages inside current Financial Studies without modifying either
 - [x] Discuss and approve any legacy Sales and Marketing cleanup only after confirming whether it duplicates the current Financial Studies workflow
 - [x] Remove the approved external legacy Sales and Marketing Plan icon, route, and unused component while preserving current Financial Studies Sales and Marketing pages
+- [x] Audit every external portfolio icon, route, component, and caller while preserving the current portfolio reports inside Financial Studies
+- [x] Remove all external portfolio launchers and unused legacy portfolio code so portfolio reports exist only in Financial Studies
