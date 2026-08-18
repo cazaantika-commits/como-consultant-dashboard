@@ -1,8 +1,22 @@
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { waelSalesPlans } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { waelSalesPlans, projects } from "../../drizzle/schema";
+import { eq, desc, and } from "drizzle-orm";
+
+const workspacePricingSchema = z.object({
+  residential1brPrice: z.number().int().min(0).optional(),
+  residential2brPrice: z.number().int().min(0).optional(),
+  residential3brPrice: z.number().int().min(0).optional(),
+  villaPrice: z.number().int().min(0).optional(),
+  townhousePrice: z.number().int().min(0).optional(),
+  retailSmallPrice: z.number().int().min(0).optional(),
+  retailMediumPrice: z.number().int().min(0).optional(),
+  retailLargePrice: z.number().int().min(0).optional(),
+  officeSmallPrice: z.number().int().min(0).optional(),
+  officeMediumPrice: z.number().int().min(0).optional(),
+  officeLargePrice: z.number().int().min(0).optional(),
+});
 
 export const waelSalesPlanRouter = router({
   getByProject: protectedProcedure
@@ -103,6 +117,69 @@ export const waelSalesPlanRouter = router({
         }
         return { id: insertedId, action: "created" as const };
       }
+    }),
+
+  saveWorkspace: protectedProcedure
+    .input(z.object({
+      planId: z.number().optional(),
+      projectId: z.number(),
+      pricing: workspacePricingSchema,
+      marketingPct: z.number().min(0).max(20),
+      salesCommissionPct: z.number().min(0).max(20),
+      totalRevenue: z.number().min(0),
+      offplanPct: z.number().min(0).max(100),
+      designMonths: z.number().int().min(0),
+      constructionMonths: z.number().int().min(0),
+      salesAbsorptionJson: z.string(),
+      marketingDistJson: z.string(),
+      channelsJson: z.string(),
+      paymentPlanJson: z.string(),
+      resultsJson: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB not available");
+      if (!ctx.user) throw new Error("Unauthorized");
+
+      const projectValues = {
+        ...input.pricing,
+        marketingPct: String(input.marketingPct),
+        salesCommissionPct: String(input.salesCommissionPct),
+      };
+      const planValues: any = {
+        projectId: input.projectId,
+        userId: ctx.user.id,
+        name: "سيناريو وائل المعتمد",
+        status: "approved",
+        designMonths: input.designMonths,
+        constructionMonths: input.constructionMonths,
+        offplanPct: input.offplanPct,
+        totalRevenue: input.totalRevenue,
+        marketingBudgetPct: String(input.marketingPct),
+        salesCommissionPct: String(input.salesCommissionPct),
+        salesAbsorptionJson: input.salesAbsorptionJson,
+        marketingDistJson: input.marketingDistJson,
+        channelsJson: input.channelsJson,
+        paymentPlanJson: input.paymentPlanJson,
+        resultsJson: input.resultsJson,
+      };
+
+      const persist = async (tx: any) => {
+        await tx.update(projects)
+          .set(projectValues)
+          .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
+        if (input.planId) {
+          await tx.update(waelSalesPlans).set(planValues).where(eq(waelSalesPlans.id, input.planId));
+          return input.planId;
+        }
+        const result = await tx.insert(waelSalesPlans).values(planValues);
+        return Number((result as any)[0]?.insertId || 0);
+      };
+
+      const id = typeof (db as any).transaction === "function"
+        ? await (db as any).transaction(persist)
+        : await persist(db);
+      return { id, action: input.planId ? "updated" as const : "created" as const };
     }),
 
   delete: protectedProcedure

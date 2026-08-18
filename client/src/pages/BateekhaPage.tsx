@@ -1,6 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Megaphone, Calendar, TableProperties, WalletCards, Layers3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, ClipboardList, HardHat, Target, Settings, TrendingDown, FileText, Building2, Briefcase, LayoutGrid, Landmark, Calendar, TableProperties, WalletCards, Layers3 } from "lucide-react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -17,7 +17,6 @@ const V2Feasibility = lazy(() => import("./V2Feasibility"));
 const V2Portfolio = lazy(() => import("./V2Portfolio"));
 const V2PortfolioMonthly = lazy(() => import("./V2PortfolioMonthly"));
 const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
-const MarketingPage = lazy(() => import("./MarketingPage"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
 
 type TabId = FinancialStudiesTabId;
@@ -26,8 +25,7 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
   { id: "general", label: "بطاقة المشروع", icon: ClipboardList, group: "input" },
   { id: "units", label: "توزيع الوحدات", icon: LayoutGrid, group: "input" },
   { id: "construction", label: "الإنشاء", icon: HardHat, group: "input" },
-  { id: "sales", label: "المبيعات", icon: Target, group: "input" },
-  { id: "marketing", label: "التسويق", icon: Megaphone, group: "input" },
+  { id: "sales", label: "المبيعات والتسويق — مساحة وائل", icon: Target, group: "input" },
   { id: "timeline", label: "الجدول الزمني", icon: Calendar, group: "input" },
   { id: "settings", label: "الإعدادات والقواعد", icon: Settings, group: "input" },
   { id: "cashflows", label: "تدفقات المستثمر", icon: TrendingDown, group: "output" },
@@ -41,7 +39,7 @@ const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[]
 
 const NAVIGATION_GROUPS: { id: string; label: string; description: string; icon: any; tabs: TabId[]; gradient: string; shadow: string; borderColor: string }[] = [
   { id: "project-card", label: "بطاقة المشروع", description: "بيانات المشروع والمعلومات الأساسية وتوزيع الوحدات", icon: ClipboardList, tabs: ["general", "units"], gradient: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.35)", borderColor: "#f59e0b" },
-  { id: "planning", label: "الإعداد والتخطيط", description: "الإنشاء والتسعير والمبيعات والتسويق والجدول الزمني والقواعد", icon: Target, tabs: ["construction", "sales", "marketing", "timeline", "settings"], gradient: "linear-gradient(135deg, #7c3aed, #db2777)", shadow: "rgba(124, 58, 237, 0.35)", borderColor: "#7c3aed" },
+  { id: "planning", label: "الإعداد والتخطيط", description: "الإنشاء والتسعير ومساحة وائل للمبيعات والتسويق والجدول الزمني والقواعد", icon: Target, tabs: ["construction", "sales", "timeline", "settings"], gradient: "linear-gradient(135deg, #7c3aed, #db2777)", shadow: "rgba(124, 58, 237, 0.35)", borderColor: "#7c3aed" },
   { id: "financial", label: "التخطيط المالي", description: "تدفقات المستثمر وحساب الضمان ورأس المال المطلوب للمشروع", icon: TrendingDown, tabs: ["cashflows", "escrow"], gradient: "linear-gradient(135deg, #3b82f6, #2563eb)", shadow: "rgba(59, 130, 246, 0.35)", borderColor: "#3b82f6" },
   { id: "portfolio", label: "محفظة رأس المال الديناميكية", description: "تجميع المشاريع والتدفقات الشهرية ومحفظة رأس المال", icon: WalletCards, tabs: ["portfolio", "portfolio_monthly", "capital_portfolio", "mall"], gradient: "linear-gradient(135deg, #e65100, #ff8f00)", shadow: "rgba(230, 81, 0, 0.35)", borderColor: "#e65100" },
   { id: "feasibility", label: "دراسة جدوى المستثمر", description: "التكلفة والإيراد والربحية ورأس المال والعوائد الاستثمارية", icon: FileText, tabs: ["feasibility"], gradient: "linear-gradient(135deg, #0d9488, #0f766e)", shadow: "rgba(13, 148, 136, 0.35)", borderColor: "#0d9488" },
@@ -57,8 +55,6 @@ function TabContent({ tabId }: { tabId: TabId }) {
       return <ConstructionInputsPage embedded />;
     case "sales":
       return <V2WaelSales embedded />;
-    case "marketing":
-      return <MarketingPage embedded />;
     case "timeline":
       return <TimelinePage embedded />;
     case "settings":

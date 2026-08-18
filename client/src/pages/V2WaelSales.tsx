@@ -19,7 +19,7 @@ import {
 import {
   ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
   Palette, Rocket, FileCheck, HardHat, Save, Loader2,
-  Building2, Percent, CreditCard, Table2, Info, Download,
+  Building2, Percent, CreditCard, Table2, Info, Download, RefreshCw, Sparkles, ShieldCheck,
 } from "lucide-react";
 import { exportToExcel } from "@/lib/tableExport";
 import {
@@ -29,7 +29,7 @@ import {
   calculatePricingFormulas,
   calculateCosts,
 } from "@/lib/projectData";
-import { getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
+import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, Cell,
@@ -61,6 +61,15 @@ const PROJECT_PHASES = [
   { id: "marketing", name: "إطلاق التسويق", color: "#ec4899", icon: Megaphone },
   { id: "sales", name: "بدء المبيعات", color: "#10b981", icon: Target },
   { id: "construction", name: "الإنشاء", color: "#64748b", icon: HardHat },
+];
+
+const MARKETING_CHANNELS = [
+  { id: "digital", name: "التسويق الرقمي", defaultPct: 35, color: "#3b82f6" },
+  { id: "outdoor", name: "الإعلانات الخارجية", defaultPct: 20, color: "#10b981" },
+  { id: "events", name: "المعارض والفعاليات", defaultPct: 15, color: "#f59e0b" },
+  { id: "broker", name: "شبكة الوسطاء", defaultPct: 15, color: "#8b5cf6" },
+  { id: "pr", name: "العلاقات العامة", defaultPct: 10, color: "#ec4899" },
+  { id: "content", name: "المحتوى والإنتاج", defaultPct: 5, color: "#06b6d4" },
 ];
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -96,12 +105,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
-  const savePlan = trpc.waelSalesPlan.save.useMutation({
-    onSuccess: () => { plansQuery.refetch(); toast({ title: "تم حفظ خطة المبيعات ✓" }); },
+  const saveWorkspace = trpc.waelSalesPlan.saveWorkspace.useMutation({
+    onSuccess: () => { plansQuery.refetch(); projectQuery.refetch(); toast({ title: "تم اعتماد سيناريو وائل ✓" }); },
     onError: (e: any) => {
       const errorMsg = e?.data?.zodError?.[0]?.message || e?.data?.code || e.message || "خطأ غير معروف";
       toast({ title: "خطأ في الحفظ", description: errorMsg, variant: "destructive" });
-      console.error("Save error:", e);
+      console.error("Workspace save error:", e);
     },
   });
 
@@ -117,6 +126,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const [marketingPrepLead, setMarketingPrepLead] = useState(2);
   const [reraLead, setReraLead] = useState(2);
   const [marketingPct, setMarketingPct] = useState(2);
+  const [channelPcts, setChannelPcts] = useState<Record<string, number>>(
+    Object.fromEntries(MARKETING_CHANNELS.map((channel) => [channel.id, channel.defaultPct]))
+  );
+  const [marketingActualStart, setMarketingActualStart] = useState(6);
+  const [marketingActualEnd, setMarketingActualEnd] = useState(38);
+  const [marketingDistribution, setMarketingDistribution] = useState<Record<string, number[]>>({});
+  const [hasMarketingChanges, setHasMarketingChanges] = useState(false);
   const [commissionPct, setCommissionPct] = useState(5);
   const [offPlan, setOffPlan] = useState(80);
   const [speed, setSpeed] = useState(50);
@@ -188,6 +204,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   useEffect(() => {
     if (plansQuery.data && plansQuery.data.length > 0) {
       const plan = plansQuery.data[0] as any;
+      const marketingTiming = getProjectMarketingTiming(projectQuery.data);
       setPlanId(plan.id);
       if (plan.offplanPct) setOffPlan(plan.offplanPct);
 
@@ -205,11 +222,26 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.ppInstallmentPct) setPpInstallmentPct(parsed.ppInstallmentPct);
           if (parsed.ppInstallmentEvery) setPpInstallmentEvery(parsed.ppInstallmentEvery);
           if (parsed.ppHandoverPct) setPpHandoverPct(parsed.ppHandoverPct);
+          const savedMarketingStart = Number(parsed.marketingActualStart ?? marketingTiming.marketingStartMonth);
+          const validMarketingStart = Math.max(savedMarketingStart, marketingTiming.marketingStartMonth);
+          const savedMarketingEnd = Number(parsed.marketingActualEnd ?? marketingTiming.projectEndMonth);
+          setMarketingActualStart(validMarketingStart);
+          setMarketingActualEnd(Math.max(validMarketingStart, Math.min(savedMarketingEnd, marketingTiming.projectEndMonth)));
+          const savedDistribution = (() => {
+            try { return plan.marketingDistJson ? JSON.parse(plan.marketingDistJson) : parsed.marketingDistribution; } catch { return parsed.marketingDistribution; }
+          })();
+          if (savedDistribution) {
+            setMarketingDistribution(clampMarketingDistributionToStart(savedDistribution, savedMarketingStart, marketingTiming.marketingStartMonth));
+          }
         } catch {}
       }
+      if (plan.channelsJson) {
+        try { setChannelPcts(JSON.parse(plan.channelsJson)); } catch {}
+      }
       setHasPlanChanges(false);
+      setHasMarketingChanges(false);
     }
-  }, [plansQuery.data]);
+  }, [plansQuery.data, projectQuery.data]);
 
   // ─── Computed: Revenue ────────────────────────────────────────────────────
   const unitRevenues = useMemo(
@@ -231,6 +263,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const constructionCostPerSqft = projectQuery.data ? Number((projectQuery.data as any).estimatedConstructionPricePerSqft) || 400 : 400;
   const constructionCost = totalArea * constructionCostPerSqft;
   const marketingCost = totalRevenue * (marketingPct / 100);
+  const totalChannelPct = Object.values(channelPcts).reduce((sum, value) => sum + value, 0);
   const commissionCost = totalRevenue * (commissionPct / 100);
 
   // Full project costs using the same model as ProjectCard/Feasibility
@@ -471,7 +504,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     });
   }, [selectedProjectId, projectQuery.data, updateProject, buildForSaleMarketingRate, buildForSaleMarketingStartBeforeCompletion, buildForSaleMarketingDuration, toast]);
 
-  const handleSavePlan = useCallback(async () => {
+  const handleSaveWorkspace = useCallback(async () => {
     if (!selectedProjectId) return;
     try {
       let existingAbsorption: any = {};
@@ -479,14 +512,22 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (existingPlan?.salesAbsorptionJson) {
         try { existingAbsorption = JSON.parse(existingPlan.salesAbsorptionJson); } catch {}
       }
-      const savedPlan = await savePlan.mutateAsync({
-        id: planId,
+      const validMarketingStart = timeline.marketingStart;
+      const normalizedMarketingDistribution = clampMarketingDistributionToStart(
+        marketingDistribution,
+        marketingActualStart,
+        validMarketingStart,
+      );
+      const savedPlan = await saveWorkspace.mutateAsync({
+        planId,
         projectId: selectedProjectId,
+        pricing: Object.fromEntries(UNIT_TYPES.map((unit) => [unit.dbPrice, unitData[unit.id]?.price || 0])),
+        marketingPct,
+        salesCommissionPct: commissionPct,
         totalRevenue,
         designMonths: timeline.designEnd,
         constructionMonths,
         offplanPct: offPlan,
-        salesCommissionPct: String(commissionPct),
         salesAbsorptionJson: JSON.stringify({
           ...existingAbsorption,
           mode: salesMode,
@@ -499,27 +540,88 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           ppInstallmentPct,
           ppInstallmentEvery,
           ppHandoverPct,
+          marketingActualStart: validMarketingStart,
+          marketingActualEnd: Math.max(validMarketingStart, marketingActualEnd),
+          marketingDistribution: normalizedMarketingDistribution,
           ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}),
         }),
+        marketingDistJson: JSON.stringify(normalizedMarketingDistribution),
+        channelsJson: JSON.stringify(channelPcts),
         paymentPlanJson: JSON.stringify(isBuildForSale
           ? { downPct: 100, secondPct: 0, secondAfterMonths: 0, duringTotalPct: 0, installmentEveryMonths: 1, handoverPct: 0 }
           : { downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
-        resultsJson: JSON.stringify({ escrowData: isBuildForSale ? [] : escrowData, salesDistribution, actualCashInflow, actualCashInflowVersion: 2, ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}) }),
+        resultsJson: JSON.stringify({
+          escrowData: isBuildForSale ? [] : escrowData,
+          salesDistribution,
+          actualCashInflow,
+          actualCashInflowVersion: 2,
+          ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}),
+        }),
       });
-
       setPlanId(savedPlan.id);
+      setHasUnitChanges(false);
       setHasPlanChanges(false);
-      await plansQuery.refetch();
-
+      setHasMarketingChanges(false);
+      await Promise.all([plansQuery.refetch(), projectQuery.refetch()]);
     } catch {
-      // The mutations display the exact failure message. Keep the page marked as changed.
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, totalRevenue, timeline.designEnd, constructionMonths, offPlan, commissionPct, salesMode, speed, curveTemplate, manualUnits, escrowData, salesDistribution, actualCashInflow, savePlan, plansQuery, isBuildForSale]);
+  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, ppDuringTotal, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, saveWorkspace, plansQuery, projectQuery, isBuildForSale]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
     setHasUnitChanges(true);
+    setHasPlanChanges(true);
+  };
+
+  const updateSalesMonth = (monthIndex: number, requestedUnits: number) => {
+    const current = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
+    const otherMonths = current.reduce((sum, value, index) => index === monthIndex ? sum : sum + (value || 0), 0);
+    current[monthIndex] = Math.min(Math.max(0, Math.round(requestedUnits)), Math.max(0, offPlanUnits - otherMonths));
+    setManualUnits(current);
+    setSalesMode("manual");
+    setHasPlanChanges(true);
+  };
+
+  const handleChannelSliderChange = (channelId: string, value: number) => {
+    setChannelPcts((previous) => {
+      const totalExcludingChannel = Object.entries(previous).reduce((sum, [id, percentage]) => id === channelId ? sum : sum + percentage, 0);
+      return { ...previous, [channelId]: Math.min(value, Math.max(0, 100 - totalExcludingChannel)) };
+    });
+    setHasMarketingChanges(true);
+  };
+
+  const handleMarketingMonthInput = (channelId: string, monthIndex: number, requestedAmount: number, months: number) => {
+    setMarketingDistribution((previous) => {
+      const amounts = [...(previous[channelId] || Array(months).fill(0))];
+      while (amounts.length < months) amounts.push(0);
+      const channelBudget = marketingCost * ((channelPcts[channelId] || 0) / 100);
+      const otherMonths = amounts.reduce((sum, value, index) => index === monthIndex ? sum : sum + (value || 0), 0);
+      amounts[monthIndex] = Math.min(Math.max(0, requestedAmount), Math.max(0, channelBudget - otherMonths));
+      return { ...previous, [channelId]: amounts };
+    });
+    setHasMarketingChanges(true);
+  };
+
+  const applySalesPace = (template: "fast" | "bell" | "gradual" | "late", nextSpeed: number) => {
+    setCurveTemplate(template);
+    setSpeed(nextSpeed);
+    setSalesMode("auto");
+    setManualUnits([]);
+    setHasPlanChanges(true);
+  };
+
+  const adjustAllPrices = (multiplier: number) => {
+    setUnitData((previous) => Object.fromEntries(Object.entries(previous).map(([id, unit]) => [id, { ...unit, price: Math.max(0, Math.round(unit.price * multiplier)) }] )));
+    setHasUnitChanges(true);
+    setHasPlanChanges(true);
+  };
+
+  const applyPaymentPreset = (preset: "early" | "balanced" | "handover") => {
+    if (preset === "early") { setPpDownPct(20); setPpSecondPct(15); setPpSecondAfterMonths(1); setPpInstallmentPct(10); setPpInstallmentEvery(4); setPpHandoverPct(25); }
+    else if (preset === "handover") { setPpDownPct(10); setPpSecondPct(5); setPpSecondAfterMonths(2); setPpInstallmentPct(10); setPpInstallmentEvery(6); setPpHandoverPct(45); }
+    else { setPpDownPct(10); setPpSecondPct(10); setPpSecondAfterMonths(1); setPpInstallmentPct(10); setPpInstallmentEvery(6); setPpHandoverPct(40); }
+    setHasPlanChanges(true);
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════
@@ -534,22 +636,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             <div>
               <h1 className="text-xs font-bold text-gray-900 flex items-center gap-1">
                 <Target className="w-3 h-3 text-emerald-600" />
-                المبيعات والتسويق
+                مساحة وائل — المبيعات والتسويق
               </h1>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />
-            {hasUnitChanges && (
-              <Button size="sm" onClick={handleSaveUnits} disabled={updateProject.isPending} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
-                {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                حفظ التسعير
-              </Button>
-            )}
-            {(hasPlanChanges || isBuildForSale) && (
-              <Button size="sm" onClick={handleSavePlan} disabled={savePlan.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
-                {savePlan.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {isBuildForSale ? "حفظ خطة البيع المباشر" : "حفظ الخطة"}
+            {(hasUnitChanges || hasPlanChanges || hasMarketingChanges || isBuildForSale) && (
+              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || totalSold > offPlanUnits} className="gap-1.5 bg-emerald-600 hover:bg-emerald-700">
+                {saveWorkspace.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                اعتماد سيناريو وائل
               </Button>
             )}
             <Button size="sm" variant="outline" onClick={() => {
@@ -582,6 +678,27 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         {/* Main Content */}
         {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
           <>
+            {/* DECISION-FIRST SCENARIO LAYER — detailed grids below remain the exact input contract */}
+            <section className="rounded-xl border border-emerald-100 bg-gradient-to-l from-emerald-50 via-white to-blue-50 p-3 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div><h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900"><Sparkles className="h-4 w-4 text-emerald-600" />مركز قرار وائل</h2><p className="mt-0.5 text-[10px] text-slate-500">حرّك القرار، وشاهد أثره فورًا قبل اعتماد السيناريو.</p></div>
+                <Badge className={hasDeficit ? "bg-red-100 text-red-700 hover:bg-red-100" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"}>{hasDeficit ? `تنبيه إسكرو: عجز ${fmt(Math.abs(maxDeficit))}` : "الإسكرو متوازن"}</Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                <div className="rounded-lg border border-white bg-white/80 p-2.5"><p className="text-[10px] font-bold text-slate-700">هدف البيع على الخارطة</p><div className="mt-2 flex items-center gap-2"><Slider value={[offPlan]} onValueChange={([value]) => { setOffPlan(value); setSalesMode("auto"); setManualUnits([]); setHasPlanChanges(true); }} min={0} max={100} step={5} /><b className="w-9 text-left text-sm text-emerald-700">{offPlan}%</b></div><p className="mt-1 text-[9px] text-slate-500">{offPlanUnits} وحدة من {totalUnits}</p></div>
+                <div className="rounded-lg border border-white bg-white/80 p-2.5"><p className="text-[10px] font-bold text-slate-700">سرعة الامتصاص</p><div className="mt-2 grid grid-cols-2 gap-1">{([{ id: "fast", label: "سريع", speed: 85 }, { id: "bell", label: "متوازن", speed: 50 }, { id: "gradual", label: "تدريجي", speed: 30 }, { id: "late", label: "متأخر", speed: 15 }] as const).map((option) => <button key={option.id} type="button" onClick={() => applySalesPace(option.id, option.speed)} className={`rounded px-1.5 py-1 text-[9px] font-medium ${curveTemplate === option.id && salesMode === "auto" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>{option.label}</button>)}</div><p className="mt-1 text-[9px] text-slate-500">{totalSold} وحدة موزعة حاليًا</p></div>
+                <div className="rounded-lg border border-white bg-white/80 p-2.5"><p className="text-[10px] font-bold text-slate-700">قرار السعر</p><p className="mt-1 text-sm font-bold text-emerald-700">{fmt(totalRevenue)} AED</p><div className="mt-2 flex gap-1"><Button type="button" size="sm" variant="outline" className="h-6 flex-1 text-[9px]" onClick={() => adjustAllPrices(0.95)}>خفض 5%</Button><Button type="button" size="sm" variant="outline" className="h-6 flex-1 text-[9px]" onClick={() => adjustAllPrices(1.05)}>رفع 5%</Button></div></div>
+                <div className="rounded-lg border border-white bg-white/80 p-2.5"><p className="text-[10px] font-bold text-slate-700">سيولة المشترين</p><div className="mt-2 grid grid-cols-3 gap-1">{([{ id: "early", label: "مبكرة" }, { id: "balanced", label: "متوازنة" }, { id: "handover", label: "تسليم" }] as const).map((option) => <button key={option.id} type="button" onClick={() => applyPaymentPreset(option.id)} className="rounded bg-indigo-50 px-1 py-1 text-[8px] font-medium text-indigo-700 hover:bg-indigo-100">{option.label}</button>)}</div><p className="mt-1 text-[9px] text-slate-500">دفعة أولى {ppDownPct}% · تسليم {ppHandoverPct}%</p></div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-center md:grid-cols-4"><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">إيراد السيناريو</p><p className="text-[11px] font-bold text-emerald-700">{fmt(totalRevenue)}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">أول تحصيل فعلي</p><p className="text-[11px] font-bold text-blue-700">{cashInflowData.find((row) => row.cashInflow > 0)?.month ? `شهر ${cashInflowData.find((row) => row.cashInflow > 0)?.month}` : "—"}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">الشهر الحرج</p><p className={`text-[11px] font-bold ${hasDeficit ? "text-red-700" : "text-amber-700"}`}>{criticalMonth ? `شهر ${criticalMonth.month}` : "—"}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">الربح المتوقع</p><p className="text-[11px] font-bold text-violet-700">{fmt(profit)}</p></div></div>
+            </section>
+
+            <details className="group rounded-xl border border-slate-200 bg-white shadow-sm">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-right [&::-webkit-details-marker]:hidden">
+                <span><span className="block text-[11px] font-bold text-slate-800">تفاصيل التحكم الدقيق</span><span className="mt-0.5 block text-[9px] text-slate-500">الأسعار، الدفعات، التوزيع الشهري، التسويق، والإسكرو — تفتحها فقط عند الحاجة.</span></span>
+                <span className="rounded-md bg-slate-100 px-2 py-1 text-[9px] font-medium text-slate-600 group-open:hidden">إظهار التفاصيل</span><span className="hidden rounded-md bg-slate-100 px-2 py-1 text-[9px] font-medium text-slate-600 group-open:inline">إخفاء التفاصيل</span>
+              </summary>
+              <div className="border-t border-slate-100 p-0.5">
             {/* SECTION 1: PRICING + PAYMENT PLAN SIDE BY SIDE */}
             <div className="grid grid-cols-3 gap-2">
             {/* Pricing Table - 2/3 */}
@@ -874,7 +991,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   <span>نقطة الانطلاق (اكتمال المخططات التخطيطية): <strong className="text-gray-800">شهر {sharedTiming.schematicCompletionMonth}</strong></span>
                   {!isBuildForSale && <span>مدة تحضير المواد: <strong className="text-gray-800">{sharedTiming.marketingPrepMonths} شهر</strong></span>}
                   {!isBuildForSale && <span>مدة ريرا: <strong className="text-gray-800">{sharedTiming.reraApprovalMonths} شهر</strong></span>}
-                  <Badge className="text-[8px] bg-pink-100 text-pink-700">التسويق: {isBuildForSale ? `قبل الإنجاز بـ ${buildForSaleMarketingStartBeforeCompletion} شهر لمدة ${buildForSaleMarketingDuration} أشهر` : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                  <Badge className="text-[8px] bg-pink-100 text-pink-700">التسويق: {isBuildForSale ? `قبل الإنجاز بـ ${buildForSaleMarketingStartBeforeCompletion} شهر لمدة ${buildForSaleMarketingDuration} أشهر` : activityWindows.marketing.hasSavedActivity ? "سيناريو وائل" : "توقع افتراضي"}</Badge>
                   <Badge className="text-[8px] bg-emerald-100 text-emerald-700">المبيعات: {activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                 </div>
               </div>
@@ -926,13 +1043,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                             {inSalesRange ? (
                               <input
                                 type="number" min={0} max={50} value={val}
-                                onChange={(e) => {
-                                  const arr = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
-                                  arr[salesIdx] = Math.max(0, +e.target.value);
-                                  setManualUnits(arr);
-                                  setSalesMode("manual");
-                                  setHasPlanChanges(true);
-                                }}
+                                onChange={(e) => updateSalesMonth(salesIdx, +e.target.value)}
                                 className="w-8 h-5 text-center text-[10px] font-bold border border-gray-200 rounded bg-white focus:ring-1 focus:ring-emerald-200 outline-none"
                               />
                             ) : (
@@ -950,8 +1061,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         const val = inSalesRange ? (manualUnits[salesIdx] ?? salesDistribution[salesIdx] ?? 0) : 0;
                         const pct = offPlanUnits > 0 ? ((val / offPlanUnits) * 100).toFixed(0) : '0';
                         return (
-                          <div key={i} className="text-center text-[9px] font-black text-gray-800 py-0.5 border-l border-gray-200">
-                            {inSalesRange ? `${pct}%` : '-'}
+                          <div key={i} className="flex items-center justify-center border-l border-gray-200 py-0.5">
+                            {inSalesRange ? (
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={pct}
+                                onChange={(e) => updateSalesMonth(salesIdx, Math.round((Math.max(0, Number(e.target.value) || 0) / 100) * offPlanUnits))}
+                                className="h-5 w-8 rounded border border-emerald-200 bg-emerald-50 text-center text-[9px] font-black text-emerald-800 focus:ring-1 focus:ring-emerald-300"
+                              />
+                            ) : '-'}
                           </div>
                         );
                       })}
@@ -960,6 +1080,22 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 })()}
               </div>
             </section>
+
+            {!isBuildForSale && <section className="bg-white rounded-xl border border-pink-100 shadow-sm overflow-hidden">
+              <div className="px-3 py-2 border-b border-pink-100 bg-pink-50/40 flex items-center justify-between">
+                <div className="flex items-center gap-1.5"><Megaphone className="w-3.5 h-3.5 text-pink-600" /><h2 className="text-[11px] font-bold text-gray-800">قرار التسويق</h2><Badge variant={totalChannelPct === 100 ? "secondary" : "destructive"} className="text-[9px]">القنوات: {totalChannelPct}%</Badge></div>
+                <span className="text-[9px] text-pink-700">الإنفاق هنا ينعكس مباشرة في الربح والتدفقات</span>
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2"><div className="flex justify-between text-[10px] font-medium"><span>ميزانية التسويق</span><span className="text-pink-700 font-bold">{marketingPct}%</span></div><Slider value={[marketingPct]} onValueChange={([value]) => { setMarketingPct(value); setHasMarketingChanges(true); }} min={0} max={10} step={0.5} className="mt-2" /><p className="mt-1 text-[9px] text-gray-500">{fmtFull(Math.round(marketingCost))} AED</p></div>
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2"><p className="text-[10px] font-medium">نهاية الحملة</p><div className="mt-1 flex items-center gap-1"><span className="text-[9px] text-gray-500">شهر {timeline.marketingStart} ←</span><input type="number" min={timeline.marketingStart} max={timeline.projectEnd} value={marketingActualEnd} onChange={(event) => { setMarketingActualStart(timeline.marketingStart); setMarketingActualEnd(Math.max(timeline.marketingStart, Math.min(timeline.projectEnd, Number(event.target.value) || timeline.projectEnd))); setHasMarketingChanges(true); }} className="h-6 w-14 border border-pink-300 rounded text-center text-[10px] font-bold text-pink-700" /></div><p className="mt-1 text-[8px] text-gray-500">البداية من قواعد المشروع؛ وائل يحدد الاستمرار.</p></div>
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-2">{(() => { const entered = Object.values(marketingDistribution).flat().reduce((sum, value) => sum + (value || 0), 0); const remaining = marketingCost - entered; return <><p className="text-[10px] font-medium">توزيع الميزانية</p><p className={`mt-1 text-[11px] font-bold ${Math.abs(remaining) < 100 ? "text-emerald-700" : "text-amber-700"}`}>{fmtFull(Math.round(entered))} / {fmtFull(Math.round(marketingCost))}</p><p className="text-[8px] text-gray-500">{Math.abs(remaining) < 100 ? "موزعة بالكامل" : `${remaining > 0 ? "متبقي" : "تجاوز"}: ${fmtFull(Math.abs(Math.round(remaining)))}`}</p></>; })()}</div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">{MARKETING_CHANNELS.map((channel) => { const allocation = channelPcts[channel.id] || 0; return <div key={channel.id} className="rounded-lg border border-gray-100 p-2"><div className="flex justify-between text-[10px]"><span><span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: channel.color }} /> {channel.name}</span><b style={{ color: channel.color }}>{allocation}%</b></div><Slider value={[allocation]} onValueChange={([value]) => handleChannelSliderChange(channel.id, value)} min={0} max={100} step={5} className="mt-2" /><p className="mt-1 text-[8px] text-gray-500">{fmtFull(Math.round(marketingCost * allocation / 100))} AED</p></div>; })}</div>
+                <div className="flex items-center justify-between border-t pt-2"><p className="text-[9px] text-gray-500">القنوات لا تتجاوز 100%؛ التوزيع الشهري يُحفظ مع السيناريو نفسه.</p><Button type="button" variant="outline" size="sm" className="h-6 text-[9px] gap-1" onClick={() => { const months = Math.max(1, marketingActualEnd - timeline.marketingStart + 1); const distribution: Record<string, number[]> = {}; MARKETING_CHANNELS.forEach((channel) => { distribution[channel.id] = Array(months).fill(Math.round((marketingCost * ((channelPcts[channel.id] || 0) / 100)) / months)); }); setMarketingDistribution(distribution); setMarketingActualStart(timeline.marketingStart); setHasMarketingChanges(true); }}><RefreshCw className="w-3 h-3" />توزيع متوازن</Button></div>
+              </div>
+            </section>}
 
             {/* SECTION 7: ESCROW (GUARANTEE ACCOUNT) */}
             {!isBuildForSale && <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -1256,6 +1392,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
             )}
 
+              </div>
+            </details>
           </>
         )}
       </div>

@@ -17,10 +17,12 @@ describe("legacy Sales and Marketing Plan cleanup", () => {
     expect(fs.existsSync(path.resolve(process.cwd(), "client/src/pages/WaelSalesPlan.tsx"))).toBe(false);
   });
 
-  it("preserves the current Sales and Marketing pages inside Financial Studies", () => {
+  it("preserves one consolidated Wael Sales and Marketing workspace inside Financial Studies", () => {
     expect(appSource).toContain('path="/bateekha"');
     expect(financialStudiesSource).toContain('id: "sales"');
-    expect(financialStudiesSource).toContain('id: "marketing"');
+    expect(financialStudiesSource).not.toContain('id: "marketing"');
+    expect(financialStudiesSource).toContain('المبيعات والتسويق — مساحة وائل');
     expect(financialStudiesSource).toContain('V2WaelSales');
+    expect(fs.existsSync(path.resolve(process.cwd(), "client/src/pages/MarketingPage.tsx"))).toBe(false);
   });
 });

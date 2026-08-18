@@ -1225,3 +1225,22 @@
 - [x] Preserve existing project field names and stored values so unified-card presentation changes do not break any Financial Studies page or report
 - [x] Verify save, reload, and cross-page consistency for General Inputs, unit distribution, pricing, Sales, Feasibility, Investor Cash Flow, and Escrow before removing the original card
 - [x] Implement the approved unified project-card presentation inside Financial Studies using the existing project fields, with manual inputs first, Khazen facts below, and calculated values separated
+- [x] Conduct a non-destructive whole-application audit of modules, routes, data-entry points, sources, and reporting dependencies
+- [x] Assess application workflows and information-sharing needs for the owner, Sheikh Issa, and Wael without treating the app as a general employee portal
+- [x] Present a fact-based consolidation roadmap identifying duplicated inputs, broken links, incomplete workflows, and the next agreed operating model before implementation
+- [ ] Assess the existing aggregated portfolio cash-flow report and define decision-oriented enhancements for Sheikh Issa without changing its calculations
+- [ ] Discuss and approve the executive aggregated cash-flow report specification before implementation
+- [ ] Define an executive first-screen cash-flow alert showing required amounts, project sources, and timing for the next three or four months without changing Financial Studies calculations
+- [x] Audit Wael’s current sales and marketing input journey to identify repeated, unnecessary, or difficult steps before simplifying it
+- [x] Keep payment requests as an independent Command Center workflow linked to project and supporting documents, not to sales planning
+- [x] Define a dedicated interactive Sales and Marketing simulator for Wael with live monthly sales, collection, marketing, and escrow effects before redesigning the existing pages
+- [x] Make Wael the designated editor of sales values within one pricing source in the future simulator, without duplicating price entry elsewhere
+- [x] Consolidate the existing Sales and Marketing pages into one future Wael workspace with one save path and remove duplicated marketing and pricing inputs only after approval
+- [x] Document exactly how sales value, monthly sales distribution, payment terms, marketing, escrow, and investor cash flow are linked before redesigning Wael’s interface
+- [x] Propose a simpler interaction model for entering sales amounts and percentages before consolidating the existing Sales and Marketing pages
+- [x] Design the future Wael workspace as an intelligent decision tool that proposes scenarios, exposes risks, and explains live effects rather than requiring raw numeric entry alone
+- [x] Complete and validate Wael’s single-source workspace before designing Sheikh Issa’s executive portfolio report from those approved inputs
+- [x] Support synchronized unit and percentage planning in Wael’s future workspace, with safeguards preventing the total from exceeding available inventory
+- [x] Require a protected pilot, save-reload checks, and complete downstream report reconciliation before replacing any existing Sales or Marketing interface
+- [x] Independently manage implementation safeguards and report only verified business outcomes or material decisions that require the owner’s direction
+- [x] Repair and prove preservation of every saved marketing allocation through a price-only Wael workspace scenario save

@@ -77,4 +77,47 @@ describe("waelSalesPlan.save", () => {
     }));
     expect(where).toHaveBeenCalledTimes(1);
   });
+
+  it("saves pricing and the approved cash-flow scenario through one workspace operation", async () => {
+    const projectWhere = vi.fn().mockResolvedValue(undefined);
+    const projectSet = vi.fn().mockReturnValue({ where: projectWhere });
+    const planWhere = vi.fn().mockResolvedValue(undefined);
+    const planSet = vi.fn().mockReturnValue({ where: planWhere });
+    mockedGetDb.mockResolvedValue({
+      update: vi.fn()
+        .mockReturnValueOnce({ set: projectSet })
+        .mockReturnValueOnce({ set: planSet }),
+    } as any);
+
+    const result = await createCaller().saveWorkspace({
+      planId: 73,
+      projectId: 2,
+      pricing: { residential1brPrice: 1700, villaPrice: 2400 },
+      marketingPct: 2,
+      salesCommissionPct: 5,
+      totalRevenue: 804_600_000,
+      offplanPct: 80,
+      designMonths: 8,
+      constructionMonths: 30,
+      salesAbsorptionJson: "{\"manual\":[7,8,9],\"marketingActualStart\":6}",
+      marketingDistJson: "{\"digital\":[250000,250000]}",
+      channelsJson: "{\"digital\":35}",
+      paymentPlanJson: "{\"downPct\":10,\"handoverPct\":40}",
+      resultsJson: "{\"actualCashInflow\":[2200000],\"actualCashInflowVersion\":2}",
+    });
+
+    expect(result).toEqual({ id: 73, action: "updated" });
+    expect(projectSet).toHaveBeenCalledWith(expect.objectContaining({
+      residential1brPrice: 1700,
+      villaPrice: 2400,
+      marketingPct: "2",
+      salesCommissionPct: "5",
+    }));
+    expect(planSet).toHaveBeenCalledWith(expect.objectContaining({
+      totalRevenue: 804_600_000,
+      salesAbsorptionJson: "{\"manual\":[7,8,9],\"marketingActualStart\":6}",
+      marketingDistJson: "{\"digital\":[250000,250000]}",
+      resultsJson: "{\"actualCashInflow\":[2200000],\"actualCashInflowVersion\":2}",
+    }));
+  });
 });
