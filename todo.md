@@ -1216,3 +1216,12 @@
 - [x] Remove the approved external legacy Sales and Marketing Plan icon, route, and unused component while preserving current Financial Studies Sales and Marketing pages
 - [x] Audit every external portfolio icon, route, component, and caller while preserving the current portfolio reports inside Financial Studies
 - [x] Remove all external portfolio launchers and unused legacy portfolio code so portfolio reports exist only in Financial Studies
+- [x] Compare the Strategic Studies identification card and Financial Studies project card field by field without implementing a merge or removing any data
+- [x] Classify project-card fields by document-derived source, financial source, uniqueness, and report dependency before proposing any unified card
+- [x] Present the project-card comparison and data-source governance proposal for approval before any implementation
+- [x] Preserve every current Financial Studies input while classifying unified project-card fields as Khazen-extracted from documents, manual financial input, or calculated output
+- [x] Define a safe Khazen workflow in which missing or uncertain document values remain pending for approval and do not receive invented defaults
+- [x] Design the unified project card with required manual financial inputs first, Khazen document facts in a separate lower section, and calculated values isolated for review
+- [x] Preserve existing project field names and stored values so unified-card presentation changes do not break any Financial Studies page or report
+- [x] Verify save, reload, and cross-page consistency for General Inputs, unit distribution, pricing, Sales, Feasibility, Investor Cash Flow, and Escrow before removing the original card
+- [x] Implement the approved unified project-card presentation inside Financial Studies using the existing project fields, with manual inputs first, Khazen facts below, and calculated values separated

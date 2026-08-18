@@ -159,7 +159,7 @@ function GroupHeader({ label, color = "stone" }: { label: string; color?: string
 // ═══════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════
-export default function FactSheetPage({ embedded = false, initialProjectId, onBack }: { embedded?: boolean; initialProjectId?: number | null; onBack?: () => void }) {
+export default function FactSheetPage({ embedded = false, initialProjectId, onBack, documentOnly = false }: { embedded?: boolean; initialProjectId?: number | null; onBack?: () => void; documentOnly?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
@@ -448,8 +448,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   <FileText className="h-3.5 w-3.5 text-amber-700" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-bold text-stone-800 leading-tight">بطاقة بيانات المشروع</h1>
-                  <p className="text-[10px] text-muted-foreground leading-none">Fact Sheet</p>
+                  <h1 className="text-sm font-bold text-stone-800 leading-tight">{documentOnly ? "بيانات المشروع من الوثائق" : "بطاقة بيانات المشروع"}</h1>
+                  <p className="text-[10px] text-muted-foreground leading-none">{documentOnly ? "خازن والوثائق المرجعية" : "Fact Sheet"}</p>
                 </div>
               </div>
             </div>
@@ -537,7 +537,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
             </div>
 
             {/* ── Legend (inline compact) ── */}
-            <div className="flex items-center gap-3 px-1">
+            <div className={documentOnly ? "hidden" : "flex items-center gap-3 px-1"}>
               <span className="text-[9px] text-stone-500 font-medium">مصدر:</span>
               <span className="flex items-center gap-0.5 text-[9px]">
                 <span className="bg-amber-100 text-amber-600 px-1 py-0 rounded font-medium">يدوي</span>
@@ -556,6 +556,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
             {/* ══════════════════════════════════════════════
                 SECTION 1 — MANUAL INPUTS (TOP)
             ══════════════════════════════════════════════ */}
+            <div className={documentOnly ? "hidden" : ""}>
             <div className="flex items-center gap-2 pt-1">
               <div className="h-5 w-5 rounded bg-amber-100 flex items-center justify-center flex-shrink-0">
                 <PenLine className="h-3 w-3 text-amber-600" />
@@ -681,6 +682,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               </Section>
 
             </div>
+            </div>
 
             {/* ══════════════════════════════════════════════
                 SECTION 2 — AI-EXTRACTED DATA (MIDDLE)
@@ -720,7 +722,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   <Field label="محلات" value={formData.gfaRetailSqft} onChange={v => updateField("gfaRetailSqft", v)} type="number" suffix="sqft" source="ai" />
                   <Field label="مكاتب" value={formData.gfaOfficesSqft} onChange={v => updateField("gfaOfficesSqft", v)} type="number" suffix="sqft" source="ai" />
                 </div>
-                {(n("gfaResidentialSqft") > 0 || n("gfaRetailSqft") > 0 || n("gfaOfficesSqft") > 0) && (
+                {!documentOnly && (n("gfaResidentialSqft") > 0 || n("gfaRetailSqft") > 0 || n("gfaOfficesSqft") > 0) && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded p-1.5 mt-1.5">
                     <div className="flex items-center gap-0.5 mb-1">
                       <Calculator className="h-2.5 w-2.5 text-emerald-600" />
@@ -834,6 +836,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
             {/* ══════════════════════════════════════════════
                 SECTION 3 — AUTO-CALCULATED (BOTTOM)
             ══════════════════════════════════════════════ */}
+            <div className={documentOnly ? "hidden" : ""}>
             <div className="flex items-center gap-2 pt-2">
               <div className="h-5 w-5 rounded bg-emerald-100 flex items-center justify-center flex-shrink-0">
                 <Calculator className="h-3 w-3 text-emerald-600" />
@@ -911,6 +914,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 </div>
               </Section>
 
+            </div>
             </div>
 
             {/* ── Bottom Save Bar ── */}

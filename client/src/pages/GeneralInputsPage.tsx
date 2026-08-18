@@ -46,12 +46,19 @@ const ALL_FIELDS = [
   { key: "reraInspectionReportFee", label: "تقرير فحص ريرا (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "150000", computed: true, hint: "= 15,020 × عدد الدفعات الربع سنوية (من الإعدادات)" },
 ];
 
+const DOCUMENT_DERIVED_FIELD_KEYS = new Set([
+  "plotAreaSqft",
+  "gfaResidentialSqft",
+  "gfaRetailSqft",
+  "gfaOfficesSqft",
+]);
+
 function fmt(n: number): string {
   if (!n || isNaN(n)) return "0";
   return Math.round(n).toLocaleString("en-US");
 }
 
-export default function GeneralInputsPage({ embedded }: { embedded?: boolean } = {}) {
+export default function GeneralInputsPage({ embedded, hideDocumentFields = false }: { embedded?: boolean; hideDocumentFields?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -160,14 +167,15 @@ export default function GeneralInputsPage({ embedded }: { embedded?: boolean } =
   const isBuildForSale = formData.financingScenario === "build_for_sale";
   const isBuildForRent = formData.financingScenario === "build_for_rent";
   const isIndependentType = isBuildForSale || isBuildForRent;
-  const visibleFields = isIndependentType
+  const visibleFields = (isIndependentType
     ? ALL_FIELDS.filter((field) => {
         if (isBuildForRent && (field as any).buildForRentOnly) return true;
         if ((field as any).buildForRentOnly) return false;
         if (isBuildForRent && field.key === "developerFeePct") return false;
         return isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario);
       })
-    : ALL_FIELDS.filter((field) => !(field as any).buildForRentOnly);
+    : ALL_FIELDS.filter((field) => !(field as any).buildForRentOnly))
+    .filter((field) => !hideDocumentFields || !DOCUMENT_DERIVED_FIELD_KEYS.has(field.key));
   const columnSize = Math.ceil(visibleFields.length / 3);
   const col1 = visibleFields.slice(0, columnSize);
   const col2 = visibleFields.slice(columnSize, columnSize * 2);

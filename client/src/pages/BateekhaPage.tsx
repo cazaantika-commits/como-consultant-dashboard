@@ -6,7 +6,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { getFallbackFinancialStudiesTab, isFinancialStudiesTabVisible, type FinancialStudiesTabId } from "@/lib/financialStudiesNavigation";
 
-const GeneralInputsPage = lazy(() => import("./GeneralInputsPage"));
+const UnifiedProjectCardPage = lazy(() => import("./UnifiedProjectCardPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
 const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
 const V2WaelSales = lazy(() => import("./V2WaelSales"));
@@ -23,7 +23,7 @@ const TimelinePage = lazy(() => import("./TimelinePage"));
 type TabId = FinancialStudiesTabId;
 
 const TABS: { id: TabId; label: string; icon: any; group: "input" | "output" }[] = [
-  { id: "general", label: "المدخلات العامة", icon: ClipboardList, group: "input" },
+  { id: "general", label: "بطاقة المشروع", icon: ClipboardList, group: "input" },
   { id: "units", label: "توزيع الوحدات", icon: LayoutGrid, group: "input" },
   { id: "construction", label: "الإنشاء", icon: HardHat, group: "input" },
   { id: "sales", label: "المبيعات", icon: Target, group: "input" },
@@ -50,7 +50,7 @@ const NAVIGATION_GROUPS: { id: string; label: string; description: string; icon:
 function TabContent({ tabId }: { tabId: TabId }) {
   switch (tabId) {
     case "general":
-      return <GeneralInputsPage embedded />;
+      return <UnifiedProjectCardPage />;
     case "units":
       return <PricingPage />;
     case "construction":

@@ -203,3 +203,41 @@ The approved external **خطة المبيعات والتسويق** navigation en
 The former external investment-portfolio route, `/consolidated-investor-cashflow`, was opened directly and now returns the application's 404 page. The Financial Studies entry page was then opened in the browser. Its sole **محفظة رأس المال الديناميكية** group remains visible alongside the other four Financial Studies groups, confirming that portfolio reporting is available only through **الدراسات والتخطيط المالي**.
 
 The Dynamic Capital Portfolio group was opened and showed its four current in-module cards: **تجميع المشاريع**; **العرض الشهري**; **محفظة رأس المال**; and **المركز التجاري**. Selecting **محفظة رأس المال** loaded the current Capital Portfolio report with five investment projects, AED 1.013B in revenue, AED 893.7M in total cost, AED 119.0M pre-developer-share profit, and AED 469.8M total capital. This confirms that the portfolio reports remain intact at their sole approved location.
+
+## Unified Project Card — initial live structure verification — 18 August 2026
+
+The authenticated Financial Studies guide was opened for **مجان متعدد الاستخدامات (G+4P+25)**. Its dedicated **بطاقة المشروع** child card now opens the unified page. The top section, **المطلوب إدخاله واعتماده**, presents the existing Financial Studies financial and operational values; the lower section, **بيانات المشروع من الوثائق**, presents the existing Khazen-backed identification, land, GFA, use, party, infrastructure, contractual, restriction, and legal fields. The original fields were not migrated or renamed, and no project value was changed during this check.
+
+The first live review exposed that the document-derived plot area and GFA-by-use values were still visibly repeated in the manual section because the existing General Inputs page rendered them for calculation context. The unified page was corrected to hide those four document-derived fields from the manual section while continuing to read the same stored values for its calculations. The corrected live page now shows the manual financial fields beginning with BUA and construction cost, while plot area and all GFA-by-use fields appear only in the lower Khazen document section. The remaining verification is the required controlled save/reload and dependent-report consistency check.
+
+For the controlled persistence check, edit mode was opened on the unified Project Card for Majan and the existing manual **design-fee rate** was changed temporarily from **1.40%** to **1.41%**. The visible Save action became enabled. This test changes only an existing financial field that the unified card continues to write through the original project update path; the approved 1.40% value will be restored after reload and cross-page checks.
+
+The unified Project Card save completed and returned to read-only mode with the manual design-fee rate still visibly set to **1.41%**. This confirms the new unified presentation submitted the existing project update path successfully. A full reload and downstream report checks are continuing before restoration.
+
+After a full browser reload, the Financial Studies guide and its **بطاقة المشروع** group both remained reachable for the same selected Majan project. The next view will confirm the stored 1.41% value inside the reloaded unified Project Card.
+
+The reloaded unified Project Card displayed the manual design-fee rate as **1.41%**, proving persistence across save and reload. The lower Khazen document section retained the same plot, GFA, legal, and document-derived values during the reload. Downstream Financial Studies report checks and restoration to the approved 1.40% are next.
+
+After the persistence reload, the Financial Studies main guide and its current **التخطيط المالي** group remained accessible. The group displayed both current report entries—**تدفقات المستثمر** and **تدفقات الإسكرو**—confirming that the new Project Card presentation did not remove or hide those dependent reports.
+
+The current Majan **Investor Cash Flow** report was opened after the 1.41% save and loaded its complete monthly table successfully. It showed AED 202.2M required from the investor, AED 526.5M received, and AED 324.3M net; its design-fee monthly row remained present and recalculated through the shared project values. Returning from the report restored the Financial Studies guide without error.
+
+The current Majan **Escrow Cash Flow** report was then opened from the same Financial Studies group. It loaded successfully with AED 712.3M in outflows, AED 712.3M in inflows, and a nil final balance; its design and supervision payment rows remained present. This confirms the unified Project Card uses the same stored project inputs without breaking the current Investor or Escrow cash-flow pages. The controlled 1.41% rate will now be restored to the approved 1.40%.
+
+After the two cash-flow checks, the browser returned normally to the Financial Studies guide and then to the **بطاقة المشروع** child guide. Both the unified Project Card and Unit Distribution entries remain available for the same project, ready for restoration and the remaining cross-page checks.
+
+The unified Project Card was reopened with the persisted test value of 1.41%, and edit mode was entered to restore the approved **1.40%** design-fee rate through the same original project update path.
+
+The design-fee rate was set back to **1.40%** in the unified Project Card and its Save action was submitted. The page remained on the same project and showed the restored 1.40% value while the update completed. A final reload will confirm that the approved value has been restored in storage.
+
+The browser was reloaded after restoring the rate. The Financial Studies guide and the **بطاقة المشروع** child guide both loaded normally for Majan, with the unified Project Card still available. The next view will confirm the restored 1.40% field value after this reload.
+
+The reloaded unified Project Card displayed the approved **1.40%** design-fee rate again. The controlled test value has therefore been fully restored, while the top manual-input section and lower Khazen document section remain separated.
+
+After the final persistence confirmation, the Financial Studies guide and **بطاقة المشروع** child guide were opened again. The unified Project Card and the existing **توزيع الوحدات** entry are both visible and reachable, confirming that the new card did not replace or remove the current unit-distribution workflow.
+
+The current Majan Unit Distribution page opened successfully and retained its saved data: **209 units**, **741 parking spaces**, and **380,943 square feet** of used unit area. It continued to state that price per square foot is defined solely in the Sales and Marketing page. Returning from the page restored the Financial Studies guide without error.
+
+The current **المبيعات والتسويق** page was opened next from **الإعداد والتخطيط**. It retained the same saved project sales and pricing data: **209 units**, **AED 725.7M** revenue, 80% off-plan sales, a 5% sales commission, and the saved pricing table, payment plan, sales timeline, and cash-collection schedule. This verifies that the unified Project Card did not affect the current Sales and Pricing source of truth.
+
+The current Majan **Feasibility Study** was opened directly from the Financial Studies guide and retained the restored 1.40% design-fee rate, AED 725.7M revenue, AED 593.2M costs, AED 112.7M net investor profit, and AED 306.0M required capital. Its details card also continued to show the preserved plot, BUA, GFA, saleable-area, construction-cost, and financing values. This completes the live checks of General Inputs through the unified card, Unit Distribution, Sales/Pricing, Feasibility, Investor Cash Flow, and Escrow Cash Flow without altering their field sources.
