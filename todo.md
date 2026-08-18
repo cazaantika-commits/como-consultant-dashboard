@@ -1199,3 +1199,7 @@
 - [x] Rebuild the Financial Studies entry page to match the supplied Strategic Studies reference: spacious premium three-column cards with large colored icon blocks, title, description, and "فتح القسم" action
 - [x] Align the Financial Studies card system exactly with the existing Strategic Studies implementation: shared proportions, neutral cards with gradient overlays, accent lines, card order, and header hierarchy
 - [x] Diagnose and restore the expected Financial Studies sections and child pages that are missing or unreachable after entering the new card interface
+- [x] Audit Financial Studies pages, data sources, and duplicate legacy navigation entry points without deleting, hiding, or changing any interface
+- [x] Discuss and approve the exact legacy icons or links to remove only after the dependency audit is complete
+- [x] Remove only the approved duplicate "التقارير المالية (V2)" icon from the main dashboard while keeping all V2 pages and direct routes intact
+- [x] Remove only the approved duplicate "دراسة جدوى المستثمر" card from Strategic Studies while keeping all other Strategic Studies sections intact

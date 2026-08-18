@@ -179,3 +179,9 @@ The dedicated **محفظة رأس المال الديناميكية** guide was 
 The dedicated **بطاقة المشروع** guide was verified as well. It clearly displays both expected project-data pages—**المدخلات العامة** and **توزيع الوحدات**—as separate visible cards rather than hiding them beneath the main Financial Studies interface.
 
 Finally, the direct **دراسة جدوى المستثمر** card was opened from the main guide. It reached the live Feasibility Study page for Majan and displayed the saved project’s revenue, costs, net investor profit, capital requirement, and project details. All five main Financial Studies sections are therefore visible and reachable from the corrected card system.
+
+## Approved legacy-entry consolidation — 18 August 2026
+
+The authenticated dashboard was reviewed after the approved first consolidation. **التقارير المالية (V2)** is no longer present among the main dashboard cards, while **الدراسات والتخطيط المالي** remains visible as the sole main-dashboard entry for the unified current financial workflow. No report component, V2 route, Financial Studies route, calculation, or data source was removed.
+
+The authenticated **الدراسات والتخطيط الاستراتيجي** guide was then opened. It shows exactly its four retained cards—**بطاقة المشروع**; **المعرفة والتحليل**; **التخطيط المالي**; and **محفظة رأس المال الديناميكية**. The duplicate **دراسة جدوى المستثمر** card is absent. This confirms that only the approved card was removed; the other Strategic Studies sections remain available.

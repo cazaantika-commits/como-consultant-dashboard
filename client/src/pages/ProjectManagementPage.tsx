@@ -137,15 +137,6 @@ const SECTIONS = [
     borderColor: "#e65100",
     description: "اختيار السيناريو (O1/O2/O3) لكل مشروع بشكل مستقل مع تحكم بالتأخير",
   },
-  {
-    id: "investor-study" as View,
-    label: "دراسة جدوى المستثمر",
-    SvgIcon: InvestorStudyIcon,
-    gradient: "linear-gradient(135deg, #0d9488, #0f766e)",
-    shadow: "rgba(13, 148, 136, 0.35)",
-    borderColor: "#0d9488",
-    description: "البطاقة التعريفية والتسعير والتدفقات النقدية للمستثمر وحساب الضمان",
-  },
 ];
 
 export default function ProjectManagementPage() {
