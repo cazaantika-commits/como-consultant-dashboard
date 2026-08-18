@@ -1211,3 +1211,6 @@
 - [x] Remove legacy Financial Planning hub entry points from Strategic Studies, Command Center, and direct routes without changing current Financial Studies pages
 - [x] Remove legacy Dynamic Capital Portfolio entry points from Strategic Studies, Command Center, direct routes, and unused legacy hubs without changing the current Financial Studies portfolio reports
 - [x] Preserve current Financial Studies pages and frozen portfolio reports while deleting only their obsolete legacy alternatives
+- [x] Audit the external legacy Sales and Marketing Plan entry and compare it with the Sales and Marketing pages inside current Financial Studies without modifying either
+- [x] Discuss and approve any legacy Sales and Marketing cleanup only after confirming whether it duplicates the current Financial Studies workflow
+- [x] Remove the approved external legacy Sales and Marketing Plan icon, route, and unused component while preserving current Financial Studies Sales and Marketing pages

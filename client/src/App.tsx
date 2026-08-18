@@ -80,7 +80,6 @@ import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
 import InternalMessages from "./pages/InternalMessages";
-import WaelSalesPlan from "./pages/WaelSalesPlan";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 import V2InvestorCashFlow from "./pages/V2InvestorCashFlow";
 import V2Portfolio from "./pages/V2Portfolio";
@@ -176,7 +175,6 @@ function Router() {
       <Route path="/v2/timeline" component={V2Timeline} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
-      <Route path="/wael-sales-plan" component={WaelSalesPlan} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />

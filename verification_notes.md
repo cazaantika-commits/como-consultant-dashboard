@@ -193,3 +193,7 @@ After the user expanded the approved scope to remove these old features everywhe
 The current **الدراسات والتخطيط المالي** guide was opened after the cleanup and remained fully available. Its current five sections still appear, including the current **التخطيط المالي** section. Opening it showed its dedicated **تدفقات المستثمر** and **تدفقات الإسكرو** cards. These are the current unified Financial Studies reports and are distinct from the deleted legacy Financial Planning and Dynamic Capital Portfolio launchers.
 
 The current **تدفقات المستثمر** card was opened directly after the cleanup. The live Majan report loaded with its saved figures—AED 202.2M required from the investor, AED 526.5M received by the investor, and AED 324.4M net—along with the full monthly cash-flow table. This confirms that deleting the old legacy launchers did not affect the current Financial Studies report or its saved project data.
+
+## External legacy Sales and Marketing Plan cleanup — 18 August 2026
+
+The approved external **خطة المبيعات والتسويق** navigation entry was removed from the dashboard and its `/wael-sales-plan` route was checked directly in the browser. It now returns the application's 404 page rather than the obsolete sales-planning interface. The current Sales and Marketing workflow remains inside **الدراسات والتخطيط المالي ← الإعداد والتخطيط** and was intentionally not changed.

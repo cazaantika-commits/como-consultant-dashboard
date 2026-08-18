@@ -14,7 +14,7 @@ describe("approved Financial Studies navigation consolidation", () => {
     expect(homeSource).not.toContain('id: "main-v2"');
     expect(homeSource).toContain('id: "main-bateekha"');
     expect(homeSource).toContain('id: "main-portfolio"');
-    expect(homeSource).toContain('id: "tool-wael-sales"');
+    expect(homeSource).not.toContain('id: "tool-wael-sales"');
   });
 
   it("retains only the independent Strategic Studies cards after legacy financial cleanup", () => {
