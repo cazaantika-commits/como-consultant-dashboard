@@ -14,14 +14,13 @@ import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesRes
 import { ProjectSelector } from "@/components/ProjectSelector";
 import {
   DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
-  Percent, Users, Sparkles, Landmark, Activity, Layers
+  Users, Sparkles, Landmark, Activity, Layers, CalendarClock, ShieldCheck
 } from "lucide-react";
 
 const fmt = (n: number) =>
   n === 0 ? "—" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n));
 
-const fmtPct = (n: number) =>
-  n === 0 ? "—" : `${n.toFixed(1)}%`;
+const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
 const fmtM = (n: number) => {
   if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -151,8 +150,12 @@ export default function V2Feasibility() {
   const profit = totalRevenue - totalCosts;
   const comoFee = profit > 0 ? profit * 0.15 : 0;
   const investorProfit = profit - comoFee;
-  const profitOnCost = totalCosts > 0 ? (investorProfit / totalCosts) * 100 : 0;
-  const profitOnCapital = capital.requiredCapital > 0 ? (investorProfit / capital.requiredCapital) * 100 : 0;
+  // Keep the two investor questions separate: project economics before Como's
+  // share, then the investor's own return after that share on cash committed.
+  const projectMarginOnCost = totalCosts > 0 ? (profit / totalCosts) * 100 : 0;
+  const investorReturnOnCapital = capital.requiredCapital > 0 ? (investorProfit / capital.requiredCapital) * 100 : 0;
+  const capitalCommittedPct = capital.requiredCapital > 0 ? Math.min(100, (capital.paidCapital / capital.requiredCapital) * 100) : 0;
+  const investorOutcomePositive = investorProfit >= 0 && projectMarginOnCost >= 0;
 
   // Revenue breakdown
   const revRes = costs?.revenueRes || 0;
@@ -184,8 +187,8 @@ export default function V2Feasibility() {
     const p = rev - totalCosts;
     const como = p > 0 ? p * 0.15 : 0;
     const invP = p - como;
-    const roi = totalCosts > 0 ? (invP / totalCosts) * 100 : 0;
-    return { revenue: rev, investorProfit: invP, roi };
+    const marginOnCost = totalCosts > 0 ? (p / totalCosts) * 100 : 0;
+    return { revenue: rev, investorProfit: invP, marginOnCost };
   };
   const optimistic = scenarioCalc(1.10);
   const base = scenarioCalc(1.00);
@@ -220,23 +223,85 @@ export default function V2Feasibility() {
       {costs && project && (
         <div className="max-w-[1100px] mx-auto px-4 py-3 space-y-3">
 
-          {/* ═══ KPI STRIP ═══ */}
+          {/* ═══ INVESTOR DECISION CANVAS ═══ */}
+          {!isBuildForRent && (
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="grid xl:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="bg-slate-950 px-5 py-5 text-white">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+                    <ShieldCheck className="h-4 w-4 text-cyan-300" />
+                    قرار المستثمر
+                  </div>
+                  <p className="mt-3 text-xs font-medium text-slate-400">صافي عائدك المتوقع بعد حصة كومو</p>
+                  <p className={`mt-1 text-3xl font-black tracking-tight tabular-nums ${investorOutcomePositive ? "text-emerald-200" : "text-rose-200"}`} dir="ltr">{fmtM(investorProfit)} AED</p>
+                  <p className="mt-1 text-[11px] text-slate-400">مدة المشروع: {totalMonths} شهرًا · {totalYears.toFixed(1)} سنة</p>
+                  <div className="mt-5 border-t border-white/10 pt-4">
+                    <p className="text-xs font-semibold text-slate-200">ذروة السيولة المطلوبة</p>
+                    <p className="mt-1 text-xl font-bold tabular-nums text-amber-200" dir="ltr">{fmtM(capital.requiredCapital)} AED</p>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400"><CalendarClock className="h-3 w-3" /> {capital.peakMonthDate || "يُحدَّد من تدفق المستثمر"}</p>
+                  </div>
+                </aside>
+
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div>
+                      <p className="text-xs font-semibold text-cyan-700">ملخص الاستثمار</p>
+                      <h2 className="mt-1 text-xl font-black text-slate-950">كم يكلّف المشروع، وكم يعيد للمستثمر؟</h2>
+                      <p className="mt-1 text-xs text-slate-500">تُعرض اقتصاديات المشروع أولًا، ثم يظهر رأس المال وتوقيته، وتبقى التفاصيل أدناه للتدقيق.</p>
+                    </div>
+                    <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">مصدر الإيراد: التسعير المعتمد</span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <DecisionMetric label="إيرادات البيع المعتمدة" value={fmtM(totalRevenue)} tone="teal" detail="من صفحة التسعير فقط" />
+                    <DecisionMetric label="إجمالي تكلفة المشروع" value={fmtM(totalCosts)} tone="slate" detail="مدفوع ومستقبلي" />
+                    <DecisionMetric label="ربح المشروع قبل حصة كومو" value={fmtM(profit)} tone={profit >= 0 ? "violet" : "rose"} detail="الإيرادات ناقص إجمالي التكلفة" />
+                  </div>
+
+                  <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                    <RatioDecisionCard
+                      label="هامش ربح المشروع على التكلفة الكلية"
+                      value={fmtPct(projectMarginOnCost)}
+                      formula={`${fmtM(profit)} ربح ÷ ${fmtM(totalCosts)} تكلفة`}
+                      explanation="يقيس اقتصاديات المشروع قبل حصة كومو"
+                      tone="teal"
+                    />
+                    <RatioDecisionCard
+                      label="عائد المستثمر على رأس المال المستخدم"
+                      value={fmtPct(investorReturnOnCapital)}
+                      formula={`${fmtM(investorProfit)} صافي ربح ÷ ${fmtM(capital.requiredCapital)} رأس مال`}
+                      explanation="بعد حصة كومو وعلى ذروة رأس المال المطلوبة"
+                      tone="amber"
+                    />
+                  </div>
+
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-800"><Briefcase className="h-4 w-4 text-amber-700" /> التزام رأس المال للمستثمر</div>
+                      <span className="text-[11px] text-slate-500">القيمة القصوى المطلوبة من تدفقات المستثمر</span>
+                    </div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                      <CapitalFact label="المطلوب عند الذروة" value={fmtM(capital.requiredCapital)} tone="slate" />
+                      <CapitalFact label="تم دفعه" value={fmtM(capital.paidCapital)} tone="slate" />
+                      <CapitalFact label="المتبقي للتمويل" value={fmtM(capital.remainingCapital)} tone="amber" />
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" aria-label="نسبة رأس المال المدفوع من رأس المال المطلوب">
+                      <div className="h-full rounded-full bg-gradient-to-l from-amber-500 to-cyan-500" style={{ width: `${capitalCommittedPct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ═══ BUILD-FOR-RENT SUMMARY ═══ */}
           {isBuildForRent ? (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <KpiMini label="إجمالي تكاليف البناء للتأجير" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
               <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
               <KpiMini label="الإيرادات والإيجار" value="غير مدرج حالياً" color="teal" icon={<TrendingUp className="w-3 h-3" />} />
             </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
-              <KpiMini label="الإيرادات" value={fmtM(totalRevenue)} color="teal" icon={<TrendingUp className="w-3 h-3" />} />
-              <KpiMini label="التكاليف" value={fmtM(totalCosts)} color="slate" icon={<DollarSign className="w-3 h-3" />} />
-              <KpiMini label="ربح المستثمر الصافي" value={fmtM(investorProfit)} color={investorProfit >= 0 ? "gold" : "red"} icon={<BarChart2 className="w-3 h-3" />} />
-              <KpiMini label="رأس المال المطلوب" value={fmtM(capital.requiredCapital)} color="slate" icon={<Briefcase className="w-3 h-3" />} />
-              <KpiMini label="ربح/تكلفة" value={fmtPct(profitOnCost)} color="teal" icon={<Percent className="w-3 h-3" />} />
-              <KpiMini label="ربح/رأس المال" value={fmtPct(profitOnCapital)} color="gold" icon={<Sparkles className="w-3 h-3" />} />
-            </div>
-          )}
+          ) : null}
 
           {/* ═══ TWO COLUMNS ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
@@ -295,8 +360,8 @@ export default function V2Feasibility() {
                 </div>
               </SectionCard>
 
-              {/* Investor return: a simple profit waterfall, not disconnected ratio cards. */}
-              {!isBuildForRent && <SectionCard title="عائد المستثمر" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
+              {/* Investor return: a transparent calculation trail below the decision canvas. */}
+              {!isBuildForRent && <SectionCard title="تسلسل العائد للمستثمر" icon={<BarChart2 className="w-3.5 h-3.5 text-amber-300" />} gradient="from-teal-700 to-teal-900" borderColor="border-teal-200/60">
                 <div className="space-y-2.5">
                   <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                     <div className="flex items-end justify-between gap-3">
@@ -320,7 +385,7 @@ export default function V2Feasibility() {
                         <Users className="w-4 h-4 text-teal-700" />
                         <div>
                           <p className="text-[11px] font-black text-teal-900">صافي ربح المستثمر</p>
-                          <p className="text-[9px] text-teal-700 mt-0.5">بعد خصم حصة كومو</p>
+                      <p className="text-[9px] text-teal-700 mt-0.5">بعد خصم حصة كومو</p>
                         </div>
                       </div>
                       <span className="text-lg font-black text-teal-800 tabular-nums" dir="ltr">{fmt(investorProfit)} AED</span>
@@ -328,12 +393,14 @@ export default function V2Feasibility() {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="rounded-md bg-gray-50 px-2 py-1.5">
-                      <p className="text-[9px] text-gray-500">عائد المستثمر على التكلفة</p>
-                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(profitOnCost)}</p>
+                      <p className="text-[9px] text-gray-500">هامش ربح المشروع على التكلفة</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(projectMarginOnCost)}</p>
+                      <p className="mt-0.5 text-[8px] text-gray-400">قبل حصة كومو</p>
                     </div>
                     <div className="rounded-md bg-gray-50 px-2 py-1.5">
                       <p className="text-[9px] text-gray-500">عائد المستثمر على رأس المال</p>
-                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(profitOnCapital)}</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(investorReturnOnCapital)}</p>
+                      <p className="mt-0.5 text-[8px] text-gray-400">بعد حصة كومو</p>
                     </div>
                   </div>
                 </div>
@@ -348,7 +415,7 @@ export default function V2Feasibility() {
                         <th className="py-1.5 px-2 text-right font-medium">السيناريو</th>
                         <th className="py-1.5 px-2 text-center font-medium">الإيرادات</th>
                         <th className="py-1.5 px-2 text-center font-medium">ربح المستثمر</th>
-                        <th className="py-1.5 px-2 text-center font-medium">ربح/تكلفة</th>
+                        <th className="py-1.5 px-2 text-center font-medium">هامش المشروع</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -356,19 +423,19 @@ export default function V2Feasibility() {
                         <td className="py-1.5 px-2 font-bold text-green-700">متفائل (+10%)</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(optimistic.revenue)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700" dir="ltr">{fmtM(optimistic.investorProfit)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700">{fmtPct(optimistic.roi)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-green-700">{fmtPct(optimistic.marginOnCost)}</td>
                       </tr>
                       <tr className="border-t border-gray-100 bg-blue-50/30">
                         <td className="py-1.5 px-2 font-bold text-blue-700">أساسي</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(base.revenue)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700" dir="ltr">{fmtM(base.investorProfit)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700">{fmtPct(base.roi)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-blue-700">{fmtPct(base.marginOnCost)}</td>
                       </tr>
                       <tr className="border-t border-gray-100 bg-orange-50/30">
                         <td className="py-1.5 px-2 font-bold text-orange-700">متحفظ (-10%)</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums" dir="ltr">{fmtM(conservative.revenue)}</td>
                         <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700" dir="ltr">{fmtM(conservative.investorProfit)}</td>
-                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700">{fmtPct(conservative.roi)}</td>
+                        <td className="py-1.5 px-2 text-center font-bold tabular-nums text-orange-700">{fmtPct(conservative.marginOnCost)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -542,6 +609,50 @@ function KpiMini({ label, value, color, icon }: { label: string; value: string; 
     <div className={`rounded-lg border px-2 py-1.5 ${colorMap[color] || colorMap.teal}`}>
       <div className="flex items-center gap-1 mb-0.5 opacity-70">{icon}<span className="text-[8px] font-medium">{label}</span></div>
       <div className="text-sm font-black tabular-nums" dir="ltr">{value}</div>
+    </div>
+  );
+}
+
+function DecisionMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: "teal" | "slate" | "violet" | "rose" }) {
+  const tones = {
+    teal: "border-teal-100 bg-teal-50 text-teal-950",
+    slate: "border-slate-200 bg-slate-50 text-slate-950",
+    violet: "border-violet-100 bg-violet-50 text-violet-950",
+    rose: "border-rose-100 bg-rose-50 text-rose-950",
+  };
+  return (
+    <div className={`rounded-xl border p-3 ${tones[tone]}`}>
+      <p className="text-xs font-semibold opacity-75">{label}</p>
+      <p className="mt-1 text-2xl font-black tracking-tight tabular-nums" dir="ltr">{value} AED</p>
+      <p className="mt-1 text-[11px] opacity-70">{detail}</p>
+    </div>
+  );
+}
+
+function RatioDecisionCard({ label, value, formula, explanation, tone }: { label: string; value: string; formula: string; explanation: string; tone: "teal" | "amber" }) {
+  const tones = {
+    teal: "border-teal-200 bg-teal-50 text-teal-950",
+    amber: "border-amber-200 bg-amber-50 text-amber-950",
+  };
+  return (
+    <div className={`rounded-xl border p-4 ${tones[tone]}`}>
+      <p className="text-xs font-bold">{label}</p>
+      <p className="mt-1 text-3xl font-black tracking-tight tabular-nums" dir="ltr">{value}</p>
+      <p className="mt-2 rounded-md bg-white/70 px-2 py-1 text-[11px] font-semibold tabular-nums" dir="ltr">{formula}</p>
+      <p className="mt-1.5 text-[11px] opacity-75">{explanation}</p>
+    </div>
+  );
+}
+
+function CapitalFact({ label, value, tone }: { label: string; value: string; tone: "slate" | "amber" }) {
+  const tones = {
+    slate: "text-slate-900",
+    amber: "text-amber-800",
+  };
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-slate-500">{label}</p>
+      <p className={`mt-0.5 text-lg font-black tabular-nums ${tones[tone]}`} dir="ltr">{value} AED</p>
     </div>
   );
 }

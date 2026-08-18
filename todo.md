@@ -1261,3 +1261,6 @@
 - [x] Inspect the current Investor Cash Flow and Escrow Cash Flow screens, including their decision hierarchy, readability, and interaction constraints
 - [x] Benchmark professional cash-flow, liquidity, and risk-dashboard patterns relevant to investor and escrow reporting
 - [x] Redesign Investor Cash Flow and Escrow Cash Flow into consistent decision-first presentations without changing figures, financial rules, sources, or frozen portfolio reports
+- [x] Inspect the current Feasibility Study screen and verify how revenue, total cost, required capital, paid capital, remaining capital, and profit ratios are sourced
+- [x] Benchmark professional investment-committee feasibility presentations and define an investor-first decision hierarchy
+- [x] Redesign Feasibility Study so profit on total project cost and profit on required investor capital are prominent, clearly explained, and sourced from unchanged calculations
