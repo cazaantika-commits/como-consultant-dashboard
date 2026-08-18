@@ -73,24 +73,6 @@ const MARKETING_CHANNELS = [
   { id: "content", name: "المحتوى والإنتاج", defaultPct: 5, color: "#06b6d4" },
 ];
 
-type WaelStudioRoom = "overview" | "pricing" | "sales" | "collection" | "marketing" | "impact";
-
-const WAEL_STUDIO_ROOMS: Array<{
-  id: WaelStudioRoom;
-  title: string;
-  eyebrow: string;
-  description: string;
-  icon: typeof LayoutDashboard;
-  tone: string;
-}> = [
-  { id: "overview", title: "لوحة السيناريو", eyebrow: "ابدأ هنا", description: "ملخص القرار قبل الدخول في التفاصيل", icon: LayoutDashboard, tone: "bg-slate-900 text-white" },
-  { id: "pricing", title: "المنتج والسعر", eyebrow: "قيمة البيع", description: "سعر القدم لكل نوع وحدة والإيراد الناتج", icon: Tags, tone: "bg-emerald-600 text-white" },
-  { id: "sales", title: "خطة البيع", eyebrow: "متى وكم", description: "سرعة البيع وعدد الوحدات أو نسبتها شهرياً", icon: Target, tone: "bg-blue-600 text-white" },
-  { id: "collection", title: "تحصيل المشتري", eyebrow: "متى يدخل النقد", description: "خطة الدفعات والتحصيل الفعلي", icon: WalletCards, tone: "bg-indigo-600 text-white" },
-  { id: "marketing", title: "حملة التسويق", eyebrow: "دفع الطلب", description: "الميزانية والقنوات وتوقيت الإنفاق", icon: Megaphone, tone: "bg-pink-600 text-white" },
-  { id: "impact", title: "أثر القرار", eyebrow: "اختبر قبل الاعتماد", description: "الإسكرو والتحصيل والربح والمخاطر", icon: BarChart3, tone: "bg-violet-600 text-white" },
-];
-
 // ─── Utilities ───────────────────────────────────────────────────────────────
 function fmt(n: number): string {
   if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + "B";
@@ -110,9 +92,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
-  const [activeStudioRoom, setActiveStudioRoom] = useState<WaelStudioRoom>("overview");
-  const [showSalesPrecision, setShowSalesPrecision] = useState(false);
   const [salesCalendarPage, setSalesCalendarPage] = useState(0);
+  const [impactFocus, setImpactFocus] = useState("توزيع المبيعات");
 
   // ─── DB Queries ─────────────────────────────────────────────────────────────
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
@@ -342,7 +323,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
   const offPlanUnits = isBuildForSale ? totalUnits : Math.round((totalUnits * offPlan) / 100);
   const salesDistribution = useMemo(() => {
-    if (salesMode === "manual" && manualUnits.length === salesMonths) return manualUnits;
+    if (salesMode === "manual" && manualUnits.length === salesMonths) {
+      return manualUnits.map((value) => Math.max(0, Math.round(Number(value) || 0)));
+    }
     const n = salesMonths;
     if (n <= 0) return [];
     let raw: number[];
@@ -555,7 +538,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           mode: salesMode,
           speed,
           template: curveTemplate,
-          manual: manualUnits,
+          manual: manualUnits.map((value) => Math.max(0, Math.round(Number(value) || 0))),
           ppDownPct,
           ppSecondPct,
           ppSecondAfterMonths,
@@ -597,7 +580,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   };
 
   const updateSalesMonth = (monthIndex: number, requestedUnits: number) => {
-    const current = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)];
+    const current = [...(manualUnits.length === salesMonths ? manualUnits : salesDistribution)].map((value) => Math.max(0, Math.round(Number(value) || 0)));
     const otherMonths = current.reduce((sum, value, index) => index === monthIndex ? sum : sum + (value || 0), 0);
     current[monthIndex] = Math.min(Math.max(0, Math.round(requestedUnits)), Math.max(0, offPlanUnits - otherMonths));
     setManualUnits(current);
@@ -646,8 +629,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasPlanChanges(true);
   };
 
-  const activeRoom = WAEL_STUDIO_ROOMS.find((room) => room.id === activeStudioRoom) ?? WAEL_STUDIO_ROOMS[0];
   const hasScenarioChanges = hasUnitChanges || hasPlanChanges || hasMarketingChanges || hasBuildForSaleMarketingChanges;
+  const firstCollection = cashInflowData.find((row) => row.cashInflow > 0);
+  const visibleImpactMonths = cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 12);
+  // Retained only to keep the detailed legacy renderers dormant while the unified
+  // canvas supplies the entire visible workflow. No room selector is rendered.
+  const activeStudioRoom = "canvas";
+  const activeRoom = { eyebrow: "", title: "", description: "", icon: LayoutDashboard, tone: "bg-slate-900 text-white" };
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -656,17 +644,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     <div className="min-h-full bg-[#f5f7fb] p-3 sm:p-5" dir="rtl">
       <div className="mx-auto max-w-[1500px] space-y-4">
         {/* ═══ SCENARIO STUDIO HEADER ═══ */}
-        <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
-          <div className="flex flex-col gap-3 bg-[linear-gradient(110deg,#0f172a,#172554_58%,#0f766e)] p-4 text-white lg:flex-row lg:items-center lg:justify-between">
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.10)]">
+          <div className="flex flex-col gap-4 bg-[radial-gradient(circle_at_12%_0%,rgba(45,212,191,0.25),transparent_36%),linear-gradient(115deg,#0b1220,#142b48_56%,#0f766e)] px-5 py-5 text-white lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <div className="flex items-center gap-2 text-[10px] font-bold tracking-wide text-emerald-300"><Sparkles className="h-3.5 w-3.5" />استوديو قرار وائل</div>
-              <h1 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">خطّط المبيعات. شاهد النقد. اعتمد القرار.</h1>
-              <p className="mt-1 text-xs leading-5 text-slate-300">حرّك هدف البيع والسعر والدفعات، ثم شاهد الأثر المالي فورًا قبل الحفظ.</p>
+              <div className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-emerald-200"><Sparkles className="h-4 w-4" />مساحة سيناريو وائل</div>
+              <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-[28px]">صمّم البيع، وشاهد السيولة قبل الاعتماد.</h1>
+              <p className="mt-1.5 text-sm leading-6 text-slate-200">تتحرك كل نتيجة هنا فور تعديل السعر أو الشهر أو خطة التحصيل. لا صفحات منفصلة ولا أرقام صغيرة.</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setActiveStudioRoom("overview"); }} />
-              <Badge className={hasScenarioChanges ? "border border-amber-300/30 bg-amber-400/15 px-3 py-1 text-amber-200 hover:bg-amber-400/15" : "border border-emerald-300/30 bg-emerald-400/15 px-3 py-1 text-emerald-200 hover:bg-emerald-400/15"}>{hasScenarioChanges ? "مسودة غير معتمدة" : "السيناريو المعتمد"}</Badge>
-              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || totalSold > offPlanUnits} className="gap-1.5 bg-emerald-500 text-white hover:bg-emerald-400">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />
+              <Badge className={hasScenarioChanges ? "border border-amber-300/40 bg-amber-400/15 px-3 py-1.5 text-amber-100 hover:bg-amber-400/15" : "border border-emerald-300/40 bg-emerald-400/15 px-3 py-1.5 text-emerald-100 hover:bg-emerald-400/15"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
+              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-emerald-400 px-4 font-bold text-slate-950 hover:bg-emerald-300">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 اعتماد السيناريو
               </Button>
@@ -675,23 +663,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 const rows = cashInflowData.map(d => [d.month, Math.round(d.salesThisMonth), Math.round(d.cashInflow), Math.round(d.cumSales), Math.round(d.cumCash)]);
                 const projectName = (projectQuery.data as any)?.name || "مشروع";
                 exportToExcel({ title: "خطة المبيعات والتدفقات", projectName, scenario: "offplan_escrow", headers, rows }, `خطة_المبيعات_${projectName}`);
-              }} className="gap-1.5 border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white">
+              }} className="h-10 gap-1.5 border-white/25 bg-white/5 px-3 text-white hover:bg-white/10 hover:text-white">
                 <Download className="h-3.5 w-3.5" />تصدير
               </Button>
             </div>
           </div>
-          {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
-            <div className="flex gap-1 overflow-x-auto border-t border-slate-100 bg-slate-50 p-2">
-              {WAEL_STUDIO_ROOMS.map((room) => {
-                const Icon = room.icon;
-                const isActive = room.id === activeStudioRoom;
-                return <button key={room.id} type="button" onClick={() => setActiveStudioRoom(room.id)} className={`flex min-w-[118px] items-center gap-2 rounded-xl px-3 py-2 text-right transition ${isActive ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
-                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-white/15" : room.tone}`}><Icon className="h-3.5 w-3.5" /></div>
-                  <span><span className={`block text-[8px] font-bold ${isActive ? "text-slate-300" : "text-slate-400"}`}>{room.eyebrow}</span><span className="block text-[11px] font-black">{room.title}</span></span>
-                </button>;
-              })}
-            </div>
-          )}
         </section>
 
         {/* No project selected */}
@@ -712,6 +688,78 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         {/* Main Content */}
         {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
           <>
+            <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_370px]">
+              <div className="min-w-0 space-y-4">
+                <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+                  <div className="flex flex-col gap-2 border-b border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold text-teal-700">شريط التحكم</p>
+                      <h2 className="mt-0.5 text-lg font-black text-slate-900">حرّك المحرّك، والأثر أمامك فورًا</h2>
+                    </div>
+                    <p className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">آخر تعديل: <span className="text-teal-700">{impactFocus}</span></p>
+                  </div>
+                  <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">هدف البيع</p><Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">{offPlanUnits} وحدة</Badge></div>
+                      <div className="mt-4 flex items-center gap-3"><Slider value={[offPlan]} onValueChange={([value]) => { setOffPlan(value); setSalesMode("auto"); setManualUnits([]); setHasPlanChanges(true); setImpactFocus("هدف البيع"); }} min={0} max={100} step={5} /><span className="min-w-14 text-left text-2xl font-black text-emerald-700">{offPlan}%</span></div>
+                      <p className="mt-3 text-[11px] text-slate-500">من أصل {totalUnits} وحدة قابلة للبيع</p>
+                    </div>
+                    <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">إيقاع البيع</p><TrendingUp className="h-4 w-4 text-blue-700" /></div>
+                      <div className="mt-3 grid grid-cols-4 gap-1.5">{([{ id: "fast", label: "سريع", speed: 85 }, { id: "bell", label: "متوازن", speed: 50 }, { id: "gradual", label: "تدريجي", speed: 30 }, { id: "late", label: "متأخر", speed: 15 }] as const).map((option) => <button key={option.id} type="button" onClick={() => { applySalesPace(option.id, option.speed); setImpactFocus("إيقاع البيع"); }} className={`rounded-xl px-1 py-2 text-[10px] font-black transition ${curveTemplate === option.id && salesMode === "auto" ? "bg-blue-700 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-blue-50"}`}>{option.label}</button>)}</div>
+                      <p className="mt-3 text-[11px] text-slate-500">توزيع مقترح على {salesMonths} شهر</p>
+                    </div>
+                    <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">متوسط سعر الوحدة</p><DollarSign className="h-4 w-4 text-amber-700" /></div>
+                      <p className="mt-3 text-2xl font-black tracking-tight text-amber-800">{fmt(avgUnitPrice)} <span className="text-xs">AED</span></p>
+                      <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="outline" className="h-9 border-amber-200 bg-white text-[11px] font-bold text-amber-800 hover:bg-amber-100" onClick={() => { adjustAllPrices(0.95); setImpactFocus("السعر"); }}>خفض 5%</Button><Button type="button" className="h-9 bg-amber-600 text-[11px] font-bold text-white hover:bg-amber-500" onClick={() => { adjustAllPrices(1.05); setImpactFocus("السعر"); }}>رفع 5%</Button></div>
+                    </div>
+                    <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">خطة تحصيل المشتري</p><CreditCard className="h-4 w-4 text-indigo-700" /></div>
+                      <div className="mt-3 grid grid-cols-3 gap-1.5">{([{ id: "early", label: "مبكرة" }, { id: "balanced", label: "متوازنة" }, { id: "handover", label: "تسليم" }] as const).map((option) => <button key={option.id} type="button" onClick={() => { applyPaymentPreset(option.id); setImpactFocus("خطة التحصيل"); }} className="rounded-xl bg-white px-1 py-2 text-[10px] font-black text-indigo-700 ring-1 ring-indigo-100 transition hover:bg-indigo-100">{option.label}</button>)}</div>
+                      <p className="mt-3 text-[11px] text-slate-500">مقدم {ppDownPct}% · تسليم {ppHandoverPct}%</p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+                  <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div><p className="text-[11px] font-bold text-blue-700">تقويم البيع المباشر</p><h2 className="mt-0.5 text-lg font-black text-slate-900">لوحة بيع 12 شهرًا</h2><p className="mt-1 text-xs text-slate-500">اكتب عدد الوحدات أو النسبة داخل البطاقة نفسها؛ الآخر يتزامن لحظيًا.</p></div>
+                    {(() => { const maxPage = Math.max(0, Math.ceil(salesMonths / 12) - 1); const page = Math.min(salesCalendarPage, maxPage); return <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-1.5"><Button type="button" variant="ghost" size="sm" disabled={page === 0} onClick={() => setSalesCalendarPage(Math.max(0, page - 1))} className="h-8 text-[11px]">الأشهر التالية</Button><span className="min-w-14 text-center text-xs font-black text-slate-600">{page + 1} / {maxPage + 1}</span><Button type="button" variant="ghost" size="sm" disabled={page === maxPage} onClick={() => setSalesCalendarPage(Math.min(maxPage, page + 1))} className="h-8 text-[11px]">الأشهر السابقة</Button></div>; })()}
+                  </div>
+                  <div className="p-4 sm:p-5">
+                    {(() => {
+                      const monthsPerPage = 12;
+                      const maxPage = Math.max(0, Math.ceil(salesMonths / monthsPerPage) - 1);
+                      const page = Math.min(salesCalendarPage, maxPage);
+                      const pageStartIndex = page * monthsPerPage;
+                      const visibleMonths = salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage);
+                      const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                      const maxUnitsInView = Math.max(...visibleMonths, 1);
+                      return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const salesIndex = pageStartIndex + index; const monthIndex = projectStartDate ? ((Number(projectStartDate.split("-")[1]) - 1 + absoluteMonth - 1) % 12 + 12) % 12 : -1; const monthLabel = monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`; const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0); const percentage = offPlanUnits ? Math.round((selectedUnits / offPlanUnits) * 100) : 0; return <article key={absoluteMonth} className={`rounded-2xl border p-3.5 transition-all ${selectedUnits > 0 ? "border-emerald-200 bg-gradient-to-b from-white to-emerald-50/50 shadow-sm" : "border-slate-200 bg-slate-50/70"}`}><div className="flex items-start justify-between"><div><p className="text-sm font-black text-slate-800">{monthLabel}</p><p className="mt-0.5 text-[10px] font-semibold text-slate-400">شهر المشروع {absoluteMonth}</p></div><span className="rounded-lg bg-slate-900 px-2 py-1 text-[10px] font-black text-white">{percentage}%</span></div><div className="mt-4 grid grid-cols-2 gap-2"><label><span className="mb-1.5 block text-[10px] font-bold text-slate-500">الوحدات</span><input aria-label={`وحدات ${monthLabel}`} type="number" min={0} max={offPlanUnits} value={selectedUnits} onChange={(event) => { updateSalesMonth(salesIndex, Number(event.target.value) || 0); setImpactFocus(`${monthLabel} — الوحدات`); }} className="h-12 w-full rounded-xl border border-slate-300 bg-white text-center text-xl font-black text-emerald-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" /></label><label><span className="mb-1.5 block text-[10px] font-bold text-slate-500">النسبة</span><div className="relative"><input aria-label={`نسبة ${monthLabel}`} type="number" min={0} max={100} value={percentage} onChange={(event) => { updateSalesMonth(salesIndex, Math.round((Math.max(0, Number(event.target.value) || 0) / 100) * offPlanUnits)); setImpactFocus(`${monthLabel} — النسبة`); }} className="h-12 w-full rounded-xl border border-blue-200 bg-blue-50 text-center text-xl font-black text-blue-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" /><span className="pointer-events-none absolute left-3 top-3.5 text-sm font-black text-blue-400">%</span></div></label></div><div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(100, Math.max(0, (selectedUnits / maxUnitsInView) * 100))}%` }} /></div><p className="mt-2 text-center text-[10px] font-semibold text-slate-500">{fmt(selectedUnits * avgUnitPrice)} AED قيمة بيع متوقعة</p></article>; })}</div>;
+                    })()}
+                  </div>
+                </section>
+
+                <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4"><span><span className="block text-[11px] font-bold text-slate-500">تفاصيل قابلة للتوسيع عند الحاجة</span><span className="mt-0.5 block text-base font-black text-slate-900">السعر، خطة التحصيل، التسويق، وتحليل النقد</span></span><span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition group-open:bg-slate-900 group-open:text-white">فتح التفاصيل</span></summary>
+                    <div className="space-y-5 border-t border-slate-100 p-5">
+                      <div><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-black text-slate-900">أسعار الوحدات</h3><p className="text-xs font-bold text-emerald-700">إجمالي الإيراد {fmt(totalRevenue)} AED</p></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{activeUnitRevenues.map((unit) => <label key={unit.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><span className="flex items-center gap-2 text-xs font-bold text-slate-700"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: unit.color }} />{unit.name}<span className="mr-auto text-[10px] text-slate-400">{unit.count} وحدة</span></span><div className="mt-2 flex items-center gap-2"><input aria-label={`سعر ${unit.name}`} type="number" min={0} value={unit.price} onChange={(event) => { updateUnit(unit.id, "price", Number(event.target.value) || 0); setImpactFocus(`سعر ${unit.name}`); }} className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-center text-base font-black text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" /><span className="text-[10px] font-bold text-slate-500">AED/قدم²</span></div><p className="mt-2 text-[11px] font-bold text-emerald-700">{fmt(unit.total)} AED</p></label>)}</div></div>
+                      {!isBuildForSale && <div className="grid gap-4 xl:grid-cols-2"><div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4"><h3 className="text-sm font-black text-indigo-950">تفصيل خطة التحصيل</h3><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><label className="text-[11px] font-bold text-slate-600">مقدم<input type="number" min={0} max={100} value={ppDownPct} onChange={(event) => { setPpDownPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("المقدم"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-200 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">دفعة ثانية<input type="number" min={0} max={100} value={ppSecondPct} onChange={(event) => { setPpSecondPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("الدفعة الثانية"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-200 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">كل قسط<input type="number" min={0} max={100} value={ppInstallmentPct} onChange={(event) => { setPpInstallmentPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("قسط الإنشاء"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-200 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">التسليم<input type="number" min={0} max={100} value={ppHandoverPct} onChange={(event) => { setPpHandoverPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("دفعة التسليم"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-200 bg-white text-center text-base font-black text-indigo-800" /></label></div><p className={`mt-3 text-xs font-bold ${ppTotal === 100 ? "text-emerald-700" : "text-red-700"}`}>الإجمالي {ppTotal}% · {ppTotal === 100 ? "خطة متوازنة" : "يرجى إكمال النسب إلى 100%"}</p></div><div className="rounded-2xl border border-pink-100 bg-pink-50/40 p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-black text-pink-950">غلاف التسويق</h3><span className="text-lg font-black text-pink-700">{marketingPct}%</span></div><Slider value={[marketingPct]} onValueChange={([value]) => { setMarketingPct(value); setHasMarketingChanges(true); setImpactFocus("ميزانية التسويق"); }} min={0} max={10} step={0.5} className="mt-4" /><p className="mt-3 text-xs font-bold text-pink-800">{fmt(marketingCost)} AED ميزانية متاحة</p><div className="mt-3 grid grid-cols-2 gap-2">{MARKETING_CHANNELS.slice(0, 4).map((channel) => { const allocation = channelPcts[channel.id] || 0; return <label key={channel.id} className="rounded-lg bg-white p-2 text-[11px] font-bold text-slate-600">{channel.name}<input type="number" min={0} max={100} value={allocation} onChange={(event) => { handleChannelSliderChange(channel.id, Number(event.target.value) || 0); setImpactFocus(`قناة ${channel.name}`); }} className="mt-1 h-8 w-full rounded border border-pink-200 text-center text-sm font-black text-pink-700" /></label>; })}</div><p className={`mt-3 text-[11px] font-bold ${totalChannelPct === 100 ? "text-emerald-700" : "text-red-700"}`}>توزيع القنوات: {totalChannelPct}%</p></div></div>}
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-black text-slate-900">قراءة التحصيل والأثر النقدي</p><p className="mt-1 text-xs text-slate-500">هذه قراءة تفصيلية للمشروع؛ الأثر التنفيذي المختصر يبقى مثبتًا بجوار التقويم.</p></div><Badge className={hasDeficit ? "bg-red-100 text-red-700 hover:bg-red-100" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"}>{hasDeficit ? "مخاطرة إسكرو قائمة" : "سيولة الإسكرو مريحة"}</Badge></div><div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 8).map((row) => <div key={row.month} className="rounded-xl bg-white p-3 ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-500">شهر {row.month}</p><p className="mt-1 text-sm font-black text-blue-700">{fmt(row.cashInflow)}</p><p className="mt-1 text-[10px] text-slate-500">تحصيل · بيع {fmt(row.salesThisMonth)}</p></div>)}</div></div>
+                    </div>
+                  </details>
+                </section>
+              </div>
+
+              <aside className="xl:sticky xl:top-4">
+                <section className="overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d] text-white shadow-[0_16px_40px_rgba(15,23,42,0.22)]">
+                  <div className="bg-[radial-gradient(circle_at_100%_0%,rgba(167,139,250,0.32),transparent_45%)] px-5 py-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-bold text-violet-200">أثر القرار — مباشر</p><h2 className="mt-1 text-xl font-black">ما الذي تغيّر الآن؟</h2><p className="mt-1 text-xs leading-5 text-slate-300">يراقب {impactFocus} ويُحدَّث دون انتظار الحفظ.</p></div><div className="rounded-xl bg-white/10 p-2.5"><BarChart3 className="h-5 w-5 text-violet-200" /></div></div></div>
+                  <div className="space-y-3 px-4 pb-4"><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-3.5"><p className="text-[11px] font-bold text-emerald-100">إيراد السيناريو</p><p className="mt-2 text-2xl font-black tracking-tight text-emerald-300">{fmt(totalRevenue)}</p><p className="mt-1 text-[10px] font-semibold text-emerald-100/70">AED</p></div><div className="rounded-2xl border border-violet-300/20 bg-violet-400/10 p-3.5"><p className="text-[11px] font-bold text-violet-100">الربح المتوقع</p><p className={`mt-2 text-2xl font-black tracking-tight ${profit >= 0 ? "text-violet-200" : "text-red-300"}`}>{fmt(profit)}</p><p className="mt-1 text-[10px] font-semibold text-violet-100/70">AED</p></div></div><div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"><p className="text-[11px] font-bold text-slate-300">أول تحصيل فعلي</p><div className="mt-2 flex items-end justify-between"><p className="text-2xl font-black text-white">{firstCollection ? `شهر ${firstCollection.month}` : "—"}</p><p className="text-sm font-bold text-blue-200">{firstCollection ? `${fmt(firstCollection.cashInflow)} AED` : "لا تحصيل بعد"}</p></div></div>{!isBuildForSale && <div className={`rounded-2xl border p-4 ${hasDeficit ? "border-red-400/30 bg-red-500/10" : "border-emerald-400/30 bg-emerald-500/10"}`}><p className="text-[11px] font-bold text-slate-200">أدنى رصيد في الإسكرو</p><div className="mt-2 flex items-end justify-between"><p className={`text-2xl font-black ${hasDeficit ? "text-red-300" : "text-emerald-300"}`}>{criticalMonth ? fmt(criticalMonth.balance) : "—"}</p><p className="text-sm font-bold text-slate-300">{criticalMonth ? `شهر ${criticalMonth.month}` : "لا توجد بيانات"}</p></div><p className={`mt-2 text-[11px] font-semibold ${hasDeficit ? "text-red-200" : "text-emerald-200"}`}>{hasDeficit ? "تنبيه: سيناريو البيع والتحصيل لا يغطي سحب الإسكرو في هذه النقطة." : "الرصيد لا يهبط إلى عجز وفق المدخلات الحالية."}</p></div>}<div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"><div className="flex items-center justify-between"><p className="text-[11px] font-bold text-slate-300">نبض الأشهر المؤثرة</p><span className="text-[10px] font-bold text-slate-400">بيع / تحصيل</span></div><div className="mt-3 flex h-20 items-end gap-1.5">{visibleImpactMonths.length > 0 ? visibleImpactMonths.map((row) => { const maxCash = Math.max(...visibleImpactMonths.map((item) => item.cashInflow), 1); return <div key={row.month} className="group relative flex flex-1 flex-col items-center justify-end"><span className="mb-1 text-[9px] font-bold text-blue-200 opacity-0 transition group-hover:opacity-100">{fmt(row.cashInflow)}</span><div className="w-full rounded-t-md bg-gradient-to-t from-blue-600 to-cyan-300" style={{ height: `${Math.max(10, (row.cashInflow / maxCash) * 100)}%` }} /><span className="mt-1 text-[9px] font-bold text-slate-400">{row.month}</span></div>; }) : <p className="w-full text-center text-xs text-slate-400">أدخل توزيع البيع لتظهر الأشهر المؤثرة.</p>}</div></div><p className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-center text-[11px] font-semibold text-slate-300">التفاصيل الموسعة تحت التقويم؛ هذا الملخص ثابت أثناء أي تعديل.</p></div>
+                </section>
+              </aside>
+            </section>
             {activeStudioRoom === "overview" && <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div><p className="text-[10px] font-bold text-emerald-600">{activeRoom.eyebrow}</p><h2 className="mt-1 flex items-center gap-1.5 text-xl font-black text-slate-900"><Sparkles className="h-5 w-5 text-emerald-600" />مركز قرار وائل</h2><p className="mt-1 text-sm text-slate-500">ابدأ بالصورة الكاملة، ثم انتقل إلى غرفة القرار التي تريد تعديلها.</p></div>
@@ -726,10 +774,10 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <div className="mt-2 grid grid-cols-2 gap-2 text-center md:grid-cols-4"><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">إيراد السيناريو</p><p className="text-[11px] font-bold text-emerald-700">{fmt(totalRevenue)}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">أول تحصيل فعلي</p><p className="text-[11px] font-bold text-blue-700">{cashInflowData.find((row) => row.cashInflow > 0)?.month ? `شهر ${cashInflowData.find((row) => row.cashInflow > 0)?.month}` : "—"}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">الشهر الحرج</p><p className={`text-[11px] font-bold ${hasDeficit ? "text-red-700" : "text-amber-700"}`}>{criticalMonth ? `شهر ${criticalMonth.month}` : "—"}</p></div><div className="rounded-md bg-white/70 p-1.5"><p className="text-[8px] text-slate-500">الربح المتوقع</p><p className="text-[11px] font-bold text-violet-700">{fmt(profit)}</p></div></div>
             </section>}
 
-            {activeStudioRoom !== "overview" && <section className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+            {false && <section className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-xl ${activeRoom.tone}`}><activeRoom.icon className="h-5 w-5" /></div><div><p className="text-[10px] font-bold text-slate-500">{activeRoom.eyebrow}</p><h2 className="text-lg font-black text-slate-900">{activeRoom.title}</h2><p className="mt-0.5 text-xs text-slate-500">{activeRoom.description}</p></div></div>
-                <Button variant="outline" size="sm" onClick={() => setActiveStudioRoom("overview")} className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />العودة للوحة السيناريو</Button>
+                <Button variant="outline" size="sm" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />العودة للوحة السيناريو</Button>
               </div>
               <div className="space-y-4">
             {/* SECTION 1: PRODUCT PRICE AND BUYER COLLECTION */}

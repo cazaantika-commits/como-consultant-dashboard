@@ -1255,3 +1255,6 @@
 - [x] Replace the default dense month-by-month Sales Plan grid with a goal-and-pace planner, leaving the raw synchronized unit/percentage editor only for explicit precision editing
 - [x] Redesign Wael’s input controls, month visibility, and decision flow so the interface is visually smoother and more immediately understandable than the current staged layout
 - [x] Replace the six-month Sales Plan display with a twelve-month visible board whose month cards are the direct synchronized unit-and-percentage inputs
+- [x] Benchmark professional sales forecasting, payment planning, and scenario-analysis interfaces before rebuilding Wael’s interaction model
+- [x] Rebuild Wael’s workspace as a cohesive professional scenario canvas with large direct inputs and an in-context decision-impact panel instead of separate table-derived rooms
+- [x] Clamp invalid negative legacy monthly sales values before they reach Wael’s direct-input canvas or downstream live-impact display
