@@ -1253,3 +1253,4 @@
 - [x] Rebuild Wael’s Sales and Marketing experience as a professional multi-screen decision workflow rather than a collapsed collection of existing grids
 - [x] Preserve every existing Sales, Marketing, payment-plan, collection, escrow, and investor-cash-flow data contract while replacing only the interaction and visual presentation
 - [x] Replace the default dense month-by-month Sales Plan grid with a goal-and-pace planner, leaving the raw synchronized unit/percentage editor only for explicit precision editing
+- [x] Redesign Wael’s input controls, month visibility, and decision flow so the interface is visually smoother and more immediately understandable than the current staged layout

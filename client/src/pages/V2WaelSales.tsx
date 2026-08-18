@@ -112,6 +112,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [activeStudioRoom, setActiveStudioRoom] = useState<WaelStudioRoom>("overview");
   const [showSalesPrecision, setShowSalesPrecision] = useState(false);
+  const [salesCalendarPage, setSalesCalendarPage] = useState(0);
 
   // ─── DB Queries ─────────────────────────────────────────────────────────────
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
@@ -655,12 +656,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     <div className="min-h-full bg-[#f5f7fb] p-3 sm:p-5" dir="rtl">
       <div className="mx-auto max-w-[1500px] space-y-4">
         {/* ═══ SCENARIO STUDIO HEADER ═══ */}
-        <section className="overflow-hidden rounded-[24px] bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
-          <div className="flex flex-col gap-4 bg-[radial-gradient(circle_at_8%_12%,rgba(16,185,129,0.26),transparent_33%),radial-gradient(circle_at_92%_100%,rgba(59,130,246,0.25),transparent_34%)] p-5 lg:flex-row lg:items-end lg:justify-between">
+        <section className="overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.08)]">
+          <div className="flex flex-col gap-3 bg-[linear-gradient(110deg,#0f172a,#172554_58%,#0f766e)] p-4 text-white lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-bold tracking-wide text-emerald-300"><Sparkles className="h-4 w-4" />استوديو قرار وائل</div>
-              <h1 className="text-2xl font-black tracking-tight sm:text-3xl">المبيعات والتسويق، كما يفكر بها مدير المبيعات</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-300">ابنِ سيناريو البيع، اختبر أثره المالي فورًا، واعتمد قرارًا واحدًا ينعكس على التحصيل والإسكرو والتقارير.</p>
+              <div className="flex items-center gap-2 text-[10px] font-bold tracking-wide text-emerald-300"><Sparkles className="h-3.5 w-3.5" />استوديو قرار وائل</div>
+              <h1 className="mt-1 text-xl font-black tracking-tight sm:text-2xl">خطّط المبيعات. شاهد النقد. اعتمد القرار.</h1>
+              <p className="mt-1 text-xs leading-5 text-slate-300">حرّك هدف البيع والسعر والدفعات، ثم شاهد الأثر المالي فورًا قبل الحفظ.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setActiveStudioRoom("overview"); }} />
@@ -680,14 +681,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </div>
           </div>
           {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
-            <div className="grid grid-cols-2 border-t border-white/10 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="flex gap-1 overflow-x-auto border-t border-slate-100 bg-slate-50 p-2">
               {WAEL_STUDIO_ROOMS.map((room) => {
                 const Icon = room.icon;
                 const isActive = room.id === activeStudioRoom;
-                return <button key={room.id} type="button" onClick={() => setActiveStudioRoom(room.id)} className={`group relative min-h-[98px] border-b border-l border-white/10 p-3 text-right transition ${isActive ? "bg-white text-slate-950" : "bg-white/[0.03] text-white hover:bg-white/[0.09]"}`}>
-                  <div className={`mb-2 inline-flex h-7 w-7 items-center justify-center rounded-lg ${isActive ? room.tone : "bg-white/10 text-white"}`}><Icon className="h-3.5 w-3.5" /></div>
-                  <span className={`block text-[9px] font-bold ${isActive ? "text-slate-500" : "text-slate-400"}`}>{room.eyebrow}</span>
-                  <span className="mt-0.5 block text-[12px] font-black">{room.title}</span>
+                return <button key={room.id} type="button" onClick={() => setActiveStudioRoom(room.id)} className={`flex min-w-[118px] items-center gap-2 rounded-xl px-3 py-2 text-right transition ${isActive ? "bg-slate-900 text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-100"}`}>
+                  <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${isActive ? "bg-white/15" : room.tone}`}><Icon className="h-3.5 w-3.5" /></div>
+                  <span><span className={`block text-[8px] font-bold ${isActive ? "text-slate-300" : "text-slate-400"}`}>{room.eyebrow}</span><span className="block text-[11px] font-black">{room.title}</span></span>
                 </button>;
               })}
             </div>
@@ -946,7 +946,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </section>
 
             {/* SECTION 4: PROJECT PHASES TIMELINE */}
-            <section className={`${activeStudioRoom === "sales" || activeStudioRoom === "marketing" ? "" : "hidden"} bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden`}>
+            <section className={`${activeStudioRoom === "marketing" ? "" : "hidden"} bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden`}>
               <div className="px-3 py-2 border-b border-gray-100">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -1045,6 +1045,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </Button>
               </div>
               <div className="p-3">
+                {(() => {
+                  const monthsPerPage = 6;
+                  const maxPage = Math.max(0, Math.ceil(salesMonths / monthsPerPage) - 1);
+                  const page = Math.min(salesCalendarPage, maxPage);
+                  const pageStartIndex = page * monthsPerPage;
+                  const visibleMonths = salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage);
+                  const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+                  return <div className="mb-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2"><div><p className="text-[11px] font-black text-slate-800">خريطة البيع القريبة</p><p className="text-[9px] text-slate-500">ستة أشهر واضحة بدل شريط طويل غير مقروء</p></div><div className="flex items-center gap-1"><Button type="button" size="sm" variant="outline" disabled={page === 0} onClick={() => setSalesCalendarPage(Math.max(0, page - 1))} className="h-7 px-2 text-[10px]">التالي</Button><span className="min-w-16 text-center text-[9px] font-bold text-slate-500">{page + 1} / {maxPage + 1}</span><Button type="button" size="sm" variant="outline" disabled={page === maxPage} onClick={() => setSalesCalendarPage(Math.min(maxPage, page + 1))} className="h-7 px-2 text-[10px]">السابق</Button></div></div>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const monthIndex = projectStartDate ? ((Number(projectStartDate.split("-")[1]) - 1 + absoluteMonth - 1) % 12 + 12) % 12 : -1; const percentage = offPlanUnits ? Math.round((units / offPlanUnits) * 100) : 0; return <div key={absoluteMonth} className={`rounded-xl border p-2 text-center ${units > 0 ? "border-emerald-200 bg-white" : "border-slate-200 bg-white/60"}`}><p className="text-[9px] font-bold text-slate-500">{monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`}</p><p className="mt-1 text-lg font-black text-emerald-700">{units}</p><p className="text-[8px] text-slate-500">وحدة · {percentage}%</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, Math.max(0, (units / Math.max(...salesDistribution, 1)) * 100))}%` }} /></div></div>; })}</div>
+                  </div>;
+                })()}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 rounded-xl border border-blue-100 bg-gradient-to-l from-blue-50/80 via-white to-emerald-50/50 p-3">
                   <div>
                     <p className="text-[10px] font-bold text-slate-700">1. هدف البيع</p>
