@@ -1228,9 +1228,15 @@
 - [x] Conduct a non-destructive whole-application audit of modules, routes, data-entry points, sources, and reporting dependencies
 - [x] Assess application workflows and information-sharing needs for the owner, Sheikh Issa, and Wael without treating the app as a general employee portal
 - [x] Present a fact-based consolidation roadmap identifying duplicated inputs, broken links, incomplete workflows, and the next agreed operating model before implementation
-- [ ] Assess the existing aggregated portfolio cash-flow report and define decision-oriented enhancements for Sheikh Issa without changing its calculations
-- [ ] Discuss and approve the executive aggregated cash-flow report specification before implementation
-- [ ] Define an executive first-screen cash-flow alert showing required amounts, project sources, and timing for the next three or four months without changing Financial Studies calculations
+- [x] Assess the existing aggregated portfolio cash-flow report and define decision-oriented enhancements for Sheikh Issa without changing its calculations
+- [x] Discuss and approve the executive aggregated cash-flow report specification before implementation
+- [x] Define an executive first-screen cash-flow alert showing required amounts, project sources, and timing for the next three or four months without changing Financial Studies calculations
+- [x] Build Sheikh Issa’s read-only four-month portfolio cash-flow alert from the current aggregation source, with month cards, project drivers, and a link to the full report
+- [x] Complete executive-alert validation without requiring the owner to perform technical login or test steps, while reporting any live-access limitation transparently
+- [x] Diagnose and repair the reported Command Center login failure before relying on it for Sheikh Issa’s executive alert
+- [x] Repair stale Command Center tile references that crash the dashboard after valid member login
+- [x] Restore the Command Center member-role mapping so existing executive and admin access rules receive the stored role correctly
+- [x] Make the executive alert’s full-report action open the exact current Project Aggregation tab inside Financial Studies
 - [x] Audit Wael’s current sales and marketing input journey to identify repeated, unnecessary, or difficult steps before simplifying it
 - [x] Keep payment requests as an independent Command Center workflow linked to project and supporting documents, not to sales planning
 - [x] Define a dedicated interactive Sales and Marketing simulator for Wael with live monthly sales, collection, marketing, and escrow effects before redesigning the existing pages

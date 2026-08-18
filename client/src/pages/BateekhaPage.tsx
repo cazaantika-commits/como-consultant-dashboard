@@ -85,7 +85,7 @@ function TabContent({ tabId }: { tabId: TabId }) {
 }
 
 export default function BateekhaPage() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const { user } = useAuth();
@@ -98,6 +98,14 @@ export default function BateekhaPage() {
   useEffect(() => {
     setActiveTab((currentTab) => currentTab ? getFallbackFinancialStudiesTab(currentTab, projectType) : null);
   }, [projectType]);
+
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab") as TabId | null;
+    if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && isFinancialStudiesTabVisible(requestedTab, projectType)) {
+      setActiveTab(requestedTab);
+      setOpenGroupId(null);
+    }
+  }, [location, projectType]);
 
   const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
   const visibleTabIds = new Set(visibleTabs.map((tab) => tab.id));

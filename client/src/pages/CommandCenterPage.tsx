@@ -113,6 +113,7 @@ import GeneralRequestsPage from "./GeneralRequests";
 import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
+import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -4274,6 +4275,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
       <div className="w-full px-4 py-4">
+        <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} />
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-3xl mb-4 shadow-lg"
           style={{background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 60%, #f8f6ff 100%)', border: '1.5px solid #e5e7eb'}}>
@@ -4518,10 +4520,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             );
           };
 
-          // BUBBLES index reference:
-          // 0=محفظة رأس المال, 1=التقارير المالية, 2=طلبات الصرف, 3=تقييم الاستشاريين
-          // 4=المراحل والأداء, 5=الاعتمادات الرسمية, 6=التقارير, 7=محاضر الاجتماعات
-          // 8=برنامج العمل, 9=دراسة الجدوى, 10=الإعلانات
+          // Current BUBBLES index reference:
+          // 0=طلبات الصرف, 1=تقييم الاستشاريين, 2=المراحل والأداء, 3=الاعتمادات الرسمية
+          // 4=التقارير, 5=محاضر الاجتماعات, 6=برنامج العمل, 7=الإعلانات, 8=التواصل الداخلي
 
           // Hero priority card — large horizontal card for payment/general requests
           const HeroPriorityCard = ({ bubble, accentColor, gradientFrom, gradientTo }: {
@@ -4597,8 +4598,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">الأولوية القصوى</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <HeroPriorityCard bubble={BUBBLES[2]} accentColor="#f59e0b" gradientFrom="#f59e0b" gradientTo="#d97706" />
-                  <HeroPriorityCard bubble={BUBBLES[5]} accentColor="#f97316" gradientFrom="#ea580c" gradientTo="#c2410c" />
+                  <HeroPriorityCard bubble={BUBBLES[0]} accentColor="#f59e0b" gradientFrom="#f59e0b" gradientTo="#d97706" />
+                  <HeroPriorityCard bubble={BUBBLES[3]} accentColor="#f97316" gradientFrom="#ea580c" gradientTo="#c2410c" />
                 </div>
               </div>
 
@@ -4609,10 +4610,10 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">المالية والتشغيل</span>
                 </div>
                 <div className="grid grid-cols-4 gap-4">
-                  <CardTile bubble={BUBBLES[0]} size="md" />
                   <CardTile bubble={BUBBLES[1]} size="md" />
-                  <CardTile bubble={BUBBLES[3]} size="md" />
+                  <CardTile bubble={BUBBLES[2]} size="md" />
                   <CardTile bubble={BUBBLES[4]} size="md" />
+                  <CardTile bubble={BUBBLES[5]} size="md" />
                 </div>
               </div>
 
@@ -4625,11 +4626,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <div className="grid grid-cols-4 gap-4">
                   <IconTile bubble={BUBBLES[6]} size="md" />
                   <IconTile bubble={BUBBLES[7]} size="md" />
-                  <IconTile bubble={BUBBLES[12]} size="md" />
-                  <IconTile bubble={BUBBLES[8]} size="sm" />
-                  <IconTile bubble={BUBBLES[9]} size="sm" />
-                  <IconTile bubble={BUBBLES[10]} size="sm" />
-                  <IconTile bubble={BUBBLES[11]} size="sm" />
+                  <IconTile bubble={BUBBLES[8]} size="md" />
                 </div>
               </div>
             </div>

@@ -46,7 +46,10 @@ async function verifyToken(token: string) {
     .set({ lastAccessAt: new Date() })
     .where(eq(commandCenterMembers.id, member.id));
   
-  return member;
+  // The database field is named memberRole, while the existing Command Center
+  // authorization code consistently reads member.role. Preserve the stored
+  // record and expose the expected normalized role for every caller.
+  return { ...member, role: member.memberRole };
 }
 
 // --- Helper: Generate secure token ---
