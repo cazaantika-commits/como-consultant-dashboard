@@ -32,4 +32,13 @@ describe("Wael professional decision workspace", () => {
     expect(navigationSource).toContain("المبيعات والتسويق — مساحة وائل");
     expect(navigationSource).not.toContain('id: "marketing"');
   });
+
+  it("uses a visible twelve-month direct-input sales board with synchronized units and percentage controls", () => {
+    expect(workspaceSource).toContain("const monthsPerPage = 12");
+    expect(workspaceSource).toContain("لوحة البيع التفاعلية");
+    expect(workspaceSource).toContain("12 شهرًا واضحًا");
+    expect(workspaceSource).toContain("وحدات ${monthIndex");
+    expect(workspaceSource).toContain("نسبة ${monthIndex");
+    expect(workspaceSource).toContain("updateSalesMonth(salesIndex");
+  });
 });

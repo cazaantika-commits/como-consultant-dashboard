@@ -1254,3 +1254,4 @@
 - [x] Preserve every existing Sales, Marketing, payment-plan, collection, escrow, and investor-cash-flow data contract while replacing only the interaction and visual presentation
 - [x] Replace the default dense month-by-month Sales Plan grid with a goal-and-pace planner, leaving the raw synchronized unit/percentage editor only for explicit precision editing
 - [x] Redesign Wael’s input controls, month visibility, and decision flow so the interface is visually smoother and more immediately understandable than the current staged layout
+- [x] Replace the six-month Sales Plan display with a twelve-month visible board whose month cards are the direct synchronized unit-and-percentage inputs
