@@ -27,4 +27,10 @@ describe("Investor Cash Flow readability layout", () => {
     expect(source).not.toContain('px-3 py-2 text-gray-800 font-semibold');
     expect(source).not.toContain('px-1.5 py-2 text-center tabular-nums');
   });
+
+  it("keeps the detail table beneath a decision-first investor position layer", () => {
+    expect(source).toContain("موقف المستثمر — مباشر");
+    expect(source).toContain("أعلى ضغط تمويلي");
+    expect(source).toContain("نبض الضغط والعودة الشهري");
+  });
 });

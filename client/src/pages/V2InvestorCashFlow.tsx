@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { ArrowRight, Download, Loader2 } from "lucide-react";
+import { ArrowRight, CalendarClock, Download, Loader2, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -103,6 +103,32 @@ export default function V2InvestorCashFlow() {
     post: "bg-emerald-50 text-emerald-700",
   };
 
+  const phaseNames = {
+    design: "تصميم",
+    construction: "إنشاء",
+    post: "ما بعد الإنجاز",
+  };
+
+  const monthCaption = (index: number) => {
+    const month = months[index];
+    return month ? `${phaseNames[month.phase]} ${month.label}` : "—";
+  };
+
+  const deepestFundingPoint = cumulative.reduce(
+    (current, value, index) => value < current.value ? { value, index } : current,
+    { value: 0, index: -1 },
+  );
+  const firstReceiptIndex = creditTotals.findIndex((value) => value > 0);
+  const largestReceipt = creditTotals.reduce(
+    (current, value, index) => value > current.value ? { value, index } : current,
+    { value: 0, index: -1 },
+  );
+  const largestFundingMonth = debitTotals.reduce(
+    (current, value, index) => value > current.value ? { value, index } : current,
+    { value: 0, index: -1 },
+  );
+  const pulseScale = Math.max(...netFlow.map((value) => Math.abs(value)), 1);
+
   // ─── Loading state ─────────────────────────────────────────────────────
   if (projectQuery.isLoading) {
     return (
@@ -148,6 +174,82 @@ export default function V2InvestorCashFlow() {
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-200"></span> إنشاء ({constructionDuration} شهر)</span>
         <span className="flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded bg-emerald-100 border border-emerald-200"></span> ما بعد الإنجاز ({postDuration} شهر)</span>
       </div>
+
+      {/* Decision layer — all values are derived from the existing monthly arrays above. */}
+      <section className="border-b border-slate-200 bg-slate-100 px-5 py-4">
+        <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="rounded-2xl bg-slate-950 p-5 text-white shadow-lg shadow-slate-950/15">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
+              <WalletCards className="h-4 w-4 text-cyan-300" />
+              موقف المستثمر — مباشر
+            </div>
+            <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{fmt(profit)}</p>
+            <p className="mt-1 text-xs text-slate-400">صافي النتيجة المتوقعة بعد جميع التدفقات</p>
+            <div className="mt-5 border-t border-white/10 pt-4">
+              <div className="flex items-start gap-2">
+                <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-200">أعلى ضغط تمويلي</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-rose-200">{fmt(Math.abs(deepestFundingPoint.value))}</p>
+                  <p className="text-[11px] text-slate-400">{deepestFundingPoint.index >= 0 ? monthCaption(deepestFundingPoint.index) : "لا يوجد عجز تراكمي"}</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+              <div>
+                <p className="text-xs font-semibold text-cyan-700">لوحة القرار</p>
+                <h2 className="mt-1 text-lg font-bold text-slate-950">متى يحتاج المشروع إلى رأس مال، ومتى يعيده؟</h2>
+                <p className="mt-1 text-xs text-slate-500">تُقرأ الأرقام التنفيذية هنا أولًا؛ ويبقى جدول الأشهر أدناه مرجع التدقيق الكامل.</p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{totalMonths} شهرًا ماليًا</div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+              <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+                <p className="text-xs font-semibold text-rose-700">إجمالي المطلوب من المستثمر</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{fmt(totalDebit)}</p>
+                <p className="mt-1 text-[11px] text-rose-700">أكبر دفعة: {fmt(largestFundingMonth.value)} · {monthCaption(largestFundingMonth.index)}</p>
+              </div>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                <p className="text-xs font-semibold text-emerald-700">إجمالي المستلم للمستثمر</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{fmt(totalCredit)}</p>
+                <p className="mt-1 text-[11px] text-emerald-700">أول استلام: {firstReceiptIndex >= 0 ? monthCaption(firstReceiptIndex) : "—"}</p>
+              </div>
+              <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
+                <p className="text-xs font-semibold text-violet-700">أكبر تدفق عائد</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{fmt(largestReceipt.value)}</p>
+                <p className="mt-1 text-[11px] text-violet-700">{largestReceipt.index >= 0 ? monthCaption(largestReceipt.index) : "لا يوجد استلام بعد"}</p>
+              </div>
+              <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-3">
+                <p className="text-xs font-semibold text-cyan-700">صافي الربحية المتوقع</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-cyan-950">{fmt(profit)}</p>
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-cyan-700"><TrendingUp className="h-3 w-3" /> إيرادات ناقص مصروفات المستثمر</p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700"><CalendarClock className="h-4 w-4 text-cyan-700" /> نبض الضغط والعودة الشهري</div>
+                <span className="text-[11px] text-slate-500">أحمر = تمويل مطلوب · أخضر = تدفق عائد</span>
+              </div>
+              <div className="mt-3 flex h-12 items-end gap-px" aria-label="نبض صافي التدفق الشهري">
+                {netFlow.map((value, index) => {
+                  const height = Math.max(8, Math.round((Math.abs(value) / pulseScale) * 100));
+                  return (
+                    <div key={index} className="group relative flex h-full flex-1 items-end" title={`${monthCaption(index)}: ${fmt(value)}`}>
+                      <div className={`w-full rounded-t-sm ${value >= 0 ? "bg-emerald-400" : "bg-rose-400"}`} style={{ height: `${height}%` }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>{monthCaption(0)}</span><span>{monthCaption(totalMonths - 1)}</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Main Table */}
       <div className="overflow-x-auto">

@@ -1258,3 +1258,6 @@
 - [x] Benchmark professional sales forecasting, payment planning, and scenario-analysis interfaces before rebuilding Wael’s interaction model
 - [x] Rebuild Wael’s workspace as a cohesive professional scenario canvas with large direct inputs and an in-context decision-impact panel instead of separate table-derived rooms
 - [x] Clamp invalid negative legacy monthly sales values before they reach Wael’s direct-input canvas or downstream live-impact display
+- [x] Inspect the current Investor Cash Flow and Escrow Cash Flow screens, including their decision hierarchy, readability, and interaction constraints
+- [x] Benchmark professional cash-flow, liquidity, and risk-dashboard patterns relevant to investor and escrow reporting
+- [x] Redesign Investor Cash Flow and Escrow Cash Flow into consistent decision-first presentations without changing figures, financial rules, sources, or frozen portfolio reports
