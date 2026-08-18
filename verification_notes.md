@@ -185,3 +185,11 @@ Finally, the direct **دراسة جدوى المستثمر** card was opened fro
 The authenticated dashboard was reviewed after the approved first consolidation. **التقارير المالية (V2)** is no longer present among the main dashboard cards, while **الدراسات والتخطيط المالي** remains visible as the sole main-dashboard entry for the unified current financial workflow. No report component, V2 route, Financial Studies route, calculation, or data source was removed.
 
 The authenticated **الدراسات والتخطيط الاستراتيجي** guide was then opened. It shows exactly its four retained cards—**بطاقة المشروع**; **المعرفة والتحليل**; **التخطيط المالي**; and **محفظة رأس المال الديناميكية**. The duplicate **دراسة جدوى المستثمر** card is absent. This confirms that only the approved card was removed; the other Strategic Studies sections remain available.
+
+## Complete removal of obsolete Financial Planning and Dynamic Capital Portfolio — 18 August 2026
+
+After the user expanded the approved scope to remove these old features everywhere, the authenticated Strategic Studies guide was checked again. It now contains only **بطاقة المشروع** and **المعرفة والتحليل**; the old **التخطيط المالي** and **محفظة رأس المال الديناميكية** cards are absent. The Command Center URL itself requires a separate Command Center access code in this browser session, so its visual bubble grid could not be reviewed live; the removal of its four obsolete financial bubbles and branches is covered by the focused source-level regression suite.
+
+The current **الدراسات والتخطيط المالي** guide was opened after the cleanup and remained fully available. Its current five sections still appear, including the current **التخطيط المالي** section. Opening it showed its dedicated **تدفقات المستثمر** and **تدفقات الإسكرو** cards. These are the current unified Financial Studies reports and are distinct from the deleted legacy Financial Planning and Dynamic Capital Portfolio launchers.
+
+The current **تدفقات المستثمر** card was opened directly after the cleanup. The live Majan report loaded with its saved figures—AED 202.2M required from the investor, AED 526.5M received by the investor, and AED 324.4M net—along with the full monthly cash-flow table. This confirms that deleting the old legacy launchers did not affect the current Financial Studies report or its saved project data.

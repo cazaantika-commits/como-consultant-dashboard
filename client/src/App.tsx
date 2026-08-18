@@ -51,7 +51,6 @@ import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
 import ProgramCashFlowPage from "./pages/ProgramCashFlowPage";
 import ExcelCashFlowPage from "./pages/ExcelCashFlowPage";
 import EscrowCashFlowPage from "./pages/EscrowCashFlowPage";
-import FinancialCommandCenter from "./pages/FinancialCommandCenter";
 import CapitalPlanningDashboard from "./pages/CapitalPlanningDashboard";
 import CapitalSchedulingPage from "./pages/CapitalSchedulingPage";
 import ConsultantsRegistry from "./pages/ConsultantsRegistry";
@@ -68,8 +67,6 @@ import WorkSchedulePage from "./pages/WorkSchedulePage";
 import CashFlowSettingsPage from "./pages/CashFlowSettingsPage";
 import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
 import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
-import PortfolioAllScenariosPage from "./pages/PortfolioAllScenariosPage";
-import CapitalPortfolioPage from "./pages/CapitalPortfolioPage";
 import PortfolioSummaryReport from "./pages/PortfolioSummaryReport";
 import EngineComparisonPage from "./pages/EngineComparisonPage";
 import ProjectCardOffplanPage from "./pages/ProjectCardOffplanPage";
@@ -113,7 +110,6 @@ function Router() {
       <Route path="/program-cashflow" component={ProgramCashFlowPage} />
       <Route path="/excel-cashflow" component={ExcelCashFlowPage} />
       <Route path="/escrow-cashflow" component={EscrowCashFlowPage} />
-      <Route path="/financial-command-center" component={FinancialCommandCenter} />
       <Route path="/capital-planning" component={CapitalPlanningDashboard} />
       <Route path="/capital-scheduling" component={CapitalSchedulingPage} />
       <Route path="/consultants-registry" component={ConsultantsRegistry} />
@@ -162,8 +158,6 @@ function Router() {
       <Route path="/cashflow-settings" component={CashFlowSettingsPage} />
       <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
       <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
-      <Route path="/portfolio-scenarios" component={PortfolioAllScenariosPage} />
-      <Route path="/capital-portfolio" component={CapitalPortfolioPage} />
       <Route path="/portfolio-summary-report" component={PortfolioSummaryReport} />
       <Route path="/engine-comparison" component={EngineComparisonPage} />
       <Route path="/project-card" component={ProjectCardOffplanPage} />

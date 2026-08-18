@@ -4,99 +4,26 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Layers } from "lucide-react";
 import FactSheetPage from "./FactSheetPage";
 import KnowledgeHubPage from "./KnowledgeHubPage";
-import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
-import CapitalPortfolioPage from "./CapitalPortfolioPage";
-import ProjectCardOffplanPage from "./ProjectCardOffplanPage";
-import PricingPage from "./PricingPage";
-import InvestorCashFlowSchedulePage from "./InvestorCashFlowSchedulePage";
-import EscrowCashFlowSchedulePage2 from "./EscrowCashFlowSchedulePage2";
-import ConsolidatedInvestorCashFlowPage from "./ConsolidatedInvestorCashFlowPage";
-import GeneralInputsPage from "./GeneralInputsPage";
-import ConstructionInputsPage from "./ConstructionInputsPage";
-import V2WaelSales from "./V2WaelSales";
-import SettingsRulesPage from "./SettingsRulesPage";
 
-type View = "icons" | "fact-sheet" | "knowledge" | "financial" | "dynamic-portfolio" | "investor-study";
+type View = "icons" | "fact-sheet" | "knowledge";
 
-// Custom SVG icon components for each section
 const FactSheetIcon = () => (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    <rect x="8" y="4" width="28" height="36" rx="4" fill="white" fillOpacity="0.25"/>
-    <rect x="8" y="4" width="28" height="36" rx="4" stroke="white" strokeWidth="2"/>
-    <path d="M14 14h16M14 20h16M14 26h10" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-    <circle cx="36" cy="36" r="8" fill="white" fillOpacity="0.3"/>
-    <path d="M33 36l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <rect x="8" y="4" width="28" height="36" rx="4" fill="white" fillOpacity="0.25" />
+    <rect x="8" y="4" width="28" height="36" rx="4" stroke="white" strokeWidth="2" />
+    <path d="M14 14h16M14 20h16M14 26h10" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+    <circle cx="36" cy="36" r="8" fill="white" fillOpacity="0.3" />
+    <path d="M33 36l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
 const KnowledgeIcon = () => (
   <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    <circle cx="24" cy="18" r="10" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="2"/>
-    <path d="M18 18c0-3.3 2.7-6 6-6s6 2.7 6 6c0 2.5-1.5 4.6-3.7 5.5L26 28h-4l-.3-4.5C19.5 22.6 18 20.5 18 18z" fill="white"/>
-    <rect x="20" y="30" width="8" height="2.5" rx="1.25" fill="white"/>
-    <rect x="21" y="34" width="6" height="2.5" rx="1.25" fill="white"/>
-    <path d="M8 38c2-4 5-6 8-7M40 38c-2-4-5-6-8-7" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
-  </svg>
-);
-
-const FinancialIcon = () => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    <rect x="4" y="28" width="8" height="14" rx="2" fill="white" fillOpacity="0.5"/>
-    <rect x="14" y="20" width="8" height="22" rx="2" fill="white" fillOpacity="0.7"/>
-    <rect x="24" y="12" width="8" height="30" rx="2" fill="white"/>
-    <rect x="34" y="6" width="8" height="36" rx="2" fill="white" fillOpacity="0.85"/>
-    <path d="M6 24l10-8 10-6 10-6" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/>
-    <circle cx="6" cy="24" r="2.5" fill="white"/>
-    <circle cx="16" cy="16" r="2.5" fill="white"/>
-    <circle cx="26" cy="10" r="2.5" fill="white"/>
-    <circle cx="36" cy="4" r="2.5" fill="white"/>
-  </svg>
-);
-
-const PortfolioIcon = () => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    <rect x="4" y="14" width="18" height="14" rx="3" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="2"/>
-    <rect x="26" y="14" width="18" height="14" rx="3" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="2"/>
-    <rect x="4" y="32" width="18" height="10" rx="3" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="2"/>
-    <rect x="26" y="32" width="18" height="10" rx="3" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="2"/>
-    <path d="M13 6h22" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-    <path d="M24 6v8" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-    <path d="M10 21h6M30 21h6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M10 38h6M30 38h6" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
-const InvestorStudyIcon = () => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    <rect x="6" y="8" width="36" height="32" rx="4" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="2"/>
-    <path d="M12 18h24M12 24h18M12 30h12" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="36" cy="32" r="6" fill="white" fillOpacity="0.4"/>
-    <path d="M34 32l1.5 1.5 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const DynamicPortfolioIcon = () => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
-    {/* Grid of project cards */}
-    <rect x="4" y="12" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="1.5"/>
-    <rect x="22" y="12" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.3" stroke="white" strokeWidth="1.5"/>
-    <rect x="4" y="26" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="1.5"/>
-    <rect x="22" y="26" width="14" height="10" rx="2.5" fill="white" fillOpacity="0.5" stroke="white" strokeWidth="1.5"/>
-    {/* Dynamic arrows / switch indicator */}
-    <path d="M40 16l4 4-4 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M40 28l4 4-4 4" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-    {/* O1/O2/O3 labels */}
-    <circle cx="11" cy="8" r="3.5" fill="white" fillOpacity="0.6"/>
-    <circle cx="24" cy="8" r="3.5" fill="white" fillOpacity="0.8"/>
-    <circle cx="37" cy="8" r="3.5" fill="white"/>
-    <text x="11" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">1</text>
-    <text x="24" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">2</text>
-    <text x="37" y="10" textAnchor="middle" fill="currentColor" fontSize="5" fontWeight="bold" opacity="0.7">3</text>
-    {/* Mini bar charts inside cards */}
-    <path d="M7 19v-2M10 19v-3M13 19v-1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M25 19v-1.5M28 19v-3M31 19v-2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M7 33v-2M10 33v-1M13 33v-3" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-    <path d="M25 33v-3M28 33v-1.5M31 33v-2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="24" cy="18" r="10" fill="white" fillOpacity="0.25" stroke="white" strokeWidth="2" />
+    <path d="M18 18c0-3.3 2.7-6 6-6s6 2.7 6 6c0 2.5-1.5 4.6-3.7 5.5L26 28h-4l-.3-4.5C19.5 22.6 18 20.5 18 18z" fill="white" />
+    <rect x="20" y="30" width="8" height="2.5" rx="1.25" fill="white" />
+    <rect x="21" y="34" width="6" height="2.5" rx="1.25" fill="white" />
+    <path d="M8 38c2-4 5-6 8-7M40 38c-2-4-5-6-8-7" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
   </svg>
 );
 
@@ -119,51 +46,21 @@ const SECTIONS = [
     borderColor: "#7c3aed",
     description: "الدراسات والأبحاث والبيانات والمخاطر",
   },
-  {
-    id: "financial" as View,
-    label: "التخطيط المالي",
-    SvgIcon: FinancialIcon,
-    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
-    shadow: "rgba(59, 130, 246, 0.35)",
-    borderColor: "#3b82f6",
-    description: "الجدوى المالية والتدفقات النقدية وجدول التكاليف",
-  },
-  {
-    id: "dynamic-portfolio" as View,
-    label: "محفظة رأس المال الديناميكية",
-    SvgIcon: DynamicPortfolioIcon,
-    gradient: "linear-gradient(135deg, #e65100, #ff8f00)",
-    shadow: "rgba(230, 81, 0, 0.35)",
-    borderColor: "#e65100",
-    description: "اختيار السيناريو (O1/O2/O3) لكل مشروع بشكل مستقل مع تحكم بالتأخير",
-  },
 ];
 
 export default function ProjectManagementPage() {
   const [, navigate] = useLocation();
   const [activeView, setActiveView] = useState<View>("icons");
 
-  // Sub-views
   if (activeView === "fact-sheet") {
     return <FactSheetPage embedded onBack={() => setActiveView("icons")} />;
   }
   if (activeView === "knowledge") {
     return <KnowledgeHubPage onBack={() => setActiveView("icons")} />;
   }
-  if (activeView === "financial") {
-    return <FinancialPlanningHubPage onBack={() => setActiveView("icons")} />;
-  }
-  if (activeView === "dynamic-portfolio") {
-    return <CapitalPortfolioPage onBack={() => setActiveView("icons")} />;
-  }
-  if (activeView === "investor-study") {
-    return <InvestorStudyHub onBack={() => setActiveView("icons")} />;
-  }
 
-  // Icons grid
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
@@ -180,14 +77,13 @@ export default function ProjectManagementPage() {
         </div>
       </header>
 
-      {/* 5 Cards Grid */}
       <main className="max-w-5xl mx-auto px-6 py-12">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-bold text-foreground mb-2">الدراسات والتخطيط الاستراتيجي</h2>
           <p className="text-sm text-muted-foreground">اختر القسم المطلوب للبدء</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
           {SECTIONS.map((section) => {
             const { SvgIcon } = section;
             return (
@@ -195,39 +91,16 @@ export default function ProjectManagementPage() {
                 key={section.id}
                 onClick={() => setActiveView(section.id)}
                 className="group relative rounded-2xl border bg-card text-right overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-xl p-6"
-                style={{
-                  borderColor: section.borderColor + "40",
-                  boxShadow: `0 4px 20px ${section.shadow}`,
-                }}
+                style={{ borderColor: section.borderColor + "40", boxShadow: `0 4px 20px ${section.shadow}` }}
               >
-                {/* Background gradient overlay */}
-                <div
-                  className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity"
-                  style={{ background: section.gradient }}
-                />
-                {/* Top accent line */}
-                <div
-                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-                  style={{ backgroundColor: section.borderColor }}
-                />
-
-                {/* SVG Icon */}
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
-                  style={{ background: section.gradient, boxShadow: `0 6px 20px ${section.shadow}` }}
-                >
+                <div className="absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity" style={{ background: section.gradient }} />
+                <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ backgroundColor: section.borderColor }} />
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300" style={{ background: section.gradient, boxShadow: `0 6px 20px ${section.shadow}` }}>
                   <SvgIcon />
                 </div>
-
-                {/* Text */}
                 <h3 className="text-base font-bold text-foreground mb-1 relative z-10">{section.label}</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed relative z-10">{section.description}</p>
-
-                {/* Arrow */}
-                <div
-                  className="mt-4 flex items-center gap-1 text-xs font-medium transition-colors relative z-10"
-                  style={{ color: section.borderColor }}
-                >
+                <div className="mt-4 flex items-center gap-1 text-xs font-medium transition-colors relative z-10" style={{ color: section.borderColor }}>
                   <span>فتح القسم</span>
                   <ArrowRight className="w-3.5 h-3.5 rotate-180" />
                 </div>
@@ -236,92 +109,6 @@ export default function ProjectManagementPage() {
           })}
         </div>
       </main>
-    </div>
-  );
-}
-
-// ─── Investor Study Hub (sub-view with tabs for the 5 new pages) ───
-function InvestorStudyHub({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState<"general" | "construction" | "wael" | "settings" | "card" | "pricing" | "investor-cf" | "escrow-cf" | "consolidated">("general");
-
-  const inputTabs = [
-    { id: "general" as const, label: "الإدخالات العامة", emoji: "📋" },
-    { id: "construction" as const, label: "الإنشاء", emoji: "🏗️" },
-    { id: "wael" as const, label: "المبيعات والتسويق", emoji: "📊" },
-    { id: "settings" as const, label: "الإعدادات", emoji: "⚙️" },
-  ];
-
-  const outputTabs = [
-    { id: "card" as const, label: "البطاقة التعريفية" },
-    { id: "pricing" as const, label: "التسعير" },
-    { id: "investor-cf" as const, label: "تدفقات المستثمر" },
-    { id: "escrow-cf" as const, label: "تدفقات الضمان" },
-    { id: "consolidated" as const, label: "التقرير المجمّع" },
-  ];
-
-  return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5">
-            <ArrowRight className="w-4 h-4" />
-            رجوع
-          </Button>
-          <div className="h-5 w-px bg-border" />
-          <h1 className="text-sm font-bold text-foreground">دراسة جدوى المستثمر</h1>
-        </div>
-      </header>
-
-      {/* Tabs - Two Groups */}
-      <div className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-6 flex gap-1 overflow-x-auto items-center">
-          {/* Input Tabs */}
-          {inputTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "border-emerald-600 text-emerald-700"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <span className="ml-1">{tab.emoji}</span>
-              {tab.label}
-            </button>
-          ))}
-          {/* Separator */}
-          <div className="h-6 w-px bg-border mx-2" />
-          {/* Output Tabs */}
-          {outputTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-0">
-        {activeTab === "general" && <GeneralInputsPage embedded />}
-        {activeTab === "construction" && <ConstructionInputsPage embedded />}
-        {activeTab === "wael" && <V2WaelSales embedded />}
-        {activeTab === "settings" && <SettingsRulesPage embedded />}
-        {activeTab === "card" && <ProjectCardOffplanPage />}
-        {activeTab === "pricing" && <PricingPage />}
-        {activeTab === "investor-cf" && <InvestorCashFlowSchedulePage />}
-        {activeTab === "escrow-cf" && <EscrowCashFlowSchedulePage2 />}
-        {activeTab === "consolidated" && <ConsolidatedInvestorCashFlowPage />}
-      </div>
     </div>
   );
 }

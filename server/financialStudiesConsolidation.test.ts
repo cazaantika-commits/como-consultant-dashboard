@@ -17,11 +17,12 @@ describe("approved Financial Studies navigation consolidation", () => {
     expect(homeSource).toContain('id: "tool-wael-sales"');
   });
 
-  it("removes only the approved Investor Study card from Strategic Studies", () => {
+  it("retains only the independent Strategic Studies cards after legacy financial cleanup", () => {
     expect(strategicStudiesSource).not.toContain('id: "investor-study" as View');
     expect(strategicStudiesSource).toContain('id: "fact-sheet" as View');
-    expect(strategicStudiesSource).toContain('id: "financial" as View');
-    expect(strategicStudiesSource).toContain('id: "dynamic-portfolio" as View');
+    expect(strategicStudiesSource).toContain('id: "knowledge" as View');
+    expect(strategicStudiesSource).not.toContain('id: "financial" as View');
+    expect(strategicStudiesSource).not.toContain('id: "dynamic-portfolio" as View');
   });
 
   it("retains legacy V2 routes and the unified Financial Studies route", () => {

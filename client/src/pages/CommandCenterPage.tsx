@@ -65,7 +65,6 @@ import {
   FileUp,
   HelpCircle,
   Layers,
-  Wallet,
   FileBarChart2,
   PieChart,
   BarChart2,
@@ -109,86 +108,11 @@ import {
 
 // Lazy imports for embedded pages
 import WorkSchedulePage from "./WorkSchedulePage";
-import CapitalPortfolioPage from "./CapitalPortfolioPage";
 import PaymentRequestsPage from "./PaymentRequests";
 import GeneralRequestsPage from "./GeneralRequests";
 import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
-import CapitalScheduleTablePage from "./CapitalScheduleTablePage";
-import FinancialPlanningHubPage from "./FinancialPlanningHubPage";
-// Old financial components removed - now using iframe embeds
-
-// --- Financial Reports View (read-only, embedded in Command Center) ---
-const CC_REPORTS_TABS = [
-  { id: "feasibility", label: "ملخص الجدوى المالية", src: "/feasibility-summary.html" },
-  { id: "capital", label: "خطة رأس مال المشروع", src: "/capital-plan.html" },
-  { id: "escrow", label: "التدفقات النقدية وحساب الضمان", src: "/escrow-cashflow.html" },
-] as const;
-type CCFinancialTab = (typeof CC_REPORTS_TABS)[number]["id"];
-
-function FinancialReportsView({ onBack, projectsList }: { onBack: () => void; projectsList: any[] }) {
-  const [activeTab, setActiveTab] = useState<CCFinancialTab>("feasibility");
-  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
-  const tabSrc = CC_REPORTS_TABS.find((t) => t.id === activeTab)?.src;
-  const currentSrc = tabSrc && selectedProjectId ? `${tabSrc}?projectId=${selectedProjectId}` : undefined;
-
-  return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0">
-            <ArrowLeft className="w-4 h-4" /> العودة
-          </Button>
-          <div className="h-5 w-px bg-border" />
-          <h1 className="text-sm font-bold text-foreground">تقارير التخطيط المالي</h1>
-          <div className="mr-auto">
-            <select
-              value={selectedProjectId ?? ""}
-              onChange={(e) => setSelectedProjectId(e.target.value ? Number(e.target.value) : null)}
-              className="text-xs h-8 px-2 rounded-md border border-border bg-background text-foreground focus:ring-1 focus:ring-primary"
-            >
-              <option value="">اختر المشروع...</option>
-              {projectsList?.map((p: any) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 flex gap-1 pb-0 overflow-x-auto">
-          {CC_REPORTS_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </header>
-      {currentSrc ? (
-        <iframe
-          key={currentSrc}
-          src={currentSrc}
-          className="flex-1 w-full border-0"
-          style={{ minHeight: "calc(100vh - 7rem)" }}
-          title="تقارير التخطيط المالي"
-        />
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center p-8 rounded-xl bg-amber-50 border border-amber-200">
-            <p className="text-amber-800 text-sm font-medium">اختر مشروعاً من القائمة أعلاه أولاً</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -378,8 +302,6 @@ const CRITERIA = [
 // --- Bubble Config ---
 const BUBBLES = [
   // ── PRIORITY 1: Financial Core (Hero cards) ──
-  { type: "capital_portfolio" as const, label: "محفظة رأس المال", icon: Wallet, color: "from-indigo-600 to-indigo-800", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", shape: "hexagon" },
-  { type: "financial_reports" as const, label: "التقارير المالية", icon: BarChart2, color: "from-emerald-500 to-teal-700", bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", shape: "diamond" },
   { type: "payment_requests" as const, label: "طلبات الصرف", icon: CreditCard, color: "from-amber-500 to-orange-700", bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", shape: "circle" },
 
   // ── PRIORITY 2: Operations & Evaluation ──
@@ -393,8 +315,6 @@ const BUBBLES = [
 
   // ── PRIORITY 4: Planning & Studies ──
   { type: "work_schedule" as const, label: "برنامج العمل", icon: CalendarDays, color: "from-teal-500 to-teal-700", bg: "bg-teal-50", border: "border-teal-200", text: "text-teal-700", shape: "rounded" },
-  { type: "capital_schedule" as const, label: "جدولة رأس المال", icon: BarChart2, color: "from-sky-500 to-blue-700", bg: "bg-sky-50", border: "border-sky-200", text: "text-sky-700", shape: "hexagon" },
-  { type: "feasibility_study" as const, label: "دراسة الجدوى", icon: TrendingUp, color: "from-fuchsia-500 to-violet-700", bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-700", shape: "diamond" },
   { type: "announcements" as const, label: "الإعلانات", icon: Megaphone, color: "from-red-500 to-rose-700", bg: "bg-rose-50", border: "border-rose-200", text: "text-rose-700", shape: "circle" },
   // ── PRIORITY 5: Internal Communication ──
   { type: "internal_messages" as const, label: "التواصل الداخلي", icon: MessageSquare, color: "from-indigo-500 to-violet-700", bg: "bg-indigo-50", border: "border-indigo-200", text: "text-indigo-700", shape: "rounded" },
@@ -4184,14 +4104,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showMilestonesKpis, setShowMilestonesKpis] = useState(false);
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
-  const [showFeasibilityStudy, setShowFeasibilityStudy] = useState(false);
-  const [showFinancialReports, setShowFinancialReports] = useState(false);
-  const [showCapitalPortfolio, setShowCapitalPortfolio] = useState(false);
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const [showGeneralRequests, setShowGeneralRequests] = useState(false);
   const [showInternalMessages, setShowInternalMessages] = useState(false);
-  const [showCapitalSchedule, setShowCapitalSchedule] = useState(false);
-  const projectsList = trpc.projects.list.useQuery();
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
@@ -4235,20 +4150,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }
 
-
-  // If viewing financial reports (read-only)
-  if (activeBubble === "financial_reports" && showFinancialReports) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <FinancialReportsView
-          onBack={() => { setActiveBubble(null); setShowFinancialReports(false); }}
-          projectsList={projectsList.data || []}
-        />
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
 
   // If viewing payment requests
   if (activeBubble === "payment_requests" && showPaymentRequests) {
@@ -4298,56 +4199,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
           <GeneralRequestsPage embedded={true} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
-
-  // If viewing capital schedule (editable)
-  if (activeBubble === "capital_schedule" && showCapitalSchedule) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="px-2 py-4">
-          <div className="flex items-center gap-2 mb-4 px-4">
-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalSchedule(false); }} className="text-slate-500">
-              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
-            </Button>
-          </div>
-          <CapitalScheduleTablePage embedded={true} />
-        </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
-
-  // If viewing capital portfolio (interactive, no persistence)
-  if (activeBubble === "capital_portfolio" && showCapitalPortfolio) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="px-2 py-4">
-          <div className="flex items-center justify-between mb-4 px-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowCapitalPortfolio(false); }} className="text-slate-500">
-                <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
-              </Button>
-              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">تحريك متاح • لا يحفظ</span>
-            </div>
-          </div>
-          <CapitalPortfolioPage />
-        </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
-
-  // If viewing feasibility study
-  if (activeBubble === "feasibility_study" && showFeasibilityStudy) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <FinancialPlanningHubPage onBack={() => { setActiveBubble(null); setShowFeasibilityStudy(false); }} />
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
@@ -4518,13 +4369,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             if (type === "milestones_kpis") { setActiveBubble("milestones_kpis"); setShowMilestonesKpis(true); }
             else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); }
             else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
-            else if (type === "feasibility_study") { setActiveBubble("feasibility_study"); setShowFeasibilityStudy(true); }
-            else if (type === "financial_reports") { setActiveBubble("financial_reports"); setShowFinancialReports(true); }
-            else if (type === "capital_portfolio") { setActiveBubble("capital_portfolio"); setShowCapitalPortfolio(true); }
             else if (type === "payment_requests") { setActiveBubble("payment_requests"); setShowPaymentRequests(true); }
             else if (type === "requests") { setActiveBubble("general_requests"); setShowGeneralRequests(true); }
             else if (type === "internal_messages") { setActiveBubble("internal_messages"); setShowInternalMessages(true); }
-            else if (type === "capital_schedule") { setActiveBubble("capital_schedule"); setShowCapitalSchedule(true); }
             else { setActiveBubble(type); }
           };
 
@@ -4564,8 +4411,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           };
 
           const subtitles: Record<string,string> = {
-            capital_portfolio: 'تحريك وتعديل رأس المال عبر المشاريع والمراحل',
-            financial_reports: 'تقارير الجدوى والتدفقات وحساب الضمان',
             payment_requests: 'إنشاء ومتابعة طلبات الصرف وسير الموافقة',
             evaluations: 'تقييم الاستشاريين الفنيين',
             milestones_kpis: 'متابعة المراحل ومؤشرات الأداء',

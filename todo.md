@@ -1203,3 +1203,11 @@
 - [x] Discuss and approve the exact legacy icons or links to remove only after the dependency audit is complete
 - [x] Remove only the approved duplicate "التقارير المالية (V2)" icon from the main dashboard while keeping all V2 pages and direct routes intact
 - [x] Remove only the approved duplicate "دراسة جدوى المستثمر" card from Strategic Studies while keeping all other Strategic Studies sections intact
+- [x] Audit the four remaining Strategic Studies cards individually and classify whether each is independent, overlapping, or safe to remove before any change
+- [x] Discuss and obtain approval for any further Strategic Studies card removal before implementation
+- [x] Trace all external callers, routes, data sources, and imports for legacy Financial Planning and Dynamic Capital Portfolio before any complete code-level removal
+- [x] Discuss and approve any dependency-safe complete cleanup of Financial Planning or Dynamic Capital Portfolio only after the audit
+- [x] Remove legacy Financial Planning and Dynamic Capital Portfolio from all user-facing locations, routes, components, and obsolete imports while retaining only shared services needed by current Financial Studies reports
+- [x] Remove legacy Financial Planning hub entry points from Strategic Studies, Command Center, and direct routes without changing current Financial Studies pages
+- [x] Remove legacy Dynamic Capital Portfolio entry points from Strategic Studies, Command Center, direct routes, and unused legacy hubs without changing the current Financial Studies portfolio reports
+- [x] Preserve current Financial Studies pages and frozen portfolio reports while deleting only their obsolete legacy alternatives
