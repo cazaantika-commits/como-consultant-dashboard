@@ -1281,3 +1281,5 @@
 - [x] Refresh the Unified Project Card with light vibrant surfaces and darker visual separators while preserving all content and behavior
 - [x] Display Project Card whole amounts with thousands separators while preserving every meaningful decimal digit for rates, percentages, and fractional values
 - [x] Establish one display-only number-formatting standard across Financial Studies and executive reports: grouped whole amounts, meaningful fractional digits retained, and no K/M/Arabic-million abbreviations
+- [x] Separate the overlapping document-facts title, project strip, action row, and extracted-data cards inside the Unified Project Card
+- [x] Separate the overlapping document-facts title, project strip, action row, and extracted-data cards inside the Unified Project Card

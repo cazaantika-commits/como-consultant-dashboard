@@ -400,6 +400,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
   const filledCount = FACT_SHEET_KEYS.filter(k => formData[k] && String(formData[k]).trim() !== "").length;
   const totalCount = FACT_SHEET_KEYS.length;
   const completeness = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+  const isEmbeddedDocumentOnly = Boolean(embedded && documentOnly);
 
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-stone-50"><Loader2 className="h-8 w-8 animate-spin text-amber-600" /></div>;
@@ -423,7 +424,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
   return (
     <div className={embedded ? "bg-gradient-to-b from-stone-50 to-white" : "min-h-screen bg-gradient-to-b from-stone-50 to-white"} dir="rtl">
       {/* ── Header ── */}
-      <div className={`sticky ${embedded ? "top-[105px]" : "top-0"} z-20 bg-white/80 backdrop-blur-md border-b border-stone-200`}>
+      <div className={isEmbeddedDocumentOnly ? "relative z-10 bg-white border-b border-violet-200" : `sticky ${embedded ? "top-[105px]" : "top-0"} z-20 bg-white/80 backdrop-blur-md border-b border-stone-200`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -454,7 +455,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {!isEmbeddedDocumentOnly && <div className="flex items-center gap-2">
               {!initialProjectId && !embedded && (
                 <Select value={selectedProjectId ? String(selectedProjectId) : ""} onValueChange={(val) => setSelectedProjectId(Number(val))}>
                   <SelectTrigger className="w-[180px] bg-white border-stone-200 h-7 text-xs">
@@ -489,7 +490,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                   </Button>
                 </>
               )}
-            </div>
+            </div>}
           </div>
         </div>
       </div>
@@ -535,6 +536,31 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                 </div>
               </div>
             </div>
+
+            {isEmbeddedDocumentOnly && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-2">
+                <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${
+                  completeness >= 80 ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+                  completeness >= 40 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-rose-50 text-rose-700 border-rose-200"
+                }`}>
+                  {completeness >= 80 ? <CheckCircle2 className="h-2.5 w-2.5 ml-1" /> : <AlertCircle className="h-2.5 w-2.5 ml-1" />}
+                  {completeness}% ({filledCount}/{totalCount})
+                </Badge>
+                <div className="flex items-center gap-2">
+                  <Button onClick={handleKhazenAutoFill} disabled={khazenLoading} variant="outline" size="sm"
+                    className="border-purple-300 bg-white text-purple-700 hover:bg-purple-50 h-7 text-[11px]">
+                    {khazenLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Sparkles className="h-3.5 w-3.5 ml-1" />}
+                    تعبئة من خازن
+                  </Button>
+                  <Button onClick={handleSave} disabled={!hasChanges || updateProject.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white h-7 text-[11px]" size="sm">
+                    {updateProject.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin ml-1" /> : <Save className="h-3.5 w-3.5 ml-1" />}
+                    حفظ
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* ── Legend (inline compact) ── */}
             <div className={documentOnly ? "hidden" : "flex items-center gap-3 px-1"}>

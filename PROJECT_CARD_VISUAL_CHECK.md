@@ -15,3 +15,7 @@ The edit-mode check was then cancelled. The standard «تعديل» action retur
 ## Number Presentation Verification
 
 The live Majan card displays the saved land price as `122,000,000`, while the design fee remains `1.4` rather than being rounded to a whole number. The construction price also remains `450`, and a fractional land area remains `755,555.56`; therefore grouping is applied without hiding a meaningful decimal part.
+
+## Document Facts Header Verification
+
+The embedded document-facts section now presents four distinct layers in order: its violet section heading, the amber project strip, a separate violet action row containing completeness and Khazen/save controls, then the extracted-data cards. The previous sticky action cluster is not rendered inside this embedded header, so no text, badge, or button sits over the project strip or the data-card headings.

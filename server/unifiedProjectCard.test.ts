@@ -55,4 +55,12 @@ describe("Unified Financial Studies project card", () => {
     expect(generalInputs).toContain('formatFullNumber(displayValue, "")');
     expect(generalInputs).toContain('unformatNumberInput(e.target.value)');
   });
+
+  it("separates the embedded document-facts title, project strip, and action row", () => {
+    expect(factSheet).toContain("const isEmbeddedDocumentOnly = Boolean(embedded && documentOnly)");
+    expect(factSheet).toContain('isEmbeddedDocumentOnly ? "relative z-10 bg-white border-b border-violet-200"');
+    expect(factSheet).toContain("{isEmbeddedDocumentOnly && (");
+    expect(factSheet).toContain("bg-violet-50/60");
+    expect(factSheet).toContain("!isEmbeddedDocumentOnly && <div");
+  });
 });
