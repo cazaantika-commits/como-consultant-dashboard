@@ -1305,3 +1305,4 @@
 - [x] Keep the collection-and-cash impact reading visibly open below the sales calendar with unambiguous collection-versus-sale labels
 - [x] Strengthen the Sales and Marketing card and input outlines while retaining light backgrounds and readable charcoal text
 - [x] Strengthen outlines and diversify light color treatments for each unit-pricing card by unit type without altering pricing logic
+- [x] Replace collection-card project-month numbers with named month and year and reduce every rectangular card and control inside the visible collection section to approximately 75%

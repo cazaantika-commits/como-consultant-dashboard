@@ -86,4 +86,13 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("قيمة البيع في الشهر");
     expect(workspaceSource).toContain('border border-slate-300 bg-white');
   });
+
+  it("uses actual named calendar months and a compact six-column collection-card layout", () => {
+    expect(workspaceSource).toContain("const formatCalendarMonth = (projectMonth: number)");
+    expect(workspaceSource).toContain("return `${monthNames[offset % 12]} ${startYear + Math.floor(offset / 12)}`");
+    expect(workspaceSource).toContain('data-testid="collection-cash-card"');
+    expect(workspaceSource).toContain('sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6');
+    expect(workspaceSource).toContain('className="rounded-xl border border-slate-300 bg-white p-2.5"');
+    expect(workspaceSource).not.toContain('className="text-xs font-black text-slate-800">شهر {row.month}');
+  });
 });
