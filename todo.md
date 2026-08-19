@@ -1325,3 +1325,4 @@
 - [x] Reconcile every requested Financial Studies and Planning change as completed, partial, or uncompleted with honest evidence
 - [x] Merge Sales and collection/escrow into one compact monthly card that preserves all sales content and adds collection then escrow balance
 - [x] Round monetary displays to whole amounts with separators while preserving decimal percentages and rates
+- [x] Correct the visible Sales cards so collection and escrow balance appear beneath the unchanged sales content in every month
