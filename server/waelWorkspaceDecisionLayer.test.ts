@@ -126,8 +126,8 @@ describe("Wael professional decision workspace", () => {
     expect(stylesSource).toContain('[data-testid="sales-live-impact"]');
     expect(stylesSource).toContain('grid-template-columns: repeat(5, minmax(0, 1fr)) !important;');
     expect(stylesSource).toContain('grid-template-columns: repeat(6, minmax(0, 1fr)) !important;');
-    expect(stylesSource).toContain('grid-auto-rows: 10rem;');
-    expect(stylesSource).toContain('height: 10rem;');
+    expect(stylesSource).toContain('grid-auto-rows: 11.5rem;');
+    expect(stylesSource).toContain('height: 11.5rem;');
     expect(stylesSource).toContain('overflow: visible;');
     expect(stylesSource).toContain('[data-testid="collection-cash-reading"]');
     expect(stylesSource).toContain('display: none !important;');
