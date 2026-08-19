@@ -66,6 +66,15 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('aria-hidden="true" className="hidden overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d]');
   });
 
+  it("gives each unit-pricing card a stronger, distinct light type treatment", () => {
+    expect(workspaceSource).toContain('data-testid="unit-pricing-card"');
+    expect(workspaceSource).toContain('className="rounded-2xl border-2 p-3.5 transition hover:-translate-y-0.5"');
+    expect(workspaceSource).toContain('borderColor: unit.color');
+    expect(workspaceSource).toContain('background: `linear-gradient(135deg, ${unit.color}1c 0%, #ffffff 62%)`');
+    expect(workspaceSource).toContain('backgroundColor: `${unit.color}14`');
+    expect(workspaceSource).toContain('className="h-9 w-full min-w-0 rounded-lg border-2 bg-white');
+  });
+
   it("keeps sales navigation, all marketing allocations, and collection reading visible without a details click", () => {
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع السابقة"');
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع التالية"');

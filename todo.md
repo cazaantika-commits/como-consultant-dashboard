@@ -1304,3 +1304,4 @@
 - [x] Show all six marketing allocation categories and their full 100% total without hidden categories
 - [x] Keep the collection-and-cash impact reading visibly open below the sales calendar with unambiguous collection-versus-sale labels
 - [x] Strengthen the Sales and Marketing card and input outlines while retaining light backgrounds and readable charcoal text
+- [x] Strengthen outlines and diversify light color treatments for each unit-pricing card by unit type without altering pricing logic
