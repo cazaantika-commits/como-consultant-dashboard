@@ -76,6 +76,14 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('className="h-9 w-full min-w-0 rounded-lg border-2 bg-white');
   });
 
+  it("uses distinct full-card pastel backgrounds rather than repetitive white interiors", () => {
+    expect(stylesSource).toContain('[data-testid="unit-pricing-card"]:nth-child(9n + 1)');
+    expect(stylesSource).toContain('[data-testid="unit-pricing-card"]:nth-child(9n + 7)');
+    expect(stylesSource).toContain('[data-testid="collection-cash-tile"]:nth-child(6n + 1)');
+    expect(stylesSource).toContain('.example-sales-month:nth-child(6n + 5)');
+    expect(stylesSource).toContain('background: linear-gradient(145deg, #dbeafe, #eff6ff) !important;');
+  });
+
   it("keeps sales navigation, all marketing allocations, and collection reading visible without a details click", () => {
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع السابقة"');
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع التالية"');

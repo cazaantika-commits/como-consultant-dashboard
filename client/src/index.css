@@ -762,6 +762,57 @@
   box-shadow: 0 2px 4px rgb(15 23 42 / 14%);
 }
 
+/* Full, visibly different pastel card surfaces — not white cards with colored edges. */
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(1) { background: linear-gradient(145deg, #c9f7df, #ecfdf5) !important; }
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(2) { background: linear-gradient(145deg, #cfe7ff, #eff6ff) !important; }
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(3) { background: linear-gradient(145deg, #ffe7a3, #fffbeb) !important; }
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(4) { background: linear-gradient(145deg, #e1d5ff, #f5f3ff) !important; }
+
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 1) { background: linear-gradient(145deg, #dbeafe, #eff6ff) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 2) { background: linear-gradient(145deg, #ede9fe, #f5f3ff) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 3) { background: linear-gradient(145deg, #fce7f3, #fdf2f8) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 4) { background: linear-gradient(145deg, #fef3c7, #fffbeb) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 5) { background: linear-gradient(145deg, #ffedd5, #fff7ed) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 6) { background: linear-gradient(145deg, #fee2e2, #fff1f2) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 7) { background: linear-gradient(145deg, #d1fae5, #ecfdf5) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n + 8) { background: linear-gradient(145deg, #ccfbf1, #f0fdfa) !important; }
+.sales-workspace-pastel [data-testid="unit-pricing-card"]:nth-child(9n) { background: linear-gradient(145deg, #cffafe, #ecfeff) !important; }
+
+.example-sales-month:nth-child(6n + 1) { --month-wash: #dbeafe; }
+.example-sales-month:nth-child(6n + 2) { --month-wash: #ede9fe; }
+.example-sales-month:nth-child(6n + 3) { --month-wash: #fef3c7; }
+.example-sales-month:nth-child(6n + 4) { --month-wash: #ccfbf1; }
+.example-sales-month:nth-child(6n + 5) { --month-wash: #d1fae5; }
+.example-sales-month:nth-child(6n) { --month-wash: #e0f2fe; }
+
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n + 1) { background: #dbeafe !important; }
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n + 2) { background: #ede9fe !important; }
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n + 3) { background: #fef3c7 !important; }
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n + 4) { background: #d1fae5 !important; }
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n + 5) { background: #fce7f3 !important; }
+.sales-workspace-pastel [data-testid="collection-cash-tile"]:nth-child(6n) { background: #cffafe !important; }
+
+.construction-example-canvas { background: linear-gradient(150deg, #f7fafc, #f8fafc 52%, #f1f5f9) !important; }
+.construction-example-canvas > div > div.space-y-4 > section:first-child > div:nth-child(1) { background: linear-gradient(145deg, #ccfbf1, #f0fdfa) !important; }
+.construction-example-canvas > div > div.space-y-4 > section:first-child > div:nth-child(2) { background: linear-gradient(145deg, #dbeafe, #eff6ff) !important; }
+.construction-example-canvas > div > div.space-y-4 > section:first-child > div:nth-child(3) { background: linear-gradient(145deg, #ffe4e6, #fff1f2) !important; }
+.construction-example-canvas > div > div.space-y-4 > section:first-child > div:nth-child(4) { background: linear-gradient(145deg, #fef3c7, #fffbeb) !important; }
+
+.construction-example-canvas section.fs-card.fs-card-teal button:nth-child(1) { background: #ccfbf1 !important; }
+.construction-example-canvas section.fs-card.fs-card-teal button:nth-child(2) { background: #dbeafe !important; }
+.construction-example-canvas section.fs-card.fs-card-teal button:nth-child(3) { background: #ede9fe !important; }
+.construction-example-canvas section.fs-card.fs-card-teal button:nth-child(4) { background: #fef3c7 !important; }
+
+.construction-example-canvas article:has(input[aria-label^="إنجاز شهر الإنشاء"]):nth-child(4n + 1) { background: linear-gradient(145deg, #ccfbf1, #f0fdfa) !important; }
+.construction-example-canvas article:has(input[aria-label^="إنجاز شهر الإنشاء"]):nth-child(4n + 2) { background: linear-gradient(145deg, #dbeafe, #eff6ff) !important; }
+.construction-example-canvas article:has(input[aria-label^="إنجاز شهر الإنشاء"]):nth-child(4n + 3) { background: linear-gradient(145deg, #ede9fe, #f5f3ff) !important; }
+.construction-example-canvas article:has(input[aria-label^="إنجاز شهر الإنشاء"]):nth-child(4n) { background: linear-gradient(145deg, #fef3c7, #fffbeb) !important; }
+
+.construction-example-canvas aside.fs-card > div > .fs-card:nth-child(1) { background: #dbeafe !important; }
+.construction-example-canvas aside.fs-card > div > .fs-card:nth-child(2) { background: #ede9fe !important; }
+.construction-example-canvas aside.fs-card > div > .fs-card:nth-child(3) { background: #fef3c7 !important; }
+.construction-example-canvas aside.fs-card > div > .fs-card:nth-child(4) { background: #ffe4e6 !important; }
+
 /* ============================================================
    FINANCIAL STUDIES — APPROVED OUTLINED CARD LANGUAGE
    Compact light cards with a clear colored perimeter and matching

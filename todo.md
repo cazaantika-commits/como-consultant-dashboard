@@ -1315,3 +1315,4 @@
 - [x] Rebuild Sales and Construction cards to match the supplied examples: soft internal gradients, restrained shadows, dark percentage pills, white input fields, and progress strips
 - [x] Add compact colored icon tiles and full-card semantic color washes for Sales and Construction status and KPI cards, matching the latest examples
 - [x] Reuse the actual Consultant Evaluation module visual system in Sales and Construction cards rather than approximating the supplied examples
+- [x] Replace repetitive white Sales and Construction card interiors with clearly distinct full-card pastel background surfaces by role
