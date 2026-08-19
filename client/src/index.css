@@ -943,13 +943,13 @@
 
   .sales-workspace-pastel [data-testid="sales-calendar-board"] > div:last-child > .grid {
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-    grid-auto-rows: 6.4rem;
+    grid-auto-rows: 8.3rem;
     gap: 0.35rem !important;
   }
 
   .sales-workspace-pastel [data-testid="sales-calendar-board"] .example-sales-month {
     min-height: 0 !important;
-    height: 6.4rem;
+    height: 8.3rem;
     overflow: hidden;
     padding: 0.4rem !important;
   }
@@ -961,6 +961,10 @@
   .sales-workspace-pastel [data-testid="sales-calendar-board"] .example-sales-month input {
     height: 1.75rem !important;
     font-size: 0.8rem !important;
+  }
+
+  .sales-workspace-pastel [data-testid="sales-calendar-board"] .unified-sale-card {
+    box-shadow: 0 3px 9px rgb(15 23 42 / 7%);
   }
 
   /* Eighteen collection months fill three exact rows of six—no stranded fourth row. */

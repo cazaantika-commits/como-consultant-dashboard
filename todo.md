@@ -1322,3 +1322,5 @@
 - [x] Fit every visible collection and escrow month tightly inside its existing panel without blank rows or increased panel height
 - [x] Apply one concise colored card style across Sales-month and collection/escrow panels with minimal vertical spacing
 - [x] Fix Financial Studies monthly table headers during scroll, darken month numbers, and add clear vertical month separators
+- [x] Reconcile every requested Financial Studies and Planning change as completed, partial, or uncompleted with honest evidence
+- [x] Merge Sales and collection/escrow into one compact monthly card that preserves all sales content and adds collection then escrow balance

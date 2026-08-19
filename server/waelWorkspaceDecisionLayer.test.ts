@@ -92,28 +92,27 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage)');
     expect(workspaceSource).toContain("MARKETING_CHANNELS.map((channel)");
     expect(workspaceSource).toContain("من 6 بنود");
-    expect(workspaceSource).toContain('data-testid="collection-cash-reading"');
-    expect(workspaceSource).toContain("التحصيل الفعلي");
-    expect(workspaceSource).toContain("قيمة البيع في الشهر");
-    expect(workspaceSource).toContain('border border-slate-300 bg-white');
+    expect(workspaceSource).toContain('data-testid="unified-month-card"');
+    expect(workspaceSource).toContain("رصيد الإسكرو");
+    expect(workspaceSource).toContain("monthlyEscrowBalance");
+    expect(workspaceSource).not.toContain('data-testid="collection-cash-reading-compact"');
   });
 
-  it("uses actual named calendar months and a compact six-column collection-card layout", () => {
+  it("uses actual named calendar months inside one unified sale-collection-escrow card", () => {
     expect(workspaceSource).toContain("const formatCalendarMonth = (projectMonth: number)");
     expect(workspaceSource).toContain("return `${monthNames[offset % 12]} ${startYear + Math.floor(offset / 12)}`");
-    expect(workspaceSource).toContain('data-testid="collection-cash-card"');
-    expect(workspaceSource).toContain('sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6');
-    expect(workspaceSource).toContain('className="rounded-xl border border-slate-300 bg-white p-2.5"');
-    expect(workspaceSource).not.toContain('className="text-xs font-black text-slate-800">شهر {row.month}');
+    expect(workspaceSource).toContain('data-testid="unified-month-card"');
+    expect(workspaceSource).toContain('const monthlyCollection = cashRow?.cashInflow ?? 0');
+    expect(workspaceSource).toContain('const monthlyEscrowBalance = isBuildForSale ? null : escrowRow?.balance ?? null');
+    expect(workspaceSource).toContain('قيمة بيع متوقعة');
+    expect(workspaceSource).toContain('رصيد الإسكرو');
   });
 
-  it("uses a compact pastel canvas with an expanded named-month collection tile board", () => {
+  it("uses a compact pastel canvas without a duplicate standalone collection board", () => {
     expect(workspaceSource).toContain('sales-workspace-pastel min-h-full');
     expect(workspaceSource).toContain('xl:grid-cols-[minmax(0,1fr)_300px]');
-    expect(workspaceSource).toContain('const visibleCollectionRows = cashInflowData.filter');
-    expect(workspaceSource).toContain('.slice(0, 18)');
-    expect(workspaceSource).toContain('data-testid="collection-cash-reading-compact"');
-    expect(workspaceSource).toContain('collectionPastelTones[index % collectionPastelTones.length]');
+    expect(workspaceSource).not.toContain('data-testid="collection-cash-reading"');
+    expect(workspaceSource).not.toContain('data-testid="collection-cash-reading-compact"');
     expect(workspaceSource).toContain('data-testid="sales-control-strip"');
     expect(workspaceSource).toContain('data-testid="sales-calendar-board"');
     expect(workspaceSource).toContain('data-testid="sales-live-impact"');
