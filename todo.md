@@ -1327,3 +1327,4 @@
 - [x] Round monetary displays to whole amounts with separators while preserving decimal percentages and rates
 - [x] Correct the visible Sales cards so collection and escrow balance appear beneath the unchanged sales content in every month
 - [x] Remove visual overlap between sale, collection, and escrow sections inside each unified Sales month card
+- [x] Audit configuration-driven monthly cash-flow distributions across off-plan, build-for-sale, and build-for-rent projects before changing financial logic
