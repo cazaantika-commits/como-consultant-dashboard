@@ -65,4 +65,16 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).not.toContain('return (n / 1e6).toFixed(1) + "M"');
     expect(workspaceSource).toContain('aria-hidden="true" className="hidden overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d]');
   });
+
+  it("keeps sales navigation, all marketing allocations, and collection reading visible without a details click", () => {
+    expect(workspaceSource).toContain('aria-label="عرض أشهر البيع السابقة"');
+    expect(workspaceSource).toContain('aria-label="عرض أشهر البيع التالية"');
+    expect(workspaceSource).toContain('الأشهر {pageStart + 1}–{Math.min(pageStart + 12, salesMonths)}');
+    expect(workspaceSource).toContain("MARKETING_CHANNELS.map((channel)");
+    expect(workspaceSource).toContain("من 6 بنود");
+    expect(workspaceSource).toContain('data-testid="collection-cash-reading"');
+    expect(workspaceSource).toContain("التحصيل الفعلي");
+    expect(workspaceSource).toContain("قيمة البيع في الشهر");
+    expect(workspaceSource).toContain('border border-slate-300 bg-white');
+  });
 });

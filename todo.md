@@ -1300,3 +1300,7 @@
 - [x] Redesign Construction Plan as a light interactive execution canvas with larger readable controls, clear curve choices, and understandable monthly progress without changing financial logic
 - [x] Visually refine the Pricing page as a compact, high-legibility workspace while preserving it as the sole unit-price source and leaving calculations unchanged
 - [x] Preserve the Financial Studies selected project when the Pricing page is reloaded so project-specific cards reopen in context
+- [x] Match sales-calendar pagination to the Construction Plan pattern with a clear centered 12-month range and directional arrows
+- [x] Show all six marketing allocation categories and their full 100% total without hidden categories
+- [x] Keep the collection-and-cash impact reading visibly open below the sales calendar with unambiguous collection-versus-sale labels
+- [x] Strengthen the Sales and Marketing card and input outlines while retaining light backgrounds and readable charcoal text
