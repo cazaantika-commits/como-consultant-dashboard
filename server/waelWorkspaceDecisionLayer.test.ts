@@ -34,8 +34,8 @@ describe("Wael professional decision workspace", () => {
     expect(navigationSource).not.toContain('id: "marketing"');
   });
 
-  it("uses a visible twelve-month direct-input sales board with synchronized, large unit and percentage controls", () => {
-    expect(workspaceSource).toContain("const monthsPerPage = 12");
+  it("uses a visible twenty-month direct-input sales board with synchronized unit and percentage controls", () => {
+    expect(workspaceSource).toContain("const monthsPerPage = 20");
     expect(workspaceSource).toContain("اكتب عدد الوحدات أو النسبة داخل البطاقة نفسها");
     expect(workspaceSource).toContain("const calendarYear = projectStartDate");
     expect(workspaceSource).toContain("tabular-nums tracking-wide text-slate-500");
@@ -67,13 +67,13 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('aria-hidden="true" className="hidden overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d]');
   });
 
-  it("gives each unit-pricing card a stronger, distinct light type treatment", () => {
+  it("uses a compact pricing ledger with one editable price field per unit type", () => {
     expect(workspaceSource).toContain('data-testid="unit-pricing-card"');
-    expect(workspaceSource).toContain('example-unit-card rounded-2xl border-2 p-3.5 transition hover:-translate-y-0.5');
-    expect(workspaceSource).toContain('borderColor: unit.color');
-    expect(workspaceSource).toContain('background: `linear-gradient(135deg, ${unit.color}1c 0%, #ffffff 62%)`');
-    expect(workspaceSource).toContain('backgroundColor: `${unit.color}14`');
-    expect(workspaceSource).toContain('className="h-9 w-full min-w-0 rounded-lg border-2 bg-white');
+    expect(workspaceSource).toContain('pricing-ledger-grid');
+    expect(workspaceSource).toContain('pricing-ledger-row');
+    expect(workspaceSource).toContain('borderRightColor: unit.color');
+    expect(workspaceSource).toContain('سعر القدم² — قابل للتعديل');
+    expect(workspaceSource).toContain('إيراد النوع');
   });
 
   it("uses distinct full-card pastel backgrounds rather than repetitive white interiors", () => {
