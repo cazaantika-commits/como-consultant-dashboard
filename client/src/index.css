@@ -877,6 +877,118 @@
   }
 }
 
+/* Compact month strips: remove inherited minimum heights and leave no empty lower panel. */
+.sales-workspace-pastel .example-sales-month {
+  min-height: 0 !important;
+  padding: 0.45rem !important;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 5%) !important;
+}
+
+.sales-workspace-pastel .example-sales-month > div:first-child {
+  min-height: 1.2rem;
+}
+
+.sales-workspace-pastel .example-sales-month > div.mt-2 {
+  margin-top: 0.3rem !important;
+}
+
+.sales-workspace-pastel .example-sales-month label > span {
+  margin-bottom: 0.15rem !important;
+}
+
+.sales-workspace-pastel .example-sales-month input {
+  height: 1.85rem !important;
+  font-size: 0.9rem !important;
+}
+
+.sales-workspace-pastel .example-sales-month > p {
+  margin-top: 0.3rem !important;
+  line-height: 1.05rem;
+}
+
+.construction-example-canvas .example-construction-month,
+.construction-example-canvas .fs-card.fs-card-cyan:has(input[aria-label^="إنجاز شهر الإنشاء"]) {
+  min-height: 0 !important;
+  padding: 0.45rem !important;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 5%) !important;
+}
+
+.construction-example-canvas .example-construction-month input[aria-label^="إنجاز شهر الإنشاء"],
+.construction-example-canvas input[aria-label^="إنجاز شهر الإنشاء"] {
+  height: 1.9rem !important;
+  font-size: 1rem !important;
+}
+
+.construction-example-canvas .example-construction-month .mt-1\.5,
+.construction-example-canvas .fs-card.fs-card-cyan:has(input[aria-label^="إنجاز شهر الإنشاء"]) .mt-1\.5 {
+  margin-top: 0.25rem !important;
+}
+
+.construction-example-canvas .example-construction-month .mt-1,
+.construction-example-canvas .fs-card.fs-card-cyan:has(input[aria-label^="إنجاز شهر الإنشاء"]) .mt-1 {
+  margin-top: 0.2rem !important;
+  line-height: 0.9rem;
+}
+
+/* One dense visible collection board: do not render a second, taller copy above it. */
+.sales-workspace-pastel [data-testid="collection-cash-reading"] {
+  display: none !important;
+}
+
+/* The Sales month canvas is a full 5 × 4 board: twenty months in the existing area. */
+@media (min-width: 1280px) {
+  .sales-workspace-pastel [data-testid="sales-calendar-board"] > div:last-child {
+    padding: 0.55rem !important;
+  }
+
+  .sales-workspace-pastel [data-testid="sales-calendar-board"] > div:last-child > .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 0.35rem !important;
+  }
+
+  .sales-workspace-pastel [data-testid="sales-calendar-board"] .example-sales-month {
+    min-height: 0 !important;
+  }
+
+  /* Eighteen collection months fill three exact rows of six—no stranded fourth row. */
+  .sales-workspace-pastel [data-testid="collection-cash-reading-compact"] > div:last-child {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    gap: 0.35rem !important;
+    padding: 0.45rem !important;
+  }
+
+.sales-workspace-pastel [data-testid="collection-cash-tile"] {
+    min-height: 0 !important;
+    padding: 0.45rem !important;
+  }
+}
+
+/* Financial tables: retain the month map while the reader scrolls through rows. */
+.investor-cashflow-table-wrap {
+  isolation: isolate;
+}
+
+.investor-cashflow-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  box-shadow: 0 3px 8px rgb(15 23 42 / 13%);
+}
+
+.investor-cashflow-table thead th:not(:first-child) {
+  border-inline-start: 1px solid #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.investor-cashflow-table tbody td:not(:first-child) {
+  border-inline-start: 1px solid rgb(148 163 184 / 62%);
+}
+
+.investor-cashflow-table tbody tr:hover td:not(:first-child) {
+  border-inline-start-color: #475569;
+}
+
 /* ============================================================
    READ-ONLY MODE
    When body[data-readonly="true"], hide all elements marked

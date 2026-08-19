@@ -113,7 +113,6 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('const visibleCollectionRows = cashInflowData.filter');
     expect(workspaceSource).toContain('.slice(0, 18)');
     expect(workspaceSource).toContain('data-testid="collection-cash-reading-compact"');
-    expect(workspaceSource).toContain('xl:grid-cols-7');
     expect(workspaceSource).toContain('collectionPastelTones[index % collectionPastelTones.length]');
     expect(workspaceSource).toContain('data-testid="sales-control-strip"');
     expect(workspaceSource).toContain('data-testid="sales-calendar-board"');
@@ -126,5 +125,9 @@ describe("Wael professional decision workspace", () => {
     expect(stylesSource).toContain('[data-testid="sales-control-strip"] > div:last-child > div:nth-child(1)');
     expect(stylesSource).toContain('[data-testid="sales-calendar-board"] article:nth-child(4n + 1)');
     expect(stylesSource).toContain('[data-testid="sales-live-impact"]');
+    expect(stylesSource).toContain('grid-template-columns: repeat(5, minmax(0, 1fr)) !important;');
+    expect(stylesSource).toContain('grid-template-columns: repeat(6, minmax(0, 1fr)) !important;');
+    expect(stylesSource).toContain('[data-testid="collection-cash-reading"]');
+    expect(stylesSource).toContain('display: none !important;');
   });
 });

@@ -1317,3 +1317,8 @@
 - [x] Reuse the actual Consultant Evaluation module visual system in Sales and Construction cards rather than approximating the supplied examples
 - [x] Replace repetitive white Sales and Construction card interiors with clearly distinct full-card pastel background surfaces by role
 - [x] Show 20 compact months per Sales and Construction calendar view and label each pagination range exactly as displayed
+- [ ] Remove unused vertical space by converting Sales and Construction month cards into ultra-compact horizontal strips
+- [ ] Replace the current unit-pricing card grid with a wholly different compact pricing-workspace composition while keeping price-only editing
+- [ ] Fit every visible collection and escrow month tightly inside its existing panel without blank rows or increased panel height
+- [ ] Apply one concise colored card style across Sales-month and collection/escrow panels with minimal vertical spacing
+- [x] Fix Financial Studies monthly table headers during scroll, darken month numbers, and add clear vertical month separators

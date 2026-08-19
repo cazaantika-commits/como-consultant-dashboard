@@ -251,14 +251,14 @@ export default function V2InvestorCashFlow() {
       </section>
 
       {/* Main Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse min-w-max">
-          <thead className="bg-white shadow-sm">
+      <div className="investor-cashflow-table-wrap overflow-x-auto">
+        <table className="investor-cashflow-table w-full text-xs border-collapse min-w-max">
+          <thead className="sticky top-0 z-30 bg-white shadow-md">
             {/* Date row */}
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px] text-[10px] text-gray-500">التاريخ</th>
               {months.map((m, i) => (
-                <th key={i} className="px-1 py-1 text-center border-b border-gray-100 text-[9px] text-gray-500 font-medium whitespace-nowrap">
+                <th key={i} className="border-s border-slate-300 bg-white px-1 py-1 text-center text-[10px] font-black text-slate-800 whitespace-nowrap">
                   {m.date ? m.date.split("-")[1] + "/" + m.date.split("-")[0].slice(2) : ""}
                 </th>
               ))}
@@ -267,7 +267,7 @@ export default function V2InvestorCashFlow() {
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px]"></th>
               {months.map((m, i) => (
-                <th key={i} className={`px-1.5 py-1 text-center border-b border-gray-200 ${phaseColors[m.phase]} font-semibold text-[11px]`}>
+                <th key={i} className={`border-s border-slate-300 px-1.5 py-1 text-center ${phaseColors[m.phase]} font-black text-[11px] text-slate-900`}>
                   {m.label}
                 </th>
               ))}
