@@ -1316,3 +1316,4 @@
 - [x] Add compact colored icon tiles and full-card semantic color washes for Sales and Construction status and KPI cards, matching the latest examples
 - [x] Reuse the actual Consultant Evaluation module visual system in Sales and Construction cards rather than approximating the supplied examples
 - [x] Replace repetitive white Sales and Construction card interiors with clearly distinct full-card pastel background surfaces by role
+- [x] Show 20 compact months per Sales and Construction calendar view and label each pagination range exactly as displayed

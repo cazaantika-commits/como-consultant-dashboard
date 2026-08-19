@@ -5,12 +5,14 @@ import { resolve } from "node:path";
 const source = readFileSync(resolve(process.cwd(), "client/src/pages/ConstructionInputsPage.tsx"), "utf8");
 
 describe("Construction Plan execution canvas", () => {
-  it("uses direct large construction controls and a paged monthly execution calendar", () => {
+  it("uses direct controls and a compact paged 20-month execution calendar", () => {
     expect(source).toContain("تقويم التنفيذ الشهري");
     expect(source).toContain('aria-label="مدة الإنشاء بالأشهر"');
     expect(source).toContain('aria-label="نسبة الدفعة المقدمة"');
-    expect(source).toContain("monthlyProgress.slice(pageStart, pageStart + 12)");
-    expect(source).toContain("h-12 w-full");
+    expect(source).toContain("const CONSTRUCTION_MONTHS_PER_PAGE = 20");
+    expect(source).toContain("monthlyProgress.slice(pageStart, pageStart + CONSTRUCTION_MONTHS_PER_PAGE)");
+    expect(source).toContain("h-9 w-full");
+    expect(source).toContain("الأشهر {pageStart + 1}–{Math.min(pageStart + CONSTRUCTION_MONTHS_PER_PAGE, constructionMonths)}");
     expect(source).not.toContain("repeat(${totalColumns}, minmax(40px, 1fr))");
   });
 

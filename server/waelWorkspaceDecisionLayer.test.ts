@@ -14,11 +14,11 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).not.toContain("WAEL_STUDIO_ROOMS");
     expect(workspaceSource).toContain("مساحة سيناريو وائل");
     expect(workspaceSource).toContain("شريط التحكم");
-    expect(workspaceSource).toContain("لوحة بيع 12 شهرًا");
+    expect(workspaceSource).toContain("لوحة بيع {Math.min(20, salesMonths)} شهرًا");
     expect(workspaceSource).toContain("أثر القرار — مباشر");
     expect(workspaceSource).toContain("impactFocus");
     expect(workspaceSource).toContain("xl:grid-cols-[minmax(0,1fr)_300px]");
-    expect(workspaceSource).toContain("h-12 w-full");
+    expect(workspaceSource).toContain("h-9 w-full");
     expect(workspaceSource).toContain("applySalesPace");
     expect(workspaceSource).toContain("adjustAllPrices");
     expect(workspaceSource).toContain("applyPaymentPreset");
@@ -87,7 +87,9 @@ describe("Wael professional decision workspace", () => {
   it("keeps sales navigation, all marketing allocations, and collection reading visible without a details click", () => {
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع السابقة"');
     expect(workspaceSource).toContain('aria-label="عرض أشهر البيع التالية"');
-    expect(workspaceSource).toContain('الأشهر {pageStart + 1}–{Math.min(pageStart + 12, salesMonths)}');
+    expect(workspaceSource).toContain('const monthsPerPage = 20');
+    expect(workspaceSource).toContain('الأشهر {pageStart + 1}–{Math.min(pageStart + monthsPerPage, salesMonths)}');
+    expect(workspaceSource).toContain('salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage)');
     expect(workspaceSource).toContain("MARKETING_CHANNELS.map((channel)");
     expect(workspaceSource).toContain("من 6 بنود");
     expect(workspaceSource).toContain('data-testid="collection-cash-reading"');
