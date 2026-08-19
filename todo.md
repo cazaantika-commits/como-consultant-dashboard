@@ -1267,3 +1267,4 @@
 - [x] Audit the current aggregated project cash-flow report, existing Sheikh Issa alert, data lineage, and role access before changing any presentation
 - [x] Benchmark professional executive portfolio-liquidity reporting and define the information Sheikh Issa needs first
 - [x] Redesign the aggregated project cash-flow report and Sheikh Issa’s Command Center view with next-four-month commitments, project drivers, timing, and safe drill-downs without changing any financial calculations or frozen data contracts
+- [x] Add a compact calendar-year label beneath each month name in Wael’s direct sales-distribution cards

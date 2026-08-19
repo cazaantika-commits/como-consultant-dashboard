@@ -35,6 +35,8 @@ describe("Wael professional decision workspace", () => {
   it("uses a visible twelve-month direct-input sales board with synchronized, large unit and percentage controls", () => {
     expect(workspaceSource).toContain("const monthsPerPage = 12");
     expect(workspaceSource).toContain("اكتب عدد الوحدات أو النسبة داخل البطاقة نفسها");
+    expect(workspaceSource).toContain("const calendarYear = projectStartDate");
+    expect(workspaceSource).toContain("tabular-nums tracking-wide text-slate-500");
     expect(workspaceSource).toContain("وحدات ${monthLabel}");
     expect(workspaceSource).toContain("نسبة ${monthLabel}");
     expect(workspaceSource).toContain("updateSalesMonth(salesIndex");
