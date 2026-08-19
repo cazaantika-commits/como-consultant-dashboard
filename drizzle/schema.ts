@@ -1113,6 +1113,11 @@ export const projects = mysqlTable("projects", {
 	compensationAmount: int(),
 	governingLaw: text(),
 	disputeResolution: text(),
+	// Document-derived parking requirements and capacity
+	parkingRequirementsText: text(),
+	parkingRulesJson: longtext(),
+	parkingSourceReference: text(),
+	parkingAvailableSpaces: int(),
 	manualBuaSqft: decimal({ precision: 14, scale: 2 }),
 	soilTestFee: decimal({ precision: 14, scale: 2 }),
 	topographicSurveyFee: decimal({ precision: 14, scale: 2 }),

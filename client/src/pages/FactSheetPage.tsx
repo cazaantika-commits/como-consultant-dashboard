@@ -193,6 +193,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     "tripAM", "tripLT", "tripPM",
     "effectiveDate", "constructionPeriod", "constructionStartDate", "completionDate", "constructionConditions",
     "saleRestrictions", "resaleConditions", "communityCharges",
+    "parkingRequirementsText", "parkingSourceReference", "parkingAvailableSpaces",
     "registrationAuthority", "adminFee", "clearanceFee", "compensationAmount",
     "governingLaw", "disputeResolution",
     "landPrice", "agentCommissionLandPct",
@@ -222,6 +223,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     constructionStartDate: "تاريخ بدء البناء", completionDate: "تاريخ الانتهاء",
     constructionConditions: "شروط البناء",
     saleRestrictions: "قيود البيع", resaleConditions: "شروط إعادة البيع", communityCharges: "رسوم المجتمع",
+    parkingRequirementsText: "متطلبات المواقف", parkingSourceReference: "مرجع شروط المواقف", parkingAvailableSpaces: "المواقف المتاحة",
     registrationAuthority: "جهة التسجيل", adminFee: "الرسوم الإدارية",
     clearanceFee: "رسوم المخالصة", compensationAmount: "مبلغ التعويض",
     governingLaw: "القانون الحاكم", disputeResolution: "آلية حل النزاعات",
@@ -270,6 +272,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         `- حركة المرور: الرحلات الصباحية والظهيرة والمسائية\n` +
         `- الجدول الزمني: تاريخ السريان، فترة البناء، تاريخ البدء والانتهاء\n` +
         `- القيود: قيود البيع، شروط إعادة البيع، رسوم المجتمع\n` +
+        `- المواقف: نص شرط المواقف كما ورد، المرجع الدقيق (اسم الوثيقة والصفحة/البند)، عدد المواقف المتاحة إن وجد، وقواعد حساب منظمة بصيغة JSON فقط إن كانت منصوصاً عليها بوضوح (سكني حسب المساحة، تجزئة/مكاتب حسب المساحة، زوار، ذوي الإعاقة). لا تفترض أي نسبة أو قاعدة غير مذكورة.\n` +
         `- الرسوم: جهة التسجيل، الرسوم الإدارية، رسوم المخالصة\n` +
         `- القانون: القانون الحاكم، آلية حل النزاعات\n\n` +
         `ابحث في كل المستندات المتاحة واستخرج أكبر قدر ممكن من البيانات.`;
@@ -328,6 +331,8 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         constructionStartDate: p.constructionStartDate || "", completionDate: p.completionDate || "",
         constructionConditions: p.constructionConditions || "",
         saleRestrictions: p.saleRestrictions || "", resaleConditions: p.resaleConditions || "", communityCharges: p.communityCharges || "",
+        parkingRequirementsText: (p as any).parkingRequirementsText || "", parkingSourceReference: (p as any).parkingSourceReference || "",
+        parkingAvailableSpaces: (p as any).parkingAvailableSpaces ?? "", parkingRulesJson: (p as any).parkingRulesJson || "",
         registrationAuthority: p.registrationAuthority || "", adminFee: p.adminFee || "",
         clearanceFee: p.clearanceFee || "", compensationAmount: p.compensationAmount || "",
         governingLaw: p.governingLaw || "", disputeResolution: p.disputeResolution || "",
@@ -364,7 +369,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
   const handleSave = () => {
     if (!selectedProjectId) return;
     const payload: Record<string, any> = { id: selectedProjectId };
-    const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount", "preConMonths", "constructionMonths"];
+    const numericIntFields = ["bua", "adminFee", "clearanceFee", "compensationAmount", "parkingAvailableSpaces", "preConMonths", "constructionMonths"];
     for (const [key, value] of Object.entries(formData)) {
       if (numericIntFields.includes(key)) { payload[key] = value ? Number(value) : undefined; }
       else { payload[key] = (value !== null && value !== undefined && String(value).trim() !== "") ? value : undefined; }
@@ -818,6 +823,15 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
                     <Field label="نهارية LT" value={formData.tripLT} onChange={v => updateField("tripLT", v)} source="ai" />
                     <Field label="مسائية PM" value={formData.tripPM} onChange={v => updateField("tripPM", v)} source="ai" />
                   </div>
+                </div>
+              </Section>
+
+              <Section title="المواقف حسب الوثائق" icon={Car} color="purple">
+                <div className="space-y-1.5">
+                  <Field label="المواقف المتاحة في المخططات" value={formData.parkingAvailableSpaces} onChange={v => updateField("parkingAvailableSpaces", v)} type="number" suffix="موقف" source="ai" />
+                  <Field label="مرجع الشرط" value={formData.parkingSourceReference} onChange={v => updateField("parkingSourceReference", v)} source="ai" placeholder="اسم الوثيقة — الصفحة أو البند" />
+                  <Field label="متطلبات المواقف المستخرجة" value={formData.parkingRequirementsText} onChange={v => updateField("parkingRequirementsText", v)} type="textarea" source="ai" placeholder="يظهر نص الشرط كما ورد في الوثيقة" />
+                  {!formData.parkingRequirementsText && <p className="rounded bg-amber-50 px-2 py-1 text-[9px] text-amber-700">بانتظار خازن لاستخراج شرط المواقف من الوثائق؛ لن تُستخدم أي قاعدة افتراضية.</p>}
                 </div>
               </Section>
 

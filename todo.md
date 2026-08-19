@@ -1283,3 +1283,7 @@
 - [x] Establish one display-only number-formatting standard across Financial Studies and executive reports: grouped whole amounts, meaningful fractional digits retained, and no K/M/Arabic-million abbreviations
 - [x] Separate the overlapping document-facts title, project strip, action row, and extracted-data cards inside the Unified Project Card
 - [x] Separate the overlapping document-facts title, project strip, action row, and extracted-data cards inside the Unified Project Card
+- [x] Make Unit Distribution compact and information-dense, using only the practical width needed rather than widely spaced columns
+- [x] Add a document-sourced parking-requirement explanation to the Project Card and Unit Distribution page, showing required, available, and variance without inventing missing document rules
+- [x] Add non-duplicative Unit Distribution summaries for total units, saleable-area allocation, and immediate area-balance validation
+- [x] Ensure missing documented parking capacity remains explicitly unavailable rather than being displayed as zero

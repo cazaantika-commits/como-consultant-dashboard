@@ -882,6 +882,11 @@ export const AGENT_TOOLS = [
           // القانون
           governingLaw: { type: "string", description: "القانون الساري" },
           disputeResolution: { type: "string", description: "تسوية النزاعات" },
+          // متطلبات المواقف من الوثائق
+          parkingRequirementsText: { type: "string", description: "شرح نصي دقيق لمتطلبات المواقف كما ورد في الوثائق، من دون افتراضات" },
+          parkingSourceReference: { type: "string", description: "اسم الوثيقة والصفحة أو البند الذي استخرجت منه متطلبات المواقف" },
+          parkingAvailableSpaces: { type: "number", description: "إجمالي المواقف المتاحة أو المعتمدة في المخططات، فقط إذا ورد صراحة في الوثيقة" },
+          parkingRulesJson: { type: "string", description: "JSON صالح لقواعد الحساب المستخرجة فقط: {residential:{thresholdSqft,spacesAtOrBelow,spacesAbove},retail:{sqftPerSpace},office:{sqftPerSpace},visitorPct,accessiblePct}. لا ترسل هذا الحقل إذا لم تذكر الوثيقة القاعدة بوضوح." },
         },
         required: ["projectId"],
       },
@@ -2394,7 +2399,8 @@ async function _executeToolInternal(
           'effectiveDate', 'constructionPeriod', 'constructionStartDate', 'completionDate', 'constructionConditions',
           'saleRestrictions', 'resaleConditions', 'communityCharges',
           'registrationAuthority', 'adminFee', 'clearanceFee', 'compensationAmount',
-          'governingLaw', 'disputeResolution'
+          'governingLaw', 'disputeResolution',
+          'parkingRequirementsText', 'parkingRulesJson', 'parkingSourceReference', 'parkingAvailableSpaces'
         ];
         for (const key of allowedFields) {
           if (fsFields[key] !== undefined && fsFields[key] !== null && fsFields[key] !== '') {

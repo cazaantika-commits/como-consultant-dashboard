@@ -63,4 +63,11 @@ describe("Unified Financial Studies project card", () => {
     expect(factSheet).toContain("bg-violet-50/60");
     expect(factSheet).toContain("!isEmbeddedDocumentOnly && <div");
   });
+
+  it("stores Khazen-extracted parking requirements as document facts instead of a financial assumption", () => {
+    expect(factSheet).toContain("المواقف حسب الوثائق");
+    expect(factSheet).toContain("parkingRequirementsText");
+    expect(factSheet).toContain("parkingSourceReference");
+    expect(factSheet).toContain("parkingAvailableSpaces");
+  });
 });

@@ -64,6 +64,11 @@ const factSheetFields = {
   compensationAmount: z.coerce.number().optional(),
   governingLaw: z.string().optional(),
   disputeResolution: z.string().optional(),
+  // متطلبات المواقف المستخرجة من الوثائق
+  parkingRequirementsText: z.string().optional(),
+  parkingRulesJson: z.string().optional(),
+  parkingSourceReference: z.string().optional(),
+  parkingAvailableSpaces: z.coerce.number().int().optional(),
   notes: z.string().optional(),
   // بيانات الشراء
   landPrice: z.string().optional(),
@@ -161,6 +166,7 @@ const FACT_SHEET_KEYS = [
   "saleRestrictions", "resaleConditions", "communityCharges",
   "registrationAuthority", "adminFee", "clearanceFee", "compensationAmount",
   "governingLaw", "disputeResolution",
+  "parkingRequirementsText", "parkingSourceReference", "parkingAvailableSpaces",
 ];
 
 function calcFactSheetCompleteness(project: any): { filled: number; total: number; percentage: number } {

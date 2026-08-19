@@ -4,20 +4,22 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { PROJECT_INPUTS, RATES, dbProjectToInputs, dbProjectToRates } from "@/lib/projectData";
+import { PROJECT_INPUTS, dbProjectToInputs } from "@/lib/projectData";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Car, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-function calcParking(type: string, area: number, count: number): number {
-  if (type.startsWith("res")) return count * (area < 1500 ? 1 : 2);
-  return count * Math.ceil(area / 500);
-}
+import { formatFullNumber } from "@/lib/numberFormat";
+import {
+  calculateParkingSummary,
+  calculateUnitParking,
+  parseParkingRules,
+  type ParkingCategory,
+} from "@/lib/parkingRules";
 
 interface UnitType {
   key: string;
   label: string;
-  category: "residential" | "retail" | "office";
+  category: ParkingCategory;
   defaultArea: number;
 }
 
@@ -43,20 +45,25 @@ const DEFAULT_AREAS: Record<string, number> = {
 };
 
 const COUNT_MAP: Record<string, string> = {
-  onebed: 'residential1brCount', twobed: 'residential2brCount', threebed: 'residential3brCount',
-  villa: 'villaCount', townhouse: 'townhouseCount',
-  retail_small: 'retailSmallCount', retail_medium: 'retailMediumCount', retail_large: 'retailLargeCount',
-  office_small: 'officeSmallCount', office_medium: 'officeMediumCount', office_large: 'officeLargeCount',
+  onebed: "residential1brCount", twobed: "residential2brCount", threebed: "residential3brCount",
+  villa: "villaCount", townhouse: "townhouseCount",
+  retail_small: "retailSmallCount", retail_medium: "retailMediumCount", retail_large: "retailLargeCount",
+  office_small: "officeSmallCount", office_medium: "officeMediumCount", office_large: "officeLargeCount",
 };
 
 const AREA_MAP: Record<string, string> = {
-  onebed: 'residential1brArea', twobed: 'residential2brArea', threebed: 'residential3brArea',
-  villa: 'villaArea', townhouse: 'townhouseArea',
-  retail_small: 'retailSmallArea', retail_medium: 'retailMediumArea', retail_large: 'retailLargeArea',
-  office_small: 'officeSmallArea', office_medium: 'officeMediumArea', office_large: 'officeLargeArea',
+  onebed: "residential1brArea", twobed: "residential2brArea", threebed: "residential3brArea",
+  villa: "villaArea", townhouse: "townhouseArea",
+  retail_small: "retailSmallArea", retail_medium: "retailMediumArea", retail_large: "retailLargeArea",
+  office_small: "officeSmallArea", office_medium: "officeMediumArea", office_large: "officeLargeArea",
 };
 
-function fmt(n: number): string { return Math.round(n).toLocaleString("en-US"); }
+const fmt = (value: number) => formatFullNumber(value, "");
+const categoryMeta: Record<ParkingCategory, { label: string; tone: string; text: string }> = {
+  residential: { label: "سكني", tone: "bg-blue-50/70 border-blue-200", text: "text-blue-700" },
+  retail: { label: "تجزئة", tone: "bg-orange-50/70 border-orange-200", text: "text-orange-700" },
+  office: { label: "مكاتب", tone: "bg-teal-50/70 border-teal-200", text: "text-teal-700" },
+};
 
 export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
@@ -67,20 +74,15 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const i = useMemo(() => {
-    if (projectQuery.data) return dbProjectToInputs(projectQuery.data);
-    return PROJECT_INPUTS;
-  }, [projectQuery.data]);
-
-  const SELLABLE = useMemo(() => ({
+  const i = useMemo(() => projectQuery.data ? dbProjectToInputs(projectQuery.data) : PROJECT_INPUTS, [projectQuery.data]);
+  const sellable = useMemo(() => ({
     residential: i.gfaResidential * i.efficiencyResidential,
     retail: i.gfaRetail * i.efficiencyRetail,
     office: i.gfaOffice * i.efficiencyOffice,
   }), [i]);
 
   const [counts, setCounts] = useState<Record<string, number>>({
-    onebed: 0, twobed: 0, threebed: 0,
-    villa: 0, townhouse: 0,
+    onebed: 0, twobed: 0, threebed: 0, villa: 0, townhouse: 0,
     retail_small: 0, retail_medium: 0, retail_large: 0,
     office_small: 0, office_medium: 0, office_large: 0,
   });
@@ -88,152 +90,180 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
 
   useEffect(() => {
     if (!selectedProjectId || projectQuery.isLoading || !projectQuery.data) return;
-    const p = projectQuery.data as any;
-    const hasSavedCounts = Object.values(COUNT_MAP).some(f => Number(p[f]) > 0);
+    const project = projectQuery.data as any;
+    const hasSavedCounts = Object.values(COUNT_MAP).some(field => Number(project[field]) > 0);
     if (hasSavedCounts) {
-      const nc: Record<string, number> = {};
-      const na: Record<string, number> = { ...DEFAULT_AREAS };
-      Object.entries(COUNT_MAP).forEach(([k, f]) => { nc[k] = Number(p[f]) || 0; });
-      Object.entries(AREA_MAP).forEach(([k, f]) => { const v = Number(p[f]); if (v > 0) na[k] = v; });
-      setCounts(nc); setAreas(na); setHasUnsavedChanges(false);
+      const nextCounts: Record<string, number> = {};
+      const nextAreas: Record<string, number> = { ...DEFAULT_AREAS };
+      Object.entries(COUNT_MAP).forEach(([key, field]) => { nextCounts[key] = Number(project[field]) || 0; });
+      Object.entries(AREA_MAP).forEach(([key, field]) => {
+        const value = Number(project[field]);
+        if (Number.isFinite(value) && value >= 0) nextAreas[key] = value;
+      });
+      setCounts(nextCounts); setAreas(nextAreas); setHasUnsavedChanges(false);
     } else {
-      const sr = i.gfaResidential * i.efficiencyResidential;
-      const srt = i.gfaRetail * i.efficiencyRetail;
-      const so = i.gfaOffice * i.efficiencyOffice;
-      const sc: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, villa: 0, townhouse: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
-      if (sr > 0) { sc.onebed = Math.round(sr * 0.4 / 750); sc.twobed = Math.round(sr * 0.4 / 1300); sc.threebed = Math.round(sr * 0.2 / 1650); }
-      if (srt > 0) { sc.retail_small = Math.round(srt * 0.4 / 850); sc.retail_medium = Math.round(srt * 0.4 / 1200); sc.retail_large = Math.round(srt * 0.2 / 1800); }
-      if (so > 0) { sc.office_small = Math.round(so * 0.4 / 1200); sc.office_medium = Math.round(so * 0.4 / 2000); sc.office_large = Math.round(so * 0.2 / 3500); }
-      setCounts(sc); setAreas({ ...DEFAULT_AREAS }); setHasUnsavedChanges(true);
+      const residential = i.gfaResidential * i.efficiencyResidential;
+      const retail = i.gfaRetail * i.efficiencyRetail;
+      const office = i.gfaOffice * i.efficiencyOffice;
+      const suggested: Record<string, number> = { onebed: 0, twobed: 0, threebed: 0, villa: 0, townhouse: 0, retail_small: 0, retail_medium: 0, retail_large: 0, office_small: 0, office_medium: 0, office_large: 0 };
+      if (residential > 0) { suggested.onebed = Math.round(residential * 0.4 / 750); suggested.twobed = Math.round(residential * 0.4 / 1300); suggested.threebed = Math.round(residential * 0.2 / 1650); }
+      if (retail > 0) { suggested.retail_small = Math.round(retail * 0.4 / 850); suggested.retail_medium = Math.round(retail * 0.4 / 1200); suggested.retail_large = Math.round(retail * 0.2 / 1800); }
+      if (office > 0) { suggested.office_small = Math.round(office * 0.4 / 1200); suggested.office_medium = Math.round(office * 0.4 / 2000); suggested.office_large = Math.round(office * 0.2 / 3500); }
+      setCounts(suggested); setAreas({ ...DEFAULT_AREAS }); setHasUnsavedChanges(true);
     }
   }, [selectedProjectId, projectQuery.data, projectQuery.isLoading, i]);
 
-  const updateCount = useCallback((key: string, val: number) => { setCounts(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
-  const updateArea = useCallback((key: string, val: number) => { setAreas(p => ({ ...p, [key]: Math.max(0, val) })); setHasUnsavedChanges(true); }, []);
+  const updateCount = useCallback((key: string, value: number) => { setCounts(previous => ({ ...previous, [key]: Math.max(0, value) })); setHasUnsavedChanges(true); }, []);
+  const updateArea = useCallback((key: string, value: number) => { setAreas(previous => ({ ...previous, [key]: Math.max(0, value) })); setHasUnsavedChanges(true); }, []);
+
+  const allocationRows = useMemo(() => UNIT_TYPES.map(unit => ({
+    category: unit.category,
+    areaSqft: areas[unit.key] ?? unit.defaultArea,
+    count: counts[unit.key] || 0,
+  })), [areas, counts]);
+  const parkingRules = useMemo(() => parseParkingRules((projectQuery.data as any)?.parkingRulesJson), [projectQuery.data]);
+  const parkingSummary = useMemo(() => calculateParkingSummary(
+    allocationRows,
+    parkingRules,
+    (projectQuery.data as any)?.parkingAvailableSpaces,
+  ), [allocationRows, parkingRules, projectQuery.data]);
+
+  const calc = useMemo(() => {
+    const result: Record<ParkingCategory, { used: number; available: number; diff: number; units: number; parking: number | null }> = {} as any;
+    (Object.keys(categoryMeta) as ParkingCategory[]).forEach(category => {
+      const rows = UNIT_TYPES.filter(unit => unit.category === category);
+      const used = rows.reduce((sum, unit) => sum + (counts[unit.key] || 0) * (areas[unit.key] ?? unit.defaultArea), 0);
+      const units = rows.reduce((sum, unit) => sum + (counts[unit.key] || 0), 0);
+      result[category] = {
+        used,
+        available: sellable[category],
+        diff: sellable[category] - used,
+        units,
+        parking: parkingSummary.perCategory[category],
+      };
+    });
+    return result;
+  }, [areas, counts, parkingSummary.perCategory, sellable]);
+
+  const totalUnits = Object.values(calc).reduce((sum, category) => sum + category.units, 0);
+  const totalUsed = Object.values(calc).reduce((sum, category) => sum + category.used, 0);
+  const totalAvailable = Object.values(calc).reduce((sum, category) => sum + category.available, 0);
+  const totalAreaVariance = totalAvailable - totalUsed;
 
   const handleSave = useCallback(async () => {
     if (!selectedProjectId || !user) return;
     setIsSaving(true);
     try {
-      const d: any = { id: selectedProjectId };
-      Object.entries(COUNT_MAP).forEach(([k, f]) => { d[f] = String(counts[k] || 0); });
-      Object.entries(AREA_MAP).forEach(([k, f]) => { d[f] = String(areas[k] || 0); });
-      await updateProject.mutateAsync(d);
+      const data: any = { id: selectedProjectId };
+      Object.entries(COUNT_MAP).forEach(([key, field]) => { data[field] = String(counts[key] || 0); });
+      Object.entries(AREA_MAP).forEach(([key, field]) => { data[field] = String(areas[key] ?? 0); });
+      await updateProject.mutateAsync(data);
       setHasUnsavedChanges(false);
       toast({ title: "تم الحفظ ✓" });
       projectQuery.refetch();
-    } catch { toast({ title: "خطأ", variant: "destructive" }); }
-    finally { setIsSaving(false); }
+    } catch {
+      toast({ title: "خطأ", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
   }, [selectedProjectId, user, counts, areas, updateProject, toast, projectQuery]);
 
-  const calc = useMemo(() => {
-    const r: Record<string, { used: number; available: number; diff: number; units: number; parking: number }> = {};
-    (["residential", "retail", "office"] as const).forEach(cat => {
-      let used = 0, units = 0, parking = 0;
-      UNIT_TYPES.filter(ut => ut.category === cat).forEach(ut => {
-        const c = counts[ut.key] || 0, a = areas[ut.key] || ut.defaultArea;
-        used += c * a; units += c;
-        parking += calcParking(cat === "residential" ? "res" : cat, a, c);
-      });
-      r[cat] = { used, available: SELLABLE[cat], diff: SELLABLE[cat] - used, units, parking };
-    });
-    return r;
-  }, [counts, areas, SELLABLE]);
-
-  const totalUnits = (calc.residential?.units || 0) + (calc.retail?.units || 0) + (calc.office?.units || 0);
-  const totalParking = (calc.residential?.parking || 0) + (calc.retail?.parking || 0) + (calc.office?.parking || 0);
-
   if (!selectedProjectId) {
-    return (<div className="p-2 text-center text-xs text-gray-400" dir="rtl">{!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}<p className="mt-1">اختر مشروعاً من دليل الدراسات</p></div>);
+    return <div className="p-2 text-center text-xs text-gray-400" dir="rtl">{!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}<p className="mt-1">اختر مشروعاً من دليل الدراسات</p></div>;
   }
-  if (projectQuery.isLoading) {
-    return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
-  }
+  if (projectQuery.isLoading) return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
 
-  const renderCategory = (cat: "residential" | "retail" | "office", label: string) => {
-    const c = calc[cat];
-    return (
-      <>
-        <tr className={`border-t ${cat === 'residential' ? 'bg-blue-50/60 border-blue-100' : cat === 'retail' ? 'bg-orange-50/60 border-orange-100' : 'bg-teal-50/60 border-teal-100'}`}>
-          <td colSpan={3} className={`py-[3px] px-2 font-bold text-[11px] ${cat === 'residential' ? 'text-blue-700' : cat === 'retail' ? 'text-orange-700' : 'text-teal-700'}`}>{label}</td>
-          <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">متاح: {fmt(c?.available || 0)} | فرق: <span className={(c?.diff || 0) < 0 ? "text-red-600" : "text-teal-600"}>{fmt(c?.diff || 0)}</span></td>
-          <td className="py-[3px] px-2 text-center text-[10px] text-gray-500">{c?.parking || 0}</td>
-        </tr>
-        {UNIT_TYPES.filter(ut => ut.category === cat).map((ut, idx) => (
-          <tr key={ut.key} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50/30"}>
-            <td className="py-[2px] px-2 text-[11px] text-gray-700">{ut.label}</td>
-            <td className="py-[2px] px-2 text-center">
-              <input type="number" min={0} value={counts[ut.key] || 0} onChange={e => updateCount(ut.key, parseInt(e.target.value) || 0)}
-                className="w-14 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
-            </td>
-            <td className="py-[2px] px-2 text-center">
-              <input type="number" min={0} value={areas[ut.key] ?? ut.defaultArea} onChange={e => updateArea(ut.key, parseInt(e.target.value) || 0)}
-                className="w-16 h-[20px] text-[11px] text-center border border-gray-200 rounded bg-white focus:border-teal-500 focus:outline-none" />
-            </td>
-            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? fmt((counts[ut.key] || 0) * (areas[ut.key] ?? ut.defaultArea)) : "—"}</td>
-            <td className="py-[2px] px-2 text-center text-[11px] text-gray-600 tabular-nums">{(counts[ut.key] || 0) > 0 ? calcParking(cat === "residential" ? "res" : cat, areas[ut.key] || ut.defaultArea, counts[ut.key] || 0) : "—"}</td>
-          </tr>
-        ))}
-      </>
-    );
+  const renderCategory = (category: ParkingCategory) => {
+    const summary = calc[category];
+    const meta = categoryMeta[category];
+    return <>
+      <tr className={`border-t ${meta.tone}`}>
+        <td colSpan={3} className={`py-1 px-2 font-bold text-[11px] ${meta.text}`}>{meta.label}</td>
+        <td className="py-1 px-2 text-center text-[10px] text-slate-600">متاح: {fmt(summary.available)} | فرق: <span className={summary.diff < 0 ? "text-rose-600" : "text-emerald-700"}>{fmt(summary.diff)}</span></td>
+        <td className="py-1 px-2 text-center text-[10px] text-slate-600">{summary.parking === null ? "بانتظار الشرط" : summary.parking}</td>
+      </tr>
+      {UNIT_TYPES.filter(unit => unit.category === category).map((unit, index) => {
+        const count = counts[unit.key] || 0;
+        const area = areas[unit.key] ?? unit.defaultArea;
+        const parking = calculateUnitParking(category, area, count, parkingRules);
+        return <tr key={unit.key} className={index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+          <td className="py-1 px-2 text-[11px] text-slate-700">{unit.label}</td>
+          <td className="py-1 px-2 text-center"><input type="number" min={0} value={count} onChange={event => updateCount(unit.key, parseInt(event.target.value) || 0)} className="w-14 h-6 text-[11px] text-center border border-slate-300 rounded bg-white focus:border-teal-500 focus:outline-none" /></td>
+          <td className="py-1 px-2 text-center"><input type="number" min={0} value={area} onChange={event => updateArea(unit.key, parseInt(event.target.value) || 0)} className="w-[72px] h-6 text-[11px] text-center border border-slate-300 rounded bg-white focus:border-teal-500 focus:outline-none" /></td>
+          <td className="py-1 px-2 text-center text-[11px] text-slate-600 tabular-nums">{count > 0 ? fmt(count * area) : "—"}</td>
+          <td className="py-1 px-2 text-center text-[11px] text-slate-600 tabular-nums">{count > 0 ? (parking === null ? "—" : parking) : "—"}</td>
+        </tr>;
+      })}
+    </>;
   };
 
-  return (
-    <div className="bg-gray-50 px-4 py-2" dir="rtl">
-      {/* Toolbar */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
+  const parkingReady = parkingSummary.totalRequired !== null;
+  const parkingVarianceTone = parkingSummary.variance === null ? "text-slate-500" : parkingSummary.variance < 0 ? "text-rose-700" : "text-emerald-700";
+
+  return <div className="bg-slate-50 px-3 py-3" dir="rtl">
+    <div className="w-full max-w-5xl space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 shadow-sm">
         {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}
-        <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
+        <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-7 gap-1 bg-teal-600 px-3 text-[12px] text-white hover:bg-teal-700">
           {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
         </Button>
-        <span className="text-[11px] text-gray-500 mr-auto">{totalUnits} وحدة | {totalParking} موقف</span>
+        <span className="text-[11px] text-slate-600">{totalUnits} وحدة</span>
         <span className="text-[10px] text-amber-700">سعر القدم² يُحدد حصراً من صفحة المبيعات والتسويق</span>
       </div>
 
-      {/* Table in white rounded container */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full border-collapse text-[11px]">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="py-[4px] px-2 text-right text-[11px] font-bold text-gray-700">النوع</th>
-              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">العدد</th>
-              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-18">المساحة</th>
-              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700">إجمالي المساحة</th>
-              <th className="py-[4px] px-2 text-center text-[11px] font-bold text-gray-700 w-16">مواقف</th>
-            </tr>
-          </thead>
-          <tbody>
-            {renderCategory("residential", "سكني")}
-            {renderCategory("retail", "تجزئة")}
-            {renderCategory("office", "مكاتب")}
-          </tbody>
-          <tfoot>
-            <tr className="bg-teal-50 font-bold border-t-2 border-teal-200 text-[11px]">
-              <td className="py-[4px] px-2 text-teal-800">الإجمالي</td>
-              <td className="py-[4px] px-2 text-center text-teal-800">{totalUnits}</td>
-              <td className="py-[4px] px-2 text-center text-teal-800">—</td>
-              <td className="py-[4px] px-2 text-center text-teal-800 tabular-nums">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))}</td>
-              <td className="py-[4px] px-2 text-center text-teal-800">{totalParking}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2.1fr)_minmax(245px,0.9fr)]">
+        <div className="overflow-hidden rounded-lg border border-slate-300 bg-white shadow-sm">
+          <table className="w-full border-collapse text-[11px]">
+            <thead><tr className="border-b-2 border-slate-300 bg-slate-100">
+              <th className="px-2 py-1.5 text-right text-[11px] font-bold text-slate-800">النوع</th>
+              <th className="w-16 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">العدد</th>
+              <th className="w-20 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">المساحة</th>
+              <th className="px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">إجمالي المساحة</th>
+              <th className="w-24 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">مواقف مطلوبة</th>
+            </tr></thead>
+            <tbody>{renderCategory("residential")}{renderCategory("retail")}{renderCategory("office")}</tbody>
+            <tfoot><tr className="border-t-2 border-teal-300 bg-teal-50 text-[11px] font-bold text-teal-900">
+              <td className="px-2 py-1.5">الإجمالي</td><td className="px-2 py-1.5 text-center">{totalUnits}</td><td className="px-2 py-1.5 text-center">—</td><td className="px-2 py-1.5 text-center tabular-nums">{fmt(totalUsed)}</td><td className="px-2 py-1.5 text-center">{parkingReady ? parkingSummary.totalRequired : "—"}</td>
+            </tr></tfoot>
+          </table>
+        </div>
 
-      {/* Summary cards - Portfolio style */}
-      <div className="mt-3 grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
-          <div className="text-[10px] text-teal-600 mb-0.5">إجمالي الوحدات</div>
-          <div className="text-base font-bold text-teal-700">{totalUnits}</div>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm text-center">
-          <div className="text-[10px] text-gray-600 mb-0.5">إجمالي المواقف</div>
-          <div className="text-base font-bold text-gray-800">{totalParking}</div>
-        </div>
-        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm text-center">
-          <div className="text-[10px] text-red-600 mb-0.5">إجمالي المساحة المستخدمة</div>
-          <div className="text-base font-bold text-red-700" dir="ltr">{fmt((calc.residential?.used || 0) + (calc.retail?.used || 0) + (calc.office?.used || 0))} <span className="text-[11px] text-gray-400">قدم²</span></div>
-        </div>
+        <aside className="space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <Metric label="إجمالي الوحدات" value={String(totalUnits)} tone="teal" />
+            <Metric label="المساحة الموزعة" value={fmt(totalUsed)} tone="blue" />
+            <Metric label="المتاح للبيع" value={fmt(totalAvailable)} tone="violet" />
+            <Metric label="فرق المساحة" value={fmt(totalAreaVariance)} tone={totalAreaVariance < 0 ? "rose" : "emerald"} />
+          </div>
+
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+            <div className="mb-2 flex items-center gap-1.5"><Car className="h-4 w-4 text-indigo-700" /><h3 className="text-xs font-bold text-indigo-900">احتساب المواقف من الوثائق</h3></div>
+            {(projectQuery.data as any)?.parkingSourceReference && <p className="mb-2 text-[10px] text-indigo-700">المرجع: {(projectQuery.data as any).parkingSourceReference}</p>}
+            {(projectQuery.data as any)?.parkingRequirementsText && <p className="mb-2 rounded border border-indigo-100 bg-white/80 p-2 text-[10px] leading-relaxed text-slate-700">{(projectQuery.data as any).parkingRequirementsText}</p>}
+            {parkingSummary.ruleLines.length > 0 ? <div className="space-y-1">{parkingSummary.ruleLines.map(line => <p key={line} className="text-[10px] text-slate-700">• {line}</p>)}</div> : <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800"><Info className="ml-1 inline h-3 w-3" />لا توجد قاعدة مواقف منظمة مستخرجة بعد. لن تُستخدم أي افتراضات حتى يضيف خازن الشرط من الوثائق.</div>}
+            <div className="mt-3 space-y-1 border-t border-indigo-200 pt-2 text-[10px]">
+              <SummaryLine label="المطلوب" value={parkingReady ? String(parkingSummary.totalRequired) : "غير مكتمل"} />
+              <SummaryLine label="المتاح في الوثائق" value={parkingSummary.available === null ? "غير مذكور" : String(parkingSummary.available)} />
+              <SummaryLine label="الفائض / العجز" value={parkingSummary.variance === null ? "بانتظار البيانات" : String(parkingSummary.variance)} valueClass={parkingVarianceTone} />
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
-  );
+  </div>;
+}
+
+function Metric({ label, value, tone }: { label: string; value: string; tone: "teal" | "blue" | "violet" | "emerald" | "rose" }) {
+  const tones = {
+    teal: "border-teal-200 bg-teal-50 text-teal-800",
+    blue: "border-blue-200 bg-blue-50 text-blue-800",
+    violet: "border-violet-200 bg-violet-50 text-violet-800",
+    emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    rose: "border-rose-200 bg-rose-50 text-rose-800",
+  };
+  return <div className={`rounded-lg border p-2 text-center ${tones[tone]}`}><div className="text-[9px] opacity-75">{label}</div><div className="mt-0.5 text-[13px] font-bold tabular-nums">{value}</div></div>;
+}
+
+function SummaryLine({ label, value, valueClass = "text-slate-800" }: { label: string; value: string; valueClass?: string }) {
+  return <div className="flex items-center justify-between gap-2"><span className="text-slate-600">{label}</span><span className={`font-bold tabular-nums ${valueClass}`}>{value}</span></div>;
 }
