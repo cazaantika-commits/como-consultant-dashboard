@@ -49,7 +49,7 @@ function Field({
         <Textarea
           value={displayVal} onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder || label} readOnly={readOnly}
-          className={`min-h-[40px] text-[11px] border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 resize-none py-1 px-2 ${
+          className={`min-h-[40px] text-[11px] border-stone-300 focus:border-amber-400 focus:ring-amber-400/20 resize-none py-1 px-2 ${
             readOnly ? "bg-stone-50 text-stone-600" : "bg-white/50"
           }`}
         />
@@ -68,7 +68,7 @@ function Field({
         <Input
           type={type} value={displayVal} onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder || label} readOnly={readOnly}
-          className={`text-[11px] h-7 border-stone-200 focus:border-amber-400 focus:ring-amber-400/20 py-0.5 px-2 ${
+          className={`text-[11px] h-7 border-stone-300 focus:border-amber-400 focus:ring-amber-400/20 py-0.5 px-2 ${
             readOnly ? "bg-stone-50 text-stone-600 cursor-default" : "bg-white/50"
           } ${suffix ? "pl-10" : ""}`}
         />
@@ -84,7 +84,7 @@ function CalcRow({ label, formula, value, unit = "AED", highlight = false }: {
   label: string; formula: string; value: number; unit?: string; highlight?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between py-1 px-2 rounded ${highlight ? "bg-emerald-50 border border-emerald-200" : "bg-stone-50 border border-stone-100"}`}>
+    <div className={`flex items-center justify-between py-1 px-2 rounded ${highlight ? "bg-emerald-50 border border-emerald-300" : "bg-stone-50 border border-stone-200"}`}>
       <div className="flex flex-col">
         <span className={`text-[10px] font-medium ${highlight ? "text-emerald-800" : "text-stone-700"}`}>{label}</span>
         <span className="text-[9px] text-blue-500 font-mono" dir="ltr">{formula}</span>
@@ -123,9 +123,9 @@ function Section({
   };
 
   return (
-    <Card className="border border-stone-200/80 shadow-sm overflow-hidden">
+    <Card className="overflow-hidden border border-stone-300 border-t-2 shadow-sm">
       <CardHeader
-        className={`py-1.5 px-3 border-b ${colorMap[color]} cursor-pointer select-none`}
+        className={`cursor-pointer select-none border-b-2 py-1.5 px-3 ${colorMap[color]}`}
         onClick={() => setOpen(o => !o)}
       >
         <CardTitle className="text-[11px] font-semibold flex items-center justify-between gap-1">
@@ -145,12 +145,12 @@ function Section({
 // ─── GroupHeader ───
 function GroupHeader({ label, color = "stone" }: { label: string; color?: string }) {
   const cls: Record<string, string> = {
-    stone: "text-stone-500 border-stone-200", purple: "text-purple-600 border-purple-200",
-    amber: "text-amber-600 border-amber-200", emerald: "text-emerald-600 border-emerald-200",
-    blue: "text-blue-600 border-blue-200",
+    stone: "text-stone-600 border-stone-300", purple: "text-purple-700 border-purple-300",
+    amber: "text-amber-700 border-amber-300", emerald: "text-emerald-700 border-emerald-300",
+    blue: "text-blue-700 border-blue-300",
   };
   return (
-    <div className={`flex items-center gap-1 pt-0.5 pb-0 border-b ${cls[color]}`}>
+    <div className={`flex items-center gap-1 border-b-2 pt-0.5 pb-0 ${cls[color]}`}>
       <span className={`text-[9px] font-bold uppercase tracking-wider ${cls[color].split(" ")[0]}`}>{label}</span>
     </div>
   );

@@ -197,7 +197,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
             ? String(reraQuarterlyFees.inspectionTotal)
             : formData[field.key] || "";
         return (
-          <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-gray-100 ${isComputed ? "bg-amber-50/50" : ""}`}>
+          <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-slate-300 ${isComputed ? "bg-amber-50/80" : ""}`}>
             <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{displayLabel}</span>
             <input
               type={field.type === "date" ? "month" : "text"}
@@ -217,9 +217,9 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
   );
 
   return (
-    <div className="bg-gray-50 px-4 py-2" dir="rtl">
+    <div className="bg-[#f7fafb] px-4 py-2" dir="rtl">
       {/* Toolbar */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
+      <div className="mb-3 flex items-center gap-3 rounded-xl border border-slate-300 border-t-2 border-t-teal-500 bg-white px-4 py-2 shadow-sm">
         {!hideProjectSelector && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />}
         <label className="flex items-center gap-2 text-[12px] text-gray-600">
           <span className="font-medium">نوع التطوير</span>
@@ -252,36 +252,36 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       </div>
 
       {isBuildForSale && (
-        <div className="mb-3 rounded-lg border border-teal-100 bg-teal-50/60 px-4 py-2 text-[12px] text-teal-900">
+        <div className="mb-3 rounded-xl border border-teal-300 border-r-4 border-r-teal-500 bg-teal-50/80 px-4 py-2 text-[12px] text-teal-900">
           <span className="font-semibold">قواعد البناء للبيع:</span> لا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ، بينما التسويق والمبيعات بعد الإنجاز يُداران من صفحة المبيعات.
         </div>
       )}
       {isBuildForRent && (
-        <div className="mb-3 rounded-lg border border-indigo-100 bg-indigo-50/60 px-4 py-2 text-[12px] text-indigo-900">
+        <div className="mb-3 rounded-xl border border-indigo-300 border-r-4 border-r-indigo-500 bg-indigo-50/80 px-4 py-2 text-[12px] text-indigo-900">
           <span className="font-semibold">قواعد البناء للتأجير:</span> لا توجد مبيعات أو تسويق أو عمولات أو إيرادات في هذه المرحلة، ولا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور قابلة للتعديل: 1.5% في التصميم و2.5% في الإشراف من تكلفة الإنشاء.
         </div>
       )}
 
       {/* 3-column grid inside white rounded container */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
-        <div className="grid grid-cols-3 gap-6">
-          {renderCol(col1)}
-          {renderCol(col2)}
-          {renderCol(col3)}
+      <div className="rounded-xl border border-slate-300 border-t-2 border-t-teal-500 bg-white p-4 shadow-sm">
+        <div className="grid grid-cols-3 divide-x divide-slate-300">
+          <div className="px-3 first:pr-0">{renderCol(col1)}</div>
+          <div className="px-3">{renderCol(col2)}</div>
+          <div className="px-3 last:pl-0">{renderCol(col3)}</div>
         </div>
       </div>
 
       {/* Computed summary cards - Portfolio style */}
       <div className="mt-3 grid grid-cols-3 gap-3">
-        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
+        <div className="rounded-xl border border-teal-300 border-t-2 border-t-teal-500 bg-teal-50/70 p-3 text-center shadow-sm">
           <div className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</div>
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="bg-white rounded-lg p-3 border border-teal-100 shadow-sm text-center">
+        <div className="rounded-xl border border-cyan-300 border-t-2 border-t-cyan-500 bg-cyan-50/70 p-3 text-center shadow-sm">
           <div className="text-[10px] text-teal-600 mb-0.5">القابل للبيع</div>
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="bg-white rounded-lg p-3 border border-red-100 shadow-sm text-center">
+        <div className="rounded-xl border border-rose-300 border-t-2 border-t-rose-500 bg-rose-50/70 p-3 text-center shadow-sm">
           <div className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</div>
           <div className="text-base font-bold text-red-700" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
         </div>

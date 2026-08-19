@@ -39,4 +39,14 @@ describe("Unified Financial Studies project card", () => {
     expect(generalInputs).toContain("hideDocumentFields = false");
     expect(generalInputs).toContain("!hideDocumentFields || !DOCUMENT_DERIVED_FIELD_KEYS.has(field.key)");
   });
+
+  it("uses light colored surfaces with stronger separators for the two project-card sections", () => {
+    expect(unified).toContain("border-t-4 border-t-teal-500");
+    expect(unified).toContain("border-t-4 border-t-violet-500");
+    expect(unified).toContain("border-b-2 border-teal-300");
+    expect(unified).toContain("border-b-2 border-violet-300");
+    expect(generalInputs).toContain("divide-x divide-slate-300");
+    expect(generalInputs).toContain("border-b border-slate-300");
+    expect(factSheet).toContain("border-b-2");
+  });
 });

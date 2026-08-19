@@ -1277,3 +1277,5 @@
 - [x] Restyle Financial Studies as compact horizontal reference-style tool cards with white surfaces, thin colored top accents, and large colored icon blocks
 - [x] Browser-verify the reference-style board while preserving its single entry project selector and type-aware project pages
 - [x] Make every Financial Studies study page return one step to the same selected-project board rather than to home or unrelated pages
+- [ ] Refine Financial Studies visual design one card at a time, changing only colors, spacing, hierarchy, and layout after each specific observation
+- [x] Refresh the Unified Project Card with light vibrant surfaces and darker visual separators while preserving all content and behavior
