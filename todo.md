@@ -1277,7 +1277,7 @@
 - [x] Restyle Financial Studies as compact horizontal reference-style tool cards with white surfaces, thin colored top accents, and large colored icon blocks
 - [x] Browser-verify the reference-style board while preserving its single entry project selector and type-aware project pages
 - [x] Make every Financial Studies study page return one step to the same selected-project board rather than to home or unrelated pages
-- [ ] Refine Financial Studies visual design one card at a time, changing only colors, spacing, hierarchy, and layout after each specific observation
+- [x] Refine Financial Studies visual design one card at a time, changing only colors, spacing, hierarchy, and layout after each specific observation
 - [x] Refresh the Unified Project Card with light vibrant surfaces and darker visual separators while preserving all content and behavior
 - [x] Display Project Card whole amounts with thousands separators while preserving every meaningful decimal digit for rates, percentages, and fractional values
 - [x] Establish one display-only number-formatting standard across Financial Studies and executive reports: grouped whole amounts, meaningful fractional digits retained, and no K/M/Arabic-million abbreviations
@@ -1297,3 +1297,4 @@
 - [x] Index the authoritative Land Ownership & Plot Info Drive documents and map each to its correct project before rerunning Khazen
 - [x] Repair Khazen’s parking-fact update so the explicit official Majan parking rule is saved with its source reference
 - [x] Show the calculated total parking requirement even when the documented parking capacity and variance are still unavailable
+- [x] Redesign Construction Plan as a light interactive execution canvas with larger readable controls, clear curve choices, and understandable monthly progress without changing financial logic
