@@ -69,5 +69,7 @@ describe("Unified Financial Studies project card", () => {
     expect(factSheet).toContain("parkingRequirementsText");
     expect(factSheet).toContain("parkingSourceReference");
     expect(factSheet).toContain("parkingAvailableSpaces");
+    expect(factSheet).toContain("لا تعتبر عروض الاستشاريين");
+    expect(factSheet).toContain("وثيقة رسمية");
   });
 });

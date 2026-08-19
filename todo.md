@@ -1287,3 +1287,8 @@
 - [x] Add a document-sourced parking-requirement explanation to the Project Card and Unit Distribution page, showing required, available, and variance without inventing missing document rules
 - [x] Add non-duplicative Unit Distribution summaries for total units, saleable-area allocation, and immediate area-balance validation
 - [x] Ensure missing documented parking capacity remains explicitly unavailable rather than being displayed as zero
+- [x] Maintain and apply the agreed light, compact, high-clarity visual language automatically to every future Financial Studies card refinement
+- [x] Audit the current project’s Khazen parking extraction request, indexed documents, and persistence path to determine why no parking facts are available
+- [x] Restrict Khazen parking extraction to authoritative land, planning, and approval documents so consultant proposals cannot be treated as parking requirements
+- [x] Repair Khazen’s failed runtime model path so document extraction completes before deciding whether an official parking fact is unavailable
+- [x] Repair Khazen’s failed runtime model path so document extraction completes before deciding whether an official parking fact is unavailable

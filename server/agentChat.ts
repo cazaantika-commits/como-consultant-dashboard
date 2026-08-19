@@ -1432,16 +1432,55 @@ async function callGemini(
   return content;
 }
 
-// Fallback to built-in Manus LLM (no tool support)
-async function callManusLLM(systemPrompt: string, userMessage: string): Promise<string> {
-  const response = await invokeLLM({
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage }
-    ]
-  });
-  const content = response.choices[0].message.content;
-  return typeof content === "string" ? content : "عذراً، لم أتمكن من فهم طلبك.";
+// Built-in server model with the same trusted tool-execution loop as the legacy providers.
+// Khazen uses this path so document extraction does not depend on unconfigured external keys.
+async function callManusLLM(
+  systemPrompt: string,
+  userMessage: string,
+  conversationHistory?: { role: "user" | "assistant"; content: string }[],
+  tools?: any[],
+  userId?: number
+): Promise<string> {
+  const messages: any[] = [{ role: "system", content: systemPrompt }];
+  for (const message of conversationHistory?.slice(-6) || []) {
+    messages.push({ role: message.role, content: message.content });
+  }
+  messages.push({ role: "user", content: userMessage });
+
+  for (let round = 0; round < 3; round++) {
+    const response = await invokeLLM({
+      messages,
+      ...(tools?.length ? { tools, toolChoice: "auto" as const } : {}),
+      maxTokens: 1024,
+    });
+    const assistantMessage = response.choices[0]?.message;
+    if (!assistantMessage) throw new Error("Manus LLM returned no assistant message");
+
+    const toolCalls = assistantMessage.tool_calls || [];
+    if (!toolCalls.length) {
+      return typeof assistantMessage.content === "string"
+        ? assistantMessage.content
+        : "تم تنفيذ طلب خازن.";
+    }
+
+    messages.push({
+      role: "assistant",
+      content: typeof assistantMessage.content === "string" ? assistantMessage.content : "",
+      tool_calls: toolCalls,
+    });
+    for (const toolCall of toolCalls) {
+      let args: any = {};
+      try { args = JSON.parse(toolCall.function.arguments || "{}"); }
+      catch { console.error(`[ManusLLM] Invalid tool arguments for ${toolCall.function.name}`); }
+
+      let result: string;
+      try { result = await executeAgentTool(toolCall.function.name, args, userId || 0); }
+      catch (error: any) { result = `Error executing ${toolCall.function.name}: ${error.message || "Unknown error"}`; }
+      messages.push({ role: "tool", tool_call_id: toolCall.id, content: result });
+    }
+  }
+
+  return "تم تنفيذ أدوات خازن، لكن تجاوزت العملية عدد خطوات التحليل المسموح.";
 }
 
 // ═══════════════════════════════════════════════════
@@ -1456,6 +1495,14 @@ async function callBestModel(
   tools?: any[],
   userId?: number
 ): Promise<{ text: string; model: string }> {
+  if (agent === "khazen") {
+    console.log(`[AgentChat] 🟢 ${agent} → Manus built-in LLM with tools`);
+    return {
+      text: await callManusLLM(systemPrompt, userMessage, conversationHistory, tools, userId),
+      model: "Manus LLM",
+    };
+  }
+
   const assignedModel = AGENT_MODEL_MAP[agent];
 
   // Try the assigned model first
@@ -1504,7 +1551,7 @@ async function callBestModel(
 
   // Final fallback: Manus built-in LLM (no tools)
   console.log(`[AgentChat] 🔴 All models failed, using Manus LLM for ${agent}`);
-  return { text: await callManusLLM(systemPrompt, userMessage), model: "Manus LLM" };
+  return { text: await callManusLLM(systemPrompt, userMessage, conversationHistory, tools, userId), model: "Manus LLM" };
 }
 
 // Get platform context data for smarter responses
