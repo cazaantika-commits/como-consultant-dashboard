@@ -1312,3 +1312,6 @@
 - [x] Replace generic Financial Studies cards with the approved compact outlined-card language: matched thin colored outline, light surface, outlined internal fields, and clear dark hierarchy
 - [x] Apply the approved colored-outline reference-card language consistently across all Financial Studies and Planning pages
 - [x] Apply clean colored percentage and status pills throughout Financial Studies while retaining light page surfaces
+- [x] Rebuild Sales and Construction cards to match the supplied examples: soft internal gradients, restrained shadows, dark percentage pills, white input fields, and progress strips
+- [x] Add compact colored icon tiles and full-card semantic color washes for Sales and Construction status and KPI cards, matching the latest examples
+- [x] Reuse the actual Consultant Evaluation module visual system in Sales and Construction cards rather than approximating the supplied examples

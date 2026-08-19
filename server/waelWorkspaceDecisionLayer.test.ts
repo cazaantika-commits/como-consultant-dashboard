@@ -69,7 +69,7 @@ describe("Wael professional decision workspace", () => {
 
   it("gives each unit-pricing card a stronger, distinct light type treatment", () => {
     expect(workspaceSource).toContain('data-testid="unit-pricing-card"');
-    expect(workspaceSource).toContain('className="rounded-2xl border-2 p-3.5 transition hover:-translate-y-0.5"');
+    expect(workspaceSource).toContain('example-unit-card rounded-2xl border-2 p-3.5 transition hover:-translate-y-0.5');
     expect(workspaceSource).toContain('borderColor: unit.color');
     expect(workspaceSource).toContain('background: `linear-gradient(135deg, ${unit.color}1c 0%, #ffffff 62%)`');
     expect(workspaceSource).toContain('backgroundColor: `${unit.color}14`');

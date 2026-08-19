@@ -14,6 +14,14 @@ describe("Construction Plan execution canvas", () => {
     expect(source).not.toContain("repeat(${totalColumns}, minmax(40px, 1fr))");
   });
 
+  it("uses the Consultant Evaluation-style visual composition for cards and controls", () => {
+    expect(source).toContain('construction-example-canvas');
+    expect(source).toContain('example-icon-tile example-icon-teal');
+    expect(source).toContain('example-icon-tile example-icon-blue');
+    expect(source).toContain('example-icon-tile example-icon-rose');
+    expect(source).toContain('example-icon-tile example-icon-amber');
+  });
+
   it("retains the financial save contract and auditable payment details", () => {
     expect(source).toContain("constructionScheduleJson: JSON.stringify({ mobilizationPct, monthlyProgress, curveType })");
     expect(source).toContain("تفاصيل دفعات المقاول للتدقيق");

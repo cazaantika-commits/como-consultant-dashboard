@@ -143,7 +143,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
 
   if (!user) return <div className="p-4 text-center text-slate-600">يرجى تسجيل الدخول</div>;
 
-  return <div className="bg-slate-50/80 px-4 py-4" dir="rtl">
+  return <div className="construction-example-canvas bg-slate-50/80 px-4 py-4" dir="rtl">
     <div className="mx-auto max-w-[1440px]">
       <header className="fs-card fs-card-teal mb-4 flex flex-wrap items-center justify-between gap-3 px-5 py-3">
         <div className="flex items-center gap-3">
@@ -164,20 +164,20 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
       {selectedProjectId && project && <div className="space-y-4">
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="fs-card fs-card-teal p-4">
-            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-800"><span>مدة الإنشاء</span><Clock3 className="h-4 w-4 text-teal-700" /></div>
+            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-800"><span>مدة الإنشاء</span><span className="example-icon-tile example-icon-teal"><Clock3 className="h-4 w-4" /></span></div>
             <div className="flex items-center gap-2"><input aria-label="مدة الإنشاء بالأشهر" type="number" min={1} max={60} value={constructionMonths} onChange={e => handleMonthsChange(Number(e.target.value))} className="h-12 w-24 rounded-xl border border-teal-300 bg-white text-center text-xl font-extrabold text-slate-900 outline-none ring-teal-200 focus:ring-2" /><span className="font-semibold text-slate-700">شهرًا</span></div>
           </div>
           <div className="fs-card fs-card-blue p-4">
-            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-800"><span>الدفعة المقدمة</span><WalletCards className="h-4 w-4 text-sky-700" /></div>
+            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-800"><span>الدفعة المقدمة</span><span className="example-icon-tile example-icon-blue"><WalletCards className="h-4 w-4" /></span></div>
             <div className="flex items-center gap-2"><input aria-label="نسبة الدفعة المقدمة" type="number" min={0} max={50} step={0.5} value={mobilizationPct} onChange={e => { setMobilizationPct(Math.max(0, Math.min(50, Number(e.target.value) || 0))); setIsDirty(true); }} className="h-12 w-24 rounded-xl border border-sky-300 bg-white text-center text-xl font-extrabold text-slate-900 outline-none ring-sky-200 focus:ring-2" /><span className="font-semibold text-slate-700">%</span></div>
           </div>
           <div className="fs-card fs-card-rose p-4">
-            <div className="mb-1 flex items-center justify-between text-sm font-bold text-slate-800"><span>تكلفة عقد الإنشاء</span><DollarSign className="h-4 w-4 text-rose-700" /></div>
+            <div className="mb-1 flex items-center justify-between text-sm font-bold text-slate-800"><span>تكلفة عقد الإنشاء</span><span className="example-icon-tile example-icon-rose"><DollarSign className="h-4 w-4" /></span></div>
             <div className="text-xl font-extrabold tracking-tight text-slate-950">{constructionCost ? formatFullNumber(constructionCost, "—") : "—"}</div>
             <div className="mt-1 text-xs text-slate-600">مساحة البناء × تكلفة القدم</div>
           </div>
           <div className="fs-card fs-card-amber p-4">
-            <div className="mb-1 flex items-center justify-between text-sm font-bold text-slate-800"><span>الاحتجاز</span><ShieldCheck className="h-4 w-4 text-amber-700" /></div>
+            <div className="mb-1 flex items-center justify-between text-sm font-bold text-slate-800"><span>الاحتجاز</span><span className="example-icon-tile example-icon-amber"><ShieldCheck className="h-4 w-4" /></span></div>
             <div className="text-xl font-extrabold text-slate-950">{retentionPct}%</div>
             <div className="mt-1 text-xs text-slate-600">5% بعد شهرين و5% بعد 13 شهرًا</div>
           </div>
