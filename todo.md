@@ -1306,3 +1306,6 @@
 - [x] Strengthen the Sales and Marketing card and input outlines while retaining light backgrounds and readable charcoal text
 - [x] Strengthen outlines and diversify light color treatments for each unit-pricing card by unit type without altering pricing logic
 - [x] Replace collection-card project-month numbers with named month and year and reduce every rectangular card and control inside the visible collection section to approximately 75%
+- [x] Redesign collection-and-escrow cards as smaller polished tiles so more than 12 named months appear together in a wide view
+- [x] Apply light, harmonious, role-based color treatments across every Sales and Marketing workspace card and control
+- [x] Apply the approved soft-pastel card style with tinted surfaces and matched colored outlines throughout the compact Sales workspace

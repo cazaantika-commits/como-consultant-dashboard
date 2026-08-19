@@ -487,6 +487,141 @@
 }
 
 /* ============================================================
+   SALES WORKSPACE — COMPACT PASTEL CANVAS
+   Soft tinted surfaces and clear colored borders, inspired by
+   the approved light-card reference. Scoped to Wael's workspace.
+   ============================================================ */
+.sales-workspace-pastel [data-testid="collection-cash-reading"] {
+  display: none;
+}
+
+.sales-workspace-pastel .rounded-\[22px\] {
+  border-radius: 1rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:first-child,
+.sales-workspace-pastel [data-testid="pricing-source-panel"] > div:first-child,
+.sales-workspace-pastel [data-testid="sales-calendar-board"] > div:first-child {
+  padding: 0.75rem 0.9rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child {
+  gap: 0.55rem;
+  padding: 0.7rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div {
+  border-width: 1px;
+  border-radius: 0.9rem;
+  padding: 0.7rem;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 4%);
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(1) {
+  border-color: #9ae6c4;
+  background: linear-gradient(135deg, #ecfdf5, #ffffff 72%);
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(2) {
+  border-color: #a9d7ff;
+  background: linear-gradient(135deg, #eff6ff, #ffffff 72%);
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(3) {
+  border-color: #f9d78c;
+  background: linear-gradient(135deg, #fffbeb, #ffffff 72%);
+}
+
+.sales-workspace-pastel [data-testid="sales-control-strip"] > div:last-child > div:nth-child(4) {
+  border-color: #c4b5fd;
+  background: linear-gradient(135deg, #f5f3ff, #ffffff 72%);
+}
+
+.sales-workspace-pastel [data-testid="pricing-source-panel"] > div:last-child {
+  gap: 0.5rem;
+  padding: 0.65rem;
+}
+
+.sales-workspace-pastel [data-testid="unit-pricing-card"] {
+  border-radius: 0.85rem;
+  padding: 0.7rem !important;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 4%) !important;
+}
+
+.sales-workspace-pastel [data-testid="unit-pricing-card"] .mt-3 {
+  margin-top: 0.45rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] > div:last-child {
+  padding: 0.65rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article {
+  min-height: 0;
+  border-width: 1px;
+  border-radius: 0.8rem;
+  padding: 0.65rem;
+  box-shadow: 0 3px 10px rgb(15 23 42 / 3%);
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article:nth-child(4n + 1) {
+  border-color: #9ac8f4;
+  background: linear-gradient(135deg, #eff6ff, #ffffff);
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article:nth-child(4n + 2) {
+  border-color: #c7b8f8;
+  background: linear-gradient(135deg, #f5f3ff, #ffffff);
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article:nth-child(4n + 3) {
+  border-color: #f5d38c;
+  background: linear-gradient(135deg, #fffbeb, #ffffff);
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article:nth-child(4n) {
+  border-color: #9de4c6;
+  background: linear-gradient(135deg, #ecfdf5, #ffffff);
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] article .mt-4 {
+  margin-top: 0.55rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-calendar-board"] input {
+  height: 2.25rem;
+  font-size: 1rem;
+}
+
+.sales-workspace-pastel [data-testid="collection-cash-reading-compact"] {
+  box-shadow: 0 7px 18px rgb(59 130 246 / 7%);
+}
+
+.sales-workspace-pastel [data-testid="sales-live-impact"] {
+  border-color: #c4b5fd;
+  box-shadow: 0 7px 18px rgb(124 58 237 / 8%);
+}
+
+.sales-workspace-pastel [data-testid="sales-live-impact"] > div:first-child {
+  padding: 0.85rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-live-impact"] > div:last-child {
+  padding: 0.7rem;
+}
+
+.sales-workspace-pastel [data-testid="sales-live-impact"] .rounded-2xl {
+  border-radius: 0.8rem;
+  padding: 0.7rem;
+}
+
+@media (min-width: 1280px) {
+  .sales-workspace-pastel [data-testid="sales-calendar-board"] article {
+    padding: 0.55rem;
+  }
+}
+
+/* ============================================================
    READ-ONLY MODE
    When body[data-readonly="true"], hide all elements marked
    with data-hide-readonly attribute.

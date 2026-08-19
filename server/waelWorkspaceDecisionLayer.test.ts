@@ -8,6 +8,7 @@ const readSource = (relativePath: string) =>
 describe("Wael professional decision workspace", () => {
   const workspaceSource = readSource("client/src/pages/V2WaelSales.tsx");
   const navigationSource = readSource("client/src/pages/BateekhaPage.tsx");
+  const stylesSource = readSource("client/src/index.css");
 
   it("uses one professional scenario canvas with live impact beside direct controls", () => {
     expect(workspaceSource).not.toContain("WAEL_STUDIO_ROOMS");
@@ -16,7 +17,7 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("لوحة بيع 12 شهرًا");
     expect(workspaceSource).toContain("أثر القرار — مباشر");
     expect(workspaceSource).toContain("impactFocus");
-    expect(workspaceSource).toContain("xl:grid-cols-[minmax(0,1fr)_370px]");
+    expect(workspaceSource).toContain("xl:grid-cols-[minmax(0,1fr)_300px]");
     expect(workspaceSource).toContain("h-12 w-full");
     expect(workspaceSource).toContain("applySalesPace");
     expect(workspaceSource).toContain("adjustAllPrices");
@@ -94,5 +95,26 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6');
     expect(workspaceSource).toContain('className="rounded-xl border border-slate-300 bg-white p-2.5"');
     expect(workspaceSource).not.toContain('className="text-xs font-black text-slate-800">شهر {row.month}');
+  });
+
+  it("uses a compact pastel canvas with an expanded named-month collection tile board", () => {
+    expect(workspaceSource).toContain('sales-workspace-pastel min-h-full');
+    expect(workspaceSource).toContain('xl:grid-cols-[minmax(0,1fr)_300px]');
+    expect(workspaceSource).toContain('const visibleCollectionRows = cashInflowData.filter');
+    expect(workspaceSource).toContain('.slice(0, 18)');
+    expect(workspaceSource).toContain('data-testid="collection-cash-reading-compact"');
+    expect(workspaceSource).toContain('xl:grid-cols-7');
+    expect(workspaceSource).toContain('collectionPastelTones[index % collectionPastelTones.length]');
+    expect(workspaceSource).toContain('data-testid="sales-control-strip"');
+    expect(workspaceSource).toContain('data-testid="sales-calendar-board"');
+    expect(workspaceSource).toContain('data-testid="sales-live-impact"');
+  });
+
+  it("scopes the approved soft pastel card system to the Sales workspace only", () => {
+    expect(stylesSource).toContain("SALES WORKSPACE — COMPACT PASTEL CANVAS");
+    expect(stylesSource).toContain('.sales-workspace-pastel [data-testid="collection-cash-reading"]');
+    expect(stylesSource).toContain('[data-testid="sales-control-strip"] > div:last-child > div:nth-child(1)');
+    expect(stylesSource).toContain('[data-testid="sales-calendar-board"] article:nth-child(4n + 1)');
+    expect(stylesSource).toContain('[data-testid="sales-live-impact"]');
   });
 });
