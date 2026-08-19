@@ -175,61 +175,61 @@ export default function V2InvestorCashFlow() {
       </div>
 
       {/* Decision layer — all values are derived from the existing monthly arrays above. */}
-      <section className="border-b border-slate-200 bg-slate-100 px-5 py-4">
+      <section className="border-b border-slate-200 bg-slate-50 px-5 py-4">
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-2xl bg-slate-950 p-5 text-white shadow-lg shadow-slate-950/15">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-              <WalletCards className="h-4 w-4 text-cyan-300" />
+          <aside className="fs-card fs-card-violet p-5 text-slate-900">
+            <div className="flex items-center gap-2 text-xs font-semibold text-violet-700">
+              <WalletCards className="h-4 w-4 text-violet-600" />
               موقف المستثمر — مباشر
             </div>
             <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{fmt(profit)}</p>
-            <p className="mt-1 text-xs text-slate-400">صافي النتيجة المتوقعة بعد جميع التدفقات</p>
-            <div className="mt-5 border-t border-white/10 pt-4">
+            <p className="mt-1 text-xs text-slate-600">صافي النتيجة المتوقعة بعد جميع التدفقات</p>
+            <div className="mt-5 border-t border-violet-200 pt-4">
               <div className="flex items-start gap-2">
                 <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
                 <div>
-                  <p className="text-xs font-semibold text-slate-200">أعلى ضغط تمويلي</p>
-                  <p className="mt-1 text-lg font-bold tabular-nums text-rose-200">{fmt(Math.abs(deepestFundingPoint.value))}</p>
-                  <p className="text-[11px] text-slate-400">{deepestFundingPoint.index >= 0 ? monthCaption(deepestFundingPoint.index) : "لا يوجد عجز تراكمي"}</p>
+                  <p className="text-xs font-semibold text-slate-700">أعلى ضغط تمويلي</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-rose-700">{fmt(Math.abs(deepestFundingPoint.value))}</p>
+                  <p className="text-[11px] text-slate-600">{deepestFundingPoint.index >= 0 ? monthCaption(deepestFundingPoint.index) : "لا يوجد عجز تراكمي"}</p>
                 </div>
               </div>
             </div>
           </aside>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="fs-card fs-card-blue p-4">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <p className="text-xs font-semibold text-cyan-700">لوحة القرار</p>
                 <h2 className="mt-1 text-lg font-bold text-slate-950">متى يحتاج المشروع إلى رأس مال، ومتى يعيده؟</h2>
                 <p className="mt-1 text-xs text-slate-500">تُقرأ الأرقام التنفيذية هنا أولًا؛ ويبقى جدول الأشهر أدناه مرجع التدقيق الكامل.</p>
               </div>
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{totalMonths} شهرًا ماليًا</div>
+              <div className="fs-pill fs-pill-blue">{totalMonths} شهرًا ماليًا</div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-              <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+              <div className="fs-card fs-card-rose p-3">
                 <p className="text-xs font-semibold text-rose-700">إجمالي المطلوب من المستثمر</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{fmt(totalDebit)}</p>
                 <p className="mt-1 text-[11px] text-rose-700">أكبر دفعة: {fmt(largestFundingMonth.value)} · {monthCaption(largestFundingMonth.index)}</p>
               </div>
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+              <div className="fs-card fs-card-emerald p-3">
                 <p className="text-xs font-semibold text-emerald-700">إجمالي المستلم للمستثمر</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{fmt(totalCredit)}</p>
                 <p className="mt-1 text-[11px] text-emerald-700">أول استلام: {firstReceiptIndex >= 0 ? monthCaption(firstReceiptIndex) : "—"}</p>
               </div>
-              <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
+              <div className="fs-card fs-card-violet p-3">
                 <p className="text-xs font-semibold text-violet-700">أكبر تدفق عائد</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{fmt(largestReceipt.value)}</p>
                 <p className="mt-1 text-[11px] text-violet-700">{largestReceipt.index >= 0 ? monthCaption(largestReceipt.index) : "لا يوجد استلام بعد"}</p>
               </div>
-              <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-3">
+              <div className="fs-card fs-card-cyan p-3">
                 <p className="text-xs font-semibold text-cyan-700">صافي الربحية المتوقع</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-cyan-950">{fmt(profit)}</p>
                 <p className="mt-1 flex items-center gap-1 text-[11px] text-cyan-700"><TrendingUp className="h-3 w-3" /> إيرادات ناقص مصروفات المستثمر</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="fs-card fs-card-cyan mt-4 px-4 py-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700"><CalendarClock className="h-4 w-4 text-cyan-700" /> نبض الضغط والعودة الشهري</div>
                 <span className="text-[11px] text-slate-500">أحمر = تمويل مطلوب · أخضر = تدفق عائد</span>

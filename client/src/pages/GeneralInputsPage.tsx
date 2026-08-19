@@ -267,7 +267,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       )}
 
       {/* 3-column grid inside white rounded container */}
-      <div className="rounded-xl border border-slate-300 border-t-2 border-t-teal-500 bg-white p-4 shadow-sm">
+      <div className="fs-card fs-card-teal rounded-xl p-4">
         <div className="grid grid-cols-3 divide-x divide-slate-300">
           <div className="px-3 first:pr-0">{renderCol(col1)}</div>
           <div className="px-3">{renderCol(col2)}</div>
@@ -277,15 +277,15 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
 
       {/* Computed summary cards - Portfolio style */}
       <div className="mt-3 grid grid-cols-3 gap-3">
-        <div className="rounded-xl border border-teal-300 border-t-2 border-t-teal-500 bg-teal-50/70 p-3 text-center shadow-sm">
+        <div className="fs-card fs-card-teal rounded-xl p-3 text-center">
           <div className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</div>
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="rounded-xl border border-cyan-300 border-t-2 border-t-cyan-500 bg-cyan-50/70 p-3 text-center shadow-sm">
+        <div className="fs-card fs-card-cyan rounded-xl p-3 text-center">
           <div className="text-[10px] text-teal-600 mb-0.5">القابل للبيع</div>
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
-        <div className="rounded-xl border border-rose-300 border-t-2 border-t-rose-500 bg-rose-50/70 p-3 text-center shadow-sm">
+        <div className="fs-card fs-card-rose rounded-xl p-3 text-center">
           <div className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</div>
           <div className="text-base font-bold text-red-700" dir="ltr">{fmt(computed.constructionCost)} <span className="text-[11px] text-gray-400">درهم</span></div>
         </div>

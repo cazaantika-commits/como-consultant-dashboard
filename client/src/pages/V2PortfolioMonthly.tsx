@@ -144,7 +144,7 @@ export default function V2PortfolioMonthly() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border-2 border-slate-900 bg-slate-50 p-4 shadow-sm">
+        <div className="fs-card fs-card-blue mt-4 p-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h2 className="text-sm font-extrabold text-slate-900">المشاريع الداخلة في التقرير</h2>
@@ -173,12 +173,12 @@ export default function V2PortfolioMonthly() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div className="rounded-md border-r-4 border-orange-500 bg-white p-3 shadow-sm"><p className="text-[10px] text-slate-500">أكبر مبلغ مطلوب من المستثمر</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(largestRequired)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
-          <div className="rounded-md border-r-4 border-emerald-500 bg-white p-3 shadow-sm"><p className="text-[10px] text-slate-500">إجمالي المستلم للمستثمر</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totalReturned)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
-          <div className="rounded-md border-r-4 border-sky-500 bg-white p-3 shadow-sm"><p className="text-[10px] text-slate-500">عدد المشاريع</p><p className="mt-1 text-lg font-extrabold text-slate-900">{selectedProjects.length} / {projects.length}</p><span className="text-[9px] text-slate-400">مشاريع مختارة</span></div>
+          <div className="fs-card fs-card-orange rounded-md p-3"><p className="text-[10px] text-slate-500">أكبر مبلغ مطلوب من المستثمر</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(largestRequired)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
+          <div className="fs-card fs-card-emerald rounded-md p-3"><p className="text-[10px] text-slate-500">إجمالي المستلم للمستثمر</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totalReturned)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
+          <div className="fs-card fs-card-cyan rounded-md p-3"><p className="text-[10px] text-slate-500">عدد المشاريع</p><p className="mt-1 text-lg font-extrabold text-slate-900">{selectedProjects.length} / {projects.length}</p><span className="text-[9px] text-slate-400">مشاريع مختارة</span></div>
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="fs-card fs-card-violet mt-4 overflow-hidden">
           <div className="border-b border-slate-200 px-4 py-3 flex items-center gap-2">
             <Layers3 className="h-4 w-4 text-slate-700" />
             <h2 className="text-sm font-extrabold text-slate-900">التوزيع الزمني للتدفقات</h2>

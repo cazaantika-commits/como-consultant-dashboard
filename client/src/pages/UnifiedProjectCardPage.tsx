@@ -6,7 +6,7 @@ export default function UnifiedProjectCardPage() {
   return (
     <div className="bg-[#f7fafb] px-4 py-3" dir="rtl">
       <div className="mx-auto max-w-[1500px] space-y-5">
-        <section className="overflow-hidden rounded-2xl border border-teal-300 border-t-4 border-t-teal-500 bg-white shadow-sm">
+        <section className="fs-card fs-card-teal overflow-hidden border-t-4 border-t-teal-500">
           <div className="flex items-start gap-3 border-b-2 border-teal-300 bg-gradient-to-l from-teal-100 via-teal-50 to-white px-4 py-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white shadow-sm">
               <ClipboardList className="h-4 w-4" />
@@ -21,7 +21,7 @@ export default function UnifiedProjectCardPage() {
           <GeneralInputsPage embedded hideDocumentFields hideProjectSelector />
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-violet-300 border-t-4 border-t-violet-500 bg-white shadow-sm">
+        <section className="fs-card fs-card-violet overflow-hidden border-t-4 border-t-violet-500">
           <div className="flex items-start gap-3 border-b-2 border-violet-300 bg-gradient-to-l from-violet-100 via-violet-50 to-white px-4 py-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-sm">
               <Database className="h-4 w-4" />
@@ -36,7 +36,7 @@ export default function UnifiedProjectCardPage() {
           <FactSheetPage embedded documentOnly />
         </section>
 
-        <div className="flex items-center gap-2 rounded-xl border border-slate-300 border-t-2 border-t-amber-400 bg-amber-50/60 px-3 py-2 text-[11px] text-slate-600">
+        <div className="fs-card fs-card-amber flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] text-slate-600">
           <Calculator className="h-3.5 w-3.5 text-emerald-600" />
           <span><strong className="text-slate-800">القيم المحسوبة</strong> تظهر في بطاقات الملخص داخل قسم الإدخالات للمراجعة فقط، ولا تعدّل يدويًا.</span>
         </div>

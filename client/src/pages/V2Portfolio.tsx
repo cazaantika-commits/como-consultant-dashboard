@@ -156,29 +156,29 @@ export default function V2Portfolio() {
           </div>
         </div>
 
-        <section className="mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_35px_rgba(15,23,42,0.07)]" dir="rtl" data-testid="portfolio-liquidity-decision-panel">
-          <div className="relative overflow-hidden bg-gradient-to-l from-slate-950 via-slate-900 to-indigo-950 px-4 py-4 text-white sm:px-5">
+        <section className="fs-card fs-card-violet mb-4 overflow-hidden" dir="rtl" data-testid="portfolio-liquidity-decision-panel">
+          <div className="relative overflow-hidden px-4 py-4 text-slate-900 sm:px-5">
             <div className="absolute -left-12 -top-16 h-44 w-44 rounded-full bg-amber-400/15 blur-3xl" />
             <div className="absolute -bottom-20 right-1/3 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
             <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-400/15 text-amber-300"><Landmark className="h-5 w-5" /></div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-violet-300 bg-violet-100 text-violet-700"><Landmark className="h-5 w-5" /></div>
                 <div>
-                  <p className="text-[10px] font-semibold tracking-[0.12em] text-amber-200">قرار السيولة التنفيذي</p>
+                  <p className="text-[10px] font-semibold tracking-[0.12em] text-violet-700">قرار السيولة التنفيذي</p>
                   <h2 className="mt-1 text-lg font-black">ما الذي تحتاجه المحفظة خلال الأشهر القادمة؟</h2>
-                  <p className="mt-1 text-xs text-slate-300">التزامات المستثمر، العوائد، ومحركات القرار من صف صافي التدفق المعتمد.</p>
+                  <p className="mt-1 text-xs text-slate-600">التزامات المستثمر، العوائد، ومحركات القرار من صف صافي التدفق المعتمد.</p>
                 </div>
               </div>
-              {executiveLiquidity.months.length > 0 && <div className="flex items-center gap-2 self-start rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs text-slate-100"><CalendarDays className="h-4 w-4 text-amber-200" /> {formatMonth(executiveLiquidity.months[0].monthDate)} – {formatMonth(executiveLiquidity.months[executiveLiquidity.months.length - 1].monthDate)}</div>}
+              {executiveLiquidity.months.length > 0 && <div className="fs-pill fs-pill-violet self-start"><CalendarDays className="ml-1 h-3.5 w-3.5" /> {formatMonth(executiveLiquidity.months[0].monthDate)} – {formatMonth(executiveLiquidity.months[executiveLiquidity.months.length - 1].monthDate)}</div>}
             </div>
 
             <div className="relative mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <ExecutiveMetric label="مطلوب من المستثمرين" value={formatAmount(executiveLiquidity.summary.required)} tone="required" icon={<TrendingDown className="h-4 w-4" />} />
               <ExecutiveMetric label="مستلم للمستثمرين" value={formatAmount(executiveLiquidity.summary.returned)} tone="returned" icon={<TrendingUp className="h-4 w-4" />} />
               <ExecutiveMetric label={executiveLiquidity.summary.netFunding > 0 ? "صافي التمويل بعد العوائد" : "صافي العائد بعد الالتزامات"} value={formatAmount(executiveLiquidity.summary.netFunding)} tone={executiveLiquidity.summary.netFunding > 0 ? "required" : "returned"} icon={<Landmark className="h-4 w-4" />} />
-              <div className="rounded-2xl border border-white/15 bg-white/10 p-3">
-                <p className="text-[10px] font-bold text-slate-300">{executiveLiquidity.peakKind === "required" ? "شهر أعلى ضغط تمويلي" : "شهر أعلى عائد متوقع"}</p>
-                {executiveLiquidity.peakMonth ? <><p className="mt-1 text-base font-black text-white">{formatMonth(executiveLiquidity.peakMonth.monthDate)}</p><p className={`mt-1 text-sm font-black ${executiveLiquidity.peakKind === "required" ? "text-red-200" : "text-emerald-200"}`}>{formatAmount(executiveLiquidity.peakKind === "required" ? executiveLiquidity.peakMonth.required : executiveLiquidity.peakMonth.returned)} <span className="text-[10px] font-semibold">درهم</span></p></> : <p className="mt-2 text-sm font-bold text-slate-400">لا بيانات قادمة</p>}
+              <div className="fs-card fs-card-amber p-3">
+                <p className="text-[10px] font-bold text-slate-600">{executiveLiquidity.peakKind === "required" ? "شهر أعلى ضغط تمويلي" : "شهر أعلى عائد متوقع"}</p>
+                {executiveLiquidity.peakMonth ? <><p className="mt-1 text-base font-black text-slate-900">{formatMonth(executiveLiquidity.peakMonth.monthDate)}</p><p className={`mt-1 text-sm font-black ${executiveLiquidity.peakKind === "required" ? "text-red-700" : "text-emerald-700"}`}>{formatAmount(executiveLiquidity.peakKind === "required" ? executiveLiquidity.peakMonth.required : executiveLiquidity.peakMonth.returned)} <span className="text-[10px] font-semibold">درهم</span></p></> : <p className="mt-2 text-sm font-bold text-slate-400">لا بيانات قادمة</p>}
               </div>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function V2Portfolio() {
               {executiveLiquidity.months.map((month) => {
                 const isOpen = openExecutiveMonth === month.monthDate;
                 const isRequired = month.required > 0;
-                return <div key={month.monthDate} className={`rounded-xl border p-3 transition ${isRequired ? "border-red-100 bg-red-50/70" : month.returned > 0 ? "border-emerald-100 bg-emerald-50/70" : "border-slate-100 bg-slate-50"}`}>
+                return <div key={month.monthDate} className={`fs-card p-3 transition ${isRequired ? "fs-card-rose" : month.returned > 0 ? "fs-card-emerald" : "fs-card-blue"}`}>
                   <button className="w-full text-right" onClick={() => setOpenExecutiveMonth(isOpen ? null : month.monthDate)}>
                     <div className="flex items-center justify-between gap-2"><span className="text-sm font-black text-slate-800">{formatMonth(month.monthDate)}</span>{isOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}</div>
                     <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]"><div><p className="text-red-600">مطلوب</p><p className="mt-0.5 font-black text-red-700">{month.required ? formatAmount(month.required) : "—"}</p></div><div><p className="text-emerald-600">مستلم</p><p className="mt-0.5 font-black text-emerald-700">{month.returned ? formatAmount(month.returned) : "—"}</p></div></div>
@@ -200,7 +200,7 @@ export default function V2Portfolio() {
                 </div>;
               })}
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="fs-card fs-card-blue p-3">
               <p className="text-[10px] font-bold text-slate-500">{executiveLiquidity.peakKind === "required" ? "المشاريع التي تقود شهر الذروة" : "المشاريع التي تقود أعلى عائد"}</p>
               {executiveLiquidity.peakMonth ? <><p className="mt-1 text-sm font-black text-slate-800">{formatMonth(executiveLiquidity.peakMonth.monthDate)}</p><div className="mt-3 space-y-2">{(executiveLiquidity.peakKind === "required" ? executiveLiquidity.peakMonth.requiredDrivers : executiveLiquidity.peakMonth.returnedDrivers).slice(0, 3).map((driver, index) => <div key={driver.projectId} className="flex items-center justify-between gap-3 rounded-lg bg-white px-2.5 py-2"><div className="flex min-w-0 items-center gap-2"><span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-black text-slate-500">{index + 1}</span><span className="truncate text-[11px] font-semibold text-slate-700">{driver.name}</span></div><span className={`shrink-0 text-xs font-black ${driver.value < 0 ? "text-red-700" : "text-emerald-700"}`}>{formatAmount(driver.value)}</span></div>)}</div></> : <p className="mt-3 text-xs text-slate-400">لا توجد تدفقات ضمن الفترة المختارة.</p>}
             </div>
@@ -214,6 +214,6 @@ export default function V2Portfolio() {
 }
 
 function ExecutiveMetric({ label, value, tone, icon }: { label: string; value: string; tone: "required" | "returned"; icon: ReactNode }) {
-  const tones = tone === "required" ? "border-red-300/20 bg-red-400/10 text-red-100" : "border-emerald-300/20 bg-emerald-400/10 text-emerald-100";
-  return <div className={`rounded-2xl border p-3 ${tones}`}><div className="flex items-center gap-1.5 text-[10px] font-bold">{icon}{label}</div><p className="mt-1.5 text-xl font-black text-white">{value} <span className="text-[10px] font-semibold">درهم</span></p></div>;
+  const tones = tone === "required" ? "fs-card-rose text-rose-700" : "fs-card-emerald text-emerald-700";
+  return <div className={`fs-card rounded-2xl p-3 ${tones}`}><div className="flex items-center gap-1.5 text-[10px] font-bold">{icon}{label}</div><p className="mt-1.5 text-xl font-black text-slate-950">{value} <span className="text-[10px] font-semibold">درهم</span></p></div>;
 }

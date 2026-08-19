@@ -310,11 +310,11 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
           <div className="space-y-3">
 
             {/* ═══ SECTION 1: PROJECT PHASES ═══ */}
-            <section className="rounded-xl border border-teal-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-teal overflow-hidden">
               <div className="px-4 py-2.5 bg-teal-50 border-b border-teal-100 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-teal-700" />
                 <h2 className="text-sm font-bold text-teal-800">مراحل المشروع</h2>
-                <Badge className="text-[10px] bg-teal-100 text-teal-700 mr-auto">البداية والمدة</Badge>
+                <Badge className="fs-pill fs-pill-teal mr-auto text-[10px]">البداية والمدة</Badge>
               </div>
               <div className="p-3">
                 <div className="grid grid-cols-[auto_1fr_120px_120px] gap-x-3 gap-y-1 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2 mb-2">
@@ -381,7 +381,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 2: DESIGN PHASES ═══ */}
-            <section className="rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-blue overflow-hidden">
               <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                 <Palette className="w-4 h-4 text-blue-700" />
                 <h2 className="text-sm font-bold text-blue-800">مراحل التصميم واستحقاق الاستشاري</h2>
@@ -392,7 +392,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
                   </Badge>
                 )}
                 {designPaymentTotal === 100 && (
-                  <Badge className="text-[10px] mr-auto bg-emerald-100 text-emerald-700">100% ✓</Badge>
+                  <Badge className="fs-pill fs-pill-emerald mr-auto text-[10px]">100% ✓</Badge>
                 )}
                 <span className="text-[10px] text-gray-400">إجمالي: {totalDesignWeeks} أسبوع ≈ {totalDesignMonths} شهر</span>
               </div>
@@ -438,14 +438,14 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 3: CONFIGURABLE RATES ═══ */}
-            <section className="rounded-xl border border-amber-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-amber overflow-hidden">
               <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
                 <Banknote className="w-4 h-4 text-amber-700" />
                 <h2 className="text-sm font-bold text-amber-800">المعدلات والرسوم القابلة للتعديل</h2>
               </div>
               <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {visibleConfigurableRates.map((rate) => (
-                  <div key={rate.id} className="rounded-lg border border-gray-100 p-2.5 hover:border-amber-200 transition-colors">
+                  <div key={rate.id} className="fs-card fs-card-amber rounded-lg p-2.5 transition-colors">
                     <p className="text-[11px] font-bold text-gray-800 mb-0.5">{rate.label}</p>
                     <p className="text-[9px] text-gray-400 mb-2">{rate.description}</p>
                     <div className="flex items-center gap-2">
@@ -463,11 +463,11 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 4: DIRECT POST-COMPLETION SALES ═══ */}
-            {!isNoOffPlanType && <section className="rounded-xl border border-sky-100 shadow-sm overflow-hidden">
+            {!isNoOffPlanType && <section className="fs-card fs-card-blue overflow-hidden">
               <div className="px-4 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center gap-2">
                 <Megaphone className="w-4 h-4 text-sky-700" />
                 <h2 className="text-sm font-bold text-sky-800">المبيعات المباشرة بعد الإنجاز</h2>
-                <Badge className="text-[10px] bg-sky-100 text-sky-700 mr-auto">حساب المستثمر</Badge>
+                <Badge className="fs-pill fs-pill-blue mr-auto text-[10px]">حساب المستثمر</Badge>
               </div>
               <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="rounded-lg border border-sky-100 p-3">
@@ -512,11 +512,11 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>}
 
             {/* ═══ SECTION 4: INVESTOR PAYMENT RULES ═══ */}
-            <section className="rounded-xl border border-emerald-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-emerald overflow-hidden">
               <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
                 <Landmark className="w-4 h-4 text-emerald-700" />
                 <h2 className="text-sm font-bold text-emerald-800">قواعد الدفع — حساب المستثمر</h2>
-                <Badge className="text-[10px] bg-emerald-100 text-emerald-700 mr-auto">{visibleInvestorRules.length} بند</Badge>
+                <Badge className="fs-pill fs-pill-emerald mr-auto text-[10px]">{visibleInvestorRules.length} بند</Badge>
               </div>
               <div className="p-2">
                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-1 mb-1 px-2">
@@ -535,11 +535,11 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             </section>
 
             {/* ═══ SECTION 5: ESCROW PAYMENT RULES ═══ */}
-            {!isNoOffPlanType && <section className="rounded-xl border border-violet-100 shadow-sm overflow-hidden">
+            {!isNoOffPlanType && <section className="fs-card fs-card-violet overflow-hidden">
               <div className="px-4 py-2.5 bg-violet-50 border-b border-violet-100 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-violet-700" />
                 <h2 className="text-sm font-bold text-violet-800">قواعد الدفع — حساب الضمان (Escrow)</h2>
-                <Badge className="text-[10px] bg-violet-100 text-violet-700 mr-auto">{ESCROW_RULES.length} بند</Badge>
+                <Badge className="fs-pill fs-pill-violet mr-auto text-[10px]">{ESCROW_RULES.length} بند</Badge>
               </div>
               <div className="p-2">
                 <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 gap-y-0 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-1 mb-1 px-2">

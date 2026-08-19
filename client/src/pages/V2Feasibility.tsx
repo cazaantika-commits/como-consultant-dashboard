@@ -222,20 +222,20 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
 
           {/* ═══ INVESTOR DECISION CANVAS ═══ */}
           {!isBuildForRent && (
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="fs-card fs-card-blue overflow-hidden">
               <div className="grid xl:grid-cols-[280px_minmax(0,1fr)]">
-                <aside className="bg-slate-950 px-5 py-5 text-white">
-                  <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
-                    <ShieldCheck className="h-4 w-4 text-cyan-300" />
+                <aside className="fs-card fs-card-violet m-3 px-5 py-5 text-slate-900">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-violet-700">
+                    <ShieldCheck className="h-4 w-4 text-violet-600" />
                     قرار المستثمر
                   </div>
-                  <p className="mt-3 text-xs font-medium text-slate-400">صافي عائدك المتوقع بعد حصة كومو</p>
-                  <p className={`mt-1 text-3xl font-black tracking-tight tabular-nums ${investorOutcomePositive ? "text-emerald-200" : "text-rose-200"}`} dir="ltr">{fmtM(investorProfit)} AED</p>
-                  <p className="mt-1 text-[11px] text-slate-400">مدة المشروع: {totalMonths} شهرًا · {totalYears.toFixed(1)} سنة</p>
-                  <div className="mt-5 border-t border-white/10 pt-4">
-                    <p className="text-xs font-semibold text-slate-200">ذروة السيولة المطلوبة</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-amber-200" dir="ltr">{fmtM(capital.requiredCapital)} AED</p>
-                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400"><CalendarClock className="h-3 w-3" /> {capital.peakMonthDate || "يُحدَّد من تدفق المستثمر"}</p>
+                  <p className="mt-3 text-xs font-medium text-slate-600">صافي عائدك المتوقع بعد حصة كومو</p>
+                  <p className={`mt-1 text-3xl font-black tracking-tight tabular-nums ${investorOutcomePositive ? "text-emerald-700" : "text-rose-700"}`} dir="ltr">{fmtM(investorProfit)} AED</p>
+                  <p className="mt-1 text-[11px] text-slate-600">مدة المشروع: {totalMonths} شهرًا · {totalYears.toFixed(1)} سنة</p>
+                  <div className="mt-5 border-t border-violet-200 pt-4">
+                    <p className="text-xs font-semibold text-slate-700">ذروة السيولة المطلوبة</p>
+                    <p className="mt-1 text-xl font-bold tabular-nums text-amber-700" dir="ltr">{fmtM(capital.requiredCapital)} AED</p>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600"><CalendarClock className="h-3 w-3" /> {capital.peakMonthDate || "يُحدَّد من تدفق المستثمر"}</p>
                   </div>
                 </aside>
 
@@ -597,10 +597,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
 
 function KpiMini({ label, value, color, icon }: { label: string; value: string; color: string; icon: React.ReactNode }) {
   const colorMap: Record<string, string> = {
-    teal: "bg-teal-50 border-teal-200/60 text-teal-800",
-    gold: "bg-amber-50 border-amber-200/60 text-amber-800",
-    red: "bg-red-50 border-red-200/60 text-red-700",
-    slate: "bg-slate-50 border-slate-200/60 text-slate-700",
+    teal: "fs-card fs-card-teal text-teal-800",
+    gold: "fs-card fs-card-amber text-amber-800",
+    red: "fs-card fs-card-rose text-rose-700",
+    slate: "fs-card fs-card-violet text-violet-700",
   };
   return (
     <div className={`rounded-lg border px-2 py-1.5 ${colorMap[color] || colorMap.teal}`}>
@@ -612,10 +612,10 @@ function KpiMini({ label, value, color, icon }: { label: string; value: string; 
 
 function DecisionMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: "teal" | "slate" | "violet" | "rose" }) {
   const tones = {
-    teal: "border-teal-100 bg-teal-50 text-teal-950",
-    slate: "border-slate-200 bg-slate-50 text-slate-950",
-    violet: "border-violet-100 bg-violet-50 text-violet-950",
-    rose: "border-rose-100 bg-rose-50 text-rose-950",
+    teal: "fs-card fs-card-teal text-teal-950",
+    slate: "fs-card fs-card-blue text-slate-950",
+    violet: "fs-card fs-card-violet text-violet-950",
+    rose: "fs-card fs-card-rose text-rose-950",
   };
   return (
     <div className={`rounded-xl border p-3 ${tones[tone]}`}>
@@ -628,8 +628,8 @@ function DecisionMetric({ label, value, detail, tone }: { label: string; value: 
 
 function RatioDecisionCard({ label, value, formula, explanation, tone }: { label: string; value: string; formula: string; explanation: string; tone: "teal" | "amber" }) {
   const tones = {
-    teal: "border-teal-200 bg-teal-50 text-teal-950",
-    amber: "border-amber-200 bg-amber-50 text-amber-950",
+    teal: "fs-card fs-card-teal text-teal-950",
+    amber: "fs-card fs-card-amber text-amber-950",
   };
   return (
     <div className={`rounded-xl border p-4 ${tones[tone]}`}>
@@ -656,7 +656,7 @@ function CapitalFact({ label, value, tone }: { label: string; value: string; ton
 
 function SectionCard({ title, icon, gradient, borderColor, children }: { title: string; icon: React.ReactNode; gradient: string; borderColor: string; children: React.ReactNode }) {
   return (
-    <div className={`rounded-xl bg-white border ${borderColor} shadow-sm overflow-hidden`}>
+    <div className={`fs-card rounded-xl ${borderColor} overflow-hidden`}>
       <div className={`px-3 py-1.5 border-b border-gray-100 flex items-center gap-2`}>
         <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center`}>{icon}</div>
         <h3 className="text-[11px] font-bold text-gray-800">{title}</h3>

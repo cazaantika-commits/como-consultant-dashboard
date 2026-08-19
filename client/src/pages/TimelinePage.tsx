@@ -218,7 +218,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
         {selectedProjectId && !projectQuery.isLoading && (
           <>
             {/* SECTION 1: PROJECT PHASES TIMELINE */}
-            <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-blue overflow-hidden">
               <div className="px-3 py-2 border-b border-gray-100">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
@@ -305,26 +305,26 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   </div>}
                   {isBuildForSale && <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">تسويق البناء للبيع:</span>
-                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{buildForSaleMarketing.durationMonths} أشهر بدءًا قبل {buildForSaleMarketing.startMonthsBeforeCompletion} شهر من الإنجاز</Badge>
+                    <Badge className="fs-pill fs-pill-rose text-[9px]">{buildForSaleMarketing.durationMonths} أشهر بدءًا قبل {buildForSaleMarketing.startMonthsBeforeCompletion} شهر من الإنجاز</Badge>
                   </div>}
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نقطة الانطلاق (اكتمال المخططات التخطيطية):</span>
-                    <Badge className="text-[9px] bg-blue-100 text-blue-700">شهر {schematicCompletionMonth}</Badge>
+                    <Badge className="fs-pill fs-pill-blue text-[9px]">شهر {schematicCompletionMonth}</Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق التسويق:</span>
-                    <Badge className="text-[9px] bg-pink-100 text-pink-700">{isBuildForSale ? "إعدادات البناء للبيع" : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                    <Badge className="fs-pill fs-pill-rose text-[9px]">{isBuildForSale ? "إعدادات البناء للبيع" : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق البيع:</span>
-                    <Badge className="text-[9px] bg-emerald-100 text-emerald-700">{isBuildForSale ? buildForSaleSalesWindow.hasSavedActivity ? "خطة البيع المباشر" : "البيع المباشر بعد الإنجاز" : activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
+                    <Badge className="fs-pill fs-pill-emerald text-[9px]">{isBuildForSale ? buildForSaleSalesWindow.hasSavedActivity ? "خطة البيع المباشر" : "البيع المباشر بعد الإنجاز" : activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* SECTION 2: CONSULTANT DESIGN PHASES SCHEDULE */}
-            <section className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+            <section className="fs-card fs-card-violet overflow-hidden">
               <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                 <Palette className="w-3.5 h-3.5 text-blue-700" />
                 <h2 className="text-[11px] font-bold text-blue-800">مراحل التصميم واستحقاق الاستشاري</h2>
@@ -332,7 +332,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   <Badge variant="destructive" className="text-[9px] mr-auto">المجموع = {designPaymentTotal}%</Badge>
                 )}
                 {designPaymentTotal === 100 && (
-                  <Badge className="text-[9px] mr-auto bg-emerald-100 text-emerald-700">100% ✓</Badge>
+                  <Badge className="fs-pill fs-pill-emerald mr-auto text-[9px]">100% ✓</Badge>
                 )}
                 <span className="text-[9px] text-gray-400">إجمالي: {totalDesignWeeks} أسبوع ≈ {totalDesignMonths} شهر</span>
               </div>

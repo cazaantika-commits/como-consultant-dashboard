@@ -1309,3 +1309,6 @@
 - [x] Redesign collection-and-escrow cards as smaller polished tiles so more than 12 named months appear together in a wide view
 - [x] Apply light, harmonious, role-based color treatments across every Sales and Marketing workspace card and control
 - [x] Apply the approved soft-pastel card style with tinted surfaces and matched colored outlines throughout the compact Sales workspace
+- [x] Replace generic Financial Studies cards with the approved compact outlined-card language: matched thin colored outline, light surface, outlined internal fields, and clear dark hierarchy
+- [x] Apply the approved colored-outline reference-card language consistently across all Financial Studies and Planning pages
+- [x] Apply clean colored percentage and status pills throughout Financial Studies while retaining light page surfaces

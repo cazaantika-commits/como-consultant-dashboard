@@ -129,21 +129,21 @@ export default function V2CapitalPortfolio() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-4" dir="rtl">
       <div className="max-w-[1800px] mx-auto">
-        <div className="rounded-lg bg-slate-900 px-5 py-4 text-white shadow-sm flex items-start justify-between gap-4">
+        <div className="fs-card fs-card-violet px-5 py-4 text-slate-900 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
             <button onClick={() => navigate("/v2")} className="mt-0.5 rounded-md p-1 hover:bg-white/10" aria-label="العودة"><ArrowRight className="h-4 w-4" /></button>
-            <div><h1 className="text-base font-extrabold">تقرير محفظة رأس المال</h1><p className="mt-1 text-[11px] text-slate-300">من مخرجات الدراسات والتخطيط المالي — يستثني مشاريع البناء للتأجير من مؤشرات الإيرادات والأرباح</p></div>
+            <div><h1 className="text-base font-extrabold">تقرير محفظة رأس المال</h1><p className="mt-1 text-[11px] text-slate-600">من مخرجات الدراسات والتخطيط المالي — يستثني مشاريع البناء للتأجير من مؤشرات الإيرادات والأرباح</p></div>
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-slate-300"><button onClick={exportExcel} className="inline-flex items-center gap-1 rounded-md bg-white/10 px-2.5 py-1.5 font-bold hover:bg-white/20"><FileSpreadsheet className="h-3.5 w-3.5" />Excel</button><button onClick={exportHtml} className="inline-flex items-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 font-bold hover:bg-teal-500"><Download className="h-3.5 w-3.5" />HTML</button><Landmark className="h-4 w-4 text-sky-300" />{selectedProjects.length} مشاريع استثمارية</div>
+          <div className="flex items-center gap-2 text-[10px] text-slate-600"><button onClick={exportExcel} className="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-white/80 px-2.5 py-1.5 font-bold hover:bg-violet-50"><FileSpreadsheet className="h-3.5 w-3.5" />Excel</button><button onClick={exportHtml} className="inline-flex items-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 font-bold text-white hover:bg-teal-500"><Download className="h-3.5 w-3.5" />HTML</button><Landmark className="h-4 w-4 text-sky-600" />{selectedProjects.length} مشاريع استثمارية</div>
         </div>
 
-        <section className="mt-4 rounded-lg border-2 border-slate-900 bg-slate-50 p-4 shadow-sm">
+        <section className="fs-card fs-card-blue mt-4 p-4">
           <h2 className="border-b-2 border-slate-300 pb-2 text-sm font-extrabold text-slate-900">الملخص الإحصائي</h2>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="rounded-md border-r-4 border-emerald-500 bg-white p-3"><p className="text-[10px] text-slate-500">إجمالي الإيرادات</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.revenue)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
-            <div className="rounded-md border-r-4 border-orange-500 bg-white p-3"><p className="text-[10px] text-slate-500">إجمالي التكلفة</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.cost)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
-            <div className="rounded-md border-r-4 border-sky-500 bg-white p-3"><p className="text-[10px] text-slate-500">الأرباح قبل حصة المطور</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.profit)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
-            <div className="rounded-md border-r-4 border-rose-500 bg-white p-3"><p className="text-[10px] text-slate-500">رأس المال الكلي</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.capital)}</p><div className="mt-1 flex gap-2 text-[9px]"><span className="text-emerald-700">مدفوع {formatAmount(totals.paid)}</span><span className="text-rose-700">متبقٍ {formatAmount(totals.remaining)}</span></div></div>
+            <div className="fs-card fs-card-emerald rounded-md p-3"><p className="text-[10px] text-slate-500">إجمالي الإيرادات</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.revenue)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
+            <div className="fs-card fs-card-orange rounded-md p-3"><p className="text-[10px] text-slate-500">إجمالي التكلفة</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.cost)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
+            <div className="fs-card fs-card-cyan rounded-md p-3"><p className="text-[10px] text-slate-500">الأرباح قبل حصة المطور</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.profit)}</p><span className="text-[9px] text-slate-400">درهم</span></div>
+            <div className="fs-card fs-card-rose rounded-md p-3"><p className="text-[10px] text-slate-500">رأس المال الكلي</p><p className="mt-1 text-lg font-extrabold text-slate-900">{formatAmount(totals.capital)}</p><div className="mt-1 flex gap-2 text-[9px]"><span className="text-emerald-700">مدفوع {formatAmount(totals.paid)}</span><span className="text-rose-700">متبقٍ {formatAmount(totals.remaining)}</span></div></div>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
@@ -159,7 +159,7 @@ export default function V2CapitalPortfolio() {
           </div>
         </section>
 
-        <section className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <section className="fs-card fs-card-violet mt-4 overflow-hidden">
           <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3"><BarChart3 className="h-4 w-4 text-slate-700" /><h2 className="text-sm font-extrabold text-slate-900">تفاصيل رأس المال حسب المشروع</h2></div>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]" style={{ minWidth: 965 + groupedPortfolio.periods.length * 105 }}>

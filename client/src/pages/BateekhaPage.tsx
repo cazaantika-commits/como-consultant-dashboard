@@ -104,7 +104,7 @@ export default function BateekhaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]" dir="rtl">
+    <div className="financial-studies-language min-h-screen bg-[#f8fafc]" dir="rtl">
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-teal-700"><ArrowRight className="h-4 w-4" />الرئيسية</button>
@@ -115,7 +115,7 @@ export default function BateekhaPage() {
 
       {!activeTab ? (
         <main className="mx-auto max-w-[1720px] px-4 py-7 sm:px-6">
-          <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <section className="fs-card fs-card-teal mb-6 overflow-hidden shadow-sm">
             <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:px-5">
               <div>
                 <p className="text-[11px] font-black tracking-wide text-teal-700">الدراسات والتخطيط المالي</p>
@@ -133,7 +133,7 @@ export default function BateekhaPage() {
               const Icon = tab.icon;
               const tone = TONES[index % TONES.length];
               const disabled = tab.projectScoped && !selectedProjectId;
-              return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
+              return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: tone.border, background: `linear-gradient(135deg, ${tone.wash}, #ffffff 72%)` }}>
                 <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tone.accent }} />
                 <span className="text-[15px] font-black text-slate-900">{tab.label}</span>
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-white shadow-sm" style={{ backgroundColor: tone.accent, boxShadow: `0 10px 20px ${tone.accent}30` }}><Icon className="h-6 w-6" /></span>

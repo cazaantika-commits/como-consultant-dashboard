@@ -615,6 +615,64 @@
   padding: 0.7rem;
 }
 
+/* ============================================================
+   FINANCIAL STUDIES — APPROVED OUTLINED CARD LANGUAGE
+   Compact light cards with a clear colored perimeter and matching
+   internal fields. These utilities are intentionally presentation-only.
+   ============================================================ */
+.fs-card {
+  --fs-accent: #2563eb;
+  --fs-wash: #eff6ff;
+  --fs-outline: #93c5fd;
+  border: 1.5px solid var(--fs-outline) !important;
+  background: linear-gradient(135deg, var(--fs-wash), #ffffff 68%) !important;
+  border-radius: 0.9rem !important;
+  box-shadow: 0 5px 14px rgb(15 23 42 / 4%);
+}
+
+.fs-card-teal { --fs-accent: #0f766e; --fs-wash: #f0fdfa; --fs-outline: #99f6e4; }
+.fs-card-blue { --fs-accent: #2563eb; --fs-wash: #eff6ff; --fs-outline: #93c5fd; }
+.fs-card-violet { --fs-accent: #7c3aed; --fs-wash: #f5f3ff; --fs-outline: #c4b5fd; }
+.fs-card-amber { --fs-accent: #b45309; --fs-wash: #fffbeb; --fs-outline: #fcd34d; }
+.fs-card-rose { --fs-accent: #be185d; --fs-wash: #fff1f2; --fs-outline: #fda4af; }
+.fs-card-emerald { --fs-accent: #047857; --fs-wash: #ecfdf5; --fs-outline: #86efac; }
+.fs-card-cyan { --fs-accent: #0e7490; --fs-wash: #ecfeff; --fs-outline: #67e8f9; }
+.fs-card-orange { --fs-accent: #c2410c; --fs-wash: #fff7ed; --fs-outline: #fdba74; }
+
+.fs-card :is(input, select, textarea) {
+  border-color: color-mix(in srgb, var(--fs-accent) 62%, white) !important;
+  background-color: rgb(255 255 255 / 88%) !important;
+}
+
+.fs-card :is(input, select, textarea):focus {
+  outline: 3px solid color-mix(in srgb, var(--fs-accent) 18%, transparent) !important;
+  outline-offset: 1px;
+}
+
+.fs-pill {
+  --fs-pill: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.55rem;
+  border-radius: 9999px;
+  padding: 0.15rem 0.55rem;
+  background: var(--fs-pill);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--fs-pill) 24%, transparent);
+}
+
+.fs-pill-teal { --fs-pill: #0d9488; }
+.fs-pill-blue { --fs-pill: #0284c7; }
+.fs-pill-violet { --fs-pill: #6366f1; }
+.fs-pill-amber { --fs-pill: #f97316; }
+.fs-pill-rose { --fs-pill: #e11d78; }
+.fs-pill-slate { --fs-pill: #64748b; }
+.fs-pill-emerald { --fs-pill: #059669; }
+
 @media (min-width: 1280px) {
   .sales-workspace-pastel [data-testid="sales-calendar-board"] article {
     padding: 0.55rem;

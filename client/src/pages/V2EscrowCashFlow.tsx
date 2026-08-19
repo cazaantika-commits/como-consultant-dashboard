@@ -359,58 +359,58 @@ export default function V2EscrowCashFlow() {
       </div>
 
       {/* Decision layer — derived only from the existing escrow arrays and settlement logic above. */}
-      <section className="border-b border-slate-200 bg-slate-100 px-4 py-4">
+      <section className="border-b border-slate-200 bg-slate-50 px-4 py-4">
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-2xl bg-slate-950 p-5 text-white shadow-lg shadow-slate-950/15">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-300"><Landmark className="h-4 w-4 text-cyan-300" /> حساب الضمان — موقف السيولة</div>
+          <aside className="fs-card fs-card-teal p-5 text-slate-900">
+            <div className="flex items-center gap-2 text-xs font-semibold text-teal-700"><Landmark className="h-4 w-4 text-teal-600" /> حساب الضمان — موقف السيولة</div>
             <div className="mt-4 flex items-center gap-3">
               {hasEscrowDeficit ? <AlertTriangle className="h-7 w-7 text-rose-300" /> : <ShieldCheck className="h-7 w-7 text-emerald-300" />}
               <div>
                 <p className="text-lg font-bold">{hasEscrowDeficit ? "تنبيه سيولة" : "سيولة الإسكرو مريحة"}</p>
-                <p className="text-xs text-slate-400">{hasEscrowDeficit ? "الرصيد يهبط تحت الصفر في المسار الحالي" : "لا يوجد عجز في الرصيد التشغيلي"}</p>
+                <p className="text-xs text-slate-600">{hasEscrowDeficit ? "الرصيد يهبط تحت الصفر في المسار الحالي" : "لا يوجد عجز في الرصيد التشغيلي"}</p>
               </div>
             </div>
-            <div className="mt-5 border-t border-white/10 pt-4">
-              <p className="text-xs font-semibold text-slate-200">أدنى رصيد عامل قبل التصفية</p>
-              <p className={`mt-1 text-3xl font-bold tabular-nums ${hasEscrowDeficit ? "text-rose-200" : "text-emerald-200"}`}>{fmt(lowestWorkingBalance.value)}</p>
-              <p className="mt-1 text-[11px] text-slate-400">{lowestWorkingBalance.index >= 0 ? monthCaption(lowestWorkingBalance.index) : "—"}</p>
+            <div className="mt-5 border-t border-teal-200 pt-4">
+              <p className="text-xs font-semibold text-slate-700">أدنى رصيد عامل قبل التصفية</p>
+              <p className={`mt-1 text-3xl font-bold tabular-nums ${hasEscrowDeficit ? "text-rose-700" : "text-emerald-700"}`}>{fmt(lowestWorkingBalance.value)}</p>
+              <p className="mt-1 text-[11px] text-slate-600">{lowestWorkingBalance.index >= 0 ? monthCaption(lowestWorkingBalance.index) : "—"}</p>
             </div>
           </aside>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="fs-card fs-card-cyan p-4">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
               <div>
                 <p className="text-xs font-semibold text-cyan-700">لوحة القرار</p>
                 <h2 className="mt-1 text-lg font-bold text-slate-950">كيف يتكوّن رصيد الإسكرو، ومتى يُفرج عنه؟</h2>
                 <p className="mt-1 text-xs text-slate-500">ملخص سيولة واضح فوق سجل الحركة الشهري الكامل، من دون تعديل أي قاعدة تسوية أو تحصيل.</p>
               </div>
-              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{totalMonths} شهرًا ماليًا</div>
+              <div className="fs-pill fs-pill-teal">{totalMonths} شهرًا ماليًا</div>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+              <div className="fs-card fs-card-emerald p-3">
                 <p className="text-xs font-semibold text-emerald-700">إجمالي ما دخل الإسكرو</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{fmt(totalInflow)}</p>
                 <p className="mt-1 text-[11px] text-emerald-700">أول تحصيل مشترين: {firstBuyerReceiptIndex >= 0 ? monthCaption(firstBuyerReceiptIndex) : "—"}</p>
               </div>
-              <div className="rounded-xl border border-rose-100 bg-rose-50 p-3">
+              <div className="fs-card fs-card-rose p-3">
                 <p className="text-xs font-semibold text-rose-700">إجمالي ما خرج من الإسكرو</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{fmt(totalOutflow)}</p>
                 <p className="mt-1 text-[11px] text-rose-700">يشمل مصروفات التنفيذ والتصفية النظامية</p>
               </div>
-              <div className="rounded-xl border border-violet-100 bg-violet-50 p-3">
+              <div className="fs-card fs-card-violet p-3">
                 <p className="text-xs font-semibold text-violet-700">أعلى رصيد في الحساب</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{fmt(peakBalance.value)}</p>
                 <p className="mt-1 text-[11px] text-violet-700">{peakBalance.index >= 0 ? monthCaption(peakBalance.index) : "—"}</p>
               </div>
-              <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-3">
+              <div className="fs-card fs-card-cyan p-3">
                 <p className="text-xs font-semibold text-cyan-700">إغلاق الحساب</p>
                 <p className="mt-2 text-2xl font-bold text-cyan-950">{Math.abs(finalBalance) < 1 ? "مغلق" : fmt(finalBalance)}</p>
                 <p className="mt-1 text-[11px] text-cyan-700">بعد الاحتجاز والتسوية النهائية</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="fs-card fs-card-cyan mt-4 px-4 py-3">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-700"><CalendarClock className="h-4 w-4 text-cyan-700" /> مسار الرصيد ومحطات التصفية</div>
                 <span className="text-[11px] text-slate-500">يرتفع بالتحصيل وينخفض بالصرف والتحويلات</span>
@@ -427,8 +427,8 @@ export default function V2EscrowCashFlow() {
                 })}
               </div>
               <div className="mt-3 grid gap-2 text-[11px] sm:grid-cols-2">
-                <div className="rounded-lg bg-white px-3 py-2 text-slate-600"><span className="font-semibold text-violet-700">تحويل 1:</span> {fmt(actualLiq1)} · {monthCaption(liq1MonthIdx)}</div>
-                <div className="rounded-lg bg-white px-3 py-2 text-slate-600"><span className="font-semibold text-violet-700">تحويل الاحتجاز:</span> {fmt(actualLiq2)} · {monthCaption(liq2MonthIdx)}</div>
+                <div className="fs-card fs-card-violet rounded-lg px-3 py-2 text-slate-600"><span className="font-semibold text-violet-700">تحويل 1:</span> {fmt(actualLiq1)} · {monthCaption(liq1MonthIdx)}</div>
+                <div className="fs-card fs-card-violet rounded-lg px-3 py-2 text-slate-600"><span className="font-semibold text-violet-700">تحويل الاحتجاز:</span> {fmt(actualLiq2)} · {monthCaption(liq2MonthIdx)}</div>
               </div>
             </div>
           </div>
