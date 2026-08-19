@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 const TOTAL_MONTHS = 48;
 const CHART_START = new Date(2026, 3, 1); // April 2026
@@ -23,16 +24,11 @@ function getShortMonthLabel(offset: number): string {
 
 function fmtCell(n: number): string {
   if (n === 0) return "";
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return n.toFixed(0);
+  return formatFullNumber(n, "");
 }
 
 function fmtTooltipNum(n: number): string {
-  if (n === 0) return "0";
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M AED`;
-  if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K AED`;
-  return `${n.toFixed(0)} AED`;
+  return `${formatFullNumber(n, "0")} AED`;
 }
 
 // Neutral base with subtle tints matching vertical view

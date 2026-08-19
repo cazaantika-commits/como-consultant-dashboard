@@ -9,6 +9,7 @@ import { Save, Loader2, Pencil, X } from "lucide-react";
 import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@/lib/projectData";
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { isFinancialStudiesGeneralInputVisible } from "@/lib/financialStudiesNavigation";
+import { formatFullNumber, unformatNumberInput } from "@/lib/numberFormat";
 
 const ALL_FIELDS = [
   { key: "plotAreaSqft", label: "مساحة الأرض", unit: "قدم²", type: "number" },
@@ -196,13 +197,16 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
           : field.key === "reraInspectionReportFee"
             ? String(reraQuarterlyFees.inspectionTotal)
             : formData[field.key] || "";
+        const visibleValue = !isEditing && field.type === "number"
+          ? formatFullNumber(displayValue, "")
+          : displayValue;
         return (
           <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-slate-300 ${isComputed ? "bg-amber-50/80" : ""}`}>
             <span className="text-[13px] text-gray-600 w-[45%] text-right whitespace-nowrap overflow-hidden text-ellipsis" title={hint || ""}>{displayLabel}</span>
             <input
               type={field.type === "date" ? "month" : "text"}
-              value={displayValue}
-              onChange={e => updateField(field.key, e.target.value)}
+              value={visibleValue}
+              onChange={e => updateField(field.key, field.type === "number" ? unformatNumberInput(e.target.value) : e.target.value)}
               disabled={!isEditing || isComputed}
               className={`flex-1 h-[24px] px-2 text-[13px] rounded ${isComputed ? "bg-amber-50 text-amber-700 font-medium cursor-not-allowed" : !isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
               dir="ltr"

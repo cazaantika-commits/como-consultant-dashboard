@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { formatFullNumber } from "@/lib/numberFormat";
 import {
   ArrowRight,
   Plus,
@@ -2013,11 +2014,11 @@ function SupervisionReviewScreen({
           <div className="text-xs text-muted-foreground mt-0.5">مدة الإشراف (شهر)</div>
         </div>
         <div className="rounded-xl p-3 text-center border bg-sky-50 border-sky-200">
-          <div className="text-lg font-bold text-sky-600">{totalFee > 0 ? (totalFee / 1000000).toFixed(2) + "M" : "—"}</div>
+          <div className="text-lg font-bold text-sky-600">{totalFee > 0 ? formatFullNumber(totalFee, "—") : "—"}</div>
           <div className="text-xs text-muted-foreground mt-0.5">إجمالي المستشار (AED)</div>
         </div>
         <div className="rounded-xl p-3 text-center border bg-emerald-50 border-emerald-200">
-          <div className="text-lg font-bold text-emerald-600">{refTotal > 0 ? (refTotal / 1000000).toFixed(2) + "M" : "—"}</div>
+          <div className="text-lg font-bold text-emerald-600">{refTotal > 0 ? formatFullNumber(refTotal, "—") : "—"}</div>
           <div className="text-xs text-muted-foreground mt-0.5">المرجعي (AED)</div>
         </div>
       </div>

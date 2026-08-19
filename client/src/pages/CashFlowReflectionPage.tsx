@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { getMonthLabel } from "@/lib/monthUtils";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,14 +68,12 @@ const CATEGORY_ROW_COLORS: Record<Category, string> = {
 
 function fmt(n: number): string {
   if (!n || isNaN(n) || Math.abs(n) < 1) return "";
-  return Math.round(n).toLocaleString("ar-AE");
+  return formatFullNumber(n, "");
 }
 
 function fmtHeader(n: number): string {
   if (!n || isNaN(n)) return "—";
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "م";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "ك";
-  return Math.round(n).toString();
+  return formatFullNumber(n, "—");
 }
 
 function getPhaseForMonth(
@@ -350,25 +349,25 @@ export default function CashFlowReflectionPage({
               <div className="bg-white rounded-xl border border-gray-200 p-3 shadow-sm text-center">
                 <p className="text-xs text-gray-500 mb-1">إجمالي التكاليف</p>
                 <p className="text-base font-bold text-gray-900">
-                  {(data.totalCosts / 1_000_000).toFixed(2)}م د.إ
+                  {formatFullNumber(data.totalCosts, "0")} د.إ
                 </p>
               </div>
               <div className="bg-blue-50 rounded-xl border border-blue-100 p-3 shadow-sm text-center">
                 <p className="text-xs text-blue-600 mb-1">تكاليف المستثمر</p>
                 <p className="text-base font-bold text-blue-700">
-                  {(data.investorMonthlyTotals.reduce((s, v) => s + v, 0) / 1_000_000).toFixed(2)}م د.إ
+                  {formatFullNumber(data.investorMonthlyTotals.reduce((s, v) => s + v, 0), "0")} د.إ
                 </p>
               </div>
               <div className="bg-violet-50 rounded-xl border border-violet-100 p-3 shadow-sm text-center">
                 <p className="text-xs text-violet-600 mb-1">تكاليف الضمان</p>
                 <p className="text-base font-bold text-violet-700">
-                  {(data.escrowMonthlyTotals.reduce((s, v) => s + v, 0) / 1_000_000).toFixed(2)}م د.إ
+                  {formatFullNumber(data.escrowMonthlyTotals.reduce((s, v) => s + v, 0), "0")} د.إ
                 </p>
               </div>
               <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-3 shadow-sm text-center">
                 <p className="text-xs text-emerald-600 mb-1">إجمالي الإيرادات</p>
                 <p className="text-base font-bold text-emerald-700">
-                  {(data.totalRevenue / 1_000_000).toFixed(2)}م د.إ
+                  {formatFullNumber(data.totalRevenue, "0")} د.إ
                 </p>
               </div>
             </div>

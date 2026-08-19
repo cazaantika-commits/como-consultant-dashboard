@@ -22,6 +22,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -32,14 +33,11 @@ type FieldType = "input" | "formula";
 // FORMAT HELPERS
 // ═══════════════════════════════════════════
 function fmt(n: number): string {
-  if (Math.abs(n) >= 1_000_000) {
-    return (n / 1_000_000).toLocaleString("ar-AE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " مليون";
-  }
-  return Math.round(n).toLocaleString("ar-AE");
+  return formatFullNumber(n, "0");
 }
 
 function fmtFull(n: number): string {
-  return Math.round(n).toLocaleString("ar-AE");
+  return formatFullNumber(n, "0");
 }
 
 // ═══════════════════════════════════════════

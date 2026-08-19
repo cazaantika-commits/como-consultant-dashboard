@@ -11,15 +11,14 @@ import {
 } from "@/lib/investorCashFlowEngine";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
 // ═══════════════════════════════════════════
 function fmt(n: number): string {
   if (n === 0) return "-";
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
-  return Math.round(n).toLocaleString("en-US");
+  return formatFullNumber(n, "-");
 }
 
 function formatDate(dateStr: string): string {

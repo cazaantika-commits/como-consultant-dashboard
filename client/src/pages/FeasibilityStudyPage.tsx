@@ -23,6 +23,7 @@ import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";
 import CapitalScheduleTablePage from "@/pages/CapitalScheduleTablePage";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 import { exportFeasibilityReport, type FeasibilityReportData } from "@/lib/feasibilityReportExport";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ═══════════════════════════════════════════
 // FORMATTING HELPERS
@@ -30,18 +31,12 @@ import { exportFeasibilityReport, type FeasibilityReportData } from "@/lib/feasi
 
 function fmt(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
-  if (Math.abs(n) >= 1_000_000) {
-    return (n / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "M";
-  }
-  if (Math.abs(n) >= 1_000) {
-    return (n / 1_000).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + "K";
-  }
-  return Math.round(n).toLocaleString("en-US");
+  return formatFullNumber(n, "0");
 }
 
 function fmtFull(n: number | null | undefined): string {
   if (n == null || isNaN(n)) return "0";
-  return Math.round(n).toLocaleString("en-US");
+  return formatFullNumber(n, "0");
 }
 
 function fmtPct(n: number): string {

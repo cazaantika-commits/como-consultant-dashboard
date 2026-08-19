@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronDown, ChevronUp, Landmark, TrendingDown, TrendingUp }
 import { trpc } from "@/lib/trpc";
 import type { PortfolioProjectMonthlyNet } from "@/lib/portfolioAggregation";
 import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 const MONTH_NAMES = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -15,10 +16,7 @@ function monthLabel(monthDate: string) {
 }
 
 function formatAmount(value: number) {
-  const absolute = Math.abs(value);
-  if (absolute >= 1_000_000) return `${(absolute / 1_000_000).toFixed(1)} مليون`;
-  if (absolute >= 1_000) return `${(absolute / 1_000).toFixed(0)} ألف`;
-  return Math.round(absolute).toLocaleString("en-US");
+  return formatFullNumber(Math.abs(value), "0");
 }
 
 type ExecutiveCashFlowAlertProps = {

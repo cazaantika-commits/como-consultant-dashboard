@@ -15,17 +15,16 @@ import {
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
 // ═══════════════════════════════════════════
 function fmt(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} مليون`;
-  if (Math.abs(n) >= 1_000) return n.toLocaleString("en-US");
-  return n.toString();
+  return formatFullNumber(n, "0");
 }
 function fmtFull(n: number): string {
-  return Math.round(n).toLocaleString("en-US");
+  return formatFullNumber(n, "0");
 }
 
 type Phase = "land" | "design" | "offplan" | "construction" | "post";

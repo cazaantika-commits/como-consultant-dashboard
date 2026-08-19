@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatFullNumber } from '@/lib/numberFormat';
 
 interface CashFlowData {
   projectName: string;
@@ -44,7 +45,7 @@ export function CashFlowCharts({ data }: CashFlowChartsProps) {
   }, [data]);
 
   const formatCurrency = (value: number) => {
-    return `د.إ ${(value / 1000000).toFixed(1)}M`;
+    return `د.إ ${formatFullNumber(value, '0')}`;
   };
 
   return (

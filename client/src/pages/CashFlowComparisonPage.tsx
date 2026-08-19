@@ -16,18 +16,17 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Download, BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fmt(v: number | null | undefined): string {
   if (!v || Math.abs(v) < 1) return "–";
-  if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}م`;
-  if (Math.abs(v) >= 1_000) return `${Math.round(v / 1_000)}ك`;
-  return Math.round(v).toLocaleString();
+  return formatFullNumber(v, "–");
 }
 
 function fmtFull(v: number): string {
-  return Math.round(v).toLocaleString() + " د.إ";
+  return formatFullNumber(v, "0") + " د.إ";
 }
 
 function getPhaseForMonth(month: number, phaseInfo: PhaseInfo): string {
@@ -272,20 +271,20 @@ export default function CashFlowComparisonPage() {
                     <div className="p-3 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-500">إجمالي التدفق ({viewMode === "investor" ? "المستثمر" : viewMode === "escrow" ? "الضمان" : "الكل"})</span>
-                        <span className="text-sm font-bold text-gray-900">{(total / 1_000_000).toFixed(2)}م د.إ</span>
+                        <span className="text-sm font-bold text-gray-900">{fmtFull(total)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-500">إجمالي التكاليف</span>
-                        <span className="text-xs font-semibold text-red-700">{(cost / 1_000_000).toFixed(2)}م</span>
+                        <span className="text-xs font-semibold text-red-700">{formatFullNumber(cost, "0")}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs text-gray-500">إجمالي الإيرادات</span>
-                        <span className="text-xs font-semibold text-emerald-700">{(rev / 1_000_000).toFixed(2)}م</span>
+                        <span className="text-xs font-semibold text-emerald-700">{formatFullNumber(rev, "0")}</span>
                       </div>
                       <div className="flex justify-between items-center pt-1 border-t border-gray-100">
                         <span className="text-xs text-gray-500">صافي الربح</span>
                         <span className={`text-xs font-bold ${rev - cost > 0 ? "text-emerald-700" : "text-red-700"}`}>
-                          {((rev - cost) / 1_000_000).toFixed(2)}م
+                          {formatFullNumber(rev - cost, "0")}
                         </span>
                       </div>
                     </div>

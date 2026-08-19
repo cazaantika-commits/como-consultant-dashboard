@@ -12,6 +12,7 @@ import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 import { clampMarketingDistributionToStart, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
 import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { formatFullNumber } from "@/lib/numberFormat";
 import {
   DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
   Users, Sparkles, Landmark, Activity, Layers, CalendarClock, ShieldCheck
@@ -22,11 +23,7 @@ const fmt = (n: number) =>
 
 const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 
-const fmtM = (n: number) => {
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "K";
-  return n.toFixed(0);
-};
+const fmtM = (n: number) => formatFullNumber(n, "0");
 
 export default function V2Feasibility({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();

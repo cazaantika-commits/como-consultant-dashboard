@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -51,9 +52,7 @@ function generateSCurve(months: number, type: "standard" | "front_loaded" | "bac
 }
 
 function fmt(n: number): string {
-  if (Math.abs(n) >= 1_000_000) return (n / 1_000_000).toFixed(1) + "م";
-  if (Math.abs(n) >= 1_000) return (n / 1_000).toFixed(0) + "ك";
-  return n.toFixed(0);
+  return formatFullNumber(n, "0");
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -308,7 +307,7 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
                   </Tooltip>
                 </div>
                 <div className="text-sm font-bold text-red-700">
-                  {constructionCost ? (constructionCost / 1_000_000).toFixed(1) + " م" : "—"}
+                  {constructionCost ? formatFullNumber(constructionCost, "—") : "—"}
                 </div>
               </div>
 

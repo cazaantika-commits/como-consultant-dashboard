@@ -49,4 +49,10 @@ describe("Unified Financial Studies project card", () => {
     expect(generalInputs).toContain("border-b border-slate-300");
     expect(factSheet).toContain("border-b-2");
   });
+
+  it("formats whole manual amounts with separators without discarding meaningful fractional digits", () => {
+    expect(generalInputs).toContain('import { formatFullNumber, unformatNumberInput } from "@/lib/numberFormat"');
+    expect(generalInputs).toContain('formatFullNumber(displayValue, "")');
+    expect(generalInputs).toContain('unformatNumberInput(e.target.value)');
+  });
 });

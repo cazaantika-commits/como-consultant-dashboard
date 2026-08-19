@@ -7,6 +7,7 @@ import {
   groupCalendarAlignedPortfolio,
   type PortfolioProjectMonthlyNet,
 } from "@/lib/portfolioAggregation";
+import { formatFullNumber } from "@/lib/numberFormat";
 
 const MONTH_NAMES = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -38,10 +39,7 @@ type CapitalProject = {
 };
 
 function formatAmount(value: number): string {
-  const amount = Math.abs(value);
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(0)}K`;
-  return Math.round(amount).toLocaleString("en-US");
+  return formatFullNumber(Math.abs(value), "0");
 }
 
 function formatMonth(date: string): string {

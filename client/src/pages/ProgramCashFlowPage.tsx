@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { formatFullNumber } from "@/lib/numberFormat";
 import {
   CalendarDays, Plus, Trash2, Edit, DollarSign, TrendingDown, TrendingUp,
   BarChart3, ArrowRight, Building2, Layers, Settings2, FolderOpen,
@@ -83,17 +84,11 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 function formatAED(amount: number): string {
-  if (Math.abs(amount) >= 1_000_000) {
-    return `${(amount / 1_000_000).toFixed(2)}M`;
-  }
-  if (Math.abs(amount) >= 1_000) {
-    return `${(amount / 1_000).toFixed(0)}K`;
-  }
-  return amount.toLocaleString('en-US');
+  return formatFullNumber(amount, "0");
 }
 
 function formatFullAED(amount: number): string {
-  return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
+  return formatFullNumber(amount, "0");
 }
 
 // ═══════════════════════════════════════════════════════════════

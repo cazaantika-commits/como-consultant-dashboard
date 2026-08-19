@@ -1279,3 +1279,5 @@
 - [x] Make every Financial Studies study page return one step to the same selected-project board rather than to home or unrelated pages
 - [ ] Refine Financial Studies visual design one card at a time, changing only colors, spacing, hierarchy, and layout after each specific observation
 - [x] Refresh the Unified Project Card with light vibrant surfaces and darker visual separators while preserving all content and behavior
+- [x] Display Project Card whole amounts with thousands separators while preserving every meaningful decimal digit for rates, percentages, and fractional values
+- [x] Establish one display-only number-formatting standard across Financial Studies and executive reports: grouped whole amounts, meaningful fractional digits retained, and no K/M/Arabic-million abbreviations
