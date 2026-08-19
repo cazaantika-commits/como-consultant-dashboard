@@ -1274,3 +1274,6 @@
 - [x] Replace nested Financial Studies groups with one flat board of distinct light-colored page icons visible at launch
 - [x] Place the single project selector at the Financial Studies entry and remove duplicate internal project selectors from project-specific study pages
 - [x] Verify the flat project-first navigation on live off-plan, build-for-sale, and build-for-rent projects without changing financial values
+- [x] Restyle Financial Studies as compact horizontal reference-style tool cards with white surfaces, thin colored top accents, and large colored icon blocks
+- [x] Browser-verify the reference-style board while preserving its single entry project selector and type-aware project pages
+- [x] Make every Financial Studies study page return one step to the same selected-project board rather than to home or unrelated pages

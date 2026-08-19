@@ -21,7 +21,8 @@ describe("legacy Sales and Marketing Plan cleanup", () => {
     expect(appSource).toContain('path="/bateekha"');
     expect(financialStudiesSource).toContain('id: "sales"');
     expect(financialStudiesSource).not.toContain('id: "marketing"');
-    expect(financialStudiesSource).toContain('المبيعات والتسويق — مساحة وائل');
+    expect(financialStudiesSource).toContain('label: "المبيعات والتسويق"');
+    expect(financialStudiesSource).toContain("مساحة وائل لتخطيط البيع");
     expect(financialStudiesSource).toContain('V2WaelSales');
     expect(fs.existsSync(path.resolve(process.cwd(), "client/src/pages/MarketingPage.tsx"))).toBe(false);
   });
