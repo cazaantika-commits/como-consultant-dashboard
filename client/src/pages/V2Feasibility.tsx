@@ -28,7 +28,7 @@ const fmtM = (n: number) => {
   return n.toFixed(0);
 };
 
-export default function V2Feasibility() {
+export default function V2Feasibility({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
@@ -207,13 +207,13 @@ export default function V2Feasibility() {
           </div>
           <span className="text-xs font-bold text-gray-800">دراسة الجدوى المالية</span>
         </div>
-        <div className="mr-auto w-56">
+        {!embedded && <div className="mr-auto w-56">
           <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
-        </div>
+        </div>}
       </div>
 
       {!selectedProjectId && (
-        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً لعرض دراسة الجدوى</div>
+        <div className="text-center py-16 text-gray-400 text-sm">اختر مشروعاً من دليل الدراسات لعرض دراسة الجدوى</div>
       )}
 
       {selectedProjectId && !costs && (

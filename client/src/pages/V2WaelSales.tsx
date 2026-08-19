@@ -652,7 +652,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <p className="mt-1.5 text-sm leading-6 text-slate-200">{isBuildForSale ? "تتحرك كل نتيجة هنا فور تعديل السعر أو شهر البيع المباشر بعد الإنجاز." : "تتحرك كل نتيجة هنا فور تعديل السعر أو الشهر أو خطة التحصيل."} لا صفحات منفصلة ولا أرقام صغيرة.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />
+              {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
               <Badge className={hasScenarioChanges ? "border border-amber-300/40 bg-amber-400/15 px-3 py-1.5 text-amber-100 hover:bg-amber-400/15" : "border border-emerald-300/40 bg-emerald-400/15 px-3 py-1.5 text-emerald-100 hover:bg-emerald-400/15"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
               <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-emerald-400 px-4 font-bold text-slate-950 hover:bg-emerald-300">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -675,7 +675,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           <Card className="border-dashed">
             <CardContent className="py-12 text-center">
               <Building2 className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">اختر مشروعاً من القائمة أعلاه لبدء العمل</p>
+              <p className="text-gray-500">اختر مشروعاً من دليل الدراسات لبدء العمل</p>
             </CardContent>
           </Card>
         )}

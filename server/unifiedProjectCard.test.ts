@@ -14,7 +14,7 @@ describe("Unified Financial Studies project card", () => {
     expect(unified).toContain("المطلوب إدخاله واعتماده");
     expect(unified).toContain("بيانات المشروع من الوثائق");
     expect(unified.indexOf("المطلوب إدخاله واعتماده")).toBeLessThan(unified.indexOf("بيانات المشروع من الوثائق"));
-    expect(unified).toContain("<GeneralInputsPage embedded hideDocumentFields />");
+    expect(unified).toContain("<GeneralInputsPage embedded hideDocumentFields hideProjectSelector />");
     expect(unified).toContain("<FactSheetPage embedded documentOnly />");
   });
 
@@ -22,7 +22,7 @@ describe("Unified Financial Studies project card", () => {
     expect(unified).not.toContain("trpc.projects.update");
     expect(financialStudies).toContain('const UnifiedProjectCardPage = lazy(() => import("./UnifiedProjectCardPage"))');
     expect(financialStudies).toContain('return <UnifiedProjectCardPage />;');
-    expect(financialStudies).toContain('return <PricingPage />;');
+    expect(financialStudies).toContain('return <PricingPage embedded />;');
     expect(financialStudies).toContain('return <V2WaelSales embedded />;');
   });
 
@@ -31,6 +31,7 @@ describe("Unified Financial Studies project card", () => {
     expect(factSheet).toContain('documentOnly ? "hidden" : ""');
     expect(factSheet).toContain("بيانات المشروع من الوثائق");
     expect(factSheet).toContain("تعبئة من خازن");
+    expect(factSheet).toContain("!initialProjectId && !embedded");
   });
 
   it("does not repeat Khazen-derived land and GFA values as manual inputs", () => {

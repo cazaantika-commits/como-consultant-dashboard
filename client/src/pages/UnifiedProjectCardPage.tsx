@@ -18,7 +18,7 @@ export default function UnifiedProjectCardPage() {
               </p>
             </div>
           </div>
-          <GeneralInputsPage embedded hideDocumentFields />
+          <GeneralInputsPage embedded hideDocumentFields hideProjectSelector />
         </section>
 
         <section className="overflow-hidden rounded-xl border border-violet-200 bg-white shadow-sm">

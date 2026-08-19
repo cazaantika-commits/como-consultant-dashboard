@@ -455,7 +455,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
             </div>
 
             <div className="flex items-center gap-2">
-              {!initialProjectId && (
+              {!initialProjectId && !embedded && (
                 <Select value={selectedProjectId ? String(selectedProjectId) : ""} onValueChange={(val) => setSelectedProjectId(Number(val))}>
                   <SelectTrigger className="w-[180px] bg-white border-stone-200 h-7 text-xs">
                     <SelectValue placeholder="اختر المشروع..." />
@@ -502,7 +502,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
               <Building2 className="h-8 w-8 text-amber-400" />
             </div>
             <h2 className="text-lg font-bold text-stone-700 mb-1">اختر مشروعاً لعرض بطاقة البيانات</h2>
-            <p className="text-xs text-muted-foreground max-w-md">استخدم القائمة في الأعلى لاختيار المشروع</p>
+            <p className="text-xs text-muted-foreground max-w-md">استخدم دليل الدراسات لاختيار المشروع</p>
           </div>
         ) : projectQuery.isLoading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-amber-600" /></div>

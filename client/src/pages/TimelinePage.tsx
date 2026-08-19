@@ -194,7 +194,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
             <h1 className="text-xs font-bold text-gray-900">الجدول الزمني</h1>
           </div>
           <div className="flex items-center gap-2">
-            <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />
+            {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />}
             {hasChanges && (
               <Button size="sm" onClick={handleSave} disabled={updateProject.isPending} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
                 {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -207,7 +207,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
         {!selectedProjectId && (
           <Card className="border-dashed"><CardContent className="py-12 text-center">
             <Building2 className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">اختر مشروعاً من القائمة أعلاه</p>
+            <p className="text-gray-500">اختر مشروعاً من دليل الدراسات</p>
           </CardContent></Card>
         )}
 

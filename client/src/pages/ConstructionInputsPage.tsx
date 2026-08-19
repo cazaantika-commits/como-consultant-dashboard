@@ -258,10 +258,10 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
             <span className="text-xs font-bold text-slate-800">جدول الإنشاء</span>
           </div>
           <div className="flex items-center gap-2">
-            <ProjectSelector
+            {!embedded && <ProjectSelector
               selectedId={selectedProjectId}
               onSelect={setSelectedProjectId}
-            />
+            />}
             <Button size="sm" onClick={handleSave} disabled={!isDirty || updateProject.isPending || !selectedProjectId} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
               {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               حفظ

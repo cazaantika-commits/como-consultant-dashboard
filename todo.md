@@ -1271,3 +1271,6 @@
 - [x] Audit the 4 Villas build-for-sale project from saved setup and pricing through timeline, investor cash flow, feasibility, and portfolio aggregation before changing any data or logic
 - [x] Verify that 4 Villas’ build-for-sale classification controls every visible page, allowed input, excluded off-plan feature, revenue-timing rule, and downstream report
 - [x] Remove off-plan buyer-payment and escrow-status controls from the build-for-sale sales workspace while retaining the post-completion direct-sale planner
+- [x] Replace nested Financial Studies groups with one flat board of distinct light-colored page icons visible at launch
+- [x] Place the single project selector at the Financial Studies entry and remove duplicate internal project selectors from project-specific study pages
+- [x] Verify the flat project-first navigation on live off-plan, build-for-sale, and build-for-rent projects without changing financial values

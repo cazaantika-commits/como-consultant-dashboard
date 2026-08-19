@@ -2,45 +2,42 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-describe("Financial Studies two-tier tile navigation", () => {
+describe("Financial Studies flat project-first navigation", () => {
   const source = fs.readFileSync(
     path.resolve(process.cwd(), "client/src/pages/BateekhaPage.tsx"),
     "utf8",
   );
 
-  it("opens to a reference-style independent card guide instead of a preselected report", () => {
-    expect(source).toContain("useState<TabId | null>(null)");
-    expect(source).toContain("اختر القسم المطلوب للبدء");
-    expect(source).toContain("العودة إلى دليل الدراسات");
+  it("opens a flat board of independent study icons instead of nested groups", () => {
+    expect(source).toContain('const [activeTab, setActiveTab] = useState<TabId | null>(null)');
+    expect(source).toContain("كل الدراسات");
+    expect(source).toContain("visibleTabs.map((tab, index)");
+    expect(source).toContain('xl:grid-cols-4');
+    expect(source).toContain("TONES");
+    expect(source).not.toContain("NAVIGATION_GROUPS");
+    expect(source).not.toContain("openGroupId");
+    expect(source).not.toContain("العودة إلى جميع الأقسام");
   });
 
-  it("renders the five spacious descriptive cards from the supplied reference style", () => {
-    expect(source).toContain('max-w-5xl');
-    expect(source).toContain('grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3');
-    expect(source).toContain('rounded-2xl border bg-card p-6 text-right');
-    expect(source).toContain('opacity-5 transition-opacity group-hover:opacity-10');
-    expect(source).toContain('h-[3px] rounded-t-2xl');
-    expect(source).toContain("بطاقة المشروع");
-    expect(source).toContain("الإعداد والتخطيط");
-    expect(source).toContain("التخطيط المالي");
-    expect(source).toContain("دراسة جدوى المستثمر");
-    expect(source).toContain("محفظة رأس المال الديناميكية");
-    expect(source).toContain("فتح القسم");
+  it("owns project selection at the Financial Studies entry rather than the page cards", () => {
+    expect(source).toContain("اختر المشروع ثم افتح الدراسة المطلوبة");
+    expect(source).toContain('<ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />');
+    expect(source).toContain("projectScoped");
+    expect(source).toContain("يتطلب اختيار مشروع");
+    expect(source).toContain("المشروع المختار");
   });
 
-  it("opens each group into a dedicated child-page guide", () => {
-    expect(source).toContain("!activeTab && openGroup ? (");
-    expect(source).toContain("العودة إلى جميع الأقسام");
-    expect(source).toContain('grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3');
-    expect(source).toContain("فتح الصفحة");
-    expect(source).toContain("setOpenGroupId(groupId)");
-  });
-
-  it("does not revert to compact tile strips and retains type-aware navigation", () => {
-    expect(source).not.toContain("sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm");
-    expect(source).not.toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5');
+  it("keeps type-aware visibility while applying the entry context to project pages", () => {
     expect(source).toContain("isFinancialStudiesTabVisible");
     expect(source).toContain("getFallbackFinancialStudiesTab");
-    expect(source).toContain('sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-sm');
+    expect(source).toContain("<PricingPage embedded />");
+    expect(source).toContain("<ConstructionInputsPage embedded />");
+    expect(source).toContain("<V2WaelSales embedded />");
+    expect(source).toContain("<V2Feasibility embedded />");
+  });
+
+  it("retains the return path from each open study page to the single entry board", () => {
+    expect(source).toContain("العودة إلى دليل الدراسات");
+    expect(source).toContain("setActiveTab(null)");
   });
 });

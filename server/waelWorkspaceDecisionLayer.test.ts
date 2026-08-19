@@ -28,7 +28,8 @@ describe("Wael professional decision workspace", () => {
   it("preserves a single approved scenario save and one visible Sales and Marketing entry", () => {
     expect(workspaceSource).toContain("اعتماد سيناريو وائل");
     expect(workspaceSource).toContain("saveWorkspace.mutateAsync");
-    expect(navigationSource).toContain("المبيعات والتسويق — مساحة وائل");
+    expect(navigationSource).toContain('label: "المبيعات والتسويق"');
+    expect(navigationSource).toContain("مساحة وائل لتخطيط البيع");
     expect(navigationSource).not.toContain('id: "marketing"');
   });
 

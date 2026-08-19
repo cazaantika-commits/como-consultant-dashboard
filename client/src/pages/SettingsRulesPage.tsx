@@ -282,7 +282,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
             <h1 className="text-sm font-bold text-gray-900">الإعدادات والقواعد</h1>
           </div>
           <div className="flex items-center gap-2">
-            <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />
+            {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => setSelectedProjectId(id)} />}
             {hasChanges && (
               <Button size="sm" onClick={handleSave} disabled={updateProject.isPending} className="gap-1.5 bg-teal-600 hover:bg-teal-700">
                 {updateProject.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}

@@ -58,7 +58,7 @@ const AREA_MAP: Record<string, string> = {
 
 function fmt(n: number): string { return Math.round(n).toLocaleString("en-US"); }
 
-export default function PricingPage() {
+export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -144,7 +144,7 @@ export default function PricingPage() {
   const totalParking = (calc.residential?.parking || 0) + (calc.retail?.parking || 0) + (calc.office?.parking || 0);
 
   if (!selectedProjectId) {
-    return (<div className="p-2 text-center text-xs text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-1">اختر مشروعاً</p></div>);
+    return (<div className="p-2 text-center text-xs text-gray-400" dir="rtl">{!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}<p className="mt-1">اختر مشروعاً من دليل الدراسات</p></div>);
   }
   if (projectQuery.isLoading) {
     return <div className="p-2 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto" /></div>;
@@ -182,7 +182,7 @@ export default function PricingPage() {
     <div className="bg-gray-50 px-4 py-2" dir="rtl">
       {/* Toolbar */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
-        <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />
+        {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}
         <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
           {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
         </Button>

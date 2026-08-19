@@ -58,7 +58,7 @@ function fmt(n: number): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
-export default function GeneralInputsPage({ embedded, hideDocumentFields = false }: { embedded?: boolean; hideDocumentFields?: boolean } = {}) {
+export default function GeneralInputsPage({ embedded, hideDocumentFields = false, hideProjectSelector = false }: { embedded?: boolean; hideDocumentFields?: boolean; hideProjectSelector?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -158,7 +158,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
   }, [formData.constructionMonths, projectQuery.data]);
 
   if (!selectedProjectId) {
-    return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /><p className="mt-2">اختر مشروعاً</p></div>);
+    return (<div className="p-4 text-center text-sm text-gray-400" dir="rtl">{!hideProjectSelector && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}<p className="mt-2">اختر مشروعاً من دليل الدراسات</p></div>);
   }
   if (projectQuery.isLoading) {
     return <div className="p-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>;
@@ -220,7 +220,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
     <div className="bg-gray-50 px-4 py-2" dir="rtl">
       {/* Toolbar */}
       <div className="bg-white rounded-lg border border-gray-100 shadow-sm px-4 py-2 mb-3 flex items-center gap-3">
-        <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />
+        {!hideProjectSelector && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setIsEditing(false); }} />}
         <label className="flex items-center gap-2 text-[12px] text-gray-600">
           <span className="font-medium">نوع التطوير</span>
           <select
