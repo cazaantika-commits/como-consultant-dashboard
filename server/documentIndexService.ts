@@ -31,8 +31,7 @@ export async function extractTextFromDriveFile(
   try {
     const authClient = await getOAuthClientForUser(userId);
     if (!authClient) {
-      console.error("[DocIndex] No auth client for user", userId);
-      return null;
+      console.warn("[DocIndex] No personal OAuth record for user", userId, "— continuing through the connected project Drive service account");
     }
 
     // Get file metadata first

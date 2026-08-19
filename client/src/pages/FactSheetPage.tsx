@@ -245,6 +245,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
     filledFields: string[]; emptyFields: string[]; newlyFilled: string[];
     beforeCount: number; afterCount: number;
   } | null>(null);
+  const syncOfficialParking = trpc.officialDocuments.syncOfficialParkingFacts.useMutation();
 
   const handleKhazenAutoFill = async () => {
     if (!selectedProjectId || !projectQuery.data) return;
@@ -261,7 +262,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
       const projectName = projectQuery.data.name;
       const prompt =
         `أنا بحاجة لتعبئة بطاقة بيانات المشروع "${projectName}" (معرف المشروع: ${selectedProjectId}). ` +
-        `أرجو منك البحث في Google Drive عن مستندات هذا المشروع (Affection Plan, Title Deed, Plots Guidelines, Site Plan, DDA) ` +
+        `أرجو منك البحث في المستندات الرسمية المفهرسة لهذا المشروع تحديداً (official_land_document) باستخدام projectId، وهي تأتي من Affection Plan, Title Deed, Plots Guidelines, Site Plan, DDA. لا تستخدم عروض الاستشاريين. ` +
         `واستخراج البيانات التالية وتحديث بطاقة البيانات مباشرة باستخدام أداة update_project_fact_sheet:\n\n` +
         `- أرقام التعريف: رقم القطعة، كود المنطقة، رقم سند الملكية، رقم DDA، الرقم المرجعي للمطور\n` +
         `- المساحات: مساحة الأرض (م²/قدم²)، GFA (م²/قدم²)، BUA\n` +
@@ -283,6 +284,10 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
       setKhazenProgress(30); setKhazenMessage("خازن يبحث في مستندات المشروع على Google Drive...");
       const result = await khazenChat.mutateAsync({ agent: "khazen", message: prompt });
       setKhazenProgress(80); setKhazenMessage("خازن أنهى التحليل. جاري تحديث البيانات...");
+
+      // Parking is parsed deterministically from an exact official source when it is present.
+      // This keeps the user-visible Khazen workflow source-backed even when a model omits one field.
+      await syncOfficialParking.mutateAsync({ projectId: selectedProjectId });
 
       const refetched = await projectQuery.refetch();
       const updatedProject = refetched.data;

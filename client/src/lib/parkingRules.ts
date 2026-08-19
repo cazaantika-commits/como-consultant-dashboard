@@ -88,11 +88,11 @@ export function calculateParkingSummary(
     : categories.reduce((sum, category) => sum + (perCategory[category] || 0), 0);
   const visitorPct = validNumber(rules?.visitorPct);
   const accessiblePct = validNumber(rules?.accessiblePct);
-  const visitorRequired = baseRequired === null || visitorPct === null ? (visitorPct === null ? null : Math.ceil(baseRequired * visitorPct / 100)) : Math.ceil(baseRequired * visitorPct / 100);
-  const accessibleRequired = baseRequired === null || accessiblePct === null ? (accessiblePct === null ? null : Math.ceil(baseRequired * accessiblePct / 100)) : Math.ceil(baseRequired * accessiblePct / 100);
-  const totalRequired = baseRequired === null || visitorRequired === null || accessibleRequired === null
-    ? null
-    : baseRequired + visitorRequired + accessibleRequired;
+  // Visitor and accessibility percentages are optional additions. Their absence must not hide
+  // a fully calculable base requirement from the official project rule.
+  const visitorRequired = baseRequired === null ? null : visitorPct === null ? 0 : Math.ceil(baseRequired * visitorPct / 100);
+  const accessibleRequired = baseRequired === null ? null : accessiblePct === null ? 0 : Math.ceil(baseRequired * accessiblePct / 100);
+  const totalRequired = baseRequired === null ? null : baseRequired + (visitorRequired ?? 0) + (accessibleRequired ?? 0);
   const available = validNumber(availableSpaces);
   const variance = totalRequired === null || available === null ? null : available - totalRequired;
 

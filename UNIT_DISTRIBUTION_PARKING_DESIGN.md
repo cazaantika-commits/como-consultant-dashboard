@@ -24,4 +24,8 @@ The compact Majan distribution page correctly displayed the document-pending sta
 
 ## Final browser verification
 
-Majan’s live Unit Distribution now renders as a compact two-panel work area rather than a full-width spread. It shows 209 units, 380,943 distributed square feet, 381,077.54 available saleable square feet, and a 134.54-square-foot variance without creating any new unit input. The parking panel explicitly shows **غير مكتمل / غير مذكور / بانتظار البيانات** because no document-derived rule or capacity exists yet. It neither calculates a requirement nor treats missing capacity as zero. The four project parking columns were also confirmed present in the live database.
+Majan’s live Unit Distribution now renders as a compact two-panel work area rather than a full-width spread. It shows 209 units, 380,943 distributed square feet, 381,077.54 available saleable square feet, and a 134.54-square-foot variance without creating any new unit input. The four project parking columns were also confirmed present in the live database.
+
+## Official rule now extracted
+
+After exact official-document indexing and the repaired Khazen workflow, Majan now carries the parking text and reference from `MAJ_6457879_AP_V1.0.pdf — GENERAL NOTES / PARKING`. The detail table calculates required spaces for every unit type. Browser validation exposed one remaining presentation gap: the top summary still shows «غير مكتمل» for required spaces when capacity is unavailable. The requirement is already calculable and must be shown separately from capacity and variance.

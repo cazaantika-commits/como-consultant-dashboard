@@ -53,6 +53,24 @@ describe("Unit Distribution document-sourced parking", () => {
     expect(documentedZero.variance).toBe(-1);
   });
 
+  it("shows a complete base requirement when optional visitor and accessibility additions are absent", () => {
+    const rules = parseParkingRules(JSON.stringify({
+      residential: { thresholdSqft: 1600, spacesAtOrBelow: 1, spacesAbove: 2 },
+      retail: { sqftPerSpace: 700 },
+      office: { sqftPerSpace: 500 },
+    }));
+    const result = calculateParkingSummary([
+      { category: "residential", areaSqft: 1200, count: 2 },
+      { category: "retail", areaSqft: 700, count: 1 },
+      { category: "office", areaSqft: 500, count: 1 },
+    ], rules, null);
+
+    expect(result.baseRequired).toBe(4);
+    expect(result.totalRequired).toBe(4);
+    expect(result.available).toBeNull();
+    expect(result.variance).toBeNull();
+  });
+
   it("keeps Unit Distribution focused on counts, areas, compact layout, and document-backed parking", () => {
     const source = readProjectFile("client/src/pages/PricingPage.tsx");
     expect(source).toContain("احتساب المواقف من الوثائق");

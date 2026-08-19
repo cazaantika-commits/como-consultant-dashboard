@@ -1293,3 +1293,7 @@
 - [x] Restrict Khazen parking extraction to authoritative land, planning, and approval documents so consultant proposals cannot be treated as parking requirements
 - [x] Repair Khazen’s failed runtime model path so document extraction completes before deciding whether an official parking fact is unavailable
 - [x] Repair Khazen’s failed runtime model path so document extraction completes before deciding whether an official parking fact is unavailable
+- [x] Locate and provide the exact connected Google Drive folder where authoritative Majan documents must be placed for Khazen extraction
+- [x] Index the authoritative Land Ownership & Plot Info Drive documents and map each to its correct project before rerunning Khazen
+- [x] Repair Khazen’s parking-fact update so the explicit official Majan parking rule is saved with its source reference
+- [x] Show the calculated total parking requirement even when the documented parking capacity and variance are still unavailable

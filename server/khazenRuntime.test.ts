@@ -19,4 +19,11 @@ describe("Khazen built-in extraction runtime", () => {
     expect(llm).toContain("tool_calls?: ToolCall[]");
     expect(llm).toContain("...(tool_calls ? { tool_calls } : {})");
   });
+
+  it("uses exact centrally indexed official documents for Fact Sheet extraction", () => {
+    expect(agentChat).toContain("search_indexed_documents باستخدام projectId");
+    expect(agentChat).toContain("official_land_document");
+    expect(agentChat).toContain("00_Land Ownership & Plot Info");
+    expect(agentChat).not.toContain("ابحث عن مجلد 00_Land-Info داخل مجلد المشروع");
+  });
 });
