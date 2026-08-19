@@ -1328,3 +1328,12 @@
 - [x] Correct the visible Sales cards so collection and escrow balance appear beneath the unchanged sales content in every month
 - [x] Remove visual overlap between sale, collection, and escrow sections inside each unified Sales month card
 - [x] Audit configuration-driven monthly cash-flow distributions across off-plan, build-for-sale, and build-for-rent projects before changing financial logic
+- [x] Verify the recorded build-for-sale sorting-fee setting, amount, funding source, and timing before investigating escrow
+- [x] Complete a rule-by-rule settings-to-monthly-output audit for off-plan, build-for-sale, and build-for-rent before any financial logic changes
+- [ ] Make Build-for-Sale sorting-fee placement follow the displayed penultimate-construction-month rule
+- [ ] Make Build-for-Sale developer NOC placement follow the displayed penultimate-construction-month rule
+- [ ] Make design-fee monthly distribution consume the saved seven-stage percentages and durations
+- [ ] Make RERA/DLD unit-registration fees consume the saved per-unit rate, including the default 520 AED rule
+- [ ] Make the Off-Plan escrow-deposit percentage consume the saved setting throughout investor and escrow settlement calculations
+- [ ] Rebase Build-for-Sale direct-sale receipts and matching commissions whenever the project end month changes
+- [ ] Hide inapplicable Build-for-Sale settings and display the correct Build-for-Rent payment-rule descriptions without changing financial calculations
