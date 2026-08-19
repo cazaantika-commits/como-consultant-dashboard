@@ -3,8 +3,7 @@
  *
  * Examples:
  *   122000000.00 -> 122,000,000
- *   755555.56    -> 755,555.56
- *   "1.415"      -> 1.415
+ *   755555.56    -> 755,556
  *
  * This helper never emits compact K/M/ك/م labels. It must not be used to
  * prepare values for saving or for financial calculations.
@@ -15,20 +14,26 @@ export function formatFullNumber(
 ): string {
   if (value === null || value === undefined || value === "") return fallback;
 
-  const isStoredText = typeof value === "string";
-  const supplied = isStoredText ? value.replace(/,/g, "").trim() : String(value);
+  const supplied = typeof value === "string" ? value.replace(/,/g, "").trim() : String(value);
   if (!supplied || !/^-?\d+(?:\.\d+)?$/.test(supplied)) return fallback;
 
   const negative = supplied.startsWith("-");
   const unsigned = negative ? supplied.slice(1) : supplied;
-  // Saved input text keeps its meaningful precision. Computed JS numbers are
-  // normalized to two decimal places so binary floating-point artifacts stay hidden.
-  const normalized = isStoredText ? unsigned : Number(unsigned).toFixed(2);
-  const [wholePart, decimalPart] = normalized.split(".");
-  const groupedWhole = Number(wholePart).toLocaleString("en-US", { maximumFractionDigits: 0 });
-  const meaningfulDecimal = decimalPart?.replace(/0+$/, "");
+  const roundedWhole = Math.round(Number(unsigned));
+  const groupedWhole = roundedWhole.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  return `${negative ? "-" : ""}${groupedWhole}`;
+}
 
-  return `${negative ? "-" : ""}${groupedWhole}${meaningfulDecimal ? `.${meaningfulDecimal}` : ""}`;
+/** Use only for rates and percentages where fractional precision is meaningful. */
+export function formatRateOrPercent(
+  value: number | string | null | undefined,
+  fallback = "—",
+): string {
+  if (value === null || value === undefined || value === "") return fallback;
+  const supplied = typeof value === "string" ? value.replace(/,/g, "").trim() : String(value);
+  if (!supplied || !/^-?\d+(?:\.\d+)?$/.test(supplied)) return fallback;
+  const numberValue = Number(supplied);
+  return numberValue.toLocaleString("en-US", { maximumFractionDigits: 2 });
 }
 
 /** Accept a raw text entry by removing grouping commas before it is saved. */

@@ -1324,3 +1324,4 @@
 - [x] Fix Financial Studies monthly table headers during scroll, darken month numbers, and add clear vertical month separators
 - [x] Reconcile every requested Financial Studies and Planning change as completed, partial, or uncompleted with honest evidence
 - [x] Merge Sales and collection/escrow into one compact monthly card that preserves all sales content and adds collection then escrow balance
+- [x] Round monetary displays to whole amounts with separators while preserving decimal percentages and rates
