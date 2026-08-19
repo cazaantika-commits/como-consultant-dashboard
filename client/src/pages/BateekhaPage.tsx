@@ -88,7 +88,10 @@ export default function BateekhaPage() {
   }, [projectType]);
 
   useEffect(() => {
-    const requestedTab = new URLSearchParams(window.location.search).get("tab") as TabId | null;
+    const requestedTabParam = new URLSearchParams(window.location.search).get("tab");
+    // Older Financial Studies links used "pricing" for Wael's unified sales and
+    // marketing canvas. Keep these links valid when the page is reopened.
+    const requestedTab = (requestedTabParam === "pricing" ? "sales" : requestedTabParam) as TabId | null;
     if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && isFinancialStudiesTabVisible(requestedTab, projectType)) {
       setActiveTab(requestedTab);
     }

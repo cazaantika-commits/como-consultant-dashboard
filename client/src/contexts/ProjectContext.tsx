@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -19,6 +19,16 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? Number(saved) : null;
   });
+
+  // Re-read the persisted choice after client hydration. This keeps project-first
+  // Financial Studies pages in their selected-project context after a reload.
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const savedProjectId = saved ? Number(saved) : null;
+    if (savedProjectId && Number.isFinite(savedProjectId) && savedProjectId !== selectedProjectId) {
+      setSelectedProjectIdState(savedProjectId);
+    }
+  }, [selectedProjectId]);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projects = projectsQuery.data || [];

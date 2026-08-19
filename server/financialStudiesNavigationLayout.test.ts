@@ -44,4 +44,8 @@ describe("Financial Studies flat project-first navigation", () => {
     expect(source).toContain("العودة إلى دليل الدراسات");
     expect(source).toContain("setActiveTab(null)");
   });
+
+  it("reopens legacy Pricing links in the unified sales workspace", () => {
+    expect(source).toContain('requestedTabParam === "pricing" ? "sales" : requestedTabParam');
+  });
 });

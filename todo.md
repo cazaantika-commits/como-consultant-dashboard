@@ -1298,3 +1298,5 @@
 - [x] Repair Khazen’s parking-fact update so the explicit official Majan parking rule is saved with its source reference
 - [x] Show the calculated total parking requirement even when the documented parking capacity and variance are still unavailable
 - [x] Redesign Construction Plan as a light interactive execution canvas with larger readable controls, clear curve choices, and understandable monthly progress without changing financial logic
+- [x] Visually refine the Pricing page as a compact, high-legibility workspace while preserving it as the sole unit-price source and leaving calculations unchanged
+- [x] Preserve the Financial Studies selected project when the Pricing page is reloaded so project-specific cards reopen in context

@@ -54,4 +54,15 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("بيع مباشر بعد الإنجاز");
     expect(workspaceSource).toContain('isBuildForSale ? "استلام مباشر" : "تحصيل"');
   });
+
+  it("keeps unit pricing in one visible light source panel with full-number formatting", () => {
+    expect(workspaceSource).toContain('data-testid="pricing-source-panel"');
+    expect(workspaceSource).toContain("لوحة التسعير المعتمدة");
+    expect(workspaceSource).toContain("سعر القدم المربع هو نقطة الإدخال الوحيدة");
+    expect(workspaceSource).toContain("مرجع من توزيع الوحدات");
+    expect(workspaceSource).toContain('import { formatFullNumber } from "@/lib/numberFormat"');
+    expect(workspaceSource).toContain('return formatFullNumber(n, "0")');
+    expect(workspaceSource).not.toContain('return (n / 1e6).toFixed(1) + "M"');
+    expect(workspaceSource).toContain('aria-hidden="true" className="hidden overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d]');
+  });
 });
