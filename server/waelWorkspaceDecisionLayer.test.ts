@@ -46,4 +46,11 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("manualUnits.map((value) => Math.max(0, Math.round(Number(value) || 0)))");
     expect(workspaceSource).toContain("const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0)");
   });
+
+  it("uses direct post-completion sale language instead of off-plan payment or escrow controls for build-for-sale", () => {
+    expect(workspaceSource).toContain('isBuildForSale ? "تحصيل البيع"');
+    expect(workspaceSource).toContain("دفعة كاملة عند بيع الوحدة");
+    expect(workspaceSource).toContain("بيع مباشر بعد الإنجاز");
+    expect(workspaceSource).toContain('isBuildForSale ? "استلام مباشر" : "تحصيل"');
+  });
 });

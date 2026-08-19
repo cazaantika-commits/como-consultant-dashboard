@@ -1268,3 +1268,6 @@
 - [x] Benchmark professional executive portfolio-liquidity reporting and define the information Sheikh Issa needs first
 - [x] Redesign the aggregated project cash-flow report and Sheikh Issa’s Command Center view with next-four-month commitments, project drivers, timing, and safe drill-downs without changing any financial calculations or frozen data contracts
 - [x] Add a compact calendar-year label beneath each month name in Wael’s direct sales-distribution cards
+- [ ] Audit the 4 Villas build-for-sale project from saved setup and pricing through timeline, investor cash flow, feasibility, and portfolio aggregation before changing any data or logic
+- [ ] Verify that 4 Villas’ build-for-sale classification controls every visible page, allowed input, excluded off-plan feature, revenue-timing rule, and downstream report
+- [x] Remove off-plan buyer-payment and escrow-status controls from the build-for-sale sales workspace while retaining the post-completion direct-sale planner
