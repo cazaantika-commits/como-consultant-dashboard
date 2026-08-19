@@ -100,15 +100,42 @@ export function buildSalesResultFromSavedPlan(
         : Array.isArray(parsed.escrowData) && Array.isArray(parsed.salesDistribution);
       if (hasSavedSalesResult) {
         const storedCashInflow = parsed.actualCashInflow || [];
+        const normalizedCashInflow = parsed.actualCashInflowVersion === 2
+          ? storedCashInflow
+          : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
+        let actualCashInflow = normalizedCashInflow;
+
+        // Build-for-Sale receipt arrays are persisted against absolute project
+        // months. If Settings later changes the design or construction duration,
+        // keep the saved receipt weights but move their post-completion window
+        // to the current project end instead of leaving it at the retired end.
+        if (scenario === "build_for_sale" && normalizedCashInflow.length > 0) {
+          const currentDesignMonths = getProjectMarketingTiming(project).designMonths;
+          const currentConstructionMonths = Math.max(1, Number(project?.constructionMonths ?? plan.constructionMonths ?? 0));
+          const savedDesignMonths = Math.max(0, Number(plan.designMonths ?? currentDesignMonths));
+          const savedConstructionMonths = Math.max(1, Number(plan.constructionMonths ?? currentConstructionMonths));
+          const savedProjectEnd = savedDesignMonths + savedConstructionMonths;
+          const currentProjectEnd = currentDesignMonths + currentConstructionMonths;
+
+          if (savedProjectEnd !== currentProjectEnd) {
+            const savedPostCompletionReceipts = normalizedCashInflow
+              .slice(savedProjectEnd)
+              .map((amount: unknown) => Math.max(0, Number(amount) || 0));
+            if (savedPostCompletionReceipts.some((amount) => amount > 0)) {
+              actualCashInflow = new Array(currentProjectEnd + savedPostCompletionReceipts.length).fill(0);
+              savedPostCompletionReceipts.forEach((amount, index) => {
+                actualCashInflow[currentProjectEnd + index] = amount;
+              });
+            }
+          }
+        }
         return {
           escrowData: Array.isArray(parsed.escrowData) ? parsed.escrowData : [],
           salesDistribution: Array.isArray(parsed.salesDistribution) ? parsed.salesDistribution : [],
           marketingMonthlyAmounts,
           ppDownPct,
           paymentPlan,
-          actualCashInflow: parsed.actualCashInflowVersion === 2
-            ? storedCashInflow
-            : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow),
+          actualCashInflow,
           offplanPct: Number(plan.offplanPct ?? 80),
           directSalesStartMonth,
           directSalesInstallmentCount,

@@ -9,8 +9,9 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
-import { clampMarketingDistributionToStart, getProjectDesignTiming, getProjectMarketingTiming } from "@/lib/projectTiming";
-import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
+import { getProjectDesignTiming } from "@/lib/projectTiming";
+import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type Scenario } from "@/lib/investorCashFlowEngine";
+import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { formatFullNumber } from "@/lib/numberFormat";
 import {
@@ -50,86 +51,13 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
     return { designRate, supervisionRate, totalRate: designRate + supervisionRate };
   }, [project]);
 
-  // Use the saved Sales Plan inputs so the Feasibility Study's capital number
-  // has the same cash-flow source as Investor and Escrow Cash Flow.
-  const salesResult = useMemo<SalesResult | undefined>(() => {
+  // One canonical saved-plan adapter keeps feasibility in lockstep with sales,
+  // investor cash flow, and escrow whenever project timing or rules change.
+  const salesResult = useMemo(() => {
     const plan = plansQuery.data?.[0] as any;
     if (!plan || !project) return undefined;
-    let marketingMonthlyAmounts: number[] | undefined;
-    let paymentPlan: SalesResult["paymentPlan"];
-    let ppDownPct: number | undefined;
-    let buildForSaleMonthlyUnits: number[] | undefined;
-
-    try {
-      const absorption = plan.salesAbsorptionJson ? JSON.parse(plan.salesAbsorptionJson) : null;
-      if (absorption?.marketingDistribution) {
-        const minimumStart = getProjectMarketingTiming(project).marketingStartMonth;
-        const savedStart = Number(absorption.marketingActualStart || minimumStart);
-        const actualStart = Math.max(savedStart, minimumStart);
-        const distribution = clampMarketingDistributionToStart(absorption.marketingDistribution, savedStart, minimumStart);
-        const channels = Object.values(distribution) as number[][];
-        if (channels.length) {
-          marketingMonthlyAmounts = new Array(actualStart - 1 + Math.max(...channels.map((channel) => channel.length))).fill(0);
-          for (const channel of channels) {
-            channel.forEach((value, index) => { marketingMonthlyAmounts![actualStart - 1 + index] += Number(value || 0); });
-          }
-        }
-      }
-      ppDownPct = absorption?.ppDownPct;
-      if (Array.isArray(absorption?.buildForSaleMonthlyUnits)) {
-        buildForSaleMonthlyUnits = absorption.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0));
-      }
-      paymentPlan = absorption ? {
-        downPct: Number(absorption.ppDownPct ?? 10),
-        secondPct: Number(absorption.ppSecondPct ?? 0),
-        secondAfterMonths: Number(absorption.ppSecondAfterMonths ?? 0),
-        duringTotalPct: 100 - Number(absorption.ppDownPct ?? 10) - Number(absorption.ppSecondPct ?? 0) - Number(absorption.ppHandoverPct ?? 0),
-        installmentEveryMonths: Number(absorption.ppInstallmentEvery ?? 1),
-        handoverPct: Number(absorption.ppHandoverPct ?? 0),
-      } : undefined;
-    } catch {}
-
-    try {
-      if (plan.paymentPlanJson) {
-        paymentPlan = JSON.parse(plan.paymentPlanJson);
-        ppDownPct = paymentPlan?.downPct;
-      }
-      const results = plan.resultsJson ? JSON.parse(plan.resultsJson) : null;
-      const parsedBuildForSaleUnits = Array.isArray(results?.buildForSaleMonthlyUnits)
-        ? results.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0))
-        : undefined;
-      const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
-        || buildForSaleMonthlyUnits
-        || (isBuildForSale && Array.isArray(results?.salesDistribution)
-          ? results.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
-          : undefined);
-      const hasSavedSalesResult = isBuildForSale
-        ? Array.isArray(results?.actualCashInflow) || Array.isArray(results?.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
-        : Array.isArray(results?.escrowData) && Array.isArray(results?.salesDistribution);
-      if (!hasSavedSalesResult) return (marketingMonthlyAmounts || buildForSaleMonthlyUnits)
-        ? { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, paymentPlan, buildForSaleMonthlyUnits }
-        : undefined;
-      const storedCash = results.actualCashInflow || [];
-      const actualCashInflow = results.actualCashInflowVersion === 2
-        ? storedCash
-        : (storedCash.length > 0 && storedCash[0] === 0 ? storedCash.slice(1) : storedCash);
-      const directSales = JSON.parse((project as any).constructionScheduleJson || "{}")?.settings?.directPostCompletionSales || {};
-      return {
-        escrowData: Array.isArray(results.escrowData) ? results.escrowData : [],
-        salesDistribution: Array.isArray(results.salesDistribution) ? results.salesDistribution : [],
-        marketingMonthlyAmounts,
-        ppDownPct,
-        paymentPlan,
-        actualCashInflow,
-        offplanPct: Number(plan.offplanPct ?? 80),
-        directSalesStartMonth: Number(directSales.startMonth ?? 4),
-        directSalesInstallmentCount: Number(directSales.installmentCount ?? 6),
-        buildForSaleMonthlyUnits: resolvedBuildForSaleUnits,
-      };
-    } catch {
-      return undefined;
-    }
-  }, [plansQuery.data, project]);
+    return buildSalesResultFromSavedPlan(plan, project, scenario);
+  }, [plansQuery.data, project, scenario]);
 
   const cashFlow = useMemo(
     () => computeInvestorCashFlow(project || null, scenario, undefined, salesResult),

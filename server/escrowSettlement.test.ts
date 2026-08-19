@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
 import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
+import { buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
   it("retains five percent of buyer collections, covers later obligations, and closes at zero in month thirteen", () => {
@@ -266,6 +267,13 @@ describe("calculateEscrowSettlement", () => {
     expect(result.rows.some((row) => row.label === "تقرير مدقق ريرا")).toBe(false);
     expect(result.rows.some((row) => row.funder === "escrow")).toBe(false);
 
+    const sorting = result.rows.find((row) => row.label === "رسوم الفرز")!;
+    const noc = result.rows.find((row) => row.label === "رسوم NOC المطور")!;
+    expect(sorting.designMonths.reduce((sum, amount) => sum + amount, 0)).toBe(0);
+    expect(noc.designMonths.reduce((sum, amount) => sum + amount, 0)).toBe(0);
+    expect(sorting.constructionMonths[1]).toBe(sorting.totalCost);
+    expect(noc.constructionMonths[1]).toBe(noc.totalCost);
+
     const contractor = result.rows.find((row) => row.label.startsWith("مستخلصات المقاول"))!;
     expect(contractor.funder).toBe("investor");
     expect(contractor.constructionMonths[0]).toBe(0);
@@ -347,6 +355,121 @@ describe("calculateEscrowSettlement", () => {
     ]);
     expect(comoShare.postConstructionMonths[0]).toBe(0);
     expect(comoShare.postConstructionMonths[1]).toBe(comoShare.totalCost);
+  });
+
+  it("uses the saved RERA or DLD unit-registration fee for every project type", () => {
+    const result = computeInvestorCashFlow({
+      financingScenario: "build_for_sale",
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 4,
+      residential1brArea: 750,
+      residential1brPrice: 5000,
+      constructionScheduleJson: JSON.stringify({
+        settings: { configurableRates: { reraUnitRegistrationFee: 520 } },
+      }),
+    }, "build_for_sale");
+
+    const unitRegistration = result.rows.find((row) => row.label === "تسجيل الوحدات — دائرة الأراضي والأملاك")!;
+    expect(unitRegistration.totalCost).toBe(4 * 520);
+    expect(unitRegistration.constructionMonths[1]).toBe(4 * 520);
+  });
+
+  it("uses the saved seven design-stage percentages and durations for monthly design fees", () => {
+    const stages = {
+      mobilization: { pct: 5, durationWeeks: 1 },
+      concept: { pct: 5, durationWeeks: 1 },
+      schematic: { pct: 5, durationWeeks: 1 },
+      dd: { pct: 5, durationWeeks: 1 },
+      authorities: { pct: 5, durationWeeks: 1 },
+      tender: { pct: 35, durationWeeks: 1 },
+      ifc: { pct: 40, durationWeeks: 1 },
+    };
+    const result = computeInvestorCashFlow({
+      financingScenario: "build_for_sale",
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+      designFeePct: 2,
+      constructionScheduleJson: JSON.stringify({ settings: { designPayments: stages } }),
+    }, "build_for_sale");
+
+    const designFee = result.rows.find((row) => row.label === "أتعاب التصاميم")!;
+    expect(designFee.designMonths).toHaveLength(2);
+    expect(designFee.designMonths[0]).toBeCloseTo(designFee.totalCost * 0.2165, 6);
+    expect(designFee.designMonths[1]).toBeCloseTo(designFee.totalCost * 0.7835, 6);
+  });
+
+  it("uses the saved escrow-deposit percentage in both the investor transfer and the escrow settlement", () => {
+    const baseProject = {
+      financingScenario: "offplan_escrow",
+      constructionMonths: 3,
+      manualBuaSqft: 10000,
+      estimatedConstructionPricePerSqft: 400,
+    };
+    const withTwentyPct = computeInvestorCashFlow({
+      ...baseProject,
+      constructionScheduleJson: JSON.stringify({ settings: { configurableRates: { escrowDepositPct: 20 } } }),
+    }, "offplan_escrow");
+    const withTwentyFivePct = computeInvestorCashFlow({
+      ...baseProject,
+      constructionScheduleJson: JSON.stringify({ settings: { configurableRates: { escrowDepositPct: 25 } } }),
+    }, "offplan_escrow");
+
+    const getRow = (result: CashFlowResult, label: string) => result.rows.find((row) => row.label === label)!;
+    const getDeposit = (result: CashFlowResult) => result.rows.find((row) => row.label.startsWith("إيداع حساب الضمان"))!;
+    const deposit20 = getDeposit(withTwentyPct);
+    const deposit25 = getDeposit(withTwentyFivePct);
+    const settlement20 = getRow(withTwentyPct, "تصفية حساب الضمان (دفعة 1)");
+    const settlement25 = getRow(withTwentyFivePct, "تصفية حساب الضمان (دفعة 1)");
+
+    expect(deposit25.label).toBe("إيداع حساب الضمان (25%)");
+    expect(deposit25.totalCost).toBe(10000 * 400 * 0.25);
+    expect(deposit25.totalCost - deposit20.totalCost).toBe(10000 * 400 * 0.05);
+    expect(settlement25.totalCost - settlement20.totalCost).toBe(10000 * 400 * 0.05);
+  });
+
+  it("rebases Build-for-Sale receipts to the current completion month when a saved plan used an earlier design duration", () => {
+    const previousDesignMonths = 7;
+    const constructionMonths = 14;
+    const previousProjectEnd = previousDesignMonths + constructionMonths;
+    const receiptWeights = [18_620_000, 37_240_000, 18_620_000];
+    const savedPlan = {
+      designMonths: previousDesignMonths,
+      constructionMonths,
+      resultsJson: JSON.stringify({
+        actualCashInflowVersion: 2,
+        actualCashInflow: [
+          ...Array(previousProjectEnd).fill(0),
+          ...receiptWeights,
+        ],
+        buildForSaleMonthlyUnits: [1, 2, 1],
+      }),
+      salesAbsorptionJson: JSON.stringify({ buildForSaleMonthlyUnits: [1, 2, 1] }),
+    };
+    const currentProject = {
+      financingScenario: "build_for_sale",
+      constructionMonths,
+      constructionScheduleJson: JSON.stringify({
+        settings: {
+          designPayments: {
+            mobilization: { pct: 5, durationWeeks: 1 },
+            concept: { pct: 15, durationWeeks: 2 },
+            schematic: { pct: 20, durationWeeks: 3 },
+            dd: { pct: 25, durationWeeks: 4 },
+            authorities: { pct: 10, durationWeeks: 3 },
+            tender: { pct: 15, durationWeeks: 3 },
+            ifc: { pct: 10, durationWeeks: 1 },
+          },
+        },
+      }),
+    };
+
+    const sales = buildSalesResultFromSavedPlan(savedPlan, currentProject, "build_for_sale")!;
+    const currentProjectEnd = 4 + constructionMonths;
+    expect(sales.actualCashInflow?.slice(currentProjectEnd, currentProjectEnd + 3)).toEqual(receiptWeights);
+    expect(sales.actualCashInflow?.slice(previousProjectEnd, previousProjectEnd + 3)).not.toEqual(receiptWeights);
   });
 
   it("applies the approved build-for-rent rules with no sales, marketing, commissions, revenue, or escrow", () => {

@@ -284,36 +284,52 @@ export function generateSCurve(months: number): number[] {
 }
 
 /**
- * توزيع أتعاب التصاميم على المدة الفعلية
- * 7 مراحل: 10%, 15%, 20%, 35%, 10%, 5%, 5%
+ * Distributes the design fee from the seven editable stages saved in Settings
+ * and Rules. A stage can span two calendar months, so its own percentage is
+ * split by the actual weeks that overlap each month. Percentages are normalized
+ * only as a safeguard when a user has temporarily saved a total other than 100.
  */
-export function distributeDesignFee(totalFee: number, months: number): number[] {
-  const stages = [0.10, 0.15, 0.20, 0.35, 0.10, 0.05, 0.05];
-  const result = new Array(months).fill(0);
+export function distributeDesignFee(
+  totalFee: number,
+  months: number,
+  savedStages?: Array<{ pct: number; durationWeeks: number }>,
+): number[] {
+  const fallbackStages = [
+    { pct: 5, durationWeeks: 2 },
+    { pct: 15, durationWeeks: 4 },
+    { pct: 20, durationWeeks: 4 },
+    { pct: 25, durationWeeks: 6 },
+    { pct: 10, durationWeeks: 4 },
+    { pct: 15, durationWeeks: 4 },
+    { pct: 10, durationWeeks: 2 },
+  ];
+  const stages = (savedStages?.length ? savedStages : fallbackStages)
+    .map((stage) => ({
+      pct: Math.max(0, Number(stage.pct) || 0),
+      durationWeeks: Math.max(1, Number(stage.durationWeeks) || 1),
+    }));
+  const totalPct = stages.reduce((sum, stage) => sum + stage.pct, 0);
+  const normalizedStages = totalPct > 0
+    ? stages.map((stage) => ({ ...stage, share: stage.pct / totalPct }))
+    : fallbackStages.map((stage) => ({ ...stage, share: stage.pct / 100 }));
+  const result = new Array(Math.max(1, months)).fill(0);
+  const weeksPerCalendarMonth = 4.33;
+  let stageStartWeek = 0;
 
-  if (months >= 7) {
-    const extraMonths = months - 6;
-    result[0] = totalFee * stages[0];
-    result[1] = totalFee * stages[1];
-    result[2] = totalFee * stages[2];
-    const detailedPerMonth = (totalFee * stages[3]) / extraMonths;
-    for (let i = 3; i < 3 + extraMonths; i++) {
-      result[i] = detailedPerMonth;
+  for (const stage of normalizedStages) {
+    const stageEndWeek = stageStartWeek + stage.durationWeeks;
+    const stageFee = totalFee * stage.share;
+    for (let monthIndex = 0; monthIndex < result.length; monthIndex++) {
+      const monthStartWeek = monthIndex * weeksPerCalendarMonth;
+      const monthEndWeek = (monthIndex + 1) * weeksPerCalendarMonth;
+      const overlapWeeks = Math.max(0, Math.min(stageEndWeek, monthEndWeek) - Math.max(stageStartWeek, monthStartWeek));
+      if (overlapWeeks > 0) result[monthIndex] += stageFee * (overlapWeeks / stage.durationWeeks);
     }
-    result[months - 3] += totalFee * stages[4];
-    result[months - 2] += totalFee * stages[5];
-    result[months - 1] += totalFee * stages[6];
-  } else {
-    for (let i = 0; i < months - 1 && i < stages.length; i++) {
-      result[i] = totalFee * stages[i];
-    }
-    let remaining = 0;
-    for (let i = months - 1; i < stages.length; i++) {
-      remaining += stages[i];
-    }
-    result[months - 1] = totalFee * remaining;
+    stageStartWeek = stageEndWeek;
   }
 
+  const distributed = result.reduce((sum, amount) => sum + amount, 0);
+  if (result.length > 0) result[result.length - 1] += totalFee - distributed;
   return result;
 }
 
@@ -600,7 +616,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   });
 
   // ─── أتعاب التصاميم (توزيع حسب المراحل) ───
-  const designFeeDistribution = distributeDesignFee(costs.designFee, designDuration);
+  const designFeeDistribution = distributeDesignFee(costs.designFee, designDuration, phaseTiming.stages);
   rows.push({
     label: "أتعاب التصاميم",
     totalCost: costs.designFee,
@@ -785,9 +801,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const sortingDesign = emptyDesign();
     const sortingConstruction = emptyConstruction();
-    // Sorting is due in the first month of the saved RERA approval phase.
+    // Independent Build-for-Sale projects pay sorting in the penultimate construction month.
     const sortingMonthInDesign = reraStartInDesign;
-    if (isScenario3 || isScenario4) {
+    if (isScenario3 || isScenario4 || isBuildForSale) {
       sortingConstruction[penultimateConstruction] = costs.sortingFee;
     } else if (isScenario2) {
       sortingConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = costs.sortingFee;
@@ -812,9 +828,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   {
     const nocDesign = emptyDesign();
     const nocConstruction = emptyConstruction();
-    // Developer NOC is due in the first month of the saved RERA approval phase.
+    // Independent Build-for-Sale projects pay developer NOC in the penultimate construction month.
     const nocMonthInDesign = reraStartInDesign;
-    if (isScenario3 || isScenario4) {
+    if (isScenario3 || isScenario4 || isBuildForSale) {
       nocConstruction[penultimateConstruction] = i.nocSale;
     } else if (isScenario2) {
       nocConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.nocSale;
@@ -1259,7 +1275,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const escrowDepositAmount = constructionCost * r.escrowDeposit;
       depositDesign[reraPaymentInDesign] = escrowDepositAmount;
       rows.push({
-        label: "إيداع حساب الضمان (20%)",
+        label: `إيداع حساب الضمان (${r.escrowDeposit * 100}%)`,
         totalCost: escrowDepositAmount,
         investorAmount: escrowDepositAmount,
         paid: 0,
@@ -1500,7 +1516,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const escrowRevenue = totalSalesIncome; // Total collected from buyers through escrow
       const revenueRetention = escrowRevenue * 0.05; // Retention applies only to receipts held in escrow
       const completionPayment = constructionCost * 0.05;
-      const openingBalance = constructionCost * 0.20;
+      const openingBalance = constructionCost * r.escrowDeposit;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
         (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
         i.reraAuditorReport + i.reraInspection + i.surveyorFee;
@@ -1565,7 +1581,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const escrowRevenue = totalRevenue * 0.80;
       const revenueRetention = escrowRevenue * 0.05; // Retention applies only to receipts held in escrow
       const completionPayment = constructionCost * 0.05;
-      const openingBalance = constructionCost * 0.20;
+      const openingBalance = constructionCost * r.escrowDeposit;
       const actualEscrowExpenses = (constructionCost * 0.80) + costs.supervisionFee +
         (i.govFeesTotal * r.govFeesEscrowShare) + costs.salesCommission +
         i.reraAuditorReport + i.reraInspection + i.surveyorFee;

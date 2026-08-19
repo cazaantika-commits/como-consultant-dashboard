@@ -60,4 +60,15 @@ describe("Financial Studies build-for-sale navigation", () => {
     expect(isFinancialStudiesTabVisible("feasibility", "build_for_rent")).toBe(true);
     expect(isFinancialStudiesGeneralInputVisible("bankFees", "build_for_rent")).toBe(false);
   });
+
+  it("keeps type-specific financial settings independent", () => {
+    expect(isFinancialStudiesSettingsItemVisible("buildForSaleMarketingRate", "build_for_sale")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("buildForSaleMarketingRate", "offplan_escrow")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("buildForSaleMarketingRate", "build_for_rent")).toBe(false);
+
+    expect(isFinancialStudiesSettingsItemVisible("buildForRentDeveloperFeeDesignRate", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("buildForRentDeveloperFeeSupervisionRate", "build_for_rent")).toBe(true);
+    expect(isFinancialStudiesSettingsItemVisible("buildForRentDeveloperFeeDesignRate", "build_for_sale")).toBe(false);
+    expect(isFinancialStudiesSettingsItemVisible("buildForRentDeveloperFeeSupervisionRate", "offplan_escrow")).toBe(false);
+  });
 });

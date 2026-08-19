@@ -206,6 +206,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     : isIndependentNoOffPlan ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
   const sortingPerSqft = parseFloat(dbProject.separationFeePerSqft || '0') || 40;
   const landBrokerPct = parseFloat(dbProject.agentCommissionLandPct || '0') || 1;
+  const escrowDepositRate = Math.max(0, Math.min(1, Number(savedRates.escrowDepositPct ?? 20) / 100));
 
   return {
     projectType: isBuildForSale ? "build_for_sale" : isBuildForRent ? "build_for_rent" : dbProject.financingScenario === "rental" ? "rental" : "offplan",
@@ -216,7 +217,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     designFee: designPct / 100,
     supervisionFee: supervisionPct / 100,
     sortingFeePerSqft: sortingPerSqft,
-    reraUnitFee: 800,
+    reraUnitFee: Number(savedRates.reraUnitRegistrationFee ?? 520),
     developerFeeRate: developerPct / 100,
     developerFeeDesign: isBuildForRent ? buildForRentDeveloperFeeDesignPct / 100 : 0.01,
     developerFeeOffplan: isIndependentNoOffPlan ? 0 : 0.01,
@@ -233,7 +234,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     govFeesInvestorShare: isIndependentNoOffPlan ? 1 : 0.10,
     govFeesEscrowShare: isIndependentNoOffPlan ? 0 : 0.90,
     advancePayment: 0.10,
-    escrowDeposit: isIndependentNoOffPlan ? 0 : 0.20,
+    escrowDeposit: isIndependentNoOffPlan ? 0 : escrowDepositRate,
     contingency: 0.02,
     communityOffplanShare: 0.25,
     communityConstructionShare: 0.75,

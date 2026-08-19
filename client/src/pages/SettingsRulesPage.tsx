@@ -64,6 +64,8 @@ const DEFAULT_CONFIGURABLE_RATES: ConfigurableRate[] = [
   { id: "buildForSaleMarketingRate", label: "تسويق البناء للبيع", description: "نسبة من القيمة التقديرية للمبيعات — التوزيع يبدأ قبل شهر من اكتمال الإنشاء", value: 1, unit: "%", min: 0, max: 10, step: 0.25 },
   { id: "buildForSaleMarketingStartMonthsBeforeCompletion", label: "بدء تسويق البناء للبيع", description: "عدد الأشهر قبل اكتمال الإنشاء التي يبدأ فيها التسويق", value: 1, unit: "شهر قبل الإنجاز", min: 0, max: 12, step: 1 },
   { id: "buildForSaleMarketingDurationMonths", label: "مدة تسويق البناء للبيع", description: "عدد أشهر توزيع مصروف التسويق", value: 3, unit: "شهر", min: 1, max: 24, step: 1 },
+  { id: "buildForRentDeveloperFeeDesignRate", label: "أتعاب المطور — التصاميم (البناء للتأجير)", description: "نسبة من تكلفة الإنشاء، موزعة على مراحل التصاميم", value: 1.5, unit: "%", min: 0, max: 10, step: 0.25 },
+  { id: "buildForRentDeveloperFeeSupervisionRate", label: "أتعاب المطور — الإشراف (البناء للتأجير)", description: "نسبة من تكلفة الإنشاء، موزعة مع تقدم الإنشاء", value: 2.5, unit: "%", min: 0, max: 10, step: 0.25 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -233,6 +235,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const reraInspectionQuarterlyFee = configurableRates.find((rate) => rate.id === "reraInspectionQuarterlyFee")?.value ?? 15020;
   const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
   const isBuildForSale = projectType === "build_for_sale";
+  const isBuildForRent = projectType === "build_for_rent";
   const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
   const visibleProjectPhases = projectPhases.filter((phase) => isFinancialStudiesSettingsItemVisible(phase.id, projectType));
   const visibleConfigurableRates = configurableRates
@@ -242,7 +245,23 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
       : rate);
   const visibleInvestorRules = INVESTOR_RULES
     .filter((rule) => isFinancialStudiesSettingsItemVisible(rule.id, projectType))
+    .filter((rule) => !(isBuildForRent && rule.id === "marketing"))
     .map((rule) => {
+      if (isBuildForRent) {
+        if (rule.id === "govFees10") return { ...rule, label: "رسوم الجهات الحكومية", timing: "10% عند اكتمال التصميم التخطيطي + 45% عند 80% إنجاز الإنشاء + 45% عند 90%", type: "موزعة" };
+        if (rule.id === "sortingFees") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
+        if (rule.id === "nocDeveloper") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
+        if (rule.id === "reraUnitReg") return { ...rule, label: "تسجيل الوحدات — دائرة الأراضي والأملاك", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء (عدد الوحدات × الرسم المحدد)", type: "محسوبة" };
+      }
+      if (isBuildForRent && rule.id === "developerFees") {
+        const designRate = configurableRates.find((rate) => rate.id === "buildForRentDeveloperFeeDesignRate")?.value ?? 1.5;
+        const supervisionRate = configurableRates.find((rate) => rate.id === "buildForRentDeveloperFeeSupervisionRate")?.value ?? 2.5;
+        return {
+          ...rule,
+          timing: `${designRate}% من تكلفة الإنشاء موزعة على التصاميم + ${supervisionRate}% موزعة مع تقدم الإنشاء — تُدفع من المستثمر`,
+          type: "موزعة",
+        };
+      }
       if (!isBuildForSale) return rule;
       if (rule.id === "govFees10") return { ...rule, label: "رسوم الجهات الحكومية", timing: "10% عند اكتمال التصميم التخطيطي + 45% عند 80% إنجاز الإنشاء + 45% عند 90%", type: "موزعة" };
       if (rule.id === "sortingFees") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };

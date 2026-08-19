@@ -51,6 +51,17 @@ const OFFPLAN_ONLY_SETTINGS_ITEM_IDS = [
   "marketingPrep",
 ] as const;
 
+const BUILD_FOR_SALE_ONLY_SETTINGS_ITEM_IDS = [
+  "buildForSaleMarketingRate",
+  "buildForSaleMarketingStartMonthsBeforeCompletion",
+  "buildForSaleMarketingDurationMonths",
+] as const;
+
+const BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS = [
+  "buildForRentDeveloperFeeDesignRate",
+  "buildForRentDeveloperFeeSupervisionRate",
+] as const;
+
 export function isFinancialStudiesTabVisible(
   tabId: FinancialStudiesTabId,
   projectType?: string | null,
@@ -81,7 +92,14 @@ export function isFinancialStudiesSettingsItemVisible(
   itemId: string,
   projectType?: string | null,
 ): boolean {
-  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
-  return !isNoOffPlanType
-    || !OFFPLAN_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof OFFPLAN_ONLY_SETTINGS_ITEM_IDS[number]);
+  if (projectType === "build_for_sale") {
+    return !OFFPLAN_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof OFFPLAN_ONLY_SETTINGS_ITEM_IDS[number])
+      && !BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS[number]);
+  }
+  if (projectType === "build_for_rent") {
+    return !OFFPLAN_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof OFFPLAN_ONLY_SETTINGS_ITEM_IDS[number])
+      && !BUILD_FOR_SALE_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof BUILD_FOR_SALE_ONLY_SETTINGS_ITEM_IDS[number]);
+  }
+  return !BUILD_FOR_SALE_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof BUILD_FOR_SALE_ONLY_SETTINGS_ITEM_IDS[number])
+    && !BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS[number]);
 }

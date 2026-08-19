@@ -8,10 +8,10 @@ import {
   computeInvestorCashFlow,
   type Scenario,
   type CostRow,
-  type SalesResult,
 } from "@/lib/investorCashFlowEngine";
 import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 import { formatFullNumber } from "@/lib/numberFormat";
+import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -39,90 +39,13 @@ export default function V2EscrowCashFlow() {
   );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
 
-  // ─── Parse salesResult from saved plan ─────────────────────────────────
-  const salesResult: SalesResult | undefined = useMemo(() => {
-    if (!plansQuery.data || plansQuery.data.length === 0) return undefined;
-    const plan = plansQuery.data[0] as any;
-
-    // Parse marketing monthly amounts from salesAbsorptionJson (saved from MarketingPage)
-    // marketingDistribution arrays are indexed from 0 = marketingActualStart month
-    // Engine expects marketingMonthlyAmounts indexed from 0 = project month 1
-    // So we offset by (marketingActualStart - 1)
-    let marketingMonthlyAmounts: number[] | undefined;
-    let ppDownPct: number | undefined;
-    let paymentPlan: SalesResult["paymentPlan"];
-    if (plan.paymentPlanJson) {
-      try {
-        paymentPlan = JSON.parse(plan.paymentPlanJson);
-        ppDownPct = paymentPlan?.downPct;
-      } catch {}
-    }
-    if (plan.salesAbsorptionJson) {
-      try {
-        const absorption = JSON.parse(plan.salesAbsorptionJson);
-        ppDownPct = ppDownPct ?? absorption.ppDownPct;
-        paymentPlan = paymentPlan ?? {
-          downPct: Number(absorption.ppDownPct ?? 10),
-          secondPct: Number(absorption.ppSecondPct ?? 0),
-          secondAfterMonths: Number(absorption.ppSecondAfterMonths ?? 0),
-          duringTotalPct: 100 - Number(absorption.ppDownPct ?? 10) - Number(absorption.ppSecondPct ?? 0) - Number(absorption.ppHandoverPct ?? 0),
-          installmentEveryMonths: Number(absorption.ppInstallmentEvery ?? 1),
-          handoverPct: Number(absorption.ppHandoverPct ?? 0),
-        };
-        if (absorption.marketingDistribution) {
-          const channels = Object.values(absorption.marketingDistribution) as number[][];
-          const startOffset = (absorption.marketingActualStart || 1) - 1; // convert 1-indexed to 0-indexed
-          if (channels.length > 0) {
-            const maxLen = Math.max(...channels.map((c: number[]) => c.length));
-            // Total array length = offset + channel length
-            marketingMonthlyAmounts = new Array(startOffset + maxLen).fill(0);
-            for (const ch of channels) {
-              for (let m = 0; m < ch.length; m++) {
-                marketingMonthlyAmounts[startOffset + m] += (ch[m] || 0);
-              }
-            }
-          }
-        }
-      } catch {}
-    }
-
-    // If resultsJson exists, use escrowData, salesDistribution, and actualCashInflow from it
-    if (plan.resultsJson) {
-      try {
-        const parsed = JSON.parse(plan.resultsJson);
-        if (parsed.escrowData && parsed.salesDistribution) {
-          // Use actualCashInflow if available, otherwise fall back to escrowData
-          const storedCashInflow = parsed.actualCashInflow || [];
-          // Earlier saved plans used index 1 for project month 1 and left index
-          // 0 empty. Normalize these legacy records at the boundary so all
-          // downstream calculations use index 0 = project month 1.
-          const actualCashInflow = parsed.actualCashInflowVersion === 2
-            ? storedCashInflow
-            : (storedCashInflow.length > 0 && storedCashInflow[0] === 0 ? storedCashInflow.slice(1) : storedCashInflow);
-          return {
-            escrowData: parsed.escrowData,
-            salesDistribution: parsed.salesDistribution,
-            marketingMonthlyAmounts,
-            ppDownPct,
-            paymentPlan,
-            actualCashInflow, // Pass the actual cash inflow from sales plan
-          };
-        }
-      } catch {}
-    }
-
-    // Even without resultsJson, return marketing data so engine can use it
-    if (marketingMonthlyAmounts && marketingMonthlyAmounts.length > 0) {
-      return {
-        escrowData: [],
-        salesDistribution: [],
-        marketingMonthlyAmounts,
-        ppDownPct,
-      };
-    }
-
-    return undefined;
-  }, [plansQuery.data]);
+  // One canonical saved-plan adapter keeps Escrow Cash Flow aligned with every
+  // Sales, Settings, Investor Cash Flow, and Feasibility timing correction.
+  const salesResult = useMemo(() => {
+    const plan = plansQuery.data?.[0] as any;
+    if (!plan || !projectQuery.data) return undefined;
+    return buildSalesResultFromSavedPlan(plan, projectQuery.data, scenario);
+  }, [plansQuery.data, projectQuery.data, scenario]);
 
   // ─── Compute cash flow from engine ─────────────────────────────────────
   const data = useMemo(() => {
@@ -184,7 +107,7 @@ export default function V2EscrowCashFlow() {
         values[i] = rowValues[i];
       }
     }
-    return { label: "إيداع المستثمر (20%)", values };
+    return { label: transferRow?.label || "إيداع المستثمر", values };
   }, [rows, totalMonths]);
 
   // Sales income from escrowData (monthly buyer payments flowing into escrow)
