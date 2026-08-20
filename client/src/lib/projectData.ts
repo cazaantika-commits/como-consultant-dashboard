@@ -362,12 +362,14 @@ export function calculateCosts(
   // ─── بنود التكاليف (نفس ترتيب البطاقة) ───
   const designFee = constructionCost * rates.designFee;
   const supervisionFee = constructionCost * rates.supervisionFee;
-  const sortingFee = gfaTotal * rates.sortingFeePerSqft;
-  const reraUnits = totalUnits * rates.reraUnitFee;
+  const rawSortingFee = gfaTotal * rates.sortingFeePerSqft;
+  const rawReraUnits = totalUnits * rates.reraUnitFee;
   const salesCommission = totalRevenue * rates.salesCommission;
   const marketing = totalRevenue * rates.marketingRate;
   const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent";
   const isBuildForRent = rates.projectType === "build_for_rent";
+  const sortingFee = isBuildForRent ? 0 : rawSortingFee;
+  const reraUnits = isBuildForRent ? 0 : rawReraUnits;
   const developerFee = isBuildForRent
     ? constructionCost * (rates.developerFeeDesign + rates.developerFeeSupervision)
     : totalRevenue * rates.developerFeeRate;
@@ -380,7 +382,7 @@ export function calculateCosts(
   const totalInvestor = isIndependentNoOffPlan
     ? landPrice + landRegistration + landBroker + designFee + supervisionFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
-      sortingFee + inputs.nocSale + reraUnits + effectiveMarketing + developerFee +
+      sortingFee + (isBuildForRent ? 0 : inputs.nocSale) + reraUnits + effectiveMarketing + developerFee +
       effectiveSalesCommission + inputs.surveyorFee + constructionInvestor
     : landPrice + landRegistration + landBroker + designFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +

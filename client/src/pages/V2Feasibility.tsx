@@ -265,12 +265,12 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <Row label="رسوم المساح (DWG)" value={fmt((costs as any)?.surveyorDwgFees || 0)} pct={totalCosts > 0 ? (((costs as any)?.surveyorDwgFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   {/* الرسوم */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">الرسوم والجهات</div>
-                  <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="رسوم الفرز" value={fmt(costs?.separationFee || 0)} pct={totalCosts > 0 ? ((costs?.separationFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   <Row label="رسوم المجتمع" value={fmt(costs?.communityFees || 0)} pct={totalCosts > 0 ? ((costs?.communityFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                   <Row label="رسوم الجهات الحكومية" value={fmt(costs?.officialBodiesFees || 0)} pct={totalCosts > 0 ? ((costs?.officialBodiesFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                  <Row label="تسجيل الوحدات (دائرة الأراضي والأملاك)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="تسجيل الوحدات (دائرة الأراضي والأملاك)" value={fmt(costs?.reraUnitRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraUnitRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForSale && !isBuildForRent && <Row label="تسجيل المشروع (ريرا)" value={fmt(costs?.reraProjectRegFee || 0)} pct={totalCosts > 0 ? ((costs?.reraProjectRegFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  {!isBuildForRent && <Row label="NOC المطور" value={fmt(costs?.developerNocFee || 0)} pct={totalCosts > 0 ? ((costs?.developerNocFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForSale && !isBuildForRent && <Row label="حساب الضمان" value={fmt(costs?.escrowAccountFee || 0)} pct={totalCosts > 0 ? ((costs?.escrowAccountFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForSale && !isBuildForRent && <Row label="رسوم البنك" value={fmt(costs?.bankFees || 0)} pct={totalCosts > 0 ? ((costs?.bankFees || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForSale && !isBuildForRent && <Row label="تقرير مدقق ريرا" value={fmt(costs?.reraAuditReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraAuditReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}

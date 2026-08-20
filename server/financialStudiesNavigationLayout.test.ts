@@ -34,6 +34,7 @@ describe("Financial Studies flat project-first navigation", () => {
   it("keeps type-aware visibility while applying the entry context to project pages", () => {
     expect(source).toContain("isFinancialStudiesTabVisible");
     expect(source).toContain("getFallbackFinancialStudiesTab");
+    expect(source).toContain("!selectedProjectId || tab.projectScoped");
     expect(source).toContain("<PricingPage embedded />");
     expect(source).toContain("<ConstructionInputsPage embedded />");
     expect(source).toContain("<V2WaelSales embedded />");

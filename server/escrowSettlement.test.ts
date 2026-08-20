@@ -280,6 +280,23 @@ describe("calculateEscrowSettlement", () => {
     expect(summary.totalProjectSpend).toBe(180);
   });
 
+  it("keeps Build-for-Rent free of sale-specific regulatory fees, sales, and escrow rows", () => {
+    const result = computeInvestorCashFlow({
+      constructionMonths: 3,
+      manualBuaSqft: 10_000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 10,
+      residential1brArea: 750,
+      residential1brPrice: 1_500,
+    }, "build_for_rent");
+
+    const labels = result.rows.map((row) => row.label);
+    expect(labels).not.toContain("رسوم الفرز");
+    expect(labels).not.toContain("رسوم NOC المطور");
+    expect(labels).not.toContain("تسجيل الوحدات — دائرة الأراضي والأملاك");
+    expect(result.rows.some((row) => row.funder === "escrow")).toBe(false);
+  });
+
   it("applies the approved build-for-sale rules without an escrow account", () => {
     const project = {
       financingScenario: "build_for_sale",
@@ -542,7 +559,9 @@ describe("calculateEscrowSettlement", () => {
     expect(labels).not.toContain("التسويق");
     expect(result.rows.some((row) => row.funder === "escrow")).toBe(false);
     expect(result.rows.find((row) => row.label.startsWith("مستخلصات المقاول"))?.funder).toBe("investor");
-    expect(result.rows.find((row) => row.label === "تسجيل الوحدات — دائرة الأراضي والأملاك")?.constructionMonths[1]).toBeGreaterThan(0);
+    expect(labels).not.toContain("رسوم الفرز");
+    expect(labels).not.toContain("رسوم NOC المطور");
+    expect(labels).not.toContain("تسجيل الوحدات — دائرة الأراضي والأملاك");
 
     const feasibility = calculateProjectCosts(project)!;
     expect(feasibility.totalRevenue).toBe(0);

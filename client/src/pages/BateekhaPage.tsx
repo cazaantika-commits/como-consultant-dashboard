@@ -100,7 +100,10 @@ export default function BateekhaPage() {
     }
   }, [location, projectType]);
 
-  const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
+  // Once a project is selected, the board is strictly that project's workspace.
+  // Portfolio reports remain available from the unselected Financial Studies board
+  // and must not be mistaken for a selected Build-for-Rent project's escrow content.
+  const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType) && (!selectedProjectId || tab.projectScoped));
   const selectTab = (tab: (typeof TABS)[number]) => {
     if (tab.projectScoped && !selectedProjectId) return;
     setActiveTab(tab.id);

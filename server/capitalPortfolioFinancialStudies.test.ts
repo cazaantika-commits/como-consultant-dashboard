@@ -114,4 +114,22 @@ describe("Financial Studies Capital Portfolio source rules", () => {
 
     expect(costs?.totalRevenue).toBeGreaterThan(0);
   });
+
+  it("excludes sale-specific separation, unit-registration, and NOC costs from Build-for-Rent feasibility", () => {
+    const costs = calculateProjectCosts({
+      financingScenario: "build_for_rent",
+      gfaRetailSqft: "10,000",
+      retailSmallArea: "1,000",
+      separationFeePerSqft: "40",
+      developerNocFee: "10,000",
+      retailSmallPrice: "3,000",
+      constructionScheduleJson: JSON.stringify({
+        settings: { configurableRates: { reraUnitRegistrationFee: 520 } },
+      }),
+    });
+
+    expect(costs?.separationFee).toBe(0);
+    expect(costs?.reraUnitRegFee).toBe(0);
+    expect(costs?.developerNocFee).toBe(0);
+  });
 });

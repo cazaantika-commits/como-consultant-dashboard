@@ -1367,3 +1367,6 @@
 - [x] Remove the two orphaned feasibility child modules left unreferenced after legacy hub cleanup
 - [x] Remove the unmounted legacy REST route module after confirming it has no server bootstrap registration or import
 - [x] Remove the unreferenced meeting task-execution utility after confirming no active meeting flow imports it
+- [x] Audit Majan Commercial as a Build-for-Rent project across Financial Studies and remove any visible sales, escrow, buyer-collection, or commission content
+- [x] Exclude sorting, developer NOC, and per-unit DLD registration fees from the Build-for-Rent model because they are sale-specific, not rental-project costs
+- [x] Exclude sorting, developer NOC, and per-unit DLD registration costs from the Build-for-Rent Feasibility source so it matches Investor Cash Flow

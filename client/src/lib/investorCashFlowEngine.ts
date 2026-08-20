@@ -771,13 +771,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-  // ─── رسوم الفرز ───
-  {
+  // ─── رسوم الفرز (لا تنطبق على البناء للتأجير) ───
+  if (!isBuildForRent) {
     const sortingDesign = emptyDesign();
     const sortingConstruction = emptyConstruction();
     // Independent Build-for-Sale projects pay sorting in the penultimate construction month.
     const sortingMonthInDesign = reraStartInDesign;
-    if (isScenario3 || isScenario4 || isBuildForSale) {
+    if (isScenario3 || isBuildForSale) {
       sortingConstruction[penultimateConstruction] = costs.sortingFee;
     } else if (isScenario2) {
       sortingConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = costs.sortingFee;
@@ -798,13 +798,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-  // ─── رسوم NOC ───
-  {
+  // ─── رسوم NOC (لا تنطبق على البناء للتأجير) ───
+  if (!isBuildForRent) {
     const nocDesign = emptyDesign();
     const nocConstruction = emptyConstruction();
     // Independent Build-for-Sale projects pay developer NOC in the penultimate construction month.
     const nocMonthInDesign = reraStartInDesign;
-    if (isScenario3 || isScenario4 || isBuildForSale) {
+    if (isScenario3 || isBuildForSale) {
       nocConstruction[penultimateConstruction] = i.nocSale;
     } else if (isScenario2) {
       nocConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = i.nocSale;
@@ -850,13 +850,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
-  // ─── تسجيل الوحدات — ريرا ───
-  {
+  // ─── تسجيل الوحدات — ريرا (لا ينطبق على البناء للتأجير) ───
+  if (!isBuildForRent) {
     const reraUnitsDesign = emptyDesign();
     const reraUnitsConstruction = emptyConstruction();
     // RERA unit registration is paid in the final month of the saved RERA phase.
     const reraMonthInDesign2 = reraPaymentInDesign;
-    if (isScenario3 || isScenario4 || isBuildForSale) {
+    if (isScenario3 || isBuildForSale) {
       reraUnitsConstruction[penultimateConstruction] = costs.reraUnits;
     } else if (isScenario2) {
       reraUnitsConstruction[Math.min(phaseTiming.reraPaymentMonth - 1, constructionDuration - 1)] = costs.reraUnits;

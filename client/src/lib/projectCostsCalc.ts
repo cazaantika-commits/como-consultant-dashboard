@@ -102,14 +102,14 @@ export function calculateProjectCosts(
   const designFee = designFeeFixed > 0 ? designFeeFixed : constructionCost * (designFeePct / 100);
   const supervisionFee = supervisionFeeFixed > 0 ? supervisionFeeFixed : constructionCost * (supervisionFeePct / 100);
   const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
-  const separationFee = totalGfaSqft * separationFeePerM2;
-  const surveyorFees = parseFloat(p.surveyorFees || "0");
-  const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || 12000;
-
   const financingScenario = p.financingScenario || "offplan_escrow";
   const isBuildForSale = financingScenario === "build_for_sale";
   const isBuildForRent = financingScenario === "build_for_rent";
   const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
+  const separationFee = isBuildForRent ? 0 : totalGfaSqft * separationFeePerM2;
+  const surveyorFees = parseFloat(p.surveyorFees || "0");
+  const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || 12000;
+
   let buildForSaleMarketingRate = 1;
   let buildForRentDeveloperFeeDesignRate = 1.5;
   let buildForRentDeveloperFeeSupervisionRate = 2.5;
@@ -146,7 +146,9 @@ export function calculateProjectCosts(
   const computedReraAuditReportFee = reraQuarterlyFees.auditorTotal;
   const computedReraInspectionFee = reraQuarterlyFees.inspectionTotal;
 
-  const totalRegulatory = isIndependentNoOffPlan
+  const totalRegulatory = isBuildForRent
+    ? 0
+    : isBuildForSale
     ? computedReraUnitRegFee + developerNocFee
     : computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
   const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
@@ -168,9 +170,9 @@ export function calculateProjectCosts(
     developerFee,
     salesCommission,
     marketingCost,
-    reraUnitRegFee: computedReraUnitRegFee,
+    reraUnitRegFee: isBuildForRent ? 0 : computedReraUnitRegFee,
     reraProjectRegFee: isIndependentNoOffPlan ? 0 : reraProjectRegFee,
-    developerNocFee,
+    developerNocFee: isBuildForRent ? 0 : developerNocFee,
     escrowAccountFee: isIndependentNoOffPlan ? 0 : escrowAccountFee,
     bankFees: isIndependentNoOffPlan ? 0 : bankFees,
     reraAuditReportFee: isIndependentNoOffPlan ? 0 : computedReraAuditReportFee,
