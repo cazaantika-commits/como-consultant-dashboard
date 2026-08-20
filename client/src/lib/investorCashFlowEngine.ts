@@ -25,6 +25,12 @@ import {
 import { getProjectMarketingTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
 import { buildDefaultOffPlanSalesResult } from "@/lib/salesPlanCashFlow";
+import {
+  buildPaymentReceiptEvents,
+  getPaymentPlanPostHandoverMonths,
+  normalizeFlexiblePaymentPlan,
+  type FlexiblePaymentPlan,
+} from "@/lib/flexiblePaymentPlan";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -96,15 +102,10 @@ export interface SalesResult {
   salesDistribution: number[];
   marketingMonthlyAmounts?: number[]; // Monthly marketing amounts from marketing page (indexed from project month 1)
   ppDownPct?: number; // Down payment percentage from payment plan
-  paymentPlan?: {
-    downPct: number;
-    secondPct: number;
-    secondAfterMonths: number;
-    duringTotalPct: number;
-    installmentEveryMonths: number;
-    handoverPct: number;
-  }; // Exact buyer payment schedule saved from Sales Plan
+  paymentPlan?: FlexiblePaymentPlan; // Exact staged buyer payment schedule saved from Sales Plan
   actualCashInflow?: number[]; // Actual monthly cash inflow from payment plan (indexed from project month 1)
+  actualEscrowCashInflow?: number[]; // Buyer receipts routed to escrow (indexed from project month 1)
+  actualInvestorCashInflow?: number[]; // Buyer receipts routed directly to investor (indexed from project month 1)
   offplanPct?: number; // Share of project revenue sold during construction and received through escrow
   directSalesStartMonth?: number; // Post-completion month for the first direct sale receipt
   directSalesInstallmentCount?: number; // Number of equal direct-sale receipts
@@ -485,9 +486,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // Month 13: 5% retention payment to contractor
   // S1/S2: also 12 months of 20% direct revenue
   // S3: revenue split in months 2-3
+  const flexiblePostHandoverMonths = salesResult?.paymentPlan
+    ? getPaymentPlanPostHandoverMonths(normalizeFlexiblePaymentPlan(salesResult.paymentPlan))
+    : 0;
   const postDuration = isScenario3
     ? Math.max(13, salesResult?.buildForSaleMonthlyUnits?.length || 1)
-    : 13;
+    : Math.max(13, flexiblePostHandoverMonths);
 
   // Helper: empty month arrays
   const emptyDesign = () => new Array(designDuration).fill(0);
@@ -1006,24 +1010,15 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         const saleMonth = entry.month - 1; // convert from 1-indexed (V2WaelSales) to 0-indexed array position
         const commAmount = entry.units * avgUnitPrice * commPct; // commission = units sold × avg price × rate
 
-        const receiptEvents: Array<{ month: number; pct: number }> = [];
-        if (paymentPlan) {
-          receiptEvents.push({ month: saleMonth, pct: paymentPlan.downPct });
-          receiptEvents.push({ month: saleMonth + paymentPlan.secondAfterMonths, pct: paymentPlan.secondPct });
-
-          const installmentMonths: number[] = [];
-          const every = Math.max(1, paymentPlan.installmentEveryMonths);
-          for (let month = saleMonth + every + paymentPlan.secondAfterMonths; month <= constructionEndMonth; month += every) {
-            installmentMonths.push(month);
-          }
-          if (installmentMonths.length > 0) {
-            const installmentPct = paymentPlan.duringTotalPct / installmentMonths.length;
-            installmentMonths.forEach((month) => receiptEvents.push({ month, pct: installmentPct }));
-          } else if (paymentPlan.duringTotalPct > 0) {
-            receiptEvents.push({ month: constructionEndMonth, pct: paymentPlan.duringTotalPct });
-          }
-          receiptEvents.push({ month: constructionEndMonth, pct: paymentPlan.handoverPct });
-        } else {
+        const receiptEvents = paymentPlan
+          ? buildPaymentReceiptEvents({
+              plan: normalizeFlexiblePaymentPlan(paymentPlan),
+              saleMonth,
+              constructionStartMonth: designDuration,
+              constructionEndMonth,
+            })
+          : [];
+        if (receiptEvents.length === 0) {
           // Legacy plans without paymentPlanJson retain a transparent fallback.
           receiptEvents.push({ month: saleMonth, pct: salesResult.ppDownPct || 10 });
         }
@@ -1444,7 +1439,36 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       // Buyer payments for units sold during construction go to escrow. The remaining
       // unsold share is sold after completion and is a direct investor credit, spread
       // over the project-specific post-completion receipt schedule.
-      const totalSalesIncome = salesResult.escrowData.reduce((s, e) => s + e.income, 0);
+      const escrowBuyerReceipts = salesResult.actualEscrowCashInflow?.length
+        ? salesResult.actualEscrowCashInflow
+        : (salesResult.actualCashInflow || salesResult.escrowData.map((entry) => entry.income));
+      const totalSalesIncome = escrowBuyerReceipts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
+      const directBuyerReceipts = salesResult.actualInvestorCashInflow || [];
+      const directBuyerTotal = directBuyerReceipts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
+      if (directBuyerTotal > 0) {
+        const directBuyerDesign = emptyDesign();
+        const directBuyerConstruction = emptyConstruction();
+        const directBuyerPost = emptyPost();
+        directBuyerReceipts.forEach((amount, index) => {
+          const value = Math.max(0, amount || 0);
+          if (index < designDuration) directBuyerDesign[index] += value;
+          else if (index < designDuration + constructionDuration) directBuyerConstruction[index - designDuration] += value;
+          else if (index < designDuration + constructionDuration + postDuration) directBuyerPost[index - designDuration - constructionDuration] += value;
+        });
+        rows.push({
+          label: "تحصيلات مشترين مباشرة حسب خطة السداد",
+          totalCost: directBuyerTotal,
+          investorAmount: directBuyerTotal,
+          paid: 0,
+          unpaid: directBuyerTotal,
+          funder: "investor",
+          section: "الإيرادات",
+          designMonths: directBuyerDesign,
+          constructionMonths: directBuyerConstruction,
+          postConstructionMonths: directBuyerPost,
+          isRevenue: true,
+        });
+      }
       const offplanPct = Math.max(0, Math.min(100, salesResult.offplanPct ?? 80));
       directRevenue = totalRevenue * ((100 - offplanPct) / 100);
       const directRevenuePost = emptyPost();

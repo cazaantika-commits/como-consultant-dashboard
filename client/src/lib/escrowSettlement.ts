@@ -23,6 +23,7 @@ type EscrowBalanceRow = {
 
 type EscrowBalanceSalesResult = {
   actualCashInflow?: number[];
+  actualEscrowCashInflow?: number[];
   escrowData?: Array<{ month: number; income: number }>;
 };
 
@@ -127,8 +128,11 @@ export function calculateEscrowMonthlyBalance({
   }
 
   const salesIncomeValues = new Array(totalMonths).fill(0);
-  if (salesResult?.actualCashInflow?.length) {
-    salesResult.actualCashInflow.slice(0, totalMonths).forEach((value, index) => { salesIncomeValues[index] = value || 0; });
+  const escrowReceipts = salesResult?.actualEscrowCashInflow?.length
+    ? salesResult.actualEscrowCashInflow
+    : salesResult?.actualCashInflow;
+  if (escrowReceipts?.length) {
+    escrowReceipts.slice(0, totalMonths).forEach((value, index) => { salesIncomeValues[index] = value || 0; });
   } else {
     for (const entry of salesResult?.escrowData || []) {
       const index = entry.month - 1;

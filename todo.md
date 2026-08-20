@@ -1370,3 +1370,8 @@
 - [x] Audit Majan Commercial as a Build-for-Rent project across Financial Studies and remove any visible sales, escrow, buyer-collection, or commission content
 - [x] Exclude sorting, developer NOC, and per-unit DLD registration fees from the Build-for-Rent model because they are sale-specific, not rental-project costs
 - [x] Exclude sorting, developer NOC, and per-unit DLD registration costs from the Build-for-Rent Feasibility source so it matches Investor Cash Flow
+- [x] Research Dubai payment-plan structures and build a flexible staged payment-plan engine for Wael without breaking saved sales, collection, escrow, or cash-flow plans
+- [x] Persist and reload flexible staged payment plans through Wael’s existing single save path, proven by a controlled save-and-reload test
+- [x] Make Wael reload the specific saved scenario rather than arbitrarily selecting the first plan when multiple saved scenarios share an update timestamp
+- [x] Replace the remaining legacy four-field payment summary with the active flexible-stage schedule and correct post-handover installment wording
+- [x] Prevent until-handover installments for late sales from leaking into post-handover escrow months; settle their due portion no later than handover

@@ -1,5 +1,11 @@
 import type { SalesResult, Scenario } from "@/lib/investorCashFlowEngine";
 import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
+import {
+  buildPaymentReceiptEvents,
+  cloneFlexiblePaymentPlan,
+  getPaymentPlanPostHandoverMonths,
+  normalizeFlexiblePaymentPlan,
+} from "@/lib/flexiblePaymentPlan";
 
 export interface DefaultOffPlanSalesInput {
   totalRevenue: number;
@@ -37,14 +43,13 @@ export function buildDefaultOffPlanSalesResult({
   salesDistribution[Math.floor(salesMonths / 2)] += offPlanUnits - salesDistribution.reduce((sum, value) => sum + value, 0);
 
   const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
-  const downPct = 10;
-  const secondPct = 10;
-  const secondAfterMonths = 1;
-  const duringTotalPct = 40;
-  const installmentEveryMonths = 6;
-  const handoverPct = 40;
+  const paymentPlan = cloneFlexiblePaymentPlan();
+  const downPct = paymentPlan.stages.find((stage) => stage.trigger === "sale")?.percentage ?? 10;
   const constructionEndMonth = constructionStartMonth + constructionMonths - 1;
-  const cashPerMonth = new Array(projectEndMonth + 14).fill(0);
+  const cashFlowHorizon = projectEndMonth + Math.max(13, getPaymentPlanPostHandoverMonths(paymentPlan));
+  const cashPerMonth = new Array(cashFlowHorizon + 1).fill(0);
+  const escrowCashPerMonth = new Array(cashFlowHorizon + 1).fill(0);
+  const investorCashPerMonth = new Array(cashFlowHorizon + 1).fill(0);
   const escrowData = salesDistribution.map((units, index) => ({
     month: salesStartMonth + index,
     units,
@@ -59,30 +64,28 @@ export function buildDefaultOffPlanSalesResult({
   salesDistribution.forEach((units, index) => {
     const saleMonth = salesStartMonth + index;
     const saleAmount = units * averageUnitPrice;
-    cashPerMonth[saleMonth] += saleAmount * (downPct / 100);
-    cashPerMonth[saleMonth + secondAfterMonths] += saleAmount * (secondPct / 100);
-    const installmentMonths: number[] = [];
-    for (let month = saleMonth + installmentEveryMonths + secondAfterMonths; month <= constructionEndMonth; month += installmentEveryMonths) {
-      installmentMonths.push(month);
+    for (const event of buildPaymentReceiptEvents({ plan: paymentPlan, saleMonth, constructionStartMonth, constructionEndMonth })) {
+      if (event.month >= cashPerMonth.length) continue;
+      const amount = saleAmount * (event.pct / 100);
+      cashPerMonth[event.month] += amount;
+      if (event.recipient === "escrow") escrowCashPerMonth[event.month] += amount;
+      else investorCashPerMonth[event.month] += amount;
     }
-    const installmentTotal = saleAmount * (duringTotalPct / 100);
-    if (installmentMonths.length > 0) {
-      installmentMonths.forEach((month) => { cashPerMonth[month] += installmentTotal / installmentMonths.length; });
-    } else {
-      cashPerMonth[Math.min(constructionEndMonth, projectEndMonth)] += installmentTotal;
-    }
-    cashPerMonth[Math.min(constructionEndMonth, projectEndMonth)] += saleAmount * (handoverPct / 100);
   });
 
-  const actualCashInflow = Array.from({ length: projectEndMonth + 13 }, (_, index) => cashPerMonth[index + 1] || 0);
-  escrowData.forEach((entry) => { entry.income = actualCashInflow[entry.month - 1] || 0; });
+  const actualCashInflow = Array.from({ length: cashFlowHorizon }, (_, index) => cashPerMonth[index + 1] || 0);
+  const actualEscrowCashInflow = Array.from({ length: cashFlowHorizon }, (_, index) => escrowCashPerMonth[index + 1] || 0);
+  const actualInvestorCashInflow = Array.from({ length: cashFlowHorizon }, (_, index) => investorCashPerMonth[index + 1] || 0);
+  escrowData.forEach((entry) => { entry.income = actualEscrowCashInflow[entry.month - 1] || 0; });
   return {
     escrowData,
     salesDistribution,
     actualCashInflow,
     offplanPct,
     ppDownPct: downPct,
-    paymentPlan: { downPct, secondPct, secondAfterMonths, duringTotalPct, installmentEveryMonths, handoverPct },
+    paymentPlan,
+    actualEscrowCashInflow,
+    actualInvestorCashInflow,
   };
 }
 
@@ -132,8 +135,8 @@ export function buildSalesResultFromSavedPlan(
   let buildForSaleMonthlyUnits: number[] | undefined;
   if (plan.paymentPlanJson) {
     try {
-      paymentPlan = JSON.parse(plan.paymentPlanJson);
-      ppDownPct = paymentPlan?.downPct;
+      paymentPlan = normalizeFlexiblePaymentPlan(JSON.parse(plan.paymentPlanJson));
+      ppDownPct = paymentPlan.stages.find((stage) => stage.trigger === "sale")?.percentage;
     } catch {
       // Preserve the engine's defaults for malformed legacy plans.
     }
@@ -142,14 +145,14 @@ export function buildSalesResultFromSavedPlan(
     try {
       const absorption = JSON.parse(plan.salesAbsorptionJson);
       ppDownPct = ppDownPct ?? absorption.ppDownPct;
-      paymentPlan = paymentPlan ?? {
+      paymentPlan = paymentPlan ?? normalizeFlexiblePaymentPlan({
         downPct: Number(absorption.ppDownPct ?? 10),
         secondPct: Number(absorption.ppSecondPct ?? 0),
         secondAfterMonths: Number(absorption.ppSecondAfterMonths ?? 0),
         duringTotalPct: 100 - Number(absorption.ppDownPct ?? 10) - Number(absorption.ppSecondPct ?? 0) - Number(absorption.ppHandoverPct ?? 0),
         installmentEveryMonths: Number(absorption.ppInstallmentEvery ?? 1),
         handoverPct: Number(absorption.ppHandoverPct ?? 0),
-      };
+      });
       if (Array.isArray(absorption.buildForSaleMonthlyUnits)) {
         buildForSaleMonthlyUnits = absorption.buildForSaleMonthlyUnits.map((value: unknown) => Math.max(0, Number(value) || 0));
       }
@@ -221,6 +224,8 @@ export function buildSalesResultFromSavedPlan(
           ppDownPct,
           paymentPlan,
           actualCashInflow,
+          actualEscrowCashInflow: Array.isArray(parsed.actualEscrowCashInflow) ? parsed.actualEscrowCashInflow : undefined,
+          actualInvestorCashInflow: Array.isArray(parsed.actualInvestorCashInflow) ? parsed.actualInvestorCashInflow : undefined,
           offplanPct: Number(plan.offplanPct ?? 80),
           directSalesStartMonth,
           directSalesInstallmentCount,

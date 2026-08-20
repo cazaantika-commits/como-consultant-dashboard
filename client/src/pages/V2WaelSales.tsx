@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { FlexiblePaymentPlanEditor } from "@/components/FlexiblePaymentPlanEditor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,16 @@ import {
 } from "@/lib/projectData";
 import { buildPricingUnits, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
 import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
+import {
+  buildPaymentReceiptEvents,
+  cloneFlexiblePaymentPlan,
+  getPaymentPlanPostHandoverMonths,
+  legacyPaymentPlanToFlexible,
+  normalizeFlexiblePaymentPlan,
+  paymentPlanTotalPercentage,
+  type FlexiblePaymentPlan,
+  type PaymentPlanStage,
+} from "@/lib/flexiblePaymentPlan";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -157,13 +168,19 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const [ppInstallmentPct, setPpInstallmentPct] = useState(10); // كل فترة
   const [ppInstallmentEvery, setPpInstallmentEvery] = useState(6); // كل كم شهر
   const [ppHandoverPct, setPpHandoverPct] = useState(40); // عند التسليم
+  const [paymentPlan, setPaymentPlan] = useState<FlexiblePaymentPlan>(() => cloneFlexiblePaymentPlan());
+  const hydratedPlanIdRef = useRef<number | null>(null);
   // Computed: installments during construction = 100 - down - second - handover
   const ppDuringTotal = 100 - ppDownPct - ppSecondPct - ppHandoverPct;
   const ppInstallmentCount = ppInstallmentPct > 0 ? Math.floor(ppDuringTotal / ppInstallmentPct) : 0;
-  const ppTotal = ppDownPct + ppSecondPct + (ppInstallmentCount * ppInstallmentPct) + ppHandoverPct;
+  const ppTotal = paymentPlanTotalPercentage(paymentPlan);
+  const activeBookingPct = paymentPlan.stages.find((stage) => stage.trigger === "sale")?.percentage ?? 0;
+  const activeHandoverPct = paymentPlan.stages.filter((stage) => stage.trigger === "handover").reduce((sum, stage) => sum + stage.percentage, 0);
   // Legacy compat for escrow calc
-  const downPaymentPct = ppDownPct;
-  const duringConstructionPct = 100 - ppDownPct - ppHandoverPct;
+  const downPaymentPct = paymentPlan.stages.find((stage) => stage.trigger === "sale")?.percentage ?? ppDownPct;
+  const duringConstructionPct = paymentPlan.stages
+    .filter((stage) => stage.recipient === "escrow" && stage.trigger !== "sale")
+    .reduce((sum, stage) => sum + stage.percentage, 0);
   const onHandoverPct = ppHandoverPct;
 
   // ─── Load data from DB ──────────────────────────────────────────────────────
@@ -209,7 +226,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
   useEffect(() => {
     if (plansQuery.data && plansQuery.data.length > 0) {
-      const plan = plansQuery.data[0] as any;
+      const plan = ((planId ? plansQuery.data.find((candidate: any) => candidate.id === planId) : undefined) ?? plansQuery.data[0]) as any;
+      if (hydratedPlanIdRef.current === plan.id) return;
+      hydratedPlanIdRef.current = plan.id;
       const marketingTiming = getProjectMarketingTiming(projectQuery.data);
       setPlanId(plan.id);
       if (plan.offplanPct) setOffPlan(plan.offplanPct);
@@ -228,6 +247,19 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           if (parsed.ppInstallmentPct) setPpInstallmentPct(parsed.ppInstallmentPct);
           if (parsed.ppInstallmentEvery) setPpInstallmentEvery(parsed.ppInstallmentEvery);
           if (parsed.ppHandoverPct) setPpHandoverPct(parsed.ppHandoverPct);
+          try {
+            const savedPaymentPlan = plan.paymentPlanJson ? JSON.parse(plan.paymentPlanJson) : parsed.paymentPlan;
+            setPaymentPlan(normalizeFlexiblePaymentPlan(savedPaymentPlan));
+          } catch {
+            setPaymentPlan(legacyPaymentPlanToFlexible({
+              downPct: Number(parsed.ppDownPct ?? 10),
+              secondPct: Number(parsed.ppSecondPct ?? 10),
+              secondAfterMonths: Number(parsed.ppSecondAfterMonths ?? 1),
+              duringTotalPct: Math.max(0, 100 - Number(parsed.ppDownPct ?? 10) - Number(parsed.ppSecondPct ?? 10) - Number(parsed.ppHandoverPct ?? 40)),
+              installmentEveryMonths: Number(parsed.ppInstallmentEvery ?? 6),
+              handoverPct: Number(parsed.ppHandoverPct ?? 40),
+            }));
+          }
           const savedMarketingStart = Number(parsed.marketingActualStart ?? marketingTiming.marketingStartMonth);
           const validMarketingStart = Math.max(savedMarketingStart, marketingTiming.marketingStartMonth);
           const savedMarketingEnd = Number(parsed.marketingActualEnd ?? marketingTiming.projectEndMonth);
@@ -247,7 +279,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       setHasPlanChanges(false);
       setHasMarketingChanges(false);
     }
-  }, [plansQuery.data, projectQuery.data]);
+  }, [plansQuery.data, projectQuery.data, planId]);
 
   // ─── Computed: Revenue ────────────────────────────────────────────────────
   const unitRevenues = useMemo(
@@ -405,15 +437,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     : PROJECT_PHASES;
 
   // ─── Computed: Cash Inflow (Payment Plan × Sales) + Detailed Grid ────────
-  const { cashInflowData, perSaleGrid, activeSaleMonths, actualCashInflow } = useMemo(() => {
+  const { cashInflowData, perSaleGrid, activeSaleMonths, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow } = useMemo(() => {
     const totalMonths = isBuildForSale ? salesEndMonth : timeline.projectEnd;
-    const cashFlowHorizon = totalMonths + 13;
+    const constructionEnd = timeline.constructionStart + constructionMonths - 1;
+    const cashFlowHorizon = Math.max(totalMonths + 13, constructionEnd + Math.max(1, getPaymentPlanPostHandoverMonths(paymentPlan)) + 1);
     const monthlySales: number[] = Array(totalMonths + 1).fill(0);
     salesDistribution.forEach((units, i) => {
       const m = salesStartMonth + i;
       if (m <= totalMonths) monthlySales[m] = units * avgUnitPrice;
     });
     const cashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
+    const escrowCashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
+    const investorCashPerMonth: number[] = Array(cashFlowHorizon + 1).fill(0);
     const grid: Record<number, number[]> = {};
     const saleMonthsList: number[] = [];
     for (let saleMonth = 1; saleMonth <= totalMonths; saleMonth++) {
@@ -424,29 +459,23 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (isBuildForSale) {
         if (saleMonth < cashPerMonth.length) {
           cashPerMonth[saleMonth] += saleAmount;
+          investorCashPerMonth[saleMonth] += saleAmount;
           grid[saleMonth][saleMonth] += saleAmount;
         }
       } else {
-        const downAmount = saleAmount * (ppDownPct / 100);
-        if (saleMonth < cashPerMonth.length) { cashPerMonth[saleMonth] += downAmount; grid[saleMonth][saleMonth] += downAmount; }
-        const secondAmount = saleAmount * (ppSecondPct / 100);
-        const secondMonth = saleMonth + ppSecondAfterMonths;
-        if (secondMonth < cashPerMonth.length) { cashPerMonth[secondMonth] += secondAmount; if (secondMonth <= totalMonths) grid[saleMonth][secondMonth] += secondAmount; }
-        const installmentTotal = saleAmount * (ppDuringTotal / 100);
-        const constructionEnd = timeline.constructionStart + constructionMonths - 1;
-        const installmentMonthsList: number[] = [];
-        for (let im = saleMonth + ppInstallmentEvery + ppSecondAfterMonths; im <= constructionEnd; im += ppInstallmentEvery) installmentMonthsList.push(im);
-        if (installmentMonthsList.length > 0) {
-          const perInstallment = installmentTotal / installmentMonthsList.length;
-          installmentMonthsList.forEach(im => { if (im < cashPerMonth.length) { cashPerMonth[im] += perInstallment; if (im <= totalMonths) grid[saleMonth][im] += perInstallment; } });
-        } else {
-          const ce = Math.min(constructionEnd, totalMonths);
-          cashPerMonth[ce] += installmentTotal;
-          grid[saleMonth][ce] += installmentTotal;
+        for (const event of buildPaymentReceiptEvents({
+          plan: paymentPlan,
+          saleMonth,
+          constructionStartMonth: timeline.constructionStart,
+          constructionEndMonth: constructionEnd,
+        })) {
+          if (event.month >= cashPerMonth.length) continue;
+          const amount = saleAmount * (event.pct / 100);
+          cashPerMonth[event.month] += amount;
+          if (event.recipient === "escrow") escrowCashPerMonth[event.month] += amount;
+          else investorCashPerMonth[event.month] += amount;
+          grid[saleMonth][event.month] += amount;
         }
-        const handoverAmount = saleAmount * (ppHandoverPct / 100);
-        const handoverMonth = Math.min(timeline.constructionStart + constructionMonths - 1, totalMonths);
-        if (handoverMonth < cashPerMonth.length) { cashPerMonth[handoverMonth] += handoverAmount; if (handoverMonth <= totalMonths) grid[saleMonth][handoverMonth] += handoverAmount; }
       }
     }
     const data: { month: number; salesThisMonth: number; cashInflow: number; cumSales: number; cumCash: number }[] = [];
@@ -458,8 +487,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     // Persisted convention: array index 0 represents project month 1. This is
     // the same convention consumed by the Escrow Cash Flow page and engine.
     const persistedCashInflow = Array.from({ length: cashFlowHorizon }, (_, i) => cashPerMonth[i + 1] || 0);
-    return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList, actualCashInflow: persistedCashInflow };
-  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct, isBuildForSale, salesStartMonth, salesEndMonth]);
+    return {
+      cashInflowData: data,
+      perSaleGrid: grid,
+      activeSaleMonths: saleMonthsList,
+      actualCashInflow: persistedCashInflow,
+      actualEscrowCashInflow: Array.from({ length: cashFlowHorizon }, (_, i) => escrowCashPerMonth[i + 1] || 0),
+      actualInvestorCashInflow: Array.from({ length: cashFlowHorizon }, (_, i) => investorCashPerMonth[i + 1] || 0),
+    };
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, paymentPlan, isBuildForSale, salesStartMonth, salesEndMonth]);
 
   // The live workspace uses the same cash-flow engine and account-balance
   // helper as the Escrow report. Therefore a saved scenario cannot show two
@@ -478,18 +514,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       escrowData,
       salesDistribution,
       actualCashInflow,
+      actualEscrowCashInflow,
+      actualInvestorCashInflow,
       offplanPct: offPlan,
       ppDownPct,
-      paymentPlan: {
-        downPct: ppDownPct,
-        secondPct: ppSecondPct,
-        secondAfterMonths: ppSecondAfterMonths,
-        duringTotalPct: ppDuringTotal,
-        installmentEveryMonths: ppInstallmentEvery,
-        handoverPct: ppHandoverPct,
-      },
+      paymentPlan,
     };
-  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, offPlan, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
+  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, offPlan, ppDownPct, paymentPlan]);
   const liveCashFlow = useMemo(
     () => computeInvestorCashFlow(liveProjectData, scenario, undefined, liveSalesResult),
     [liveProjectData, scenario, liveSalesResult],
@@ -600,6 +631,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           ppInstallmentPct,
           ppInstallmentEvery,
           ppHandoverPct,
+          paymentPlanVersion: 2,
+          paymentPlan,
           marketingActualStart: validMarketingStart,
           marketingActualEnd: Math.max(validMarketingStart, marketingActualEnd),
           marketingDistribution: normalizedMarketingDistribution,
@@ -608,12 +641,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         marketingDistJson: JSON.stringify(normalizedMarketingDistribution),
         channelsJson: JSON.stringify(channelPcts),
         paymentPlanJson: JSON.stringify(isBuildForSale
-          ? { downPct: 100, secondPct: 0, secondAfterMonths: 0, duringTotalPct: 0, installmentEveryMonths: 1, handoverPct: 0 }
-          : { downPct: ppDownPct, secondPct: ppSecondPct, secondAfterMonths: ppSecondAfterMonths, duringTotalPct: ppDuringTotal, installmentEveryMonths: ppInstallmentEvery, handoverPct: ppHandoverPct }),
+          ? { version: 2, stages: [{ id: "direct-sale", label: "استلام كامل عند البيع", trigger: "sale", percentage: 100, recipient: "investor", installmentCount: 1 }] }
+          : paymentPlan),
         resultsJson: JSON.stringify({
           escrowData: isBuildForSale ? [] : escrowData,
           salesDistribution,
           actualCashInflow,
+          actualEscrowCashInflow,
+          actualInvestorCashInflow,
           actualCashInflowVersion: 2,
           ...(isBuildForSale ? { buildForSaleMonthlyUnits: salesDistribution } : {}),
         }),
@@ -626,7 +661,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     } catch {
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, ppDuringTotal, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, saveWorkspace, plansQuery, projectQuery, isBuildForSale]);
+  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, paymentPlan, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, saveWorkspace, plansQuery, projectQuery, isBuildForSale]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -677,11 +712,63 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasPlanChanges(true);
   };
 
-  const applyPaymentPreset = (preset: "early" | "balanced" | "handover") => {
-    if (preset === "early") { setPpDownPct(20); setPpSecondPct(15); setPpSecondAfterMonths(1); setPpInstallmentPct(10); setPpInstallmentEvery(4); setPpHandoverPct(25); }
-    else if (preset === "handover") { setPpDownPct(10); setPpSecondPct(5); setPpSecondAfterMonths(2); setPpInstallmentPct(10); setPpInstallmentEvery(6); setPpHandoverPct(45); }
-    else { setPpDownPct(10); setPpSecondPct(10); setPpSecondAfterMonths(1); setPpInstallmentPct(10); setPpInstallmentEvery(6); setPpHandoverPct(40); }
+  const applyPaymentPreset = (preset: "early" | "balanced" | "handover" | "posthandover") => {
+    const next = preset === "early"
+      ? normalizeFlexiblePaymentPlan({ version: 2, stages: [
+          { id: "booking", label: "مقدم الحجز", trigger: "sale", percentage: 20, recipient: "escrow" },
+          { id: "second", label: "دفعة بعد الحجز", trigger: "months_after_sale", percentage: 15, recipient: "escrow", offsetMonths: 1 },
+          { id: "construction", label: "أقساط أثناء الإنشاء", trigger: "months_after_sale", percentage: 40, recipient: "escrow", offsetMonths: 5, everyMonths: 4, untilHandover: true },
+          { id: "handover", label: "دفعة التسليم", trigger: "handover", percentage: 25, recipient: "escrow" },
+        ] })
+      : preset === "handover"
+        ? normalizeFlexiblePaymentPlan({ version: 2, stages: [
+            { id: "booking", label: "مقدم الحجز", trigger: "sale", percentage: 10, recipient: "escrow" },
+            { id: "second", label: "دفعة بعد الحجز", trigger: "months_after_sale", percentage: 5, recipient: "escrow", offsetMonths: 2 },
+            { id: "construction", label: "أقساط أثناء الإنشاء", trigger: "months_after_sale", percentage: 40, recipient: "escrow", offsetMonths: 8, everyMonths: 6, untilHandover: true },
+            { id: "handover", label: "دفعة التسليم", trigger: "handover", percentage: 45, recipient: "escrow" },
+          ] })
+        : preset === "posthandover"
+          ? normalizeFlexiblePaymentPlan({ version: 2, stages: [
+              { id: "booking", label: "مقدم الحجز", trigger: "sale", percentage: 10, recipient: "escrow" },
+              { id: "second", label: "دفعة بعد الحجز", trigger: "months_after_sale", percentage: 10, recipient: "escrow", offsetMonths: 1 },
+              { id: "construction", label: "أقساط أثناء الإنشاء", trigger: "months_after_sale", percentage: 40, recipient: "escrow", offsetMonths: 6, everyMonths: 4, untilHandover: true },
+              { id: "post-handover", label: "أقساط بعد التسليم — 4 سنوات", trigger: "post_handover", percentage: 40, recipient: "investor", offsetMonths: 1, everyMonths: 1, installmentCount: 48 },
+            ] })
+        : cloneFlexiblePaymentPlan();
+    setPaymentPlan(next);
     setHasPlanChanges(true);
+  };
+
+  const updatePaymentStage = (stageId: string, patch: Partial<PaymentPlanStage>) => {
+    setPaymentPlan((current) => ({
+      version: 2,
+      stages: current.stages.map((stage) => stage.id === stageId ? { ...stage, ...patch } : stage),
+    }));
+    setHasPlanChanges(true);
+    setImpactFocus("خطة التحصيل");
+  };
+
+  const addPaymentStage = () => {
+    setPaymentPlan((current) => ({
+      version: 2,
+      stages: [...current.stages, {
+        id: `stage-${Date.now()}`,
+        label: "دفعة جديدة",
+        trigger: "months_after_sale",
+        percentage: 0,
+        recipient: "escrow",
+        offsetMonths: 1,
+        installmentCount: 1,
+      }],
+    }));
+    setHasPlanChanges(true);
+    setImpactFocus("دفعة جديدة");
+  };
+
+  const removePaymentStage = (stageId: string) => {
+    setPaymentPlan((current) => ({ version: 2, stages: current.stages.filter((stage) => stage.id !== stageId) }));
+    setHasPlanChanges(true);
+    setImpactFocus("خطة التحصيل");
   };
 
   const hasScenarioChanges = hasUnitChanges || hasPlanChanges || hasMarketingChanges || hasBuildForSaleMarketingChanges;
@@ -727,7 +814,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             <div className="flex flex-wrap items-center gap-2.5">
               {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
               <Badge className={hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
-              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
+              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 اعتماد السيناريو
               </Button>
@@ -787,9 +874,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       <p className="mt-3 text-2xl font-black tracking-tight text-amber-800">{fmt(avgUnitPrice)} <span className="text-xs">AED</span></p>
                       <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="outline" className="h-9 border-amber-200 bg-white text-[11px] font-bold text-amber-800 hover:bg-amber-100" onClick={() => { adjustAllPrices(0.95); setImpactFocus("السعر"); }}>خفض 5%</Button><Button type="button" variant="outline" className="h-9 border-amber-300 bg-amber-100 text-[11px] font-bold text-amber-900 hover:bg-amber-200" onClick={() => { adjustAllPrices(1.05); setImpactFocus("السعر"); }}>رفع 5%</Button></div>
                     </div>
-                    {isBuildForSale ? <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">تحصيل البيع</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><p className="mt-3 text-lg font-black text-indigo-800">دفعة كاملة عند بيع الوحدة</p><p className="mt-2 text-[11px] leading-5 text-slate-500">تبدأ المبيعات بعد الإنجاز، وتدخل حصيلة كل وحدة كاملة مباشرة إلى حساب المستثمر.</p></div> : <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">خطة تحصيل المشتري</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><div className="mt-3 grid grid-cols-3 gap-1.5">{([{ id: "early", label: "مبكرة" }, { id: "balanced", label: "متوازنة" }, { id: "handover", label: "تسليم" }] as const).map((option) => <button key={option.id} type="button" onClick={() => { applyPaymentPreset(option.id); setImpactFocus("خطة التحصيل"); }} className="rounded-xl bg-white px-1 py-2 text-[10px] font-black text-indigo-700 ring-1 ring-indigo-100 transition hover:bg-indigo-100">{option.label}</button>)}</div><p className="mt-3 text-[11px] text-slate-500">مقدم {ppDownPct}% · تسليم {ppHandoverPct}%</p></div>}
+                    {isBuildForSale ? <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">تحصيل البيع</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><p className="mt-3 text-lg font-black text-indigo-800">دفعة كاملة عند بيع الوحدة</p><p className="mt-2 text-[11px] leading-5 text-slate-500">تبدأ المبيعات بعد الإنجاز، وتدخل حصيلة كل وحدة كاملة مباشرة إلى حساب المستثمر.</p></div> : <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">خطة تحصيل المشتري</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><div className="mt-3 grid grid-cols-2 gap-1.5">{([{ id: "early", label: "مبكرة" }, { id: "balanced", label: "متوازنة" }, { id: "handover", label: "تسليم" }, { id: "posthandover", label: "بعد التسليم 4 سنوات" }] as const).map((option) => <button key={option.id} type="button" onClick={() => { applyPaymentPreset(option.id); setImpactFocus("خطة التحصيل"); }} className="rounded-xl bg-white px-1 py-2 text-[10px] font-black text-indigo-700 ring-1 ring-indigo-100 transition hover:bg-indigo-100">{option.label}</button>)}</div><p className="mt-3 text-[11px] text-slate-500">مقدم {activeBookingPct}% · تسليم {activeHandoverPct}% · بعد التسليم {getPaymentPlanPostHandoverMonths(paymentPlan) || 0} شهر</p></div>}
                   </div>
                 </section>
+
+                {!isBuildForSale && <FlexiblePaymentPlanEditor plan={paymentPlan} onStageChange={updatePaymentStage} onAddStage={addPaymentStage} onRemoveStage={removePaymentStage} />}
 
                 <section data-testid="pricing-source-panel" className="overflow-hidden rounded-[22px] border-2 border-amber-300 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <div className="flex flex-col gap-3 border-b-2 border-amber-200 bg-[linear-gradient(115deg,#fffbeb,#ffffff_55%,#ecfeff)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -837,7 +926,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </section>
 
 
-                <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
+                <section className="legacy-payment-details overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <details className="group [&>div>div:last-child]:hidden">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4"><span><span className="block text-[11px] font-bold text-slate-500">تفاصيل قابلة للتوسيع عند الحاجة</span><span className="mt-0.5 block text-base font-black text-slate-900">{isBuildForSale ? "تفاصيل البيع المباشر" : "خطة التحصيل والتسويق"}</span></span><span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition group-open:bg-teal-100 group-open:text-teal-900">فتح التفاصيل</span></summary>
                     <div className="space-y-5 border-t border-slate-100 p-5">

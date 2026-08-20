@@ -1030,6 +1030,11 @@
   border-inline-start-color: #475569;
 }
 
+/* Wael's flexible schedule is the single source of payment-plan input. */
+.legacy-payment-details > details > div > .grid > .rounded-2xl:first-child {
+  display: none !important;
+}
+
 /* ============================================================
    READ-ONLY MODE
    When body[data-readonly="true"], hide all elements marked
