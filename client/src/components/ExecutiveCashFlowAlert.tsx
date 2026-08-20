@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, Landmark, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Landmark, TrendingDown, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import type { PortfolioProjectMonthlyNet } from "@/lib/portfolioAggregation";
 import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";
@@ -21,6 +21,7 @@ function formatAmount(value: number) {
 
 type ExecutiveCashFlowAlertProps = {
   onOpenFullReport: () => void;
+  onOpenLiquidityReport?: () => void;
 };
 
 /**
@@ -28,15 +29,20 @@ type ExecutiveCashFlowAlertProps = {
  * It deliberately consumes the same signed net monthly rows as the frozen
  * Project Aggregation report: negative = investor funding required, positive = returned.
  */
-export default function ExecutiveCashFlowAlert({ onOpenFullReport }: ExecutiveCashFlowAlertProps) {
+export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidityReport }: ExecutiveCashFlowAlertProps) {
   const [horizon, setHorizon] = useState<3 | 4>(4);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(undefined, { staleTime: 0 });
+  const escrowLiquidityQuery = trpc.cashFlowSettings.getPortfolioEscrowLiquidity.useQuery(undefined, { staleTime: 0 });
   const projects = (portfolioQuery.data || []) as PortfolioProjectMonthlyNet[];
 
   const liquidity = useMemo(() => buildExecutivePortfolioLiquidity(projects, { horizon }), [projects, horizon]);
   const alertMonths = liquidity.months;
   const summary = liquidity.summary;
+  const escrowDeficits = (escrowLiquidityQuery.data || []).filter((project: any) => project.liquidity?.hasDeficit);
+  const earliestEscrowDeficit = escrowDeficits
+    .map((project: any) => ({ project, index: project.liquidity.firstDeficitIndex as number }))
+    .sort((left, right) => left.project.monthDates[left.index].localeCompare(right.project.monthDates[right.index]))[0];
 
   if (portfolioQuery.isLoading) {
     return <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-500">جاري تجهيز ملخص التدفقات للمحفظة...</div>;
@@ -101,6 +107,11 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport }: ExecutiveCa
           </div>;
         })}
       </div>
+
+      {earliestEscrowDeficit && <div className="mx-5 mb-5 flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between" data-testid="executive-escrow-deficit-alert">
+        <div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700"><AlertTriangle className="h-4 w-4" /></span><div><p className="text-xs font-black text-red-800">إنذار مبكر: عجز سيولة في حسابات الضمان</p><p className="mt-1 text-xs leading-5 text-red-700">{escrowDeficits.length} مشاريع تحتاج قراراً. أول عجز: <strong>{earliestEscrowDeficit.project.name}</strong> في {monthLabel(earliestEscrowDeficit.project.monthDates[earliestEscrowDeficit.index])} بقيمة {formatAmount(earliestEscrowDeficit.project.liquidity.firstDeficit)} درهم.</p></div></div>
+        {onOpenLiquidityReport && <button onClick={onOpenLiquidityReport} className="shrink-0 rounded-xl border border-red-300 bg-white px-4 py-2 text-xs font-black text-red-700 transition hover:bg-red-100">فتح مقارنة سيولة الإسكرو</button>}
+      </div>}
 
       <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-slate-500">المصدر هو صف «صافي الشهر» المعتمد نفسه في تقرير تجميع المشاريع؛ لا توجد أي حسابات جديدة هنا.</p>

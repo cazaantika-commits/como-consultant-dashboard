@@ -11,7 +11,7 @@
  * cashFlowSettings router - see file header above
  */
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
   projectCashFlowSettings,
@@ -42,6 +42,7 @@ import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCas
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
 import { calculateProjectCosts as calculateFinancialStudiesProjectCosts } from "../../client/src/lib/projectCostsCalc";
 import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
+import { calculateEscrowMonthlyBalance, summarizeEscrowLiquidity } from "../../client/src/lib/escrowSettlement";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2549,6 +2550,109 @@ export const cashFlowSettingsRouter = router({
         monthlyNet,
       };
     });
+  }),
+
+  /**
+   * Read-only Off-Plan escrow liquidity source for portfolio comparison and
+   * early warnings. It reuses the same engine rows and monthly balance helper
+   * displayed in each project's Sales and Escrow reports.
+   */
+  getPortfolioEscrowLiquidity: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    const db = await getDb();
+    if (!db) return [];
+    const [allProjects, allPlans] = await Promise.all([
+      db.select().from(projects),
+      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+    ]);
+    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
+    for (const plan of allPlans) {
+      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
+    }
+
+    return allProjects
+      .filter((project) => (project.financingScenario || "offplan_escrow") === "offplan_escrow")
+      .map((project) => {
+        const savedPlan = newestPlanByProject.get(project.id);
+        const salesResult = buildSalesResultFromSavedPlan(savedPlan, project, "offplan_escrow");
+        const cashFlow = computeInvestorCashFlow(project, "offplan_escrow", undefined, salesResult);
+        const balance = calculateEscrowMonthlyBalance({
+          rows: cashFlow.rows,
+          designDuration: cashFlow.designDuration,
+          constructionDuration: cashFlow.constructionDuration,
+          postDuration: cashFlow.postDuration,
+          salesResult: cashFlow.usedSalesResult || salesResult,
+        });
+        const liquidity = summarizeEscrowLiquidity(balance.cumulative);
+        return {
+          projectId: project.id,
+          name: project.name,
+          monthDates: cashFlow.monthDates.slice(0, balance.cumulative.length),
+          balances: balance.cumulative,
+          hasSavedPlan: Boolean(savedPlan),
+          planStatus: savedPlan?.status || "default",
+          liquidity,
+        };
+      });
+  }),
+
+  /** Creates the requested approved initial Wael plan only where no plan exists. */
+  seedInitialOffPlanScenarios: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error("DB not available");
+    const [allProjects, allPlans] = await Promise.all([
+      db.select().from(projects),
+      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+    ]);
+    const projectIdsWithPlans = new Set(allPlans.map((plan) => plan.projectId));
+    const created: Array<{ projectId: number; planId: number }> = [];
+    const skipped: number[] = [];
+    for (const project of allProjects.filter((item) => (item.financingScenario || "offplan_escrow") === "offplan_escrow")) {
+      if (projectIdsWithPlans.has(project.id)) {
+        skipped.push(project.id);
+        continue;
+      }
+      const cashFlow = computeInvestorCashFlow(project, "offplan_escrow");
+      const sales = cashFlow.usedSalesResult;
+      if (!sales) throw new Error(`Unable to build initial sales scenario for project ${project.id}`);
+      const absorption = {
+        mode: "auto",
+        speed: 50,
+        template: "bell",
+        manual: [],
+        ppDownPct: 10,
+        ppSecondPct: 10,
+        ppSecondAfterMonths: 1,
+        ppInstallmentPct: 10,
+        ppInstallmentEvery: 6,
+        ppHandoverPct: 40,
+      };
+      const channels = { digital: 35, outdoor: 20, events: 15, broker: 15, pr: 10, content: 5 };
+      const [result] = await db.insert(waelSalesPlans).values({
+        projectId: project.id,
+        userId: ctx.user.id,
+        name: "سيناريو وائل الأولي المعتمد",
+        status: "approved",
+        designMonths: cashFlow.designDuration,
+        constructionMonths: cashFlow.constructionDuration,
+        offplanPct: sales.offplanPct ?? 80,
+        totalRevenue: Math.round(cashFlow.totalRevenue),
+        marketingBudgetPct: String(project.marketingPct || 2),
+        salesCommissionPct: String(project.salesCommissionPct || 5),
+        salesAbsorptionJson: JSON.stringify(absorption),
+        marketingDistJson: JSON.stringify({}),
+        channelsJson: JSON.stringify(channels),
+        paymentPlanJson: JSON.stringify(sales.paymentPlan || {}),
+        resultsJson: JSON.stringify({
+          escrowData: sales.escrowData || [],
+          salesDistribution: sales.salesDistribution || [],
+          actualCashInflow: sales.actualCashInflow || [],
+          actualCashInflowVersion: 2,
+        }),
+      } as any);
+      created.push({ projectId: project.id, planId: Number((result as any)?.insertId || 0) });
+    }
+    return { created, skipped };
   }),
 
   /**

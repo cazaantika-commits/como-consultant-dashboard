@@ -48,6 +48,28 @@ export interface EscrowMonthlyBalanceResult {
   finalLiquidation: number;
 }
 
+export interface EscrowLiquidityAlertSummary {
+  hasDeficit: boolean;
+  firstDeficitIndex: number | null;
+  firstDeficit: number;
+  minimumBalanceIndex: number | null;
+  minimumBalance: number;
+}
+
+/** Read-only liquidity signal derived only from the shared monthly escrow balance. */
+export function summarizeEscrowLiquidity(cumulative: number[]): EscrowLiquidityAlertSummary {
+  const firstDeficitIndex = cumulative.findIndex((value) => value < -0.5);
+  const minimumBalance = cumulative.length > 0 ? Math.min(...cumulative) : 0;
+  const minimumBalanceIndex = cumulative.length > 0 ? cumulative.indexOf(minimumBalance) : -1;
+  return {
+    hasDeficit: firstDeficitIndex >= 0,
+    firstDeficitIndex: firstDeficitIndex >= 0 ? firstDeficitIndex : null,
+    firstDeficit: firstDeficitIndex >= 0 ? cumulative[firstDeficitIndex] : 0,
+    minimumBalanceIndex: minimumBalanceIndex >= 0 ? minimumBalanceIndex : null,
+    minimumBalance,
+  };
+}
+
 /**
  * Settles the escrow account in two stages. The month-three transfer leaves
  * five percent of actual buyer collections, as well as any amount needed for

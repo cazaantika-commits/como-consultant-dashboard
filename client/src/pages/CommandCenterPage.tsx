@@ -4275,7 +4275,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
       <div className="w-full px-4 py-4">
-        <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} />
+        <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
         {/* Hero Card */}
         <div className="relative overflow-hidden rounded-3xl mb-4 shadow-lg"
           style={{background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 60%, #f8f6ff 100%)', border: '1.5px solid #e5e7eb'}}>

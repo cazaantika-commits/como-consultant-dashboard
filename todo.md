@@ -1343,3 +1343,6 @@
 - [x] Make Wael’s minimum escrow balance ignore pre-deposit zero months, matching the Escrow Cash Flow working-balance rule
 - [x] Audit every Off-Plan project’s monthly Sales escrow balance against Escrow Cash Flow and repair any proven discrepancy
 - [x] Centralize the default Off-Plan sales and buyer-collection schedule so unsaved Sales workspaces and Escrow Cash Flow start from identical monthly balances
+- [x] Add an early-warning alert for material Off-Plan escrow liquidity deficits
+- [x] Create approved initial Wael scenarios for each Off-Plan project without overwriting existing saved plans
+- [x] Add a full-portfolio monthly liquidity comparison screen sourced only from the financial-planning engines

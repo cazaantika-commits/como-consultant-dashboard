@@ -12,6 +12,7 @@ export type FinancialStudiesTabId =
   | "mall"
   | "portfolio"
   | "portfolio_monthly"
+  | "portfolio_escrow_liquidity"
   | "capital_portfolio";
 
 const BUILD_FOR_SALE_HIDDEN_TABS: FinancialStudiesTabId[] = [

@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { calculateEscrowMonthlyBalance, calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
+import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
 import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("identifies the first and deepest genuine liquidity deficit from the shared monthly escrow balance", () => {
+    expect(summarizeEscrowLiquidity([0, 20, -10, -35, -5])).toEqual({
+      hasDeficit: true,
+      firstDeficitIndex: 2,
+      firstDeficit: -10,
+      minimumBalanceIndex: 3,
+      minimumBalance: -35,
+    });
+  });
   it("uses the same default first buyer receipt as the interactive Off-Plan Sales workspace before a plan is saved", () => {
     const defaultPlan = buildDefaultOffPlanSalesResult({
       totalRevenue: 12_000_000,
