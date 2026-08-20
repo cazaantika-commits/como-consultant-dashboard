@@ -3,6 +3,8 @@ import {
   alignPortfolioMonthlyNetFlows,
   groupCalendarAlignedPortfolio,
 } from "../client/src/lib/portfolioAggregation";
+import fs from "node:fs";
+import path from "node:path";
 
 describe("Project Aggregation calendar-aligned net investor flows", () => {
   it("uses the real earliest and latest active months while preserving a zero month between them", () => {
@@ -67,5 +69,26 @@ describe("Project Aggregation calendar-aligned net investor flows", () => {
       ["2027-02", "2027-02"],
     ]);
     expect(semiAnnual.totals).toEqual([55, 35]);
+  });
+});
+
+describe("Consolidated report source trace", () => {
+  const readSource = (relativePath: string) => fs.readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
+
+  it("keeps every consolidated report connected to the shared clickable source-trace dialog", () => {
+    const traceSource = readSource("client/src/components/FinancialSourceTrace.tsx");
+    const aggregationSource = readSource("client/src/pages/V2Portfolio.tsx");
+    const monthlySource = readSource("client/src/pages/V2PortfolioMonthly.tsx");
+    const capitalSource = readSource("client/src/pages/V2CapitalPortfolio.tsx");
+
+    expect(traceSource).toContain("مصدر الرقم");
+    expect(traceSource).toContain("تفصيل التجميع");
+    expect(aggregationSource).toContain("FinancialSourceValue");
+    expect(aggregationSource).toContain("صافي الشهر من تدفقات المستثمر");
+    expect(monthlySource).toContain("FinancialSourceValue");
+    expect(monthlySource).toContain("صافي الشهر من تدفقات المستثمر");
+    expect(capitalSource).toContain("FinancialSourceValue");
+    expect(capitalSource).toContain("إجمالي الإيرادات");
+    expect(capitalSource).toContain("التكلفة الكلية");
   });
 });

@@ -1353,3 +1353,4 @@
 - [x] Make the Capital Portfolio cost source use the saved unit-registration fee instead of its remaining fixed 800 AED rate
 - [x] Make Capital Portfolio revenue use the shared automatic unit builder so zero raw counts with valid GFA do not erase project revenue
 - [x] Make all Capital Portfolio total-cost rows derive directly from individual cash-flow rows to prevent parallel-calculator variance
+- [x] Add a clickable source trace for each amount in Project Aggregation, Monthly Portfolio, and Capital Portfolio without changing calculations
