@@ -24,6 +24,7 @@ import {
 } from "@/lib/communityFee";
 import { getProjectMarketingTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
+import { buildDefaultOffPlanSalesResult } from "@/lib/salesPlanCashFlow";
 
 // ═══════════════════════════════════════════
 // TYPES
@@ -529,43 +530,16 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
   const hasValidSalesData = salesResult && salesResult.escrowData && salesResult.escrowData.length > 0 && salesResult.escrowData.some(e => e.income > 0);
   if (!hasValidSalesData && !isScenario3 && !isScenario4 && !isBuildForSale && totalUnits > 0 && totalRevenue > 0) {
-    const offPlanPct = 80; // default 80% offplan
-    const offPlanUnits = Math.round(totalUnits * offPlanPct / 100);
-    const salesStart = Math.max(1, designDuration); // sales start at first month of construction (1-indexed)
-    const salesMonths = constructionDuration; // sales period = construction duration
-    // Generate uniform sales distribution
-    const unitsPerMonth = Math.floor(offPlanUnits / salesMonths);
-    const remainderUnits = offPlanUnits - (unitsPerMonth * salesMonths);
-    const defaultSalesDist: number[] = new Array(salesMonths).fill(unitsPerMonth);
-    for (let rm = 0; rm < remainderUnits; rm++) defaultSalesDist[rm]++;
-    // Compute escrowData (same logic as V2WaelSales)
-    const avgUnitPrice = totalRevenue / totalUnits;
-    const ppDownPct = 10; // default 10% down payment
-    const ppHandoverPct = 40; // default 40% at handover
-    const duringConstructionPct = 100 - ppDownPct - ppHandoverPct; // 50%
-    const monthlyInstPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionDuration || 1);
-    let cumSold = 0;
-    const defaultEscrowData = defaultSalesDist.map((units, idx) => {
-      const dpIncome = units * avgUnitPrice * (ppDownPct / 100);
-      cumSold += units;
-      const instIncome = cumSold * monthlyInstPerUnit;
-      const totalIncome = dpIncome + instIncome;
-      return {
-        month: idx + salesStart, // 1-indexed absolute month
-        units,
-        income: totalIncome,
-        downPayment: dpIncome,
-        installments: instIncome,
-        withdrawal: 0,
-        balance: 0,
-        cumulativeSold: cumSold,
-      };
-    });
     salesResult = {
-      escrowData: defaultEscrowData,
-      salesDistribution: defaultSalesDist,
-      ppDownPct,
-      // Preserve marketing data from original salesResult (saved from MarketingPage)
+      ...buildDefaultOffPlanSalesResult({
+        totalRevenue,
+        totalUnits,
+        salesStartMonth: phaseTiming.salesStartMonth,
+        constructionStartMonth: phaseTiming.constructionStartMonth,
+        constructionMonths: i.constructionMonths,
+        projectEndMonth: phaseTiming.projectEndMonth,
+      }),
+      // Preserve marketing data from an existing marketing-only payload.
       marketingMonthlyAmounts: salesResult?.marketingMonthlyAmounts,
     };
   }

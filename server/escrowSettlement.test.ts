@@ -2,9 +2,23 @@ import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
 import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
-import { buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
+import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("uses the same default first buyer receipt as the interactive Off-Plan Sales workspace before a plan is saved", () => {
+    const defaultPlan = buildDefaultOffPlanSalesResult({
+      totalRevenue: 12_000_000,
+      totalUnits: 80,
+      salesStartMonth: 7,
+      constructionStartMonth: 7,
+      constructionMonths: 18,
+      projectEndMonth: 24,
+    });
+
+    expect(defaultPlan.actualCashInflow?.[6]).toBeGreaterThan(0);
+    expect(defaultPlan.escrowData[0].month).toBe(7);
+    expect(defaultPlan.escrowData[0].income).toBe(defaultPlan.actualCashInflow?.[6]);
+  });
   it("uses the engine rows and actual buyer collections as the only source of a displayed escrow balance", () => {
     const rows = [
       { label: "إيداع حساب الضمان (20%)", funder: "investor", isTransfer: true, designMonths: [100], constructionMonths: [0], postConstructionMonths: Array(13).fill(0) },

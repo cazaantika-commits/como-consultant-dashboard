@@ -1,6 +1,91 @@
 import type { SalesResult, Scenario } from "@/lib/investorCashFlowEngine";
 import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
 
+export interface DefaultOffPlanSalesInput {
+  totalRevenue: number;
+  totalUnits: number;
+  salesStartMonth: number;
+  constructionStartMonth: number;
+  constructionMonths: number;
+  projectEndMonth: number;
+}
+
+/**
+ * The first view of an Off-Plan project has no saved Wael plan yet. This
+ * default mirrors the interactive Sales workspace so the Escrow report starts
+ * from the same sales curve and buyer-payment schedule before the first save.
+ */
+export function buildDefaultOffPlanSalesResult({
+  totalRevenue,
+  totalUnits,
+  salesStartMonth,
+  constructionStartMonth,
+  constructionMonths,
+  projectEndMonth,
+}: DefaultOffPlanSalesInput): SalesResult {
+  const offplanPct = 80;
+  const offPlanUnits = Math.round(Math.max(0, totalUnits) * offplanPct / 100);
+  const salesMonths = Math.max(1, projectEndMonth - salesStartMonth + 1);
+  const speed = 50;
+  const mid = salesMonths * (1 - speed / 100) + (salesMonths / 2) * (speed / 100);
+  const sigma = salesMonths / (3 + (speed / 100) * 3);
+  const rawCurve = Array.from({ length: salesMonths }, (_, index) =>
+    Math.exp(-0.5 * Math.pow((index - mid + salesMonths / 2) / sigma, 2)),
+  );
+  const rawTotal = rawCurve.reduce((sum, value) => sum + value, 0) || 1;
+  const salesDistribution = rawCurve.map((value) => Math.max(1, Math.round((value / rawTotal) * offPlanUnits)));
+  salesDistribution[Math.floor(salesMonths / 2)] += offPlanUnits - salesDistribution.reduce((sum, value) => sum + value, 0);
+
+  const averageUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+  const downPct = 10;
+  const secondPct = 10;
+  const secondAfterMonths = 1;
+  const duringTotalPct = 40;
+  const installmentEveryMonths = 6;
+  const handoverPct = 40;
+  const constructionEndMonth = constructionStartMonth + constructionMonths - 1;
+  const cashPerMonth = new Array(projectEndMonth + 14).fill(0);
+  const escrowData = salesDistribution.map((units, index) => ({
+    month: salesStartMonth + index,
+    units,
+    income: 0,
+    downPayment: units * averageUnitPrice * (downPct / 100),
+    installments: 0,
+    withdrawal: 0,
+    balance: 0,
+    cumulativeSold: salesDistribution.slice(0, index + 1).reduce((sum, value) => sum + value, 0),
+  }));
+
+  salesDistribution.forEach((units, index) => {
+    const saleMonth = salesStartMonth + index;
+    const saleAmount = units * averageUnitPrice;
+    cashPerMonth[saleMonth] += saleAmount * (downPct / 100);
+    cashPerMonth[saleMonth + secondAfterMonths] += saleAmount * (secondPct / 100);
+    const installmentMonths: number[] = [];
+    for (let month = saleMonth + installmentEveryMonths + secondAfterMonths; month <= constructionEndMonth; month += installmentEveryMonths) {
+      installmentMonths.push(month);
+    }
+    const installmentTotal = saleAmount * (duringTotalPct / 100);
+    if (installmentMonths.length > 0) {
+      installmentMonths.forEach((month) => { cashPerMonth[month] += installmentTotal / installmentMonths.length; });
+    } else {
+      cashPerMonth[Math.min(constructionEndMonth, projectEndMonth)] += installmentTotal;
+    }
+    cashPerMonth[Math.min(constructionEndMonth, projectEndMonth)] += saleAmount * (handoverPct / 100);
+  });
+
+  const actualCashInflow = Array.from({ length: projectEndMonth + 13 }, (_, index) => cashPerMonth[index + 1] || 0);
+  escrowData.forEach((entry) => { entry.income = actualCashInflow[entry.month - 1] || 0; });
+  return {
+    escrowData,
+    salesDistribution,
+    actualCashInflow,
+    offplanPct,
+    ppDownPct: downPct,
+    paymentPlan: { downPct, secondPct, secondAfterMonths, duringTotalPct, installmentEveryMonths, handoverPct },
+  };
+}
+
 /**
  * Converts the saved Sales Plan payload into the exact input consumed by the
  * investor cash-flow engine. Keeping this mapping shared prevents the Project

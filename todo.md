@@ -1341,3 +1341,5 @@
 - [x] Make Feasibility Study and Escrow Cash Flow consume the shared saved Sales Plan adapter so corrected timing and settings cannot diverge between reports
 - [x] Reconcile the monthly escrow balance displayed in Wael Sales with the matching balance in Escrow Cash Flow, then repair the shared source of any difference
 - [x] Make Wael’s minimum escrow balance ignore pre-deposit zero months, matching the Escrow Cash Flow working-balance rule
+- [x] Audit every Off-Plan project’s monthly Sales escrow balance against Escrow Cash Flow and repair any proven discrepancy
+- [x] Centralize the default Off-Plan sales and buyer-collection schedule so unsaved Sales workspaces and Escrow Cash Flow start from identical monthly balances
