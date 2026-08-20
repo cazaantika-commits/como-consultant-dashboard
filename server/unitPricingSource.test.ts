@@ -23,4 +23,11 @@ describe("Financial Studies unit price ownership", () => {
     expect(source).toContain("حفظ التسعير");
     expect(source).toContain("سعر/قدم (AED)");
   });
+
+  it("initializes unsaved off-plan pricing cards from the shared financial unit builder", () => {
+    const source = readProjectFile("client/src/pages/V2WaelSales.tsx");
+
+    expect(source).toContain("buildPricingUnits");
+    expect(source).toContain("const sharedPricingUnits = buildPricingUnits");
+  });
 });

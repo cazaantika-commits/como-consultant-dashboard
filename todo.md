@@ -1346,3 +1346,6 @@
 - [x] Add an early-warning alert for material Off-Plan escrow liquidity deficits
 - [x] Create approved initial Wael scenarios for each Off-Plan project without overwriting existing saved plans
 - [x] Add a full-portfolio monthly liquidity comparison screen sourced only from the financial-planning engines
+- [x] Restore the missing apartment pricing cards for Nad Al Sheba — Plot 1 after reconciling its unit-distribution source and pricing display
+- [x] Complete an evidenced audit of every project’s units, pricing, revenue, sales plan, collections, escrow, and cash-flow outputs
+- [ ] Confirm whether Build-for-Rent cash flows should include rental-income assumptions before adding any rental revenue model

@@ -31,7 +31,7 @@ import {
   calculatePricingFormulas,
   calculateCosts,
 } from "@/lib/projectData";
-import { computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
+import { buildPricingUnits, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
 import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
@@ -170,12 +170,14 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
+      const sharedPricingUnits = buildPricingUnits(p, dbProjectToInputs(p));
       const newData: Record<string, { count: number; area: number; price: number }> = {};
-      UNIT_TYPES.forEach((u) => {
+      UNIT_TYPES.forEach((u, index) => {
+        const sharedUnit = sharedPricingUnits[index];
         newData[u.id] = {
-          count: Number(p[u.dbCount]) || 0,
-          area: Number(p[u.dbArea]) || 0,
-          price: Number(p[u.dbPrice]) || 0,
+          count: sharedUnit?.count ?? (Number(p[u.dbCount]) || 0),
+          area: sharedUnit?.area ?? (Number(p[u.dbArea]) || 0),
+          price: sharedUnit?.price ?? (Number(p[u.dbPrice]) || 0),
         };
       });
       setUnitData(newData);
