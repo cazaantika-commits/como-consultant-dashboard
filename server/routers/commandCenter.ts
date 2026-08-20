@@ -57,6 +57,10 @@ function generateToken(): string {
   return crypto.randomBytes(48).toString("hex");
 }
 
+function isHistoricalTestEvaluationSession(title: string | null) {
+  return (title || "").includes("تجريبية للاختبار");
+}
+
 export const commandCenterRouter = router({
   // ═══ Authentication ═══
   
@@ -281,6 +285,7 @@ export const commandCenterRouter = router({
         ).length,
         // evaluations: sessions where current member has NOT submitted a complete evaluation
         evaluations: allSessions.filter(s => {
+          if (isHistoricalTestEvaluationSession(s.title)) return false;
           const myCompleted = myEvals.find(e => e.sessionId === s.sessionId);
           return !myCompleted;
         }).length,
@@ -529,35 +534,54 @@ export const commandCenterRouter = router({
       const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000);
       const cutoffStr = cutoff.toISOString().slice(0, 19).replace('T', ' ');
 
-      // Fetch all active items — we'll filter by date per type below
-      const allActive = await db
-        .select({
-          id: commandCenterItems.id,
-          bubbleType: commandCenterItems.bubbleType,
-          title: commandCenterItems.title,
-          summary: commandCenterItems.summary,
-          itemPriority: commandCenterItems.itemPriority,
-          itemStatus: commandCenterItems.itemStatus,
-          requiresResponse: commandCenterItems.requiresResponse,
-          targetMemberIds: commandCenterItems.targetMemberIds,
-          createdAt: commandCenterItems.createdAt,
-        })
-        .from(commandCenterItems)
-        .where(inArray(commandCenterItems.itemStatus, ['active', 'pending_response']))
-        .orderBy(desc(commandCenterItems.createdAt))
-        .limit(100);
+      // Evaluation entries used to be read from legacy Command Center items,
+      // which can contain one old record per evaluator. The executive counter
+      // is session-based, so the ticker must use the same member-specific
+      // pending-session source instead.
+      const [allActive, allSessions, myCompletedEvaluations] = await Promise.all([
+        db
+          .select({
+            id: commandCenterItems.id,
+            bubbleType: commandCenterItems.bubbleType,
+            title: commandCenterItems.title,
+            summary: commandCenterItems.summary,
+            itemPriority: commandCenterItems.itemPriority,
+            itemStatus: commandCenterItems.itemStatus,
+            requiresResponse: commandCenterItems.requiresResponse,
+            targetMemberIds: commandCenterItems.targetMemberIds,
+            createdAt: commandCenterItems.createdAt,
+          })
+          .from(commandCenterItems)
+          .where(inArray(commandCenterItems.itemStatus, ['active', 'pending_response']))
+          .orderBy(desc(commandCenterItems.createdAt))
+          .limit(100),
+        db
+          .select({ id: evaluationSessions.id, sessionId: evaluationSessions.sessionId, title: evaluationSessions.title, createdAt: evaluationSessions.createdAt })
+          .from(evaluationSessions)
+          .orderBy(desc(evaluationSessions.createdAt)),
+        db
+          .select({ sessionId: commandCenterEvaluations.sessionId })
+          .from(commandCenterEvaluations)
+          .where(and(eq(commandCenterEvaluations.memberId, member.memberId), eq(commandCenterEvaluations.isComplete, 1))),
+      ]);
+
+      const pendingEvaluationTickerItems = allSessions
+        .filter(session => !isHistoricalTestEvaluationSession(session.title))
+        .filter(session => !myCompletedEvaluations.some(evaluation => evaluation.sessionId === session.sessionId))
+        .map(session => ({
+          id: `evaluation-session-${session.id}`,
+          label: 'تقييم',
+          text: session.title?.trim() || 'جلسة تقييم تحتاج مراجعتك',
+          isUrgent: false,
+          needsResponse: true,
+          createdAt: session.createdAt,
+        }));
 
       // Apply per-type filtering:
       // - evaluations: show all active (no time limit), but only those targeted at this member
       // - everything else: only within 72h
       const items = allActive.filter(item => {
-        if (item.bubbleType === 'evaluations') {
-          if (!item.targetMemberIds) return true;
-          try {
-            const targets = JSON.parse(item.targetMemberIds) as string[];
-            return targets.includes(member.memberId);
-          } catch { return true; }
-        }
+        if (item.bubbleType === 'evaluations') return false;
         return item.createdAt >= cutoffStr;
       }).slice(0, 30);
 
@@ -579,28 +603,12 @@ export const commandCenterRouter = router({
         return `${day} ${month} ${year}`;
       }
 
-      return items.map(item => {
+      const formattedItems = items.map(item => {
         let text = item.title;
         if (item.bubbleType === 'reports') {
           text = `تم رفع تقرير ال${item.title}`;
         } else if (item.bubbleType === 'meeting_minutes') {
           text = `تم رفع محضر الاجتماع المؤرخ ${fmtArabicDate(item.createdAt)}`;
-        } else if (item.bubbleType === 'evaluations') {
-          // Parse target members from summary or title to address them by name
-          const memberMap: Record<string, string> = {
-            wael: 'السيد وائل',
-            sheikh_issa: 'الشيخ عيسى',
-            abdulrahman: 'السيد عبدالرحمن',
-          };
-          // Try to extract member name from title if it contains a member id
-          let addressed = '';
-          for (const [id, name] of Object.entries(memberMap)) {
-            if (item.title.toLowerCase().includes(id) || (item.summary || '').toLowerCase().includes(id)) {
-              addressed = `${name} `;
-              break;
-            }
-          }
-          text = `${addressed}يرجى البدء بالتقييم الفني للاستشاريين`;
         } else if (item.bubbleType === 'requests') {
           text = `طلب جديد: ${item.title}`;
         }
@@ -613,6 +621,8 @@ export const commandCenterRouter = router({
           createdAt: item.createdAt,
         };
       });
+
+      return [...pendingEvaluationTickerItems, ...formattedItems].slice(0, 30);
     }),
 
   // ═══ Evaluation System (Blind) ═══
@@ -625,8 +635,9 @@ export const commandCenterRouter = router({
       const db = await getDb();
       if (!db) return [];
       
-      const sessions = await db.select().from(evaluationSessions)
-        .orderBy(desc(evaluationSessions.createdAt));
+      const sessions = (await db.select().from(evaluationSessions)
+        .orderBy(desc(evaluationSessions.createdAt)))
+        .filter(session => !isHistoricalTestEvaluationSession(session.title));
       
       // For each session, check completion status
       const sessionsWithStatus = await Promise.all(sessions.map(async (session) => {

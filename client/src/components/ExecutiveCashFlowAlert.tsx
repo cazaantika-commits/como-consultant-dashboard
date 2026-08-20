@@ -54,40 +54,40 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidi
 
   return (
     <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.08)]" dir="rtl" data-testid="executive-cash-flow-alert">
-      <div className="relative overflow-hidden bg-gradient-to-l from-slate-950 via-slate-900 to-indigo-950 px-5 py-5 text-white sm:px-7">
-        <div className="absolute -left-16 -top-20 h-52 w-52 rounded-full bg-amber-400/15 blur-3xl" />
-        <div className="absolute -bottom-24 right-1/3 h-52 w-52 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="relative overflow-hidden border-b border-indigo-100 bg-gradient-to-l from-indigo-50 via-white to-amber-50 px-5 py-5 sm:px-7">
+        <div className="absolute -left-16 -top-20 h-52 w-52 rounded-full bg-amber-200/45 blur-3xl" />
+        <div className="absolute -bottom-24 right-1/3 h-52 w-52 rounded-full bg-cyan-100/60 blur-3xl" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300/30 bg-amber-400/15 text-amber-300">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-300 bg-amber-100 text-amber-700">
               <Landmark className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-[11px] font-semibold tracking-[0.12em] text-amber-200">لِلْقَرار التنفيذي</p>
-              <h2 className="mt-1 text-xl font-black">التزامات المحفظة القادمة</h2>
-              <p className="mt-1 text-xs text-slate-300">ما المطلوب، متى، ومن أي مشروع خلال الأشهر القادمة</p>
+              <p className="text-[11px] font-semibold tracking-[0.12em] text-amber-700">لِلْقَرار التنفيذي</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900">التزامات المحفظة القادمة</h2>
+              <p className="mt-1 text-xs text-slate-600">ما المطلوب، متى، ومن أي مشروع خلال الأشهر القادمة</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-xl border border-white/15 bg-white/10 p-1">
-            {([3, 4] as const).map((value) => <button key={value} onClick={() => setHorizon(value)} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${horizon === value ? "bg-white text-slate-900 shadow" : "text-slate-200 hover:bg-white/10"}`}>{value} أشهر قادمة</button>)}
+          <div className="flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white/85 p-1 shadow-sm">
+            {([3, 4] as const).map((value) => <button key={value} onClick={() => setHorizon(value)} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${horizon === value ? "bg-slate-800 text-white shadow" : "text-slate-600 hover:bg-slate-100"}`}>{value} أشهر قادمة</button>)}
           </div>
         </div>
 
         <div className="relative mt-5 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-red-300/20 bg-red-400/10 p-4">
-            <div className="flex items-center gap-2 text-xs text-red-100"><TrendingDown className="h-4 w-4" /> مطلوب من المستثمرين خلال الفترة</div>
-            <p className="mt-2 text-2xl font-black text-white">{formatAmount(summary.required)} <span className="text-sm font-semibold text-red-100">درهم</span></p>
+          <div className="rounded-2xl border border-red-200 bg-red-50/85 p-4">
+            <div className="flex items-center gap-2 text-xs text-red-700"><TrendingDown className="h-4 w-4" /> مطلوب من المستثمرين خلال الفترة</div>
+            <p className="mt-2 text-2xl font-black text-red-800">{formatAmount(summary.required)} <span className="text-sm font-semibold text-red-700">درهم</span></p>
           </div>
-          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
-            <div className="flex items-center gap-2 text-xs text-emerald-100"><TrendingUp className="h-4 w-4" /> صافي المستلم للمستثمرين</div>
-            <p className="mt-2 text-2xl font-black text-white">{formatAmount(summary.returned)} <span className="text-sm font-semibold text-emerald-100">درهم</span></p>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50/85 p-4">
+            <div className="flex items-center gap-2 text-xs text-emerald-700"><TrendingUp className="h-4 w-4" /> صافي المستلم للمستثمرين</div>
+            <p className="mt-2 text-2xl font-black text-emerald-800">{formatAmount(summary.returned)} <span className="text-sm font-semibold text-emerald-700">درهم</span></p>
           </div>
-          <div className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-4">
-            <div className="flex items-center gap-2 text-xs text-amber-100"><Landmark className="h-4 w-4" /> {summary.netFunding > 0 ? "صافي التمويل بعد العوائد" : "صافي العائد بعد الالتزامات"}</div>
-            <p className="mt-2 text-2xl font-black text-white">{formatAmount(summary.netFunding)} <span className="text-sm font-semibold text-amber-100">درهم</span></p>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/90 p-4">
+            <div className="flex items-center gap-2 text-xs text-amber-800"><Landmark className="h-4 w-4" /> {summary.netFunding > 0 ? "صافي التمويل بعد العوائد" : "صافي العائد بعد الالتزامات"}</div>
+            <p className="mt-2 text-2xl font-black text-amber-900">{formatAmount(summary.netFunding)} <span className="text-sm font-semibold text-amber-800">درهم</span></p>
           </div>
         </div>
-        {liquidity.peakMonth && <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs"><span className="font-bold text-amber-200">{liquidity.peakKind === "required" ? "أعلى ضغط تمويلي:" : "أعلى عائد متوقع:"}</span><span className="font-black text-white">{monthLabel(liquidity.peakMonth.monthDate)}</span><span className={liquidity.peakKind === "required" ? "font-black text-red-200" : "font-black text-emerald-200"}>{formatAmount(liquidity.peakKind === "required" ? liquidity.peakMonth.required : liquidity.peakMonth.returned)} درهم</span></div>}
+        {liquidity.peakMonth && <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-white/75 px-4 py-2.5 text-xs"><span className="font-bold text-amber-800">{liquidity.peakKind === "required" ? "أعلى ضغط تمويلي:" : "أعلى عائد متوقع:"}</span><span className="font-black text-slate-900">{monthLabel(liquidity.peakMonth.monthDate)}</span><span className={liquidity.peakKind === "required" ? "font-black text-red-700" : "font-black text-emerald-700"}>{formatAmount(liquidity.peakKind === "required" ? liquidity.peakMonth.required : liquidity.peakMonth.returned)} درهم</span></div>}
       </div>
 
       <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">

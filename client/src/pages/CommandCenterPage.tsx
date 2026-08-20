@@ -2336,9 +2336,9 @@ function NewsTicker({ token }: { token: string }) {
   const doubled = [...displayItems, ...displayItems];
 
   return (
-    <div className="overflow-hidden" style={{background: 'rgba(30,27,75,0.96)', borderBottom: '1px solid rgba(99,102,241,0.2)'}}>
+    <div className="overflow-hidden" style={{background: '#fffdf7', borderBottom: '1px solid #fde68a'}}>
       <div className="flex items-center h-9">
-        <div className="flex-shrink-0 px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10" style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white'}}>
+        <div className="flex-shrink-0 px-4 h-full flex items-center gap-1.5 text-xs font-bold z-10" style={{background: '#fef3c7', color: '#92400e', borderLeft: '1px solid #fcd34d'}}>
           <Megaphone className="w-3.5 h-3.5" />
           أخر الأخبار
         </div>
@@ -2349,10 +2349,10 @@ function NewsTicker({ token }: { token: string }) {
                 {/* Category badge */}
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ml-2 flex-shrink-0 ${
                   item.isUrgent
-                    ? 'bg-red-500 text-white'
+                    ? 'bg-red-100 text-red-700'
                     : item.needsResponse
-                    ? 'bg-orange-400 text-white'
-                    : 'bg-slate-600 text-slate-200'
+                    ? 'bg-orange-100 text-orange-700'
+                    : 'bg-slate-100 text-slate-600'
                 }`}>
                   {item.label}
                 </span>
@@ -2363,7 +2363,7 @@ function NewsTicker({ token }: { token: string }) {
                 {!item.isUrgent && (
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 ml-1.5 flex-shrink-0" />
                 )}
-                <span style={{color: item.isUrgent ? '#fca5a5' : item.needsResponse ? '#fdba74' : 'rgba(255,255,255,0.75)'}}>
+                <span style={{color: item.isUrgent ? '#b91c1c' : item.needsResponse ? '#c2410c' : '#475569'}}>
                   {item.text}
                 </span>
               </span>
@@ -2371,6 +2371,54 @@ function NewsTicker({ token }: { token: string }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PendingEvaluationQueue({ token, onOpenOverview, onBack }: { token: string; onOpenOverview: () => void; onBack: () => void }) {
+  const sessionsQuery = trpc.commandCenter.getEvaluationSessions.useQuery({ token });
+  const pendingSessions = (sessionsQuery.data || []).filter((session: any) => !session.myEvaluationComplete);
+
+  if (sessionsQuery.isLoading) {
+    return <div className="flex justify-center py-16"><Loader2 className="h-7 w-7 animate-spin text-amber-500" /></div>;
+  }
+
+  return (
+    <div className="space-y-5" dir="rtl">
+      <div className="rounded-3xl border border-amber-200 bg-gradient-to-l from-amber-50 via-white to-indigo-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><ClipboardCheck className="h-5 w-5" /></span>
+            <div>
+              <p className="text-[11px] font-bold tracking-[0.12em] text-amber-700">المطلوب منك الآن</p>
+              <h2 className="mt-1 text-xl font-black text-slate-900">جلسات التقييم المعلقة</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-600">هذه الجلسات التي لم تسجل لها تقييماً بعد. لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة.</p>
+            </div>
+          </div>
+          <button onClick={onOpenOverview} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50">عرض حالة جميع المشاريع</button>
+        </div>
+      </div>
+
+      {pendingSessions.length === 0 ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center text-sm font-bold text-emerald-800">لا توجد جلسات تقييم معلقة لك حالياً.</div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {pendingSessions.map((session: any) => (
+            <div key={session.sessionId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-black leading-6 text-slate-900">{session.title || 'جلسة تقييم'}</p>
+                  <p className="mt-1 text-xs text-slate-600">{session.projectName}{session.consultantName ? ` — ${session.consultantName}` : ''}</p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-800">مطلوب منك</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] text-slate-500"><span>مكتمل {session.completedCount} من {session.requiredCount}</span><button onClick={onOpenOverview} className="font-black text-indigo-700 hover:text-indigo-900">فتح لوحة التقييم</button></div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900"><ArrowRight className="h-4 w-4" /> العودة لمركز القيادة</button>
     </div>
   );
 }
@@ -4103,6 +4151,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [activeBubble, setActiveBubble] = useState<string | null>(null);
   const [showSalwa, setShowSalwa] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showPendingEvaluationQueue, setShowPendingEvaluationQueue] = useState(false);
   const [showMilestonesKpis, setShowMilestonesKpis] = useState(false);
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
@@ -4223,6 +4272,18 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   }
 
   // If viewing evaluations
+  if (activeBubble === "evaluations" && showEvaluation && showPendingEvaluationQueue) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="mx-auto max-w-5xl px-4 py-6">
+          <PendingEvaluationQueue token={token} onOpenOverview={() => setShowPendingEvaluationQueue(false)} onBack={() => { setActiveBubble(null); setShowEvaluation(false); setShowPendingEvaluationQueue(false); }} />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
   if (activeBubble === "evaluations" && showEvaluation) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white" dir="rtl">
@@ -4233,7 +4294,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             memberRole={member.role}
             memberId={member.memberId}
           />
-          <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowEvaluation(false); }} className="mt-4 text-slate-500">
+          <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowEvaluation(false); setShowPendingEvaluationQueue(false); }} className="mt-4 text-slate-500">
             <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
           </Button>
         </div>
@@ -4315,7 +4376,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                     </button>
                   )}
                   {(counts.data.evaluations ?? 0) > 0 && (
-                    <button onClick={() => { setActiveBubble("evaluations"); setShowEvaluation(true); }}
+                    <button onClick={() => { setActiveBubble("evaluations"); setShowEvaluation(true); setShowPendingEvaluationQueue(true); }}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-all hover:scale-105 active:scale-95"
                       style={{background:'rgba(124,58,237,0.1)',color:'#5b21b6',border:'1px solid rgba(124,58,237,0.25)'}}>
                       <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse inline-block" />
@@ -4369,7 +4430,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         {(() => {
           const handleBubbleClick = (type: string) => {
             if (type === "milestones_kpis") { setActiveBubble("milestones_kpis"); setShowMilestonesKpis(true); }
-            else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); }
+            else if (type === "evaluations") { setActiveBubble("evaluations"); setShowEvaluation(true); setShowPendingEvaluationQueue(true); }
             else if (type === "work_schedule") { setActiveBubble("work_schedule"); setShowWorkSchedule(true); }
             else if (type === "payment_requests") { setActiveBubble("payment_requests"); setShowPaymentRequests(true); }
             else if (type === "requests") { setActiveBubble("general_requests"); setShowGeneralRequests(true); }
@@ -4679,8 +4740,8 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
         {/* Right side */}
         <div className="flex items-center gap-2">
           {/* Notifications */}
-          <button onClick={onNotifications} className="relative p-2 rounded-xl transition-all hover:scale-105" style={{background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)'}}>
-            <Bell className="w-4 h-4" style={{color: 'rgba(255,255,255,0.7)'}} />
+          <button onClick={onNotifications} className="relative p-2 rounded-xl transition-all hover:scale-105" style={{background: '#ffffff', border: '1px solid #cbd5e1'}}>
+            <Bell className="w-4 h-4" style={{color: '#334155'}} />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center" style={{boxShadow: '0 2px 6px rgba(239,68,68,0.5)'}}>
                 {unreadCount > 9 ? "9+" : unreadCount}
@@ -4689,9 +4750,9 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
           </button>
 
           {/* Member name */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)'}}>
-            <User className="w-3.5 h-3.5" style={{color: 'rgba(255,255,255,0.5)'}} />
-            <span className="text-xs font-semibold" style={{color: 'rgba(255,255,255,0.85)'}}>{member.nameAr}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl" style={{background: '#ffffff', border: '1px solid #cbd5e1'}}>
+            <User className="w-3.5 h-3.5" style={{color: '#475569'}} />
+            <span className="text-xs font-semibold" style={{color: '#1e293b'}}>{member.nameAr}</span>
           </div>
 
           {/* Logout */}

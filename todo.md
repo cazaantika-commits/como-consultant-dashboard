@@ -1354,3 +1354,10 @@
 - [x] Make Capital Portfolio revenue use the shared automatic unit builder so zero raw counts with valid GFA do not erase project revenue
 - [x] Make all Capital Portfolio total-cost rows derive directly from individual cash-flow rows to prevent parallel-calculator variance
 - [x] Add a clickable source trace for each amount in Project Aggregation, Monthly Portfolio, and Capital Portfolio without changing calculations
+- [x] Audit Command Center data, alerts, reports, and executive decision flows from Sheikh Issa’s perspective, then fix confirmed issues and improve clarity
+- [x] Convert the Command Center executive cash-flow alert from a dark surface to the approved light executive visual language without changing data or actions
+- [x] Review and correct duplicated Command Center news-ticker content so executive attention is not diluted by repeated headlines
+- [x] Make the Command Center ticker summarize the current member’s pending evaluation sessions instead of legacy duplicate evaluation-item records
+- [x] Exclude historical test evaluation sessions from Command Center executive counts, ticker, and evaluation queue without deleting audit records
+- [x] Correct low-contrast Command Center header controls on the existing light header surface
+- [x] Make the Command Center evaluation action open the member’s pending sessions first, while retaining the project-level evaluation overview separately

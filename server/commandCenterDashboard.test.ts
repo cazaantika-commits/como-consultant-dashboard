@@ -21,4 +21,24 @@ describe("Command Center dashboard card registry", () => {
   it("normalizes the stored memberRole for the existing Command Center authorization checks", () => {
     expect(routerSource).toContain("role: member.memberRole");
   });
+
+  it("builds ticker evaluation headlines from the current member's pending sessions, not legacy duplicate item records", () => {
+    expect(routerSource).toContain("pendingEvaluationTickerItems");
+    expect(routerSource).toContain("myCompletedEvaluations");
+    expect(routerSource).toContain("if (item.bubbleType === 'evaluations') return false;");
+    expect(routerSource).toContain("return [...pendingEvaluationTickerItems, ...formattedItems].slice(0, 30);");
+  });
+
+  it("keeps historical test evaluation sessions out of executive counts, ticker news, and the visible evaluation queue", () => {
+    expect(routerSource).toContain("function isHistoricalTestEvaluationSession");
+    expect(routerSource).toContain("if (isHistoricalTestEvaluationSession(s.title)) return false;");
+    expect(routerSource).toContain(".filter(session => !isHistoricalTestEvaluationSession(session.title))");
+  });
+
+  it("opens the member-specific pending evaluation queue before the project-level overview", () => {
+    expect(source).toContain("function PendingEvaluationQueue");
+    expect(source).toContain("setShowPendingEvaluationQueue(true)");
+    expect(source).toContain("المطلوب منك الآن");
+    expect(source).toContain("لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة");
+  });
 });
