@@ -77,4 +77,41 @@ describe("Financial Studies Capital Portfolio source rules", () => {
 
     expect(costs?.totalRevenue).toBe(74_480_000);
   });
+
+  it("uses the saved unit-registration rate in Capital Portfolio costs", () => {
+    const costs = calculateProjectCosts({
+      financingScenario: "build_for_sale",
+      residential1brCount: "4",
+      constructionScheduleJson: JSON.stringify({
+        settings: { configurableRates: { reraUnitRegistrationFee: 520 } },
+      }),
+    });
+
+    expect(costs?.reraUnitRegFee).toBe(2_080);
+  });
+
+  it("uses the shared automatic unit mix when project GFA exists but raw counts are zero", () => {
+    const costs = calculateProjectCosts({
+      financingScenario: "offplan_escrow",
+      gfaResidentialSqft: "46736.71",
+      gfaRetailSqft: "4090.28",
+      saleableResidentialPct: "95",
+      saleableRetailPct: "97",
+      residential1brArea: "750",
+      residential2brArea: "1300",
+      residential3brArea: "1650",
+      retailSmallArea: "850",
+      retailMediumArea: "1200",
+      retailLargeArea: "1800",
+      residential1brPrice: "1800",
+      residential2brPrice: "1750",
+      residential3brPrice: "1700",
+      retailSmallPrice: "3000",
+      retailMediumPrice: "2500",
+      retailLargePrice: "2000",
+      constructionScheduleJson: "{}",
+    });
+
+    expect(costs?.totalRevenue).toBeGreaterThan(0);
+  });
 });

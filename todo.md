@@ -1349,3 +1349,7 @@
 - [x] Restore the missing apartment pricing cards for Nad Al Sheba — Plot 1 after reconciling its unit-distribution source and pricing display
 - [x] Complete an evidenced audit of every project’s units, pricing, revenue, sales plan, collections, escrow, and cash-flow outputs
 - [x] Confirm whether Build-for-Rent cash flows should include rental-income assumptions before adding any rental revenue model — approved to remain without rental income
+- [x] Audit the three consolidated project reports against their individual sources, month by month and row by row, then repair any proven aggregation discrepancy
+- [x] Make the Capital Portfolio cost source use the saved unit-registration fee instead of its remaining fixed 800 AED rate
+- [x] Make Capital Portfolio revenue use the shared automatic unit builder so zero raw counts with valid GFA do not erase project revenue
+- [x] Make all Capital Portfolio total-cost rows derive directly from individual cash-flow rows to prevent parallel-calculator variance

@@ -40,7 +40,6 @@ import {
 } from "../../client/src/lib/investorCashFlowEngine";
 import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
-import { calculateProjectCosts as calculateFinancialStudiesProjectCosts } from "../../client/src/lib/projectCostsCalc";
 import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
 import { calculateEscrowMonthlyBalance, summarizeEscrowLiquidity } from "../../client/src/lib/escrowSettlement";
 
@@ -2685,14 +2684,10 @@ export const cashFlowSettingsRouter = router({
         );
         const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
         const capital = calculateInvestorCapitalSummary(cashFlow);
-        const costs = calculateFinancialStudiesProjectCosts(project);
-        const isBuildForSale = scenario === "build_for_sale";
-        const totalCosts = isBuildForSale
-          ? cashFlow.rows
-            .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
-            .reduce((sum, row) => sum + row.totalCost, 0)
-          : costs?.totalCosts || 0;
-        const totalRevenue = costs?.totalRevenue || 0;
+        const totalCosts = cashFlow.rows
+          .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
+          .reduce((sum, row) => sum + row.totalCost, 0);
+        const totalRevenue = cashFlow.totalRevenue;
         const monthlyFunding = calculateInvestorMonthlyFundingRequirements(cashFlow);
 
         return {

@@ -9,6 +9,8 @@ import {
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
+import { buildPricingUnits } from "@/lib/investorCashFlowEngine";
+import { calculatePricingFormulas, dbProjectToInputs } from "@/lib/projectData";
 
 /**
  * Calculate all project costs from raw data.
@@ -87,35 +89,11 @@ export function calculateProjectCosts(
   // Revenue calculation — UNIFIED with investorCashFlowEngine:
   // Simple: count × area × price (same as buildPricingUnits + calculatePricingFormulas)
   // This ensures V2Feasibility shows the SAME revenue as ProjectCardOffplanPage and V2InvestorCashFlow
-  const UNIT_DEFS = [
-    { cat: "residential", countKey: "residential1brCount", areaKey: "residential1brArea", priceField: "oneBrPrice" as const, defArea: 750, defPrice: 1650 },
-    { cat: "residential", countKey: "residential2brCount", areaKey: "residential2brArea", priceField: "twoBrPrice" as const, defArea: 1300, defPrice: 1550 },
-    { cat: "residential", countKey: "residential3brCount", areaKey: "residential3brArea", priceField: "threeBrPrice" as const, defArea: 1650, defPrice: 1450 },
-    { cat: "residential", countKey: "villaCount", areaKey: "villaArea", priceField: "villaPrice" as const, defArea: 0, defPrice: 0 },
-    { cat: "residential", countKey: "townhouseCount", areaKey: "townhouseArea", priceField: "townhousePrice" as const, defArea: 0, defPrice: 0 },
-    { cat: "retail", countKey: "retailSmallCount", areaKey: "retailSmallArea", priceField: "retailSmallPrice" as const, defArea: 850, defPrice: 3000 },
-    { cat: "retail", countKey: "retailMediumCount", areaKey: "retailMediumArea", priceField: "retailMediumPrice" as const, defArea: 1200, defPrice: 2500 },
-    { cat: "retail", countKey: "retailLargeCount", areaKey: "retailLargeArea", priceField: "retailLargePrice" as const, defArea: 1800, defPrice: 2000 },
-    { cat: "offices", countKey: "officeSmallCount", areaKey: "officeSmallArea", priceField: "officeSmallPrice" as const, defArea: 1200, defPrice: 1900 },
-    { cat: "offices", countKey: "officeMediumCount", areaKey: "officeMediumArea", priceField: "officeMediumPrice" as const, defArea: 2000, defPrice: 1800 },
-    { cat: "offices", countKey: "officeLargeCount", areaKey: "officeLargeArea", priceField: "officeLargePrice" as const, defArea: 3500, defPrice: 1700 },
-  ];
-
-  const unitData = UNIT_DEFS.map(def => {
-    const count = Number(p[def.countKey]) || 0;
-    const area = valueOrFallback(p[def.areaKey], def.defArea);
-    const price = valueOrFallback(prices[def.priceField], def.defPrice);
-    return { ...def, count, area, price, revenue: count * area * price };
-  });
-
-  let revenueRes = 0, revenueRet = 0, revenueOff = 0;
-  for (const u of unitData) {
-    if (u.cat === "residential") revenueRes += u.revenue;
-    else if (u.cat === "retail") revenueRet += u.revenue;
-    else revenueOff += u.revenue;
-  }
-
-  const calculatedRevenue = revenueRes + revenueRet + revenueOff;
+  const sharedPricing = calculatePricingFormulas(buildPricingUnits(p, dbProjectToInputs(p)));
+  const revenueRes = sharedPricing.revenueResidential;
+  const revenueRet = sharedPricing.revenueRetail;
+  const revenueOff = sharedPricing.revenueOffice;
+  const calculatedRevenue = sharedPricing.totalRevenue;
 
   // CALCULATED COSTS (using corrected formulas from new engine)
   const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
@@ -135,11 +113,14 @@ export function calculateProjectCosts(
   let buildForSaleMarketingRate = 1;
   let buildForRentDeveloperFeeDesignRate = 1.5;
   let buildForRentDeveloperFeeSupervisionRate = 2.5;
+  let reraUnitRegistrationFee = 520;
   try {
     const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
     buildForSaleMarketingRate = Number(savedRates.buildForSaleMarketingRate ?? 1);
     buildForRentDeveloperFeeDesignRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
     buildForRentDeveloperFeeSupervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+    const configuredUnitRate = Number(savedRates.reraUnitRegistrationFee);
+    if (Number.isFinite(configuredUnitRate)) reraUnitRegistrationFee = configuredUnitRate;
   } catch { /* use the approved 1% default */ }
   const effectiveDeveloperFeePct = isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
@@ -152,8 +133,8 @@ export function calculateProjectCosts(
   const totalRevenue = isBuildForRent ? 0 : calculatedRevenue;
 
   // رسوم ريرا المحسوبة (الصيغ الجديدة)
-  const totalUnits = unitData.reduce((s, u) => s + u.count, 0);
-  const computedReraUnitRegFee = totalUnits > 0 ? totalUnits * 800 : reraUnitRegFee;
+  const totalUnits = sharedPricing.totalUnits;
+  const computedReraUnitRegFee = totalUnits > 0 ? totalUnits * reraUnitRegistrationFee : reraUnitRegFee;
   const designDuration = getProjectDesignTiming(p).designMonths;
   const communitySchedule = calculateCommunityFeeSchedule(
     totalGfaSqft,
