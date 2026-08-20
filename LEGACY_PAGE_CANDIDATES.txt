@@ -1,0 +1,459 @@
+===== CapitalSchedulingHorizontal.tsx =====
+import { useState, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { formatFullNumber } from "@/lib/numberFormat";
+
+const TOTAL_MONTHS = 48;
+const CHART_START = new Date(2026, 3, 1); // April 2026
+
+const ARABIC_MONTHS = [
+  "يناير","فبراير","مارس","أبريل","مايو","يونيو",
+  "يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر",
+];
+
+function getMonthLabel(offset: number): string {
+  const d = new Date(CHART_START);
+  d.setMonth(d.getMonth() + offset);
+  return `${ARABIC_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getShortMonthLabel(offset: number): string {
+  const d = new Date(CHART_START);
+  d.setMonth(d.getMonth() + offset);
+  return `${ARABIC_MONTHS[d.getMonth()].slice(0, 3)} ${d.getFullYear().toString().slice(2)}`;
+}
+
+function fmtCell(n: number): string {
+  if (n === 0) return "";
+  return formatFullNumber(n, "");
+}
+
+function fmtTooltipNum(n: number): string {
+  return `${formatFullNumber(n, "0")} AED`;
+}
+
+// Neutral base with subtle tints matching vertical view
+const PHASE_BG: Record<string, string> = {
+  design:       "#dce4f0", // soft blue tint
+  offplan:      "#ede9de", // soft warm tint
+  construction: "#d8e8df", // soft green tint
+  handover:     "#e5dce3", // soft mauve tint
+};
+
+type PhaseType = "land" | "design" | "offplan" | "construction" | "handover";
+
+// Tooltip component
+function CellTooltip({ children, lines }: { children: React.ReactNode; lines: string[] }) {
+  const [show, setShow] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  const onEnter = useCallback((e: React.MouseEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+===== ComponentShowcase.tsx =====
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+===== ConsultantProposalsPage.tsx =====
+import { useState, useMemo, Fragment, useCallback } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { Link } from "wouter";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  FileText,
+  Upload,
+  CheckCircle,
+  XCircle,
+  Clock,
+  BarChart3,
+  Shield,
+  AlertTriangle,
+  Users,
+  Calendar,
+  CreditCard,
+  FileCheck,
+  Layers,
+  Scale,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  Loader2,
+  Trash2,
+  GitCompare,
+  Star,
+  Info,
+  ClipboardList,
+  Building2,
+  Briefcase,
+  RefreshCw,
+  DollarSign,
+  Filter,
+  Zap,
+  TrendingDown,
+  ShieldAlert,
+  CircleAlert,
+===== DashboardPage.tsx =====
+import { useProjectContext } from "@/contexts/ProjectContext";
+import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Plus, Trash2 } from "lucide-react";
+
+export default function DashboardPage() {
+  const { user, isAuthenticated } = useAuth();
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newConsultantName, setNewConsultantName] = useState("");
+
+  // Queries
+  const projectsQuery = trpc.projects.list.useQuery();
+  const consultantsQuery = trpc.consultants.list.useQuery();
+  const projectDetailsQuery = trpc.projects.getWithDetails.useQuery(selectedProjectId || 0, {
+    enabled: !!selectedProjectId,
+  });
+
+  // Mutations
+  const createProjectMutation = trpc.projects.create.useMutation({
+    onSuccess: () => {
+      projectsQuery.refetch();
+      setNewProjectName("");
+    },
+  });
+
+  const deleteProjectMutation = trpc.projects.delete.useMutation({
+    onSuccess: () => {
+      projectsQuery.refetch();
+      setSelectedProjectId(null);
+    },
+  });
+
+  const createConsultantMutation = trpc.consultants.create.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
+      setNewConsultantName("");
+    },
+  });
+
+  const deleteConsultantMutation = trpc.consultants.delete.useMutation({
+    onSuccess: () => {
+      consultantsQuery.refetch();
+    },
+  });
+===== DevelopmentStagesSimplified.tsx =====
+import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CheckCircle2, Circle, Clock } from "lucide-react";
+
+const stages = [
+  { name: "التأسيس ودراسة الجدوى", status: "completed", icon: CheckCircle2 },
+  { name: "الإعداد القانوني", status: "in-progress", icon: Clock },
+  { name: "التصميم والتصاريح", status: "pending", icon: Circle },
+  { name: "المقاولات والتنفيذ", status: "pending", icon: Circle },
+  { name: "التسليم والإدارة", status: "pending", icon: Circle },
+];
+
+export default function DevelopmentStagesSimplified() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto"
+      >
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">مراحل التطوير</h1>
+          <p className="text-gray-600">تتبع مراحل تطوير المشروع من البداية إلى النهاية</p>
+        </div>
+
+        <div className="space-y-4 mb-8">
+          {stages.map((stage, index) => {
+            const Icon = stage.icon;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className={`${
+                  stage.status === "completed" ? "bg-green-50" :
+                  stage.status === "in-progress" ? "bg-blue-50" :
+                  "bg-gray-50"
+                }`}>
+                  <CardContent className="pt-6 flex items-center gap-4">
+                    <Icon className={`w-6 h-6 ${
+                      stage.status === "completed" ? "text-green-600" :
+                      stage.status === "in-progress" ? "text-blue-600" :
+                      "text-gray-400"
+                    }`} />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{stage.name}</h3>
+                      <p className="text-sm text-gray-600">
+===== FeasibilityHubPage.tsx =====
+import { useState, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowRight, FileText, BarChart3, FileBarChart2, CalendarRange, Wallet, Landmark, Shield, TrendingUp } from "lucide-react";
+import { CashFlowProvider, useCashFlow } from "@/contexts/CashFlowContext";
+import FactSheetPage from "./FactSheetPage";
+import FeasibilityStudyPage from "./FeasibilityStudyPage";
+import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
+import TimeDistributionTab from "./TimeDistributionTab";
+import ExcelCashFlowPage from "./ExcelCashFlowPage";
+import EscrowCashFlowPage from "./EscrowCashFlowPage";
+import RiskDashboardPage from "./RiskDashboardPage";
+import MarketReportsPage from "./MarketReportsPage";
+
+type SubView = "icons" | "fact-sheet" | "feasibility" | "fin-feasibility" | "time-dist" | "capital" | "escrow" | "risk-dashboard" | "market-reports";
+
+const SUB_SECTIONS = [
+  {
+    id: "fact-sheet" as SubView,
+    label: "بطاقة المشروع",
+    icon: FileText,
+    gradient: "linear-gradient(135deg, #f59e0b, #d97706)",
+    shadow: "rgba(245, 158, 11, 0.3)",
+    borderColor: "#f59e0b",
+    emoji: "📋",
+  },
+  {
+    id: "feasibility" as SubView,
+    label: "دراسة الجدوى",
+    icon: BarChart3,
+    gradient: "linear-gradient(135deg, #3b82f6, #2563eb)",
+    shadow: "rgba(59, 130, 246, 0.3)",
+    borderColor: "#3b82f6",
+    emoji: "📊",
+  },
+  {
+    id: "fin-feasibility" as SubView,
+    label: "ملخص الجدوى المالية",
+    icon: FileBarChart2,
+    gradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
+    shadow: "rgba(124, 58, 237, 0.3)",
+    borderColor: "#7c3aed",
+    emoji: "📈",
+  },
+  {
+    id: "time-dist" as SubView,
+    label: "التوزيع الزمني للمصاريف",
+    icon: CalendarRange,
+===== FeasibilityStudySimplified.tsx =====
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BarChart3, TrendingUp, DollarSign, Home } from "lucide-react";
+
+export default function FeasibilityStudySimplified() {
+  const [projectName, setProjectName] = useState("");
+  const [location, setLocation] = useState("");
+  const [plotArea, setPlotArea] = useState("");
+  const [gfa, setGfa] = useState("");
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-6xl mx-auto"
+      >
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">دراسة الجدوى</h1>
+          <p className="text-gray-600">تحليل شامل لجدوى المشاريع العقارية</p>
+        </div>
+
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="financial">التحليل المالي</TabsTrigger>
+            <TabsTrigger value="market">دراسة السوق</TabsTrigger>
+            <TabsTrigger value="technical">الجدوى الفنية</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Home className="w-5 h-5" />
+                  بيانات المشروع
+                </CardTitle>
+                <CardDescription>أدخل المعلومات الأساسية للمشروع</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">اسم المشروع</label>
+                    <Input
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+===== FlexiblePhasesTab.tsx =====
+import { useState, useEffect } from "react";
+import { trpc } from "@/lib/trpc";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  Plus, Trash2, Edit, CalendarDays, Clock, AlertTriangle, CheckCircle2,
+  Save, RefreshCw, X, BarChart3
+} from "lucide-react";
+
+interface Phase {
+  id: number;
+  phaseNumber: number;
+  phaseName: string;
+  startDate: string;
+  durationMonths: number;
+  endDate?: string;
+  notes?: string;
+}
+
+export default function FlexiblePhasesTab({ cfProjectId, onRefresh }: { cfProjectId: number; onRefresh: () => void }) {
+  const [phases, setPhases] = useState<Phase[]>([]);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingPhase, setEditingPhase] = useState<Phase | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  // Form state
+  const [formPhaseName, setFormPhaseName] = useState("");
+  const [formStartDate, setFormStartDate] = useState("2026-01");
+  const [formDuration, setFormDuration] = useState(3);
+  const [formNotes, setFormNotes] = useState("");
+
+  const phasesQuery = trpc.cashFlowProgram.listPhases.useQuery(cfProjectId);
+  const createMutation = trpc.cashFlowProgram.createPhase.useMutation();
+  const updateMutation = trpc.cashFlowProgram.updatePhase.useMutation();
+  const deleteMutation = trpc.cashFlowProgram.deletePhase.useMutation();
+
+  useEffect(() => {
+    if (phasesQuery.data) {
+      setPhases(phasesQuery.data);
+    }
+  }, [phasesQuery.data]);
+
+  const handleCreatePhase = async () => {
+    if (!formPhaseName.trim()) {
+      toast.error("يرجى إدخال اسم المرحلة");
+===== TrueCostReportPDF.tsx =====
+'use client';
+import { useState, useCallback, useEffect } from 'react';
+import { useParams } from 'wouter';
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+  ArrowRight,
+  Loader2,
+  Pencil,
+  Check,
+  X,
+  ShieldCheck,
+  Unlock,
+  Save,
+} from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+type FieldKey = 'quotedDesignFee' | 'designScopeGap' | 'trueDesignFee' | 'quotedSupervisionFee' | 'supervisionGap' | 'adjustedSupervisionFee' | 'totalTrueCost';
+
+function formatNum(n: number | null | undefined): string {
+  if (n == null || isNaN(n)) return '—';
+  return Math.round(n).toLocaleString();
+}
+
+export default function TrueCostReportPDF({ projectId: propProjectId, onBack }: { projectId?: number; onBack?: () => void }) {
+  const params = useParams<{ projectId: string }>();
+  const projectId = propProjectId || (params?.projectId ? parseInt(params.projectId, 10) : 0);
+  
+  const reportQuery = trpc.cpa.evaluation.getFullReport.useQuery({ cpaProjectId: projectId }, { enabled: projectId > 0 });
+  
+  const [editingCell, setEditingCell] = useState<{ pcId: number; field: FieldKey } | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [approverName, setApproverName] = useState('');
+  const [dynamicBUA, setDynamicBUA] = useState<number>(0);
+  const [dynamicPricePerSqft, setDynamicPricePerSqft] = useState<number>(0);
+  const [dynamicDuration, setDynamicDuration] = useState<number>(0);
+
+  const saveMutation = trpc.cpa.evaluation.saveOverride.useMutation({

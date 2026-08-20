@@ -1,0 +1,91 @@
+=== /feasibility ===
+client/src/App.tsx:100:      <Route path="/feasibility" component={FeasibilityStudyPage} />
+client/src/App.tsx:101:      <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+client/src/App.tsx:165:      <Route path="/v2/feasibility" component={V2Feasibility} />
+client/src/components/feasibility/CostsCashFlowTab.tsx:3:import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
+client/src/pages/FeasibilityStudyPage.tsx:21:import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
+client/src/pages/FeasibilityStudyPage.tsx:25:import { exportFeasibilityReport, type FeasibilityReportData } from "@/lib/feasibilityReportExport";
+client/src/pages/KnowledgeHubPage.tsx:8:import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
+client/src/pages/KnowledgeHubPage.tsx:9:import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
+client/src/pages/KnowledgeHubPage.tsx:10:import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
+client/src/pages/V2Hub.tsx:32:    path: "/v2/feasibility",
+server/feasibilityUtils.test.ts:2:import { autoPopulateAvgAreas, DEFAULT_AVG_AREAS } from "../shared/feasibilityUtils";
+server/investorCashFlow.ts:23:// ─── DEFAULT AREA FALLBACKS (from shared/feasibilityUtils) ───────────────────
+server/joelleUpgrade.test.ts:12:  const feasibilityPath = path.join(__dirname, "routers/feasibility.ts");
+server/projectManagementConsolidation.test.ts:204:        path.resolve(__dirname, "../client/src/components/feasibility/CostsCashFlowTab.tsx")
+server/projectManagementConsolidation.test.ts:211:        path.resolve(__dirname, "../client/src/components/feasibility/JoelleEngineTab.tsx")
+server/projectManagementConsolidation.test.ts:218:        path.resolve(__dirname, "../client/src/components/feasibility/JoelleDataManager.tsx")
+server/routers.ts:15:import { feasibilityRouter } from "./routers/feasibility";
+server/routers/cashFlowProgram.ts:5:import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
+server/routes-replit.ts:9:import { generateFeasibilityReport } from "./feasibility-report";
+server/routes-replit.ts:442:  app.get("/api/feasibility-studies", async (_req, res) => {
+server/routes-replit.ts:451:  app.get("/api/feasibility-studies/:id", async (req, res) => {
+server/routes-replit.ts:461:  app.post("/api/feasibility-studies", async (req, res) => {
+server/routes-replit.ts:474:  app.patch("/api/feasibility-studies/:id", async (req, res) => {
+server/routes-replit.ts:483:  app.delete("/api/feasibility-studies/:id", async (req, res) => {
+=== /feasibility-study ===
+client/src/App.tsx:101:      <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+=== /project/ ===
+client/src/App.tsx:133:      <Route path="/project/:id" component={ProjectDetailPage} />
+client/src/pages/ExecutiveVIPPage.tsx:508:          <Card key={p.id} className="p-4 hover:shadow-md transition-all cursor-pointer active:scale-[0.98]" onClick={() => navigate(`/project/${p.id}`)}>
+client/src/pages/ProjectDetailPage.tsx:310:  const [match, params] = useRoute("/project/:id");
+=== /projects/ ===
+client/src/App.tsx:134:      <Route path="/projects/:id" component={ProjectDetailPage} />
+server/routes-replit.ts:52:  app.get("/api/projects/:id", async (req, res) => {
+server/routes-replit.ts:136:  app.patch("/api/projects/:id", async (req, res) => {
+server/routes-replit.ts:149:  app.patch("/api/projects/:id/activate", async (req, res) => {
+server/routes-replit.ts:165:  app.patch("/api/projects/:id/complete", async (req, res) => {
+server/routes-replit.ts:174:  app.get("/api/projects/:id/wallets", async (req, res) => {
+server/routes-replit.ts:183:  app.get("/api/projects/:id/rera-status", async (req, res) => {
+server/routes-replit.ts:198:  app.post("/api/projects/:id/inject", async (req, res) => {
+server/routes-replit.ts:211:  app.get("/api/projects/:id/transactions", async (req, res) => {
+server/routes-replit.ts:220:  app.post("/api/projects/:id/expenses", async (req, res) => {
+server/routes-replit.ts:233:  app.get("/api/projects/:id/expenses", async (req, res) => {
+server/routes-replit.ts:260:  app.get("/api/projects/:id/ai-market-data", async (req, res) => {
+server/routes-replit.ts:300:  app.get("/api/projects/:id/sensitivity", async (req, res) => {
+server/routes-replit.ts:331:  app.get("/api/projects/:id/milestones", async (req, res) => {
+server/routes-replit.ts:340:  app.post("/api/projects/:id/milestones", async (req, res) => {
+server/routes-replit.ts:379:  app.get("/api/projects/:id/tasks", async (req, res) => {
+server/routes-replit.ts:388:  app.post("/api/projects/:id/tasks", async (req, res) => {
+server/routes-replit.ts:839:  app.get("/api/projects/:id/budget", async (req, res) => {
+server/routes-replit.ts:852:  app.get("/api/projects/:id/budget/summary", async (req, res) => {
+server/routes-replit.ts:865:  app.patch("/api/projects/:id/budget/:itemKey", async (req, res) => {
+server/routes-replit.ts:878:  app.post("/api/projects/:id/budget/initialize", async (req, res) => {
+server/routes-replit.ts:948:  app.get("/api/projects/:id/consultants", async (req, res) => {
+server/routes-replit.ts:957:  app.post("/api/projects/:id/consultants", async (req, res) => {
+server/routes-replit.ts:968:  app.delete("/api/projects/:id/consultants/:consultantId", async (req, res) => {
+=== /project-card ===
+client/src/App.tsx:155:      <Route path="/project-card" component={ProjectCardOffplanPage} />
+client/src/App.tsx:156:      <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
+client/src/App.tsx:157:      <Route path="/project-card-post-completion" component={ProjectCardPostCompletionPage} />
+=== /project-card-offplan ===
+client/src/App.tsx:156:      <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
+=== /v2/investor-cashflow ===
+client/src/App.tsx:162:      <Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />
+client/src/pages/V2Hub.tsx:8:    path: "/v2/investor-cashflow",
+server/financialStudiesConsolidation.test.ts:30:    expect(routerSource).toContain('<Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />');
+=== /v2/portfolio ===
+client/src/App.tsx:163:      <Route path="/v2/portfolio" component={V2Portfolio} />
+client/src/pages/V2Hub.tsx:16:    path: "/v2/portfolio",
+=== /v2/escrow-cashflow ===
+client/src/App.tsx:164:      <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />
+client/src/pages/V2Hub.tsx:24:    path: "/v2/escrow-cashflow",
+=== /v2/feasibility ===
+client/src/App.tsx:165:      <Route path="/v2/feasibility" component={V2Feasibility} />
+client/src/pages/V2Hub.tsx:32:    path: "/v2/feasibility",
+=== /v2/wael-sales ===
+client/src/App.tsx:166:      <Route path="/v2/wael-sales" component={V2WaelSales} />
+client/src/pages/V2Hub.tsx:40:    path: "/v2/wael-sales",
+=== /v2/timeline ===
+client/src/App.tsx:167:      <Route path="/v2/timeline" component={V2Timeline} />
+client/src/pages/V2Hub.tsx:48:    path: "/v2/timeline",
+=== /bateekha ===
+client/src/App.tsx:169:      <Route path="/bateekha" component={BateekhaPage} />
+client/src/pages/CommandCenterPage.tsx:4339:        <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
+client/src/pages/Home.tsx:413:    { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
+server/executiveCashFlowAlert.test.ts:24:    expect(commandCenterSource).toContain('navigate("/bateekha?tab=portfolio")');
+server/executiveCashFlowAlert.test.ts:25:    expect(commandCenterSource).toContain('navigate("/bateekha?tab=portfolio_escrow_liquidity")');
+server/financialStudiesConsolidation.test.ts:31:    expect(routerSource).toContain('<Route path="/bateekha" component={BateekhaPage} />');
+server/legacyFinancialFeatureCleanup.test.ts:24:    expect(appSource).toContain('path="/bateekha"');
+server/legacyPortfolioCleanup.test.ts:25:    expect(appSource).toContain('path="/bateekha"');
+server/legacySalesPlanCleanup.test.ts:21:    expect(appSource).toContain('path="/bateekha"');

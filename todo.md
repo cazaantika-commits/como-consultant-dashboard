@@ -1361,3 +1361,9 @@
 - [x] Exclude historical test evaluation sessions from Command Center executive counts, ticker, and evaluation queue without deleting audit records
 - [x] Correct low-contrast Command Center header controls on the existing light header surface
 - [x] Make the Command Center evaluation action open the member’s pending sessions first, while retaining the project-level evaluation overview separately
+- [x] Inventory and safely remove or consolidate redundant routes, pages, components, and financial calculation paths across the entire web application
+- [x] Remove nine proven unreferenced legacy client pages and their obsolete assertion, retaining every embedded and routed Financial Studies page
+- [x] Audit the standalone HTML cash-flow exporter; retain a compact compatibility implementation because the active legacy Escrow Cash Flow route invokes it
+- [x] Remove the two orphaned feasibility child modules left unreferenced after legacy hub cleanup
+- [x] Remove the unmounted legacy REST route module after confirming it has no server bootstrap registration or import
+- [x] Remove the unreferenced meeting task-execution utility after confirming no active meeting flow imports it

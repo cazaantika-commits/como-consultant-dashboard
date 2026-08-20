@@ -1,0 +1,95 @@
+=== CPASettingsMatrices ===
+client/src/pages/CPAPage.tsx:17:import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
+=== CapitalScheduleTablePage ===
+client/src/pages/CashFlowSettingsPage.tsx:479:  // Read the project's actual scenario from DB (same source as CapitalScheduleTablePage)
+client/src/pages/FeasibilityStudyPage.tsx:23:import CapitalScheduleTablePage from "@/pages/CapitalScheduleTablePage";
+client/src/pages/FeasibilityStudyPage.tsx:1159:                <CapitalScheduleTablePage embedded initialProjectId={selectedProjectId} />
+=== CapitalSchedulingHorizontal ===
+server/numberPresentationStandard.test.ts:28:      "client/src/pages/CapitalSchedulingHorizontal.tsx",
+=== ComponentShowcase ===
+=== ConstructionInputsPage ===
+client/src/pages/BateekhaPage.tsx:12:const ConstructionInputsPage = lazy(() => import("./ConstructionInputsPage"));
+client/src/pages/BateekhaPage.tsx:64:    case "construction": return <ConstructionInputsPage embedded />;
+server/financialStudiesNavigationLayout.test.ts:38:    expect(source).toContain("<ConstructionInputsPage embedded />");
+server/numberPresentationStandard.test.ts:27:      "client/src/pages/ConstructionInputsPage.tsx",
+server/constructionPlanCanvas.test.ts:5:const source = readFileSync(resolve(process.cwd(), "client/src/pages/ConstructionInputsPage.tsx"), "utf8");
+server/financialStudiesVisualLanguage.test.ts:10:  const construction = source("client/src/pages/ConstructionInputsPage.tsx");
+=== ConsultantProposalsPage ===
+=== DashboardPage ===
+client/src/App.tsx:11:import ConsultantDashboardPage from "./pages/ConsultantDashboardPage";
+client/src/App.tsx:16:import AgentDashboardPage from "./pages/AgentDashboardPage";
+client/src/App.tsx:36:import ExecutionDashboardPage from "./pages/ExecutionDashboardPage";
+client/src/App.tsx:58:import RiskDashboardPage from "./pages/RiskDashboardPage";
+client/src/App.tsx:93:      <Route path="/consultant-dashboard" component={ConsultantDashboardPage} />
+client/src/App.tsx:98:      <Route path="/agent-dashboard" component={AgentDashboardPage} />
+client/src/App.tsx:130:      <Route path="/execution-dashboard" component={ExecutionDashboardPage} />
+client/src/App.tsx:145:      <Route path="/risk-dashboard" component={RiskDashboardPage} />
+client/src/pages/AgentDashboardPage.tsx:77:export default function AgentDashboardPage() {
+client/src/pages/ConsultantDashboardPage.tsx:7:export default function ConsultantDashboardPage() {
+client/src/pages/ExecutionDashboardPage.tsx:162:export default function ExecutionDashboardPage() {
+client/src/pages/FeasibilityHubPage.tsx:14:import RiskDashboardPage from "./RiskDashboardPage";
+=== DevelopmentStagesSimplified ===
+=== FeasibilityHubPage ===
+=== FeasibilityStudySimplified ===
+=== FinancialEvaluationScreen ===
+client/src/pages/CommandCenterPage.tsx:115:import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
+client/src/pages/CommandCenterPage.tsx:2443:    return <FinancialEvaluationScreen projectId={cpaProjectId} onBack={() => setActiveTab(null)} />;
+=== FinancialFeasibilityTab ===
+client/src/pages/FeasibilityHubPage.tsx:10:import FinancialFeasibilityTab from "./FinancialFeasibilityTab";
+client/src/pages/FeasibilityHubPage.tsx:224:          <FinancialFeasibilityTab initialProjectId={selectedProjectId} />
+client/src/pages/FeasibilityStudyPage.tsx:348:  // Queries for real revenue/costs calculation (same source as FinancialFeasibilityTab)
+=== FlexiblePhasesTab ===
+=== GeneralInputsPage ===
+client/src/pages/UnifiedProjectCardPage.tsx:2:import GeneralInputsPage from "./GeneralInputsPage";
+client/src/pages/UnifiedProjectCardPage.tsx:21:          <GeneralInputsPage embedded hideDocumentFields hideProjectSelector />
+server/unifiedProjectCard.test.ts:11:  const generalInputs = read("client/src/pages/GeneralInputsPage.tsx");
+server/unifiedProjectCard.test.ts:17:    expect(unified).toContain("<GeneralInputsPage embedded hideDocumentFields hideProjectSelector />");
+server/numberPresentationStandard.test.ts:22:      "client/src/pages/GeneralInputsPage.tsx",
+=== KnowledgeHubPage ===
+client/src/pages/ProjectManagementPage.tsx:6:import KnowledgeHubPage from "./KnowledgeHubPage";
+client/src/pages/ProjectManagementPage.tsx:59:    return <KnowledgeHubPage onBack={() => setActiveView("icons")} />;
+=== ProjectLifecyclePage ===
+client/src/App.tsx:50:import ProjectLifecyclePage from "./pages/ProjectLifecycleSimplified";
+client/src/App.tsx:104:      <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
+client/src/pages/DevelopmentPhasesPage.tsx:24:import ProjectLifecyclePage from "./ProjectLifecyclePage";
+client/src/pages/DevelopmentPhasesPage.tsx:435:      {activeView === "compliance" && <ProjectLifecyclePage embedded onProjectChange={setSharedProjectId} />}
+server/sharedProjectSync.test.ts:3: * between ProjectLifecyclePage and WorkSchedulePage.
+=== SettingsRulesPage ===
+client/src/pages/BateekhaPage.tsx:14:const SettingsRulesPage = lazy(() => import("./SettingsRulesPage"));
+client/src/pages/BateekhaPage.tsx:67:    case "settings": return <SettingsRulesPage embedded />;
+server/financialStudiesVisualLanguage.test.ts:16:  const settings = source("client/src/pages/SettingsRulesPage.tsx");
+=== TimeDistributionTab ===
+client/src/pages/FeasibilityHubPage.tsx:11:import TimeDistributionTab from "./TimeDistributionTab";
+client/src/pages/FeasibilityHubPage.tsx:229:          <TimeDistributionTab initialProjectId={selectedProjectId} />
+=== TimelinePage ===
+client/src/pages/BateekhaPage.tsx:22:const TimelinePage = lazy(() => import("./TimelinePage"));
+client/src/pages/BateekhaPage.tsx:66:    case "timeline": return <TimelinePage embedded />;
+server/financialStudiesVisualLanguage.test.ts:15:  const timeline = source("client/src/pages/TimelinePage.tsx");
+=== TrueCostReportPDF ===
+=== TrueCostReportScreen ===
+client/src/pages/CPAPage.tsx:60:import TrueCostReportScreen from "./TrueCostReportScreen";
+client/src/pages/CPAPage.tsx:3012:          <TrueCostReportScreen
+=== TrueCostReportView ===
+client/src/pages/CommandCenterPage.tsx:114:import TrueCostReportView from "./TrueCostReportView";
+client/src/pages/CommandCenterPage.tsx:2461:    return <TrueCostReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+=== UnifiedProjectCardPage ===
+client/src/pages/BateekhaPage.tsx:10:const UnifiedProjectCardPage = lazy(() => import("./UnifiedProjectCardPage"));
+client/src/pages/BateekhaPage.tsx:62:    case "general": return <UnifiedProjectCardPage />;
+server/unifiedProjectCard.test.ts:8:  const unified = read("client/src/pages/UnifiedProjectCardPage.tsx");
+server/unifiedProjectCard.test.ts:23:    expect(financialStudies).toContain('const UnifiedProjectCardPage = lazy(() => import("./UnifiedProjectCardPage"))');
+server/unifiedProjectCard.test.ts:24:    expect(financialStudies).toContain('return <UnifiedProjectCardPage />;');
+=== V2CapitalPortfolio ===
+client/src/pages/BateekhaPage.tsx:21:const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
+client/src/pages/BateekhaPage.tsx:75:    case "capital_portfolio": return <V2CapitalPortfolio />;
+server/legacyPortfolioCleanup.test.ts:30:    expect(financialStudiesSource).toContain("V2CapitalPortfolio");
+server/portfolioAggregation.test.ts:82:    const capitalSource = readSource("client/src/pages/V2CapitalPortfolio.tsx");
+server/numberPresentationStandard.test.ts:26:      "client/src/pages/V2CapitalPortfolio.tsx",
+server/financialStudiesVisualLanguage.test.ts:19:  const capitalPortfolio = source("client/src/pages/V2CapitalPortfolio.tsx");
+=== V2PortfolioEscrowLiquidity ===
+client/src/pages/BateekhaPage.tsx:20:const V2PortfolioEscrowLiquidity = lazy(() => import("./V2PortfolioEscrowLiquidity"));
+client/src/pages/BateekhaPage.tsx:74:    case "portfolio_escrow_liquidity": return <V2PortfolioEscrowLiquidity />;
+=== V2PortfolioMonthly ===
+client/src/pages/BateekhaPage.tsx:19:const V2PortfolioMonthly = lazy(() => import("./V2PortfolioMonthly"));
+client/src/pages/BateekhaPage.tsx:73:    case "portfolio_monthly": return <V2PortfolioMonthly />;
+server/portfolioAggregation.test.ts:81:    const monthlySource = readSource("client/src/pages/V2PortfolioMonthly.tsx");
+server/financialStudiesVisualLanguage.test.ts:18:  const portfolioMonthly = source("client/src/pages/V2PortfolioMonthly.tsx");

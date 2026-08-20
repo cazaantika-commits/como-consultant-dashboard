@@ -1,0 +1,34 @@
+=== PAGE FILES WITH NO APP ROUTE IMPORT ===
+client/src/pages/CPASettingsMatrices.tsx
+client/src/pages/CapitalScheduleTablePage.tsx
+client/src/pages/CapitalSchedulingHorizontal.tsx
+client/src/pages/ComponentShowcase.tsx
+client/src/pages/ConstructionInputsPage.tsx
+client/src/pages/ConsultantProposalsPage.tsx
+client/src/pages/DashboardPage.tsx
+client/src/pages/DevelopmentStagesSimplified.tsx
+client/src/pages/FeasibilityHubPage.tsx
+client/src/pages/FeasibilityStudySimplified.tsx
+client/src/pages/FinancialEvaluationScreen.tsx
+client/src/pages/FinancialFeasibilityTab.tsx
+client/src/pages/FlexiblePhasesTab.tsx
+client/src/pages/GeneralInputsPage.tsx
+client/src/pages/KnowledgeHubPage.tsx
+client/src/pages/ProjectLifecyclePage.tsx
+client/src/pages/SettingsRulesPage.tsx
+client/src/pages/TimeDistributionTab.tsx
+client/src/pages/TimelinePage.tsx
+client/src/pages/TrueCostReportPDF.tsx
+client/src/pages/TrueCostReportScreen.tsx
+client/src/pages/TrueCostReportView.tsx
+client/src/pages/UnifiedProjectCardPage.tsx
+client/src/pages/V2CapitalPortfolio.tsx
+client/src/pages/V2PortfolioEscrowLiquidity.tsx
+client/src/pages/V2PortfolioMonthly.tsx
+=== FINANCIAL LIBRARY SYMBOL CROSS-REFERENCES ===
+cashFlowEngine: 10
+projectCashFlowReport: 1
+projectCostsCalc: 11
+investorCashFlowEngine: 16
+salesPlanCashFlow: 6
+portfolioAggregation: 6
