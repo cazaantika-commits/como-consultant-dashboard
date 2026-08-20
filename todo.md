@@ -1375,3 +1375,4 @@
 - [x] Make Wael reload the specific saved scenario rather than arbitrarily selecting the first plan when multiple saved scenarios share an update timestamp
 - [x] Replace the remaining legacy four-field payment summary with the active flexible-stage schedule and correct post-handover installment wording
 - [x] Prevent until-handover installments for late sales from leaking into post-handover escrow months; settle their due portion no later than handover
+- [x] Make Command Center greet the authenticated user by their own name, with a respectful Libyan welcome for Sheikh Issa and a professional Syrian welcome for Wael

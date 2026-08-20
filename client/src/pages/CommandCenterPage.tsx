@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getCommandCenterTokenKey, getPersonaLoginHint, resolveCommandCenterPersona, type CommandCenterPersona } from "@/lib/commandCenterIdentity";
 import {
   FileText,
   ClipboardList,
@@ -221,14 +222,14 @@ function useVoiceRecorder() {
 }
 
 // --- Token Management ---
-function getStoredToken(): string | null {
-  return localStorage.getItem("cc_token");
+function getStoredToken(persona: CommandCenterPersona | null): string | null {
+  return localStorage.getItem(getCommandCenterTokenKey(persona)) || localStorage.getItem("cc_token");
 }
-function setStoredToken(token: string) {
-  localStorage.setItem("cc_token", token);
+function setStoredToken(token: string, persona: CommandCenterPersona | null) {
+  localStorage.setItem(getCommandCenterTokenKey(persona), token);
 }
-function clearStoredToken() {
-  localStorage.removeItem("cc_token");
+function clearStoredToken(persona: CommandCenterPersona | null) {
+  localStorage.removeItem(getCommandCenterTokenKey(persona));
 }
 
 // --- Evaluation Criteria (same as platform) ---
@@ -377,7 +378,7 @@ const PRIORITY_LABELS: Record<string, { label: string; color: string }> = {
 // ═══════════════════════════════════════════════════════
 // LOGIN SCREEN
 // ═══════════════════════════════════════════════════════
-function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
+function LoginScreen({ onLogin, hint }: { onLogin: (token: string) => void; hint?: string | null }) {
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -408,6 +409,7 @@ function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">مركز القيادة</h1>
           <p className="text-slate-400 text-sm mt-1">COMO Developments — Command Center</p>
+          {hint && <p className="text-amber-300 text-sm mt-3 font-medium">{hint}</p>}
         </div>
 
         {/* Login Card */}
@@ -4769,10 +4771,17 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
 // MAIN PAGE COMPONENT
 // ═══════════════════════════════════════════════════════
 export default function CommandCenterPage() {
-  const [token, setToken] = useState<string | null>(getStoredToken);
+  const { user } = useAuth();
+  const authenticatedPersona = resolveCommandCenterPersona(user as any);
+  const [token, setToken] = useState<string | null>(null);
   const [member, setMember] = useState<any>(null);
   const [authError, setAuthError] = useState("");
-  const { user } = useAuth();
+
+  useEffect(() => {
+    setToken(getStoredToken(authenticatedPersona));
+    setMember(null);
+    setAuthError("");
+  }, [authenticatedPersona]);
 
   // Check URL for token parameter
   useEffect(() => {
@@ -4780,11 +4789,11 @@ export default function CommandCenterPage() {
     const urlToken = params.get("token");
     if (urlToken) {
       setToken(urlToken);
-      setStoredToken(urlToken);
+      setStoredToken(urlToken, authenticatedPersona);
       // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [authenticatedPersona]);
 
   // Verify token
   const verification = trpc.commandCenter.verifyAccess.useQuery(
@@ -4797,28 +4806,40 @@ export default function CommandCenterPage() {
 
   useEffect(() => {
     if (verification.data) {
+      if (authenticatedPersona && verification.data.memberId !== authenticatedPersona) {
+        clearStoredToken(authenticatedPersona);
+        localStorage.removeItem("cc_token");
+        setToken(null);
+        setMember(null);
+        setAuthError("رمز الدخول لا يطابق هوية المستخدم الحالية");
+        return;
+      }
+      if (token) {
+        setStoredToken(token, authenticatedPersona);
+        localStorage.removeItem("cc_token");
+      }
       setMember(verification.data);
       setAuthError("");
     }
-  }, [verification.data]);
+  }, [verification.data, authenticatedPersona, token]);
 
   useEffect(() => {
     if (verification.error) {
       setAuthError("رمز الدخول غير صالح");
-      clearStoredToken();
+      clearStoredToken(authenticatedPersona);
       setToken(null);
       setMember(null);
     }
-  }, [verification.error]);
+  }, [verification.error, authenticatedPersona]);
 
   const handleLogin = (newToken: string) => {
     setToken(newToken);
-    setStoredToken(newToken);
+    setStoredToken(newToken, authenticatedPersona);
     setAuthError("");
   };
 
   const handleLogout = () => {
-    clearStoredToken();
+    clearStoredToken(authenticatedPersona);
     setToken(null);
     setMember(null);
   };
@@ -4844,7 +4865,7 @@ export default function CommandCenterPage() {
 
   // Not authenticated
   if (!token || !member) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return <LoginScreen onLogin={handleLogin} hint={getPersonaLoginHint(authenticatedPersona)} />;
   }
 
   // Authenticated - show dashboard

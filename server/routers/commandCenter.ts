@@ -61,6 +61,13 @@ function isHistoricalTestEvaluationSession(title: string | null) {
   return (title || "").includes("تجريبية للاختبار");
 }
 
+function getPersonalizedGreeting(memberId: string, fallback: string | null) {
+  if (memberId === "wael") return "أهلاً وائل، شو بتحب نراجع اليوم؟";
+  if (memberId === "sheikh_issa") return "يا مرحبا شيخ عيسى، شنو تحب نراجع اليوم؟";
+  if (memberId === "abdulrahman") return "أهلاً عبدالرحمن، مركز القيادة بانتظارك";
+  return fallback || "أهلاً بك في مركز القيادة";
+}
+
 export const commandCenterRouter = router({
   // ═══ Authentication ═══
   
@@ -75,7 +82,7 @@ export const commandCenterRouter = router({
         nameAr: member.nameAr,
         role: member.role,
         memberId: member.memberId,
-        greeting: member.greeting,
+        greeting: getPersonalizedGreeting(member.memberId, member.greeting),
         avatarUrl: member.avatarUrl,
       };
     }),
