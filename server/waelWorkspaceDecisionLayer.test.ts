@@ -103,7 +103,8 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("return `${monthNames[offset % 12]} ${startYear + Math.floor(offset / 12)}`");
     expect(workspaceSource).toContain('data-testid="unified-month-card"');
     expect(workspaceSource).toContain('const monthlyCollection = cashRow?.cashInflow ?? 0');
-    expect(workspaceSource).toContain('const monthlyEscrowBalance = isBuildForSale ? null : escrowRow?.balance ?? null');
+    expect(workspaceSource).toContain('const monthlyEscrowBalance = isBuildForSale ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null');
+    expect(workspaceSource).toContain('calculateEscrowMonthlyBalance');
     expect(workspaceSource).toContain('قيمة بيع متوقعة');
     expect(workspaceSource).toContain('رصيد الإسكرو');
   });

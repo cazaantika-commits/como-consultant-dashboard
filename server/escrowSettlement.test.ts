@@ -1,10 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
+import { calculateEscrowMonthlyBalance, calculateEscrowSettlement } from "../client/src/lib/escrowSettlement";
 import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("uses the engine rows and actual buyer collections as the only source of a displayed escrow balance", () => {
+    const rows = [
+      { label: "إيداع حساب الضمان (20%)", funder: "investor", isTransfer: true, designMonths: [100], constructionMonths: [0], postConstructionMonths: Array(13).fill(0) },
+      { label: "مصروف إسكرو", funder: "escrow", designMonths: [10], constructionMonths: [20], postConstructionMonths: Array(13).fill(0) },
+    ];
+    const balance = calculateEscrowMonthlyBalance({
+      rows,
+      designDuration: 1,
+      constructionDuration: 1,
+      postDuration: 13,
+      salesResult: {
+        actualCashInflow: [0, 50],
+        // A legacy presentation balance must never affect the shared balance.
+        escrowData: [{ month: 2, income: 999_999, balance: -999_999 } as any],
+      },
+    });
+
+    expect(balance.depositValues.slice(0, 2)).toEqual([100, 0]);
+    expect(balance.salesIncomeValues.slice(0, 2)).toEqual([0, 50]);
+    expect(balance.cumulativeWithoutLiquidation.slice(0, 2)).toEqual([90, 120]);
+    expect(balance.cumulative[balance.cumulative.length - 1]).toBe(0);
+  });
   it("retains five percent of buyer collections, covers later obligations, and closes at zero in month thirteen", () => {
     const baseline = [0, 500, 700, 685, 670];
     const result = calculateEscrowSettlement({

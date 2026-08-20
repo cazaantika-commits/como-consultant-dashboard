@@ -1339,3 +1339,5 @@
 - [x] Rebase Build-for-Sale direct-sale receipts and matching commissions whenever the project end month changes
 - [x] Hide inapplicable Build-for-Sale settings and display the correct Build-for-Rent payment-rule descriptions without changing financial calculations
 - [x] Make Feasibility Study and Escrow Cash Flow consume the shared saved Sales Plan adapter so corrected timing and settings cannot diverge between reports
+- [x] Reconcile the monthly escrow balance displayed in Wael Sales with the matching balance in Escrow Cash Flow, then repair the shared source of any difference
+- [x] Make Wael’s minimum escrow balance ignore pre-deposit zero months, matching the Escrow Cash Flow working-balance rule

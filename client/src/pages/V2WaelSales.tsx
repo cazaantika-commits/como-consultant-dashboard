@@ -31,6 +31,8 @@ import {
   calculatePricingFormulas,
   calculateCosts,
 } from "@/lib/projectData";
+import { computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
+import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -101,7 +103,8 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
-  const isBuildForSale = (projectQuery.data as any)?.financingScenario === "build_for_sale";
+  const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
+  const isBuildForSale = scenario === "build_for_sale";
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -395,15 +398,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
     });
   }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
-  const maxDeficit = escrowData.length > 0 ? Math.min(...escrowData.map((d) => d.balance)) : 0;
-  const hasDeficit = maxDeficit < 0;
-  const criticalMonth = useMemo(() => {
-    if (escrowData.length === 0) return null;
-    let minBalance = Infinity;
-    let minIdx = 0;
-    escrowData.forEach((d, i) => { if (d.balance < minBalance) { minBalance = d.balance; minIdx = i; } });
-    return escrowData[minIdx];
-  }, [escrowData]);
   const visibleTimelinePhases = isBuildForSale
     ? PROJECT_PHASES.filter((phase) => ["design", "marketing", "sales", "construction"].includes(phase.id))
     : PROJECT_PHASES;
@@ -464,6 +458,67 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     const persistedCashInflow = Array.from({ length: cashFlowHorizon }, (_, i) => cashPerMonth[i + 1] || 0);
     return { cashInflowData: data, perSaleGrid: grid, activeSaleMonths: saleMonthsList, actualCashInflow: persistedCashInflow };
   }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct, isBuildForSale, salesStartMonth, salesEndMonth]);
+
+  // The live workspace uses the same cash-flow engine and account-balance
+  // helper as the Escrow report. Therefore a saved scenario cannot show two
+  // different balances for the same project month.
+  const liveProjectData = useMemo(() => {
+    const project = projectQuery.data as any;
+    if (!project) return null;
+    return {
+      ...project,
+      ...Object.fromEntries(UNIT_TYPES.map((unit) => [unit.dbPrice, unitData[unit.id]?.price ?? project[unit.dbPrice]])),
+    };
+  }, [projectQuery.data, unitData]);
+  const liveSalesResult = useMemo<SalesResult | undefined>(() => {
+    if (isBuildForSale) return undefined;
+    return {
+      escrowData,
+      salesDistribution,
+      actualCashInflow,
+      offplanPct: offPlan,
+      ppDownPct,
+      paymentPlan: {
+        downPct: ppDownPct,
+        secondPct: ppSecondPct,
+        secondAfterMonths: ppSecondAfterMonths,
+        duringTotalPct: ppDuringTotal,
+        installmentEveryMonths: ppInstallmentEvery,
+        handoverPct: ppHandoverPct,
+      },
+    };
+  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, offPlan, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppDuringTotal, ppInstallmentEvery, ppHandoverPct]);
+  const liveCashFlow = useMemo(
+    () => computeInvestorCashFlow(liveProjectData, scenario, undefined, liveSalesResult),
+    [liveProjectData, scenario, liveSalesResult],
+  );
+  const sharedEscrowBalance = useMemo(
+    () => isBuildForSale ? null : calculateEscrowMonthlyBalance({
+      rows: liveCashFlow.rows,
+      designDuration: liveCashFlow.designDuration,
+      constructionDuration: liveCashFlow.constructionDuration,
+      postDuration: liveCashFlow.postDuration,
+      salesResult: liveCashFlow.usedSalesResult || liveSalesResult,
+    }),
+    [isBuildForSale, liveCashFlow, liveSalesResult],
+  );
+  const sharedEscrowMonths = useMemo(() => (sharedEscrowBalance?.cumulative || []).map((balance, index) => ({ month: index + 1, balance })), [sharedEscrowBalance]);
+  const workingEscrowMonths = useMemo(() => {
+    if (!sharedEscrowBalance) return [];
+    const firstFundingIndex = sharedEscrowBalance.inflowTotals.findIndex((value) => value > 0);
+    if (firstFundingIndex < 0) return [];
+    const firstLiquidationIndex = liveCashFlow.designDuration + liveCashFlow.constructionDuration + 2;
+    return sharedEscrowMonths.slice(firstFundingIndex, Math.min(firstLiquidationIndex + 1, sharedEscrowMonths.length));
+  }, [sharedEscrowBalance, sharedEscrowMonths, liveCashFlow.designDuration, liveCashFlow.constructionDuration]);
+  const maxDeficit = workingEscrowMonths.length > 0 ? Math.min(...workingEscrowMonths.map((d) => d.balance)) : 0;
+  const hasDeficit = maxDeficit < 0;
+  const criticalMonth = useMemo(() => {
+    if (workingEscrowMonths.length === 0) return null;
+    let minBalance = Infinity;
+    let minIdx = 0;
+    workingEscrowMonths.forEach((d, i) => { if (d.balance < minBalance) { minBalance = d.balance; minIdx = i; } });
+    return workingEscrowMonths[minIdx];
+  }, [workingEscrowMonths]);
 
   // ─── Save Handlers ────────────────────────────────────────────────────────
   const handleSaveUnits = useCallback(() => {
@@ -774,7 +829,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       const visibleMonths = salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage);
                       const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
                       const maxUnitsInView = Math.max(...visibleMonths, 1);
-                      return <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const salesIndex = pageStartIndex + index; const startMonthIndex = projectStartDate ? Number(projectStartDate.split("-")[1]) - 1 : 0; const monthIndex = projectStartDate ? ((startMonthIndex + absoluteMonth - 1) % 12 + 12) % 12 : -1; const calendarYear = projectStartDate ? Number(projectStartDate.split("-")[0]) + Math.floor((startMonthIndex + absoluteMonth - 1) / 12) : null; const monthLabel = monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`; const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0); const percentage = offPlanUnits ? Math.round((selectedUnits / offPlanUnits) * 100) : 0; const cashRow = cashInflowData.find((row) => row.month === absoluteMonth); const escrowRow = escrowData.find((row) => row.month === absoluteMonth); const monthlyCollection = cashRow?.cashInflow ?? 0; const monthlyEscrowBalance = isBuildForSale ? null : escrowRow?.balance ?? null; return <article key={absoluteMonth} data-testid="unified-month-card" className={`example-sales-month unified-sale-card rounded-xl border p-2 transition-all ${selectedUnits > 0 ? "border-emerald-300 bg-gradient-to-b from-white to-emerald-50/50 shadow-sm" : "border-slate-300 bg-slate-50/70"}`}><div className="flex items-start justify-between"><div><p className="text-xs font-black text-slate-800">{monthLabel}</p>{calendarYear && <p className="mt-0.5 text-[9px] font-black tabular-nums tracking-wide text-slate-500">{calendarYear}</p>}<p className="mt-0.5 text-[9px] font-semibold text-slate-500">شهر المشروع {absoluteMonth}</p></div><span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[9px] font-black text-white">{percentage}%</span></div><div className="mt-2 grid grid-cols-2 gap-1.5"><label><span className="mb-1 block text-[9px] font-bold text-slate-600">الوحدات</span><input aria-label={`وحدات ${monthLabel}`} type="number" min={0} max={offPlanUnits} value={selectedUnits} onChange={(event) => { updateSalesMonth(salesIndex, Number(event.target.value) || 0); setImpactFocus(`${monthLabel} — الوحدات`); }} className="h-9 w-full rounded-lg border border-slate-400 bg-white text-center text-base font-black text-emerald-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></label><label><span className="mb-1 block text-[9px] font-bold text-slate-600">النسبة</span><div className="relative"><input aria-label={`نسبة ${monthLabel}`} type="number" min={0} max={100} value={percentage} onChange={(event) => { updateSalesMonth(salesIndex, Math.round((Math.max(0, Number(event.target.value) || 0) / 100) * offPlanUnits)); setImpactFocus(`${monthLabel} — النسبة`); }} className="h-9 w-full rounded-lg border border-blue-300 bg-blue-50 text-center text-base font-black text-blue-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /><span className="pointer-events-none absolute left-2 top-2.5 text-xs font-black text-blue-500">%</span></div></label></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(100, Math.max(0, (selectedUnits / maxUnitsInView) * 100))}%` }} /></div><p className="mt-1 text-center text-[9px] font-semibold text-slate-600">{fmt(selectedUnits * avgUnitPrice)} AED قيمة بيع متوقعة</p><div className="mt-1.5 grid grid-cols-2 gap-1 border-t border-slate-200 pt-1.5"><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">التحصيل</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-blue-800">{fmt(monthlyCollection)} <span className="text-[7px]">AED</span></p></div><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">{isBuildForSale ? "استلام المستثمر" : "رصيد الإسكرو"}</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-emerald-800">{isBuildForSale ? fmt(monthlyCollection) : monthlyEscrowBalance === null ? "—" : fmt(monthlyEscrowBalance)} <span className="text-[7px]">AED</span></p></div></div></article>; })}</div>;
+                      return <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const salesIndex = pageStartIndex + index; const startMonthIndex = projectStartDate ? Number(projectStartDate.split("-")[1]) - 1 : 0; const monthIndex = projectStartDate ? ((startMonthIndex + absoluteMonth - 1) % 12 + 12) % 12 : -1; const calendarYear = projectStartDate ? Number(projectStartDate.split("-")[0]) + Math.floor((startMonthIndex + absoluteMonth - 1) / 12) : null; const monthLabel = monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`; const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0); const percentage = offPlanUnits ? Math.round((selectedUnits / offPlanUnits) * 100) : 0; const cashRow = cashInflowData.find((row) => row.month === absoluteMonth); const monthlyCollection = cashRow?.cashInflow ?? 0; const monthlyEscrowBalance = isBuildForSale ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null; return <article key={absoluteMonth} data-testid="unified-month-card" className={`example-sales-month unified-sale-card rounded-xl border p-2 transition-all ${selectedUnits > 0 ? "border-emerald-300 bg-gradient-to-b from-white to-emerald-50/50 shadow-sm" : "border-slate-300 bg-slate-50/70"}`}><div className="flex items-start justify-between"><div><p className="text-xs font-black text-slate-800">{monthLabel}</p>{calendarYear && <p className="mt-0.5 text-[9px] font-black tabular-nums tracking-wide text-slate-500">{calendarYear}</p>}<p className="mt-0.5 text-[9px] font-semibold text-slate-500">شهر المشروع {absoluteMonth}</p></div><span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[9px] font-black text-white">{percentage}%</span></div><div className="mt-2 grid grid-cols-2 gap-1.5"><label><span className="mb-1 block text-[9px] font-bold text-slate-600">الوحدات</span><input aria-label={`وحدات ${monthLabel}`} type="number" min={0} max={offPlanUnits} value={selectedUnits} onChange={(event) => { updateSalesMonth(salesIndex, Number(event.target.value) || 0); setImpactFocus(`${monthLabel} — الوحدات`); }} className="h-9 w-full rounded-lg border border-slate-400 bg-white text-center text-base font-black text-emerald-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></label><label><span className="mb-1 block text-[9px] font-bold text-slate-600">النسبة</span><div className="relative"><input aria-label={`نسبة ${monthLabel}`} type="number" min={0} max={100} value={percentage} onChange={(event) => { updateSalesMonth(salesIndex, Math.round((Math.max(0, Number(event.target.value) || 0) / 100) * offPlanUnits)); setImpactFocus(`${monthLabel} — النسبة`); }} className="h-9 w-full rounded-lg border border-blue-300 bg-blue-50 text-center text-base font-black text-blue-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /><span className="pointer-events-none absolute left-2 top-2.5 text-xs font-black text-blue-500">%</span></div></label></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(100, Math.max(0, (selectedUnits / maxUnitsInView) * 100))}%` }} /></div><p className="mt-1 text-center text-[9px] font-semibold text-slate-600">{fmt(selectedUnits * avgUnitPrice)} AED قيمة بيع متوقعة</p><div className="mt-1.5 grid grid-cols-2 gap-1 border-t border-slate-200 pt-1.5"><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">التحصيل</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-blue-800">{fmt(monthlyCollection)} <span className="text-[7px]">AED</span></p></div><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">{isBuildForSale ? "استلام المستثمر" : "رصيد الإسكرو"}</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-emerald-800">{isBuildForSale ? fmt(monthlyCollection) : monthlyEscrowBalance === null ? "—" : fmt(monthlyEscrowBalance)} <span className="text-[7px]">AED</span></p></div></div></article>; })}</div>;
                     })()}
                   </div>
                 </section>

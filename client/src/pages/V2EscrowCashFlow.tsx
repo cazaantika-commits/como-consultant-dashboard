@@ -9,7 +9,7 @@ import {
   type Scenario,
   type CostRow,
 } from "@/lib/investorCashFlowEngine";
-import { calculateEscrowSettlement } from "@/lib/escrowSettlement";
+import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 
@@ -62,10 +62,16 @@ export default function V2EscrowCashFlow() {
 
   const totalMonths = designDuration + constructionDuration + postDuration;
   const projectName = projectQuery.data?.name || "—";
+  const postStartIdx = designDuration + constructionDuration;
+  const liq1MonthIdx = postStartIdx + 2;
+  const liq2MonthIdx = postStartIdx + 12;
 
   // ─── Separate escrow rows: outflows (funder=escrow) and inflows ────────
   // Escrow outflows = items paid FROM escrow (funder=escrow, not revenue)
   const escrowOutflows = rows.filter((r) => r.funder === "escrow" && !r.isRevenue);
+  // Templates supply the two settlement row labels; their live values come from
+  // the shared monthly-balance result below.
+  const liquidationRows = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
   // Escrow inflows = investor deposit (20% construction) + buyer payments from sales
   // The engine doesn't have a separate "escrow inflow" row, so we compute it:
   // - Opening deposit: 20% of construction cost at start of construction
@@ -78,108 +84,25 @@ export default function V2EscrowCashFlow() {
     ...row.postConstructionMonths,
   ];
 
-  // ─── Get liquidation rows (escrow liquidation items transferred to investor post-construction) ───
-  const liquidationRows = rows.filter((r) => r.isRevenue && r.label.includes("تصفية حساب الضمان"));
-
-  // ─── Escrow outflow totals per month ───────────────────────────────────
-  // Include both regular outflows AND liquidation payments
-  const outflowTotals = Array.from({ length: totalMonths }, (_, i) => {
-    // Regular escrow outflows (contractor payments, fees, etc.)
-    let outflow = escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
-    
-    // Add liquidation payments (these are transfers OUT of escrow to investor)
-    for (const row of liquidationRows) {
-      const rowValues = getRowValues(row);
-      outflow += rowValues[i] || 0;
-    }
-    
-    return outflow;
-  });
-
-  // ─── Escrow inflows: deposit + sales income ────────────────────────────
-  // Use the engine's isTransfer row for deposit timing (consistent with investor cash flow)
-  const depositRow = useMemo(() => {
-    const transferRow = rows.find((r) => r.isTransfer);
-    const values = new Array(totalMonths).fill(0);
-    if (transferRow) {
-      const rowValues = [...transferRow.designMonths, ...transferRow.constructionMonths, ...transferRow.postConstructionMonths];
-      for (let i = 0; i < totalMonths && i < rowValues.length; i++) {
-        values[i] = rowValues[i];
-      }
-    }
-    return { label: transferRow?.label || "إيداع المستثمر", values };
-  }, [rows, totalMonths]);
-
-  // Sales income from escrowData (monthly buyer payments flowing into escrow)
-  // Use the engine's usedSalesResult which includes the default generated data when no saved plan exists
+  // Sales income from the engine's used Sales Plan (including its generated fallback).
   const effectiveSalesResult = data.usedSalesResult || salesResult;
-  const salesIncomeRow = useMemo(() => {
-    const values = new Array(totalMonths).fill(0);
-    // Priority 1: Use actualCashInflow from saved sales plan (single source of truth)
-    if (effectiveSalesResult && (effectiveSalesResult as any).actualCashInflow && (effectiveSalesResult as any).actualCashInflow.length > 0) {
-      const actualCashInflow = (effectiveSalesResult as any).actualCashInflow as number[];
-      for (let i = 0; i < actualCashInflow.length && i < totalMonths; i++) {
-        values[i] = actualCashInflow[i] || 0;
-      }
-    }
-    // Priority 2: Fall back to escrowData if actualCashInflow not available
-    else if (effectiveSalesResult && effectiveSalesResult.escrowData.length > 0) {
-      for (const entry of effectiveSalesResult.escrowData) {
-        // entry.month is 1-indexed absolute month from project start
-        const idx = entry.month - 1;
-        if (idx >= 0 && idx < totalMonths) {
-          values[idx] += entry.income;
-        }
-      }
-    }
-    return { label: "مبيعات أوف بلان (أقساط المشترين)", values };
-  }, [totalMonths, effectiveSalesResult]);
+  const escrowBalance = useMemo(() => calculateEscrowMonthlyBalance({
+    rows,
+    designDuration,
+    constructionDuration,
+    postDuration,
+    salesResult: effectiveSalesResult,
+  }), [rows, designDuration, constructionDuration, postDuration, effectiveSalesResult]);
+  const depositRow = { label: escrowBalance.depositLabel, values: escrowBalance.depositValues };
+  const salesIncomeRow = { label: "مبيعات أوف بلان (أقساط المشترين)", values: escrowBalance.salesIncomeValues };
 
   const inflowRows = [depositRow, salesIncomeRow];
-  const inflowTotals = Array.from({ length: totalMonths }, (_, i) =>
-    inflowRows.reduce((s, r) => s + r.values[i], 0)
-  );
-
-  // ─── Net flow and cumulative balance ───────────────────────────────────
-  // Calculate net flow and cumulative balance with proper liquidation handling
-  // Liquidation payments should drain the escrow balance to zero:
-  // - Month 3 after completion: transfer all balance minus 5% retention to investor
-  // - Month 13 after completion: transfer remaining balance (5% retention minus contractor retention) to investor
-  const postStartIdx = designDuration + constructionDuration;
-  const liq1MonthIdx = postStartIdx + 2; // Month 3 after completion (0-indexed: +2)
-  const liq2MonthIdx = postStartIdx + 12; // Month 13 after completion (0-indexed: +12)
-
-  // First pass: calculate cumulative WITHOUT liquidation to find actual balance at liquidation months
-  const outflowsWithoutLiq = Array.from({ length: totalMonths }, (_, i) => {
-    return escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
-  });
-  const netFlowNoLiq = outflowsWithoutLiq.map((d, i) => inflowTotals[i] - d);
-  const cumulativeNoLiq = netFlowNoLiq.reduce<number[]>((acc, v) => {
-    acc.push((acc[acc.length - 1] || 0) + v);
-    return acc;
-  }, []);
-
-  const { firstLiquidation: actualLiq1, finalLiquidation: actualLiq2 } = calculateEscrowSettlement({
-    cumulativeWithoutLiquidation: cumulativeNoLiq,
-    firstLiquidationIndex: liq1MonthIdx,
-    finalLiquidationIndex: liq2MonthIdx,
-    actualSalesCashInflow: salesIncomeRow.values,
-  });
-
-  // Final outflow totals with corrected liquidation amounts
-  const finalOutflowTotals = Array.from({ length: totalMonths }, (_, i) => {
-    let outflow = escrowOutflows.reduce((s, r) => s + getRowValues(r)[i], 0);
-    if (i === liq1MonthIdx) outflow += actualLiq1;
-    if (i === liq2MonthIdx) outflow += actualLiq2;
-    return outflow;
-  });
-
-  const netFlow = finalOutflowTotals.map((d, i) => inflowTotals[i] - d);
-  const cumulative = netFlow.reduce<number[]>((acc, v) => {
-    acc.push((acc[acc.length - 1] || 0) + v);
-    return acc;
-  }, []);
-
+  const inflowTotals = escrowBalance.inflowTotals;
+  const actualLiq1 = escrowBalance.firstLiquidation;
+  const actualLiq2 = escrowBalance.finalLiquidation;
+  const finalOutflowTotals = escrowBalance.outflowTotals;
+  const netFlow = escrowBalance.netFlow;
+  const cumulative = escrowBalance.cumulative;
   const totalOutflow = finalOutflowTotals.reduce((s, v) => s + v, 0);
   const totalInflow = inflowTotals.reduce((s, v) => s + v, 0);
   const finalBalance = cumulative[cumulative.length - 1] || 0;
