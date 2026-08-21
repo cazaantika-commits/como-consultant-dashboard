@@ -5,6 +5,9 @@ import {
 } from "../client/src/lib/portfolioAggregation";
 import fs from "node:fs";
 import path from "node:path";
+import { buildInvestorMonthlyTrace, combineFinancialTraceBreakdowns } from "../client/src/lib/financialTraceBreakdown";
+import { reconcileTraceRounding } from "../client/src/lib/financialTraceRounding";
+import type { CashFlowResult, CostRow } from "../client/src/lib/investorCashFlowEngine";
 
 describe("Project Aggregation calendar-aligned net investor flows", () => {
   it("uses the real earliest and latest active months while preserving a zero month between them", () => {
@@ -83,6 +86,8 @@ describe("Consolidated report source trace", () => {
 
     expect(traceSource).toContain("مصدر الرقم");
     expect(traceSource).toContain("تفصيل التجميع");
+    expect(traceSource).toContain("تفصيل بنود الحركة");
+    expect(traceSource).toContain("التحصيلات − المصاريف = صافي الشهر");
     expect(aggregationSource).toContain("FinancialSourceValue");
     expect(aggregationSource).toContain("صافي الشهر من تدفقات المستثمر");
     expect(monthlySource).toContain("FinancialSourceValue");
@@ -90,5 +95,52 @@ describe("Consolidated report source trace", () => {
     expect(capitalSource).toContain("FinancialSourceValue");
     expect(capitalSource).toContain("إجمالي الإيرادات");
     expect(capitalSource).toContain("التكلفة الكلية");
+  });
+});
+
+describe("Financial source expense and receipt breakdown", () => {
+  const row = (overrides: Partial<CostRow>): CostRow => ({
+    label: "بند",
+    totalCost: 0,
+    investorAmount: 0,
+    paid: 0,
+    unpaid: 0,
+    funder: "investor",
+    section: "design",
+    designMonths: [0],
+    constructionMonths: [],
+    postConstructionMonths: [],
+    ...overrides,
+  });
+
+  it("shows the exact expense and receipt rows whose difference is the displayed net amount", () => {
+    const cashFlow = {
+      rows: [
+        row({ label: "أتعاب التصميم", totalCost: 100, investorAmount: 100, unpaid: 100, designMonths: [100] }),
+        row({ label: "تحصيل مبيعات", totalCost: 250, investorAmount: 250, unpaid: 250, isRevenue: true, designMonths: [250] }),
+      ],
+      designDuration: 1,
+      constructionDuration: 0,
+      postDuration: 0,
+    } as unknown as CashFlowResult;
+
+    const detail = buildInvestorMonthlyTrace(cashFlow)[0];
+    expect(detail?.expenses).toEqual([{ name: "أتعاب التصميم", value: 100 }]);
+    expect(detail?.receipts).toEqual([{ name: "تحصيل مبيعات", value: 250 }]);
+    expect(detail?.expenseTotal).toBe(100);
+    expect(detail?.receiptTotal).toBe(250);
+    expect(detail?.net).toBe(150);
+
+    const combined = combineFinancialTraceBreakdowns([detail, detail]);
+    expect(combined.expenseTotal).toBe(200);
+    expect(combined.receiptTotal).toBe(500);
+    expect(combined.net).toBe(300);
+  });
+
+  it("states a display-only rounding reconciliation when rounded line items differ from the rounded source total", () => {
+    const rounding = reconcileTraceRounding([{ value: 10.6 }, { value: 10.6 }], 21);
+    expect(rounding.displayedLineItemsTotal).toBe(22);
+    expect(rounding.displayedTotal).toBe(21);
+    expect(rounding.roundingDifference).toBe(-1);
   });
 });

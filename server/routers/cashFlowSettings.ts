@@ -40,6 +40,7 @@ import {
 } from "../../client/src/lib/investorCashFlowEngine";
 import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
+import { buildInvestorMonthlyFundingTrace, buildInvestorMonthlyTrace } from "../../client/src/lib/financialTraceBreakdown";
 import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
 import { calculateEscrowMonthlyBalance, summarizeEscrowLiquidity } from "../../client/src/lib/escrowSettlement";
 
@@ -2539,6 +2540,7 @@ export const cashFlowSettingsRouter = router({
       );
       const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
       const monthlyNet = calculateInvestorMonthlyNet(cashFlow, salesResult).netFlow;
+      const monthlyTrace = buildInvestorMonthlyTrace(cashFlow, salesResult);
 
       return {
         projectId: project.id,
@@ -2547,6 +2549,7 @@ export const cashFlowSettingsRouter = router({
         startDate: cashFlow.startDate,
         monthDates: cashFlow.monthDates.slice(0, monthlyNet.length),
         monthlyNet,
+        monthlyTrace,
       };
     });
   }),
@@ -2689,6 +2692,10 @@ export const cashFlowSettingsRouter = router({
           .reduce((sum, row) => sum + row.totalCost, 0);
         const totalRevenue = cashFlow.totalRevenue;
         const monthlyFunding = calculateInvestorMonthlyFundingRequirements(cashFlow);
+        const monthlyFundingTrace = buildInvestorMonthlyFundingTrace(cashFlow);
+        const costLineItems = cashFlow.rows
+          .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation && Math.abs(row.totalCost) > 0.000001)
+          .map((row) => ({ name: row.label, value: row.totalCost }));
 
         return {
           projectId: project.id,
@@ -2697,6 +2704,8 @@ export const cashFlowSettingsRouter = router({
           startDate: cashFlow.startDate,
           monthDates: cashFlow.monthDates.slice(0, monthlyFunding.length),
           monthlyFunding,
+          monthlyFundingTrace,
+          costLineItems,
           totalRevenue,
           totalCosts,
           grossProfitBeforeDeveloperShare: totalRevenue - totalCosts,

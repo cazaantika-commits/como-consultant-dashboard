@@ -1381,3 +1381,5 @@
 - [x] Read the approved Google Drive project documents for every project and record only verified extractable data in the appropriate project-card fields
 - [x] Verify in the browser that all restored reports and Khazan-extracted fields display against the correct selected project, then document the evidence
 - [x] Prevent Khazan from writing document-derived GFA into the protected financial BUA field, then re-run and verify the affected project write path
+- [x] Expand each consolidated-report source dialog to show the documented collection and expense line items, their subtotals, and the resulting net amount without changing calculations
+- [x] Reconcile whole-number rounding in source-dialog line items so their displayed sum exactly matches the displayed source total, with any rounding difference stated explicitly

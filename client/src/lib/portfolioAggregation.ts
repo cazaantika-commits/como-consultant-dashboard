@@ -1,3 +1,5 @@
+import type { FinancialTraceBreakdown } from "@/lib/financialTraceBreakdown";
+
 export type PortfolioProjectMonthlyNet = {
   projectId: number;
   name: string | null;
@@ -5,6 +7,7 @@ export type PortfolioProjectMonthlyNet = {
   startDate: string;
   monthDates: string[];
   monthlyNet: number[];
+  monthlyTrace?: FinancialTraceBreakdown[];
 };
 
 export type CalendarAlignedRow = {
@@ -12,6 +15,7 @@ export type CalendarAlignedRow = {
   name: string;
   financingScenario: string;
   values: number[];
+  monthlyTrace?: FinancialTraceBreakdown[];
 };
 
 export type CalendarAlignedPortfolio = {
@@ -57,14 +61,20 @@ export function alignPortfolioMonthlyNetFlows(
 
   const rows = projects.map((project) => {
     const monthlyByDate = new Map<string, number>();
+    const traceByDate = new Map<string, FinancialTraceBreakdown>();
     project.monthDates.forEach((date, index) => {
       monthlyByDate.set(date, Number(project.monthlyNet[index]) || 0);
+      const trace = project.monthlyTrace?.[index];
+      if (trace) traceByDate.set(date, trace);
     });
     return {
       projectId: project.projectId,
       name: project.name || `مشروع ${project.projectId}`,
       financingScenario: project.financingScenario,
       values: monthDates.map((date) => monthlyByDate.get(date) || 0),
+      monthlyTrace: project.monthlyTrace ? monthDates.map((date) => traceByDate.get(date) || {
+        expenses: [], receipts: [], expenseTotal: 0, receiptTotal: 0, net: 0,
+      }) : undefined,
     };
   });
 
@@ -95,6 +105,19 @@ export function groupCalendarAlignedPortfolio(
     rows: portfolio.rows.map((row, rowIndex) => ({
       ...row,
       values: periods.map((period) => period.values[rowIndex] || 0),
+      monthlyTrace: row.monthlyTrace ? periods.map((_, periodIndex) => {
+        const details = row.monthlyTrace?.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize) || [];
+        const merge = (kind: "expenses" | "receipts") => {
+          const valuesByName = new Map<string, number>();
+          for (const detail of details) for (const item of detail[kind]) valuesByName.set(item.name, (valuesByName.get(item.name) || 0) + item.value);
+          return [...valuesByName.entries()].map(([name, value]) => ({ name, value })).filter((item) => Math.abs(item.value) > 0.000001);
+        };
+        const expenses = merge("expenses");
+        const receipts = merge("receipts");
+        const expenseTotal = expenses.reduce((sum, item) => sum + item.value, 0);
+        const receiptTotal = receipts.reduce((sum, item) => sum + item.value, 0);
+        return { expenses, receipts, expenseTotal, receiptTotal, net: receiptTotal - expenseTotal };
+      }) : undefined,
     })),
     totals: periods.map((period) => period.values.reduce((sum, value) => sum + value, 0)),
   };

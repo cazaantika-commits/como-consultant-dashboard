@@ -9,6 +9,7 @@ import {
   type PortfolioProjectMonthlyNet,
 } from "@/lib/portfolioAggregation";
 import { formatFullNumber } from "@/lib/numberFormat";
+import type { FinancialTraceBreakdown, FinancialTraceLineItem } from "@/lib/financialTraceBreakdown";
 
 const MONTH_NAMES = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -31,6 +32,8 @@ type CapitalProject = {
   startDate: string;
   monthDates: string[];
   monthlyFunding: number[];
+  monthlyFundingTrace: FinancialTraceBreakdown[];
+  costLineItems: FinancialTraceLineItem[];
   totalRevenue: number;
   totalCosts: number;
   grossProfitBeforeDeveloperShare: number;
@@ -184,11 +187,11 @@ export default function V2CapitalPortfolio() {
                     <td className="sticky right-0 z-10 border-l border-slate-200 bg-inherit px-3 py-2 text-right font-bold text-slate-800"><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{project.name}</span></td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-bold text-slate-600">{scenarioLabel(project.financingScenario)}</td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-emerald-700"><FinancialSourceValue testId={`capital-trace-revenue-${project.projectId}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "إجمالي الإيرادات", rule: "إجمالي الإيراد من محرك تدفق المستثمر وتسعير الوحدات المعتمد.", value: project.totalRevenue }}>{formatAmount(project.totalRevenue)}</FinancialSourceValue></td>
-                    <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold"><FinancialSourceValue testId={`capital-trace-cost-${project.projectId}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "التكلفة الكلية", rule: "جمع صفوف تكلفة تدفق المستثمر؛ لا يشمل التحويلات أو صفوف الإيراد أو حصة الربح.", value: project.totalCosts }}>{formatAmount(project.totalCosts)}</FinancialSourceValue></td>
+                    <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold"><FinancialSourceValue testId={`capital-trace-cost-${project.projectId}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "التكلفة الكلية", rule: "جمع صفوف تكلفة تدفق المستثمر؛ لا يشمل التحويلات أو صفوف الإيراد أو حصة الربح.", value: project.totalCosts, movement: "expense", expenses: project.costLineItems }}>{formatAmount(project.totalCosts)}</FinancialSourceValue></td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-slate-900"><FinancialSourceValue testId={`capital-trace-required-${project.projectId}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "رأس المال المطلوب", rule: "الحد الأدنى التراكمي لصافي المستثمر، أي ذروة التمويل بعد العوائد.", value: project.requiredCapital }}>{formatAmount(project.requiredCapital)}</FinancialSourceValue></td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-emerald-700">{formatAmount(project.paidCapital)}</td>
                     <td className="border-l border-slate-100 px-2 py-2 text-center font-semibold text-rose-700">{formatAmount(project.remainingCapital)}</td>
-                    {projectedFunding.map((value, monthIndex) => <td key={monthIndex} className={`border-l border-slate-100 px-2 py-2 text-center font-semibold ${value > 0 ? "bg-violet-50 text-violet-800" : "text-slate-300"}`}>{value > 0 ? <FinancialSourceValue testId={`capital-trace-funding-${project.projectId}-${monthIndex}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "دفعة مستقبلية مطلوبة من المستثمر", period: formatPeriod(groupedPortfolio.periods[monthIndex].startDate, groupedPortfolio.periods[monthIndex].endDate), rule: "صفوف المستثمر غير المدفوعة فقط من تدفقات المستثمر الفردية.", value }}>{formatAmount(value)}</FinancialSourceValue> : "—"}</td>)}
+                    {projectedFunding.map((value, monthIndex) => { const detail = project.monthlyFundingTrace?.[monthIndex]; return <td key={monthIndex} className={`border-l border-slate-100 px-2 py-2 text-center font-semibold ${value > 0 ? "bg-violet-50 text-violet-800" : "text-slate-300"}`}>{value > 0 ? <FinancialSourceValue testId={`capital-trace-funding-${project.projectId}-${monthIndex}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "دفعة مستقبلية مطلوبة من المستثمر", period: formatPeriod(groupedPortfolio.periods[monthIndex].startDate, groupedPortfolio.periods[monthIndex].endDate), rule: "صفوف المستثمر غير المدفوعة فقط من تدفقات المستثمر الفردية.", value, movement: "expense", expenses: detail?.expenses }}>{formatAmount(value)}</FinancialSourceValue> : "—"}</td>; })}
                     <td className="px-2 py-2 text-center font-extrabold text-slate-900">{formatAmount(monthlyTotal)}</td>
                   </tr>;
                 })}

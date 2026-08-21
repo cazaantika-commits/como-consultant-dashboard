@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { FinancialSourceValue } from "@/components/FinancialSourceTrace";
+import { combineFinancialTraceBreakdowns } from "@/lib/financialTraceBreakdown";
 import {
   alignPortfolioMonthlyNetFlows,
   groupCalendarAlignedPortfolio,
@@ -200,12 +201,14 @@ export default function V2PortfolioMonthly() {
                     {period.values.map((value, projectIndex) => {
                       const kind = cellKind(value);
                       const project = groupedPortfolio.rows[projectIndex];
-                      return <td key={projectIndex} className={`px-2 py-2 text-center font-semibold tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-emerald-700" : "text-slate-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-monthly-trace-project-${project.projectId}-${periodIndex}`} trace={{ report: "العرض الشهري", project: project.name, row: "صافي الشهر من تدفقات المستثمر", period: formatPeriod(period.startDate, period.endDate), rule: "صف صافي الشهر المعتمد من تقرير تدفقات المستثمر، بعد محاذاة التقويم الفعلي.", value }}>{formatAmount(value)}</FinancialSourceValue>}</td>;
+                      const detail = project.monthlyTrace?.[periodIndex];
+                      return <td key={projectIndex} className={`px-2 py-2 text-center font-semibold tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-emerald-700" : "text-slate-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-monthly-trace-project-${project.projectId}-${periodIndex}`} trace={{ report: "العرض الشهري", project: project.name, row: "صافي الشهر من تدفقات المستثمر", period: formatPeriod(period.startDate, period.endDate), rule: "صف صافي الشهر المعتمد من تقرير تدفقات المستثمر، بعد محاذاة التقويم الفعلي.", value, expenses: detail?.expenses, receipts: detail?.receipts }}>{formatAmount(value)}</FinancialSourceValue>}</td>;
                     })}
                     {(() => {
                       const total = groupedPortfolio.totals[periodIndex] || 0;
                       const kind = cellKind(total);
-                      return <td className={`px-2 py-2 text-center font-extrabold tabular-nums ${kind === "required" ? "bg-red-50 text-red-700" : kind === "returned" ? "bg-emerald-50 text-emerald-700" : "text-slate-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-monthly-trace-total-${periodIndex}`} trace={{ report: "العرض الشهري", project: "جميع المشاريع المختارة", row: "الإجمالي", period: formatPeriod(period.startDate, period.endDate), rule: "مجموع صف صافي الشهر لجميع المشاريع المختارة في الفترة نفسها.", value: total, contributors: groupedPortfolio.rows.map((row) => ({ name: row.name, value: row.values[periodIndex] || 0 })) }}>{formatAmount(total)}</FinancialSourceValue>}</td>;
+                      const detail = combineFinancialTraceBreakdowns(groupedPortfolio.rows.map((row) => row.monthlyTrace?.[periodIndex]));
+                      return <td className={`px-2 py-2 text-center font-extrabold tabular-nums ${kind === "required" ? "bg-red-50 text-red-700" : kind === "returned" ? "bg-emerald-50 text-emerald-700" : "text-slate-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-monthly-trace-total-${periodIndex}`} trace={{ report: "العرض الشهري", project: "جميع المشاريع المختارة", row: "الإجمالي", period: formatPeriod(period.startDate, period.endDate), rule: "مجموع صف صافي الشهر لجميع المشاريع المختارة في الفترة نفسها.", value: total, expenses: detail.expenses, receipts: detail.receipts, contributors: groupedPortfolio.rows.map((row) => ({ name: row.name, value: row.values[periodIndex] || 0 })) }}>{formatAmount(total)}</FinancialSourceValue>}</td>;
                     })()}
                   </tr>
                 ))}
