@@ -1,4 +1,5 @@
 export const EXECUTIVE_PORTFOLIO_MEMBER_ID = "sheikh_issa";
+export const EXECUTIVE_PORTFOLIO_HORIZON_MONTHS = 4;
 
 export const EXECUTIVE_PORTFOLIO_REPORTS = [
   { id: "portfolio", label: "تجميع المشاريع", description: "صافي التدفقات لجميع المشاريع" },

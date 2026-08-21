@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
+  EXECUTIVE_PORTFOLIO_HORIZON_MONTHS,
   EXECUTIVE_PORTFOLIO_REPORTS,
   canOpenExecutivePortfolioReports,
 } from "../client/src/lib/executivePortfolioReports";
+
+const executiveReportsSource = readFileSync("client/src/components/ExecutivePortfolioReports.tsx", "utf8");
 
 describe("Executive portfolio report access", () => {
   it("reserves the Command Center executive portfolio section for Sheikh Issa", () => {
@@ -19,5 +23,12 @@ describe("Executive portfolio report access", () => {
       "portfolio_escrow_liquidity",
       "capital_portfolio",
     ]);
+  });
+
+  it("uses a fixed four-month executive horizon for the opening briefing and every report control", () => {
+    expect(EXECUTIVE_PORTFOLIO_HORIZON_MONTHS).toBe(4);
+    expect(executiveReportsSource).toContain('<ExecutiveFourMonthFocus variant="brief" />');
+    expect(executiveReportsSource).toContain("الأشهر الأربعة القادمة");
+    expect(executiveReportsSource).toContain('<ExecutiveFourMonthFocus variant="panel"');
   });
 });

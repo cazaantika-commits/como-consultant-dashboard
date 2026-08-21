@@ -1391,3 +1391,6 @@
 - [x] Add a read-only Executive Portfolio Reports section inside Command Center for Sheikh Issa with direct access to Project Aggregation, Monthly Portfolio, Escrow Liquidity, and Capital Portfolio
 - [x] Enforce the Executive Portfolio Reports section as read-only for Sheikh Issa and prevent command-center members from using it to reach financial input screens
 - [x] Verify the Executive Portfolio Reports section and all four report routes in the browser, then protect the access rule with a regression test
+- [x] Add a concise Sheikh Issa executive briefing page before the portfolio-report cards, sourced from the existing portfolio obligation and escrow-liquidity data
+- [x] Add a read-only "الأشهر الأربعة القادمة" control to all four Executive Portfolio Reports that focuses each report on the upcoming executive period without changing any calculation
+- [x] Verify the executive briefing and four-month report focus in the browser and protect the behavior with regression tests

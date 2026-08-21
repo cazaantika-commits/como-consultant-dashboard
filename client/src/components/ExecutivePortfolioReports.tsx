@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { ArrowRight, BriefcaseBusiness, CalendarRange, Landmark, ShieldAlert, WalletCards } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarClock, CalendarRange, Landmark, ShieldAlert, WalletCards } from "lucide-react";
 import V2CapitalPortfolio from "@/pages/V2CapitalPortfolio";
 import V2Portfolio from "@/pages/V2Portfolio";
 import V2PortfolioEscrowLiquidity from "@/pages/V2PortfolioEscrowLiquidity";
 import V2PortfolioMonthly from "@/pages/V2PortfolioMonthly";
 import { EXECUTIVE_PORTFOLIO_REPORTS, type ExecutivePortfolioReportId } from "@/lib/executivePortfolioReports";
+import { ExecutiveFourMonthFocus } from "@/components/ExecutiveFourMonthFocus";
 
 const REPORT_ICONS: Record<ExecutivePortfolioReportId, typeof BriefcaseBusiness> = {
   portfolio: BriefcaseBusiness,
@@ -29,6 +30,7 @@ function ReportContent({ report, onBack }: { report: ExecutivePortfolioReportId;
 
 export function ExecutivePortfolioReports({ onBack }: { onBack: () => void }) {
   const [activeReport, setActiveReport] = useState<ExecutivePortfolioReportId | null>(null);
+  const [showFourMonthFocus, setShowFourMonthFocus] = useState(false);
 
   if (activeReport) {
     return (
@@ -37,9 +39,10 @@ export function ExecutivePortfolioReports({ onBack }: { onBack: () => void }) {
           <button onClick={() => setActiveReport(null)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-700 transition hover:bg-slate-100">
             <ArrowRight className="h-4 w-4" /> العودة إلى التقارير التنفيذية
           </button>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-600">عرض فقط</span>
+          <div className="flex items-center gap-2"><button onClick={() => setShowFourMonthFocus(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-[11px] font-black text-indigo-700 transition hover:bg-indigo-100"><CalendarClock className="h-3.5 w-3.5" /> الأشهر الأربعة القادمة</button><span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-black text-slate-600">عرض فقط</span></div>
         </div>
         <ReportContent report={activeReport} onBack={() => setActiveReport(null)} />
+        {showFourMonthFocus && <ExecutiveFourMonthFocus variant="panel" onClose={() => setShowFourMonthFocus(false)} />}
       </div>
     );
   }
@@ -59,6 +62,8 @@ export function ExecutivePortfolioReports({ onBack }: { onBack: () => void }) {
           <span className="self-start rounded-full border border-indigo-200 bg-white px-3 py-1.5 text-[11px] font-black text-indigo-700">4 تقارير جامعة · عرض فقط</span>
         </div>
       </section>
+
+      <ExecutiveFourMonthFocus variant="brief" />
 
       <div className="grid gap-4 sm:grid-cols-2">
         {EXECUTIVE_PORTFOLIO_REPORTS.map((report) => {
