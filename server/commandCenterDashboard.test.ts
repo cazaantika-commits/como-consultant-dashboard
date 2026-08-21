@@ -41,4 +41,10 @@ describe("Command Center dashboard card registry", () => {
     expect(source).toContain("المطلوب منك الآن");
     expect(source).toContain("لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة");
   });
+
+  it("mounts the executive portfolio section only behind Sheikh Issa's access guard", () => {
+    expect(source).toContain("canOpenExecutivePortfolioReports(member?.memberId)");
+    expect(source).toContain('activeBubble === "executive_portfolio_reports" && canOpenExecutiveReports');
+    expect(source).toContain("<ExecutivePortfolioReports onBack");
+  });
 });

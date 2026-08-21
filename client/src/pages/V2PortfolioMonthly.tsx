@@ -46,7 +46,7 @@ function cellKind(value: number): "required" | "returned" | "zero" {
   return "zero";
 }
 
-export default function V2PortfolioMonthly() {
+export default function V2PortfolioMonthly({ embedded = false, onBack }: { embedded?: boolean; onBack?: () => void }) {
   const [, navigate] = useLocation();
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(undefined, { staleTime: 0 });
   const projects = (portfolioQuery.data || []) as PortfolioProjectMonthlyNet[];
@@ -130,7 +130,7 @@ export default function V2PortfolioMonthly() {
       <div className="max-w-[1800px] mx-auto">
         <div className="rounded-lg bg-slate-900 px-5 py-4 text-white shadow-sm flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <button onClick={() => navigate("/v2")} className="mt-0.5 rounded-md p-1 hover:bg-white/10" aria-label="العودة">
+            <button onClick={() => onBack ? onBack() : navigate("/v2")} className="mt-0.5 rounded-md p-1 hover:bg-white/10" aria-label={embedded ? "العودة إلى التقارير التنفيذية" : "العودة"}>
               <ArrowRight className="h-4 w-4" />
             </button>
             <div>

@@ -62,7 +62,7 @@ function scenarioLabel(scenario: string): string {
   return "بدون أوف بلان";
 }
 
-export default function V2CapitalPortfolio() {
+export default function V2CapitalPortfolio({ embedded = false, onBack }: { embedded?: boolean; onBack?: () => void }) {
   const [, navigate] = useLocation();
   const portfolioQuery = trpc.cashFlowSettings.getFinancialStudiesCapitalPortfolio.useQuery(undefined, { staleTime: 0 });
   const projects = (portfolioQuery.data || []) as CapitalProject[];
@@ -135,7 +135,7 @@ export default function V2CapitalPortfolio() {
       <div className="max-w-[1800px] mx-auto">
         <div className="fs-card fs-card-violet px-5 py-4 text-slate-900 flex items-start justify-between gap-4">
           <div className="flex items-start gap-3">
-            <button onClick={() => navigate("/v2")} className="mt-0.5 rounded-md p-1 hover:bg-white/10" aria-label="العودة"><ArrowRight className="h-4 w-4" /></button>
+            <button onClick={() => onBack ? onBack() : navigate("/v2")} className="mt-0.5 rounded-md p-1 hover:bg-white/10" aria-label={embedded ? "العودة إلى التقارير التنفيذية" : "العودة"}><ArrowRight className="h-4 w-4" /></button>
             <div><h1 className="text-base font-extrabold">تقرير محفظة رأس المال</h1><p className="mt-1 text-[11px] text-slate-600">من مخرجات الدراسات والتخطيط المالي — يستثني مشاريع البناء للتأجير من مؤشرات الإيرادات والأرباح</p></div>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-slate-600"><button onClick={exportExcel} className="inline-flex items-center gap-1 rounded-md border border-violet-300 bg-white/80 px-2.5 py-1.5 font-bold hover:bg-violet-50"><FileSpreadsheet className="h-3.5 w-3.5" />Excel</button><button onClick={exportHtml} className="inline-flex items-center gap-1 rounded-md bg-teal-600 px-2.5 py-1.5 font-bold text-white hover:bg-teal-500"><Download className="h-3.5 w-3.5" />HTML</button><Landmark className="h-4 w-4 text-sky-600" />{selectedProjects.length} مشاريع استثمارية</div>

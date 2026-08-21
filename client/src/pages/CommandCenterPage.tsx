@@ -115,6 +115,8 @@ import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
+import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
+import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
 const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
@@ -4167,6 +4169,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const utils = trpc.useUtils();
 
   const unreadCount = notifications.data?.filter((n: any) => !n.isRead).length || 0;
+  const canOpenExecutiveReports = canOpenExecutivePortfolioReports(member?.memberId);
 
   const handleMarkAllRead = async () => {
     await markAllRead.mutateAsync({ token });
@@ -4180,6 +4183,26 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     const interval = setInterval(runCheck, 30 * 60 * 1000); // every 30 min
     return () => clearInterval(interval);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If viewing work schedule (read-only)
+  if (activeBubble === "executive_portfolio_reports" && canOpenExecutiveReports) {
+    return (
+      <div className="min-h-screen bg-slate-50" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <ExecutivePortfolioReports onBack={() => setActiveBubble(null)} />
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  if (activeBubble === "executive_portfolio_reports") {
+    return (
+      <div className="min-h-screen bg-slate-50" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="mx-auto max-w-xl px-4 py-12 text-center"><Lock className="mx-auto h-8 w-8 text-slate-400" /><h2 className="mt-3 text-lg font-black text-slate-900">هذه التقارير مخصصة للشيخ عيسى</h2><button onClick={() => setActiveBubble(null)} className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-black text-slate-700">العودة إلى مركز القيادة</button></div>
+      </div>
+    );
+  }
 
   // If viewing work schedule (read-only)
   if (activeBubble === "work_schedule" && showWorkSchedule) {
@@ -4679,6 +4702,16 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <CardTile bubble={BUBBLES[5]} size="md" />
                 </div>
               </div>
+
+              {canOpenExecutiveReports && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3"><div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#4f46e5,#0891b2)'}} /><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">مراجعة المحفظة</span></div>
+                  <button onClick={() => setActiveBubble("executive_portfolio_reports")} className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-l from-indigo-50 via-white to-sky-50 p-4 text-right shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200"><Briefcase className="h-6 w-6" /></span><div><p className="text-sm font-black text-slate-900">تقارير المحفظة التنفيذية</p><p className="mt-1 text-xs text-slate-600">تجميع المشاريع، العرض الشهري، سيولة الإسكرو، ومحفظة رأس المال</p></div></div>
+                    <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[10px] font-black text-indigo-700">عرض فقط</span>
+                  </button>
+                </div>
+              )}
 
               {/* ═══ OTHER SECTION ═══ */}
               <div>

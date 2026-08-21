@@ -47,7 +47,7 @@ function cellKind(value: number): "required" | "returned" | "zero" {
   return "zero";
 }
 
-export default function V2Portfolio() {
+export default function V2Portfolio({ embedded = false, onBack }: { embedded?: boolean; onBack?: () => void }) {
   const [, navigate] = useLocation();
   const portfolioQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(undefined, {
     staleTime: 0,
@@ -134,7 +134,7 @@ export default function V2Portfolio() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition"><ArrowRight className="w-4 h-4 text-gray-600" /></button>
+            <button onClick={() => onBack ? onBack() : navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition" aria-label={embedded ? "العودة إلى التقارير التنفيذية" : "العودة"}><ArrowRight className="w-4 h-4 text-gray-600" /></button>
             <div><h1 className="text-xs font-bold text-gray-900">المحفظة الاستثمارية</h1><p className="text-xs text-gray-500">صافي التدفقات النقدية المجمّعة — {selectedProjects.length} مشاريع</p><p className="mt-0.5 text-[9px]"><span className="text-red-600">الأحمر: مبلغ مطلوب من المستثمر</span><span className="mx-1 text-gray-300">|</span><span className="text-teal-700">الأخضر: مبلغ مستلم للمستثمر</span></p></div>
           </div>
           <div className="flex items-center gap-2">

@@ -11,7 +11,7 @@ const formatMonth = (date: string) => {
 };
 const money = (value: number) => formatFullNumber(value, "0");
 
-export default function V2PortfolioEscrowLiquidity() {
+export default function V2PortfolioEscrowLiquidity({ readOnly = false }: { readOnly?: boolean }) {
   const liquidityQuery = trpc.cashFlowSettings.getPortfolioEscrowLiquidity.useQuery(undefined, { staleTime: 0 });
   const utils = trpc.useUtils();
   const seedPlans = trpc.cashFlowSettings.seedInitialOffPlanScenarios.useMutation({
@@ -34,7 +34,7 @@ export default function V2PortfolioEscrowLiquidity() {
     <section className="fs-card fs-card-teal overflow-hidden p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700"><ShieldAlert className="h-5 w-5" /></span><div><p className="text-xs font-black text-teal-700">سيولة الإسكرو — المحفظة كاملة</p><h1 className="mt-1 text-lg font-black text-slate-900">إنذار مبكر ومقارنة شهرية من مصادر التدفق المعتمدة</h1><p className="mt-1 text-xs leading-5 text-slate-600">كل رصيد هو رصيد نهاية الشهر نفسه الظاهر في المبيعات وتدفقات الإسكرو؛ لا توجد أرقام إدخال مكررة هنا.</p></div></div>
-        <Button onClick={() => seedPlans.mutate()} disabled={seedPlans.isPending} className="bg-teal-700 text-white hover:bg-teal-800">{seedPlans.isPending ? "جاري حفظ السيناريوهات..." : "حفظ السيناريو الأولي للمشاريع بلا خطة"}</Button>
+        {!readOnly && <Button onClick={() => seedPlans.mutate()} disabled={seedPlans.isPending} className="bg-teal-700 text-white hover:bg-teal-800">{seedPlans.isPending ? "جاري حفظ السيناريوهات..." : "حفظ السيناريو الأولي للمشاريع بلا خطة"}</Button>}
       </div>
     </section>
 

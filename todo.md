@@ -1388,3 +1388,6 @@
 - [x] Replace abbreviated cash-flow month headers with visible month-and-year labels plus compact phase-month numbering in Investor and Escrow reports
 - [x] Keep the cash-flow month header and row-label column visible while scrolling the monthly matrix, and emphasize the decision rows for each report
 - [x] Add an engine-derived summary of the currently visible monthly period above each cash-flow matrix without changing values or inputs
+- [x] Add a read-only Executive Portfolio Reports section inside Command Center for Sheikh Issa with direct access to Project Aggregation, Monthly Portfolio, Escrow Liquidity, and Capital Portfolio
+- [x] Enforce the Executive Portfolio Reports section as read-only for Sheikh Issa and prevent command-center members from using it to reach financial input screens
+- [x] Verify the Executive Portfolio Reports section and all four report routes in the browser, then protect the access rule with a regression test
