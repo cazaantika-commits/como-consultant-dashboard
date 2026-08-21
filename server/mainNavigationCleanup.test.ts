@@ -16,6 +16,12 @@ describe("main navigation cleanup", () => {
     expect(homeSource).toContain('grid grid-cols-2 gap-3 md:grid-cols-4');
   });
 
+  it("keeps Knowledge Base as a separate lower Tools and Reports card", () => {
+    expect(homeSource).toContain('id: "tool-knowledge-base", label: "قاعدة المعرفة"');
+    expect(homeSource).toContain('path: "/knowledge-base"');
+    expect(homeSource).toContain('id: "main-kb", label: "المعرفة والتحليل"');
+  });
+
   it("removes only the obsolete strategic entry points while retaining the document-derived card inside Financial Studies", () => {
     expect(appSource).not.toContain('path="/project-management"');
     expect(appSource).not.toContain('path="/fact-sheet"');

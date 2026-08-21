@@ -415,6 +415,7 @@ export default function Home() {
   const NAV_TOOLS = [
     { id: "tool-tasks", label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
     { id: "tool-drive", label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
+    { id: "tool-knowledge-base", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #6d28d9)", shadow: "rgba(139, 92, 246, 0.25)" },
     { id: "tool-meetings", label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
     { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
     { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },

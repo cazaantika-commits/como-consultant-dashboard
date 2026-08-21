@@ -1399,3 +1399,6 @@
 - [x] Verify the revised main-card order and the absence of the strategic entry in the browser, then protect the navigation with a regression test
 - [x] Render all retained main cards in one compact desktop row with Financial Studies first and responsive wrapping only on smaller screens
 - [x] Repair the pre-existing cash-flow response metadata scope error exposed by the full regression suite without changing any revenue or expense calculation
+- [x] Restore the independent Knowledge Base card while preserving the independent Knowledge and Analysis card and both existing routes; on clarification, place Knowledge Base in the lower Tools and Reports group
+- [x] Verify in the browser that Knowledge Base from Tools and Reports and Knowledge and Analysis from the main-card row open separately, then protect both entries with a regression test
+- [x] Restore Knowledge Base specifically inside the lower Tools and Reports group, while Knowledge and Analysis remains a separate main card
