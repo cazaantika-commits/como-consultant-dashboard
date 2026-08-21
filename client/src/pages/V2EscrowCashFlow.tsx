@@ -12,6 +12,7 @@ import {
 import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
+import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -106,6 +107,13 @@ export default function V2EscrowCashFlow() {
   const totalOutflow = finalOutflowTotals.reduce((s, v) => s + v, 0);
   const totalInflow = inflowTotals.reduce((s, v) => s + v, 0);
   const finalBalance = cumulative[cumulative.length - 1] || 0;
+  const escrowMatrixStart = formatCashFlowMonthYear(monthDates[0] || "");
+  const escrowMatrixEnd = formatCashFlowMonthYear(monthDates[totalMonths - 1] || "");
+  const escrowMatrixSummary = {
+    outflow: sumCashFlowPeriod(finalOutflowTotals),
+    inflow: sumCashFlowPeriod(inflowTotals),
+    closing: finalBalance,
+  };
 
   // ─── Month headers ─────────────────────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
@@ -282,15 +290,28 @@ export default function V2EscrowCashFlow() {
       </section>
 
       {/* Main Table */}
-      <div className="overflow-x-auto">
+      <section className="border-t border-slate-200 bg-white px-4 py-3">
+        <div className="mx-auto flex max-w-[1800px] flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-xs font-bold text-slate-900">ملخص الفترة المالية في المصفوفة</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{escrowMatrixStart.month} {escrowMatrixStart.year} — {escrowMatrixEnd.month} {escrowMatrixEnd.year} · تحرّك داخل الجدول مع بقاء الأشهر والبنود ثابتة</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-[11px] tabular-nums">
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2"><span className="block text-rose-700">الخارج</span><strong className="text-rose-950">{fmt(escrowMatrixSummary.outflow)}</strong></div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="block text-emerald-700">الداخل</span><strong className="text-emerald-950">{fmt(escrowMatrixSummary.inflow)}</strong></div>
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2"><span className="block text-cyan-700">رصيد الإغلاق</span><strong className="text-cyan-950">{fmt(escrowMatrixSummary.closing)}</strong></div>
+          </div>
+        </div>
+      </section>
+      <div className="max-h-[70vh] overflow-auto">
         <table className="w-full text-[10px] border-collapse min-w-max">
-          <thead className="bg-white shadow-sm">
+          <thead className="sticky top-0 z-30 bg-white shadow-md">
             {/* Date row */}
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-0.5 text-right w-[200px] min-w-[200px] text-[8px] text-gray-400">التاريخ</th>
               {months.map((m, i) => (
-                <th key={i} className="px-0.5 py-0 text-center border-b border-gray-100 text-[7px] text-gray-400 font-normal whitespace-nowrap">
-                  {m.date ? m.date.split("-")[1] + "/" + m.date.split("-")[0].slice(2) : ""}
+                <th key={i} className="min-w-[62px] border-b border-slate-200 px-1 py-1.5 text-center text-[10px] font-black leading-4 text-slate-800">
+                  {m.date && <><span className="block">{formatCashFlowMonthYear(m.date).month}</span><span className="block text-[9px] font-semibold text-slate-500">{formatCashFlowMonthYear(m.date).year}</span></>}
                 </th>
               ))}
             </tr>
@@ -298,8 +319,8 @@ export default function V2EscrowCashFlow() {
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-2 py-1 text-right w-[200px] min-w-[200px]"></th>
               {months.map((m, i) => (
-                <th key={i} className={`px-1 py-0.5 text-center border-b border-gray-200 ${phaseColors[m.phase]} font-normal`}>
-                  {m.label}
+                <th key={i} className={`min-w-[62px] border-b border-slate-300 px-1 py-1.5 text-center ${phaseColors[m.phase]} text-[10px] font-black text-slate-900`}>
+                  <span className="block">{phaseNames[m.phase]}</span><span className="block text-[9px] opacity-70">شهر {m.label}</span>
                 </th>
               ))}
             </tr>
@@ -327,8 +348,8 @@ export default function V2EscrowCashFlow() {
               );
             })}
             {/* Total Outflows */}
-            <tr className="bg-red-100/50 font-bold border-t border-red-200">
-              <td className="sticky right-0 z-10 bg-red-50 px-2 py-[3px] text-red-800 border-l border-red-200 w-[200px] min-w-[200px]">
+            <tr className="bg-red-100/70 font-bold border-y-2 border-red-300">
+              <td className="sticky right-0 z-20 bg-red-100 px-2 py-1.5 text-red-900 border-l border-red-300 w-[200px] min-w-[200px]">
                 إجمالي المصروفات
               </td>
               {finalOutflowTotals.map((v, i) => (
@@ -357,8 +378,8 @@ export default function V2EscrowCashFlow() {
               </tr>
             ))}
             {/* Total Inflows */}
-            <tr className="bg-green-100/50 font-bold border-t border-green-200">
-              <td className="sticky right-0 z-10 bg-green-50 px-2 py-[3px] text-green-800 border-l border-green-200 w-[200px] min-w-[200px]">
+            <tr className="bg-green-100/70 font-bold border-y-2 border-green-300">
+              <td className="sticky right-0 z-20 bg-green-100 px-2 py-1.5 text-green-900 border-l border-green-300 w-[200px] min-w-[200px]">
                 إجمالي الإيرادات
               </td>
               {inflowTotals.map((v, i) => (
@@ -369,8 +390,8 @@ export default function V2EscrowCashFlow() {
             </tr>
 
             {/* ─── صافي الشهر ─── */}
-            <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-200">
-              <td className="sticky right-0 z-10 bg-blue-50 px-2 py-[3px] text-blue-800 border-l border-blue-200 w-[200px] min-w-[200px]">
+            <tr className="bg-cyan-100/80 font-bold border-y-2 border-cyan-400">
+              <td className="sticky right-0 z-20 bg-cyan-100 px-2 py-1.5 text-cyan-950 border-l border-cyan-400 w-[200px] min-w-[200px]">
                 صافي الشهر
               </td>
               {netFlow.map((v, i) => (
@@ -381,8 +402,8 @@ export default function V2EscrowCashFlow() {
             </tr>
 
             {/* ─── الرصيد التراكمي ─── */}
-            <tr className="bg-blue-100/50 font-bold">
-              <td className="sticky right-0 z-10 bg-blue-100 px-2 py-[3px] text-blue-900 border-l border-blue-200 w-[200px] min-w-[200px]">
+            <tr className="bg-violet-100/80 font-bold border-y-2 border-violet-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <td className="sticky right-0 z-20 bg-violet-100 px-2 py-1.5 text-violet-950 border-l border-violet-400 w-[200px] min-w-[200px]">
                 الرصيد التراكمي
               </td>
               {cumulative.map((v, i) => (

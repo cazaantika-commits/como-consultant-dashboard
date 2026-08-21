@@ -7,6 +7,10 @@ describe("Investor Cash Flow readability layout", () => {
     path.resolve(process.cwd(), "client/src/pages/V2InvestorCashFlow.tsx"),
     "utf8",
   );
+  const escrowSource = fs.readFileSync(
+    path.resolve(process.cwd(), "client/src/pages/V2EscrowCashFlow.tsx"),
+    "utf8",
+  );
 
   it("renders direct expense rows rather than non-decision subsection headings", () => {
     expect(source).toContain("{debitRows.map((item, i) => {");
@@ -29,10 +33,26 @@ describe("Investor Cash Flow readability layout", () => {
   });
 
   it("keeps dark month headers visible during scrolling and defines clear month boundaries", () => {
-    expect(source).toContain('investor-cashflow-table-wrap overflow-x-auto');
+    expect(source).toContain('investor-cashflow-table-wrap max-h-[70vh] overflow-auto');
     expect(source).toContain('sticky top-0 z-30 bg-white shadow-md');
-    expect(source).toContain('text-[10px] font-black text-slate-800');
+    expect(source).toContain('text-[10px] font-black leading-4 text-slate-800');
     expect(source).toContain('border-s border-slate-300');
+  });
+
+  it("uses full month and year labels plus a compact phase-month label in both monthly matrices", () => {
+    expect(source).toContain("formatCashFlowMonthYear(m.date).month");
+    expect(source).toContain("شهر {m.label}");
+    expect(escrowSource).toContain("formatCashFlowMonthYear(m.date).month");
+    expect(escrowSource).toContain("شهر {m.label}");
+  });
+
+  it("keeps both matrices in a fixed-heading scroll frame with a period summary and clear decision rows", () => {
+    expect(source).toContain("ملخص الفترة المالية في المصفوفة");
+    expect(source).toContain('max-h-[70vh] overflow-auto');
+    expect(source).toContain('bg-cyan-100/80 font-bold border-y-2 border-cyan-400');
+    expect(escrowSource).toContain("ملخص الفترة المالية في المصفوفة");
+    expect(escrowSource).toContain('max-h-[70vh] overflow-auto');
+    expect(escrowSource).toContain('bg-violet-100/80 font-bold border-y-2 border-violet-400');
   });
 
   it("keeps the detail table beneath a decision-first investor position layer", () => {

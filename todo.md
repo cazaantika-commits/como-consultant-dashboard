@@ -1383,3 +1383,8 @@
 - [x] Prevent Khazan from writing document-derived GFA into the protected financial BUA field, then re-run and verify the affected project write path
 - [x] Expand each consolidated-report source dialog to show the documented collection and expense line items, their subtotals, and the resulting net amount without changing calculations
 - [x] Reconcile whole-number rounding in source-dialog line items so their displayed sum exactly matches the displayed source total, with any rounding difference stated explicitly
+- [x] Audit the live Investor Cash Flow and Escrow Cash Flow reports against the agreed readability rules before changing any layout or financial logic
+- [x] Improve only the verified readability gaps in the two cash-flow reports while preserving all existing calculation sources and results
+- [x] Replace abbreviated cash-flow month headers with visible month-and-year labels plus compact phase-month numbering in Investor and Escrow reports
+- [x] Keep the cash-flow month header and row-label column visible while scrolling the monthly matrix, and emphasize the decision rows for each report
+- [x] Add an engine-derived summary of the currently visible monthly period above each cash-flow matrix without changing values or inputs

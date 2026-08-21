@@ -12,6 +12,7 @@ import {
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
 import { formatFullNumber } from "@/lib/numberFormat";
+import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -89,6 +90,13 @@ export default function V2InvestorCashFlow() {
   const totalDebit = debitTotals.reduce((s, v) => s + v, 0);
   const totalCredit = creditTotals.reduce((s, v) => s + v, 0);
   const profit = totalCredit - totalDebit;
+  const matrixStart = formatDate(monthDates[0] || "");
+  const matrixEnd = formatDate(monthDates[totalMonths - 1] || "");
+  const matrixSummary = {
+    debit: sumCashFlowPeriod(debitTotals),
+    credit: sumCashFlowPeriod(creditTotals),
+    net: sumCashFlowPeriod(netFlow),
+  };
 
   // ─── Month headers with phase info ─────────────────────────────────────
   const months: { label: string; date: string; phase: "design" | "construction" | "post" }[] = [];
@@ -251,15 +259,28 @@ export default function V2InvestorCashFlow() {
       </section>
 
       {/* Main Table */}
-      <div className="investor-cashflow-table-wrap overflow-x-auto">
+      <section className="border-t border-slate-200 bg-white px-5 py-3">
+        <div className="mx-auto flex max-w-[1800px] flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 lg:flex-row lg:items-center">
+          <div>
+            <p className="text-xs font-bold text-slate-900">ملخص الفترة المالية في المصفوفة</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{matrixStart} — {matrixEnd} · تحرّك داخل الجدول مع بقاء الأشهر والبنود ثابتة</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-[11px] tabular-nums">
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2"><span className="block text-rose-700">المطلوب</span><strong className="text-rose-950">{fmt(matrixSummary.debit)}</strong></div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="block text-emerald-700">المستلم</span><strong className="text-emerald-950">{fmt(matrixSummary.credit)}</strong></div>
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2"><span className="block text-cyan-700">الصافي</span><strong className="text-cyan-950">{fmt(matrixSummary.net)}</strong></div>
+          </div>
+        </div>
+      </section>
+      <div className="investor-cashflow-table-wrap max-h-[70vh] overflow-auto">
         <table className="investor-cashflow-table w-full text-xs border-collapse min-w-max">
           <thead className="sticky top-0 z-30 bg-white shadow-md">
             {/* Date row */}
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px] text-[10px] text-gray-500">التاريخ</th>
               {months.map((m, i) => (
-                <th key={i} className="border-s border-slate-300 bg-white px-1 py-1 text-center text-[10px] font-black text-slate-800 whitespace-nowrap">
-                  {m.date ? m.date.split("-")[1] + "/" + m.date.split("-")[0].slice(2) : ""}
+                <th key={i} className="min-w-[62px] border-s border-slate-300 bg-white px-1 py-1.5 text-center text-[10px] font-black leading-4 text-slate-800">
+                  {m.date && <><span className="block">{formatCashFlowMonthYear(m.date).month}</span><span className="block text-[9px] font-semibold text-slate-500">{formatCashFlowMonthYear(m.date).year}</span></>}
                 </th>
               ))}
             </tr>
@@ -267,8 +288,8 @@ export default function V2InvestorCashFlow() {
             <tr>
               <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px]"></th>
               {months.map((m, i) => (
-                <th key={i} className={`border-s border-slate-300 px-1.5 py-1 text-center ${phaseColors[m.phase]} font-black text-[11px] text-slate-900`}>
-                  {m.label}
+                <th key={i} className={`min-w-[62px] border-s border-slate-300 px-1.5 py-1.5 text-center ${phaseColors[m.phase]} font-black text-[10px] text-slate-900`}>
+                  <span className="block">{phaseNames[m.phase]}</span><span className="block text-[9px] opacity-70">شهر {m.label}</span>
                 </th>
               ))}
             </tr>
@@ -317,8 +338,8 @@ export default function V2InvestorCashFlow() {
               );
             })}
             {/* Total Debit */}
-            <tr className="bg-red-100/50 font-bold border-t border-red-200">
-              <td className="sticky right-0 z-10 bg-red-50 px-3 py-1 text-red-800 border-l border-red-200 w-[220px] min-w-[220px]">
+            <tr className="bg-red-100/70 font-bold border-y-2 border-red-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <td className="sticky right-0 z-20 bg-red-100 px-3 py-1.5 text-red-900 border-l border-red-300 w-[220px] min-w-[220px]">
                 إجمالي المصروفات
               </td>
               {debitTotals.map((v, i) => (
@@ -350,8 +371,8 @@ export default function V2InvestorCashFlow() {
               );
             })}
             {/* Total Credit */}
-            <tr className="bg-green-100/50 font-bold border-t border-green-200">
-              <td className="sticky right-0 z-10 bg-green-50 px-3 py-1 text-green-800 border-l border-green-200 w-[220px] min-w-[220px]">
+            <tr className="bg-green-100/70 font-bold border-y-2 border-green-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <td className="sticky right-0 z-20 bg-green-100 px-3 py-1.5 text-green-900 border-l border-green-300 w-[220px] min-w-[220px]">
                 إجمالي الإيرادات
               </td>
               {creditTotals.map((v, i) => (
@@ -362,8 +383,8 @@ export default function V2InvestorCashFlow() {
             </tr>
 
             {/* ─── صافي الشهر ─── */}
-            <tr className="bg-blue-50/50 font-bold border-t-2 border-blue-200">
-              <td className="sticky right-0 z-10 bg-blue-50 px-3 py-1 text-blue-800 border-l border-blue-200 w-[220px] min-w-[220px]">
+            <tr className="bg-cyan-100/80 font-bold border-y-2 border-cyan-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <td className="sticky right-0 z-20 bg-cyan-100 px-3 py-1.5 text-cyan-950 border-l border-cyan-400 w-[220px] min-w-[220px]">
                 صافي الشهر
               </td>
               {netFlow.map((v, i) => (
@@ -374,8 +395,8 @@ export default function V2InvestorCashFlow() {
             </tr>
 
             {/* ─── التراكمي ─── */}
-            <tr className="bg-blue-100/50 font-bold">
-              <td className="sticky right-0 z-10 bg-blue-100 px-3 py-1 text-blue-900 border-l border-blue-200 w-[220px] min-w-[220px]">
+            <tr className="bg-violet-100/70 font-bold border-y-2 border-violet-300">
+              <td className="sticky right-0 z-20 bg-violet-100 px-3 py-1.5 text-violet-950 border-l border-violet-300 w-[220px] min-w-[220px]">
                 التراكمي
               </td>
               {cumulative.map((v, i) => (
