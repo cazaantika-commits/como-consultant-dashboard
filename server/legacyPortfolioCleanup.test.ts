@@ -28,6 +28,8 @@ describe("external portfolio consolidation", () => {
     expect(financialStudiesSource).toContain('id: "capital_portfolio"');
     expect(financialStudiesSource).toContain("V2Portfolio");
     expect(financialStudiesSource).toContain("V2CapitalPortfolio");
+    expect(financialStudiesSource).toContain('const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));');
+    expect(financialStudiesSource).not.toContain('(!selectedProjectId || tab.projectScoped)');
   });
 
   it("removes external legacy portfolio screen files", () => {

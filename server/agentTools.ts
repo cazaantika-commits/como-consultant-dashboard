@@ -17,6 +17,7 @@ import {
   cfProjects, cfCostItems
 } from "../drizzle/schema";
 import { logToolCall } from "./activityLogger";
+import { buildKhazenFactSheetUpdate } from "./khazenFactSheetGuard";
 import { searchDocuments, getDocumentContent, indexDriveFile, getIndexStats } from "./documentIndexService";
 import { searchKnowledge as searchKnowledgeService } from "./knowledgeService";
 import {
@@ -834,7 +835,6 @@ export const AGENT_TOOLS = [
           // البيانات الأساسية
           plotNumber: { type: "string", description: "رقم القطعة" },
           areaCode: { type: "string", description: "كود المنطقة" },
-          bua: { type: "number", description: "مساحة البناء (قدم²)" },
           // أرقام التعريف
           titleDeedNumber: { type: "string", description: "رقم سند الملكية" },
           ddaNumber: { type: "string", description: "رقم DDA" },
@@ -2386,27 +2386,8 @@ async function _executeToolInternal(
       case "update_project_fact_sheet": {
         const { projectId: fsProjectId, ...fsFields } = args;
         if (!fsProjectId) return JSON.stringify({ error: "يجب تحديد معرف المشروع" });
-        // Build update object with only provided fields
-        const updateData: Record<string, any> = {};
-        const allowedFields = [
-          'plotNumber', 'areaCode', 'bua', 'titleDeedNumber', 'ddaNumber', 'masterDevRef',
-          'plotAreaSqm', 'plotAreaSqft', 'gfaSqm', 'gfaSqft',
-          'permittedUse', 'ownershipType', 'subdivisionRestrictions',
-          'masterDevName', 'masterDevAddress', 'sellerName', 'sellerAddress',
-          'buyerName', 'buyerNationality', 'buyerPassport', 'buyerAddress', 'buyerPhone', 'buyerEmail',
-          'electricityAllocation', 'waterAllocation', 'sewageAllocation',
-          'tripAM', 'tripLT', 'tripPM',
-          'effectiveDate', 'constructionPeriod', 'constructionStartDate', 'completionDate', 'constructionConditions',
-          'saleRestrictions', 'resaleConditions', 'communityCharges',
-          'registrationAuthority', 'adminFee', 'clearanceFee', 'compensationAmount',
-          'governingLaw', 'disputeResolution',
-          'parkingRequirementsText', 'parkingRulesJson', 'parkingSourceReference', 'parkingAvailableSpaces'
-        ];
-        for (const key of allowedFields) {
-          if (fsFields[key] !== undefined && fsFields[key] !== null && fsFields[key] !== '') {
-            updateData[key] = fsFields[key];
-          }
-        }
+        // The financial BUA input is deliberately outside Khazen's document scope.
+        const updateData = buildKhazenFactSheetUpdate(fsFields);
         if (Object.keys(updateData).length === 0) return JSON.stringify({ error: "لم يتم تقديم أي حقول للتحديث" });
         await db.update(projects).set(updateData).where(eq(projects.id, fsProjectId));
         return JSON.stringify({ 

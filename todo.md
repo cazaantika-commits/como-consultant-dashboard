@@ -1376,3 +1376,8 @@
 - [x] Replace the remaining legacy four-field payment summary with the active flexible-stage schedule and correct post-handover installment wording
 - [x] Prevent until-handover installments for late sales from leaking into post-handover escrow months; settle their due portion no later than handover
 - [x] Make Command Center greet the authenticated user by their own name, with a respectful Libyan welcome for Sheikh Issa and a professional Syrian welcome for Wael
+- [x] Inventory the three missing project reports and restore their accessible cards and routes within Financial Studies and Planning without changing calculations
+- [x] Audit Khazan’s configured extraction source, project matching rules, and existing document-to-card data path before reading any Drive files
+- [x] Read the approved Google Drive project documents for every project and record only verified extractable data in the appropriate project-card fields
+- [x] Verify in the browser that all restored reports and Khazan-extracted fields display against the correct selected project, then document the evidence
+- [x] Prevent Khazan from writing document-derived GFA into the protected financial BUA field, then re-run and verify the affected project write path

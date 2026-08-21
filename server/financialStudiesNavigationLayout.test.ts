@@ -34,7 +34,9 @@ describe("Financial Studies flat project-first navigation", () => {
   it("keeps type-aware visibility while applying the entry context to project pages", () => {
     expect(source).toContain("isFinancialStudiesTabVisible");
     expect(source).toContain("getFallbackFinancialStudiesTab");
-    expect(source).toContain("!selectedProjectId || tab.projectScoped");
+    expect(source).toContain("const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));");
+    expect(source).toContain("const disabled = tab.projectScoped && !selectedProjectId;");
+    expect(source).toContain("Portfolio reports are company-wide reports. They stay visible after choosing a");
     expect(source).toContain("<PricingPage embedded />");
     expect(source).toContain("<ConstructionInputsPage embedded />");
     expect(source).toContain("<V2WaelSales embedded />");

@@ -100,10 +100,10 @@ export default function BateekhaPage() {
     }
   }, [location, projectType]);
 
-  // Once a project is selected, the board is strictly that project's workspace.
-  // Portfolio reports remain available from the unselected Financial Studies board
-  // and must not be mistaken for a selected Build-for-Rent project's escrow content.
-  const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType) && (!selectedProjectId || tab.projectScoped));
+  // Portfolio reports are company-wide reports. They stay visible after choosing a
+  // project so the project picker never makes the three consolidated reports vanish.
+  // Project-specific cards remain disabled until the project is selected.
+  const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
   const selectTab = (tab: (typeof TABS)[number]) => {
     if (tab.projectScoped && !selectedProjectId) return;
     setActiveTab(tab.id);
