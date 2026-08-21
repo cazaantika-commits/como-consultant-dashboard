@@ -1402,3 +1402,7 @@
 - [x] Restore the independent Knowledge Base card while preserving the independent Knowledge and Analysis card and both existing routes; on clarification, place Knowledge Base in the lower Tools and Reports group
 - [x] Verify in the browser that Knowledge Base from Tools and Reports and Knowledge and Analysis from the main-card row open separately, then protect both entries with a regression test
 - [x] Restore Knowledge Base specifically inside the lower Tools and Reports group, while Knowledge and Analysis remains a separate main card
+- [x] Produce a no-change architectural assessment of Development Phases and Financial Studies: identify authoritative inputs, downstream outputs, dependencies, and duplication risks before any integration decision
+- [x] Audit the full project-registration milestone in Development Phases—registration, escrow-account opening, and sales-license completion—against the approved Financial Studies duration without changing any dates or rules
+- [x] Research the end-to-end Dubai development lifecycle across project types, authoritative approvals, deliverables, dependencies, and realistic durations before designing any new Development Phases model
+- [x] Produce a no-change blueprint for a comprehensive Development Phases card that distinguishes universal stages, project-type branches, prerequisite evidence, and duration confidence
