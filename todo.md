@@ -1406,7 +1406,7 @@
 - [x] Audit the full project-registration milestone in Development Phases—registration, escrow-account opening, and sales-license completion—against the approved Financial Studies duration without changing any dates or rules
 - [x] Research the end-to-end Dubai development lifecycle across project types, authoritative approvals, deliverables, dependencies, and realistic durations before designing any new Development Phases model
 - [x] Produce a no-change blueprint for a comprehensive Development Phases card that distinguishes universal stages, project-type branches, prerequisite evidence, and duration confidence
-- [ ] Compare every existing Development Phases service against the research-derived requirements to distinguish actual missing content from services already present, without altering the app
-- [ ] Produce a preserve-first mapping for every existing Development Phases service: retain, clarify, optionally complement, or mark project-type-specific, without deleting or changing its duration, code, or dependency
+- [x] Compare every existing Development Phases service against the research-derived requirements to distinguish actual missing content from services already present, without altering the app
+- [x] Produce a preserve-first mapping for every existing Development Phases service: retain, clarify, optionally complement, or mark project-type-specific, without deleting or changing its duration, code, or dependency
 - [x] Add research-backed requirements and evidence checklists only to the existing registration, escrow, plan-approval, and marketing-permit services; preserve every existing service code, duration, dependency, and schedule behavior
 - [x] Verify the enriched registration milestone in the browser and prove the services, durations, dependencies, and existing project instances are unchanged
