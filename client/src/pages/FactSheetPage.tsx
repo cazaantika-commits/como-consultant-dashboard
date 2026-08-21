@@ -427,7 +427,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
             <FileText className="h-12 w-12 mx-auto text-amber-600" />
             <h2 className="text-xl font-bold">بطاقة بيانات المشروع</h2>
             <p className="text-muted-foreground text-sm">يرجى تسجيل الدخول للوصول إلى بطاقة البيانات</p>
-            <Button onClick={() => window.location.href = getLoginUrl("/fact-sheet")} className="bg-amber-600 hover:bg-amber-700">تسجيل الدخول</Button>
+            <Button onClick={() => window.location.href = getLoginUrl("/bateekha?tab=general")} className="bg-amber-600 hover:bg-amber-700">تسجيل الدخول</Button>
           </CardContent>
         </Card>
       </div>

@@ -169,7 +169,7 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
       className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-manipulation animate-card-stagger ${
         isCommandCenter
           ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80 before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0 before:group-hover:opacity-100 before:transition-opacity before:duration-300'
-          : 'border-border/40 py-7 px-5'
+          : 'border-border/40 px-3 py-4'
       } ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
     >
       <div className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl" style={{ background: item.iconBg }} />
@@ -181,17 +181,17 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
           background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.1), transparent 50%)',
         }} />
       )}
-      <div className="flex flex-col items-center gap-4 relative z-10">
+      <div className="flex flex-col items-center gap-2.5 relative z-10">
         <div
           className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 relative ${
             isCommandCenter
               ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl after:absolute after:inset-0 after:rounded-2xl after:opacity-0 after:group-hover:opacity-100 after:transition-opacity after:duration-300 after:bg-gradient-to-br after:from-white/20 after:to-transparent'
-              : 'w-16 h-16'
+              : 'h-12 w-12 rounded-xl'
           }`}
           style={{ background: item.iconBg, boxShadow: `0 ${isCommandCenter ? '8px 24px' : '6px 20px'} ${item.shadow}` }}
         >
           <item.icon className={`text-white ${
-            isCommandCenter ? 'w-9 h-9 group-hover:animate-pulse' : 'w-7 h-7'
+              isCommandCenter ? 'w-9 h-9 group-hover:animate-pulse' : 'h-5 w-5'
           }`} />
           {item.badge !== undefined && item.badge > 0 && (
             <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
@@ -200,7 +200,7 @@ function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (pa
           )}
         </div>
         <span className={`font-bold text-foreground transition-all duration-300 ${
-          isCommandCenter ? 'text-base group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'text-[15px]'
+          isCommandCenter ? 'text-base group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'text-[13px]'
         }`}>{item.label}</span>
       </div>
     </div>
@@ -405,12 +405,11 @@ export default function Home() {
 
   /* -- Navigation items organized in groups -- */
   const NAV_MAIN = [
-    { id: "main-projects", label: "الدراسات والتخطيط الاستراتيجي", icon: Building2, path: "/project-management", borderColor: "#059669", iconBg: "linear-gradient(135deg, #059669, #047857)", shadow: "rgba(5, 150, 105, 0.25)", badge: 3 },
+    { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
     { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)", badge: overdueCount > 0 ? overdueCount : undefined },
     { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)", badge: 5 },
-    { id: "main-kb", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
+    { id: "main-kb", label: "المعرفة والتحليل", icon: BookOpen, path: "/knowledge-analysis", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
     { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
-    { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
   ];
 
   const NAV_TOOLS = [
@@ -428,11 +427,13 @@ export default function Home() {
 
   /* -- Sorted arrays based on saved order -- */
   const sortedMain = useMemo(() => {
-    if (!mainOrder.length) return NAV_MAIN;
+    const financialStudies = NAV_MAIN.find((item) => item.id === "main-bateekha")!;
+    const remainingItems = NAV_MAIN.filter((item) => item.id !== "main-bateekha");
+    if (!mainOrder.length) return [financialStudies, ...remainingItems];
     const map = new Map(NAV_MAIN.map(item => [item.id, item]));
-    const ordered = mainOrder.filter(id => map.has(id)).map(id => map.get(id)!);
-    NAV_MAIN.forEach(item => { if (!mainOrder.includes(item.id)) ordered.push(item); });
-    return ordered;
+    const ordered = mainOrder.filter((id) => id !== "main-bateekha" && map.has(id)).map((id) => map.get(id)!);
+    remainingItems.forEach((item) => { if (!ordered.some((current) => current.id === item.id)) ordered.push(item); });
+    return [financialStudies, ...ordered];
   }, [mainOrder]);
 
   const sortedTools = useMemo(() => {
@@ -446,6 +447,7 @@ export default function Home() {
   const handleMainDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+    if (active.id === "main-bateekha" || over.id === "main-bateekha") return;
     const oldIndex = sortedMain.findIndex(i => i.id === active.id);
     const newIndex = sortedMain.findIndex(i => i.id === over.id);
     const newArr = arrayMove(sortedMain, oldIndex, newIndex);
@@ -848,10 +850,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 4 Remaining Main Cards - Draggable (excluding command center) */}
+            {/* Compact main cards in one desktop row, excluding the Command Center hero */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMainDragEnd}>
               <SortableContext items={sortedMain.filter(i => i.id !== 'main-cmd').map(i => i.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   {sortedMain.filter(i => i.id !== 'main-cmd').map((item) => (
                     <SortableMainCard key={item.id} item={item} onNavigate={navigate} />
                   ))}

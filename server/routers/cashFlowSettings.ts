@@ -2220,6 +2220,20 @@ export const cashFlowSettingsRouter = router({
       // Try to use Wael sales plan data if available, otherwise fall back to defaults
       const totalRevenue = costs.totalRevenue || 0;
       const isOffplanScenario = scenario === "offplan_escrow" || scenario === "offplan_construction";
+      const bookingPct = cp?.paymentBookingPct ? parseFloat(String(cp.paymentBookingPct)) / 100 : 0.10;
+      const constructionPct = cp?.paymentConstructionPct ? parseFloat(String(cp.paymentConstructionPct)) / 100 : 0.60;
+      const handoverPct = cp?.paymentHandoverPct ? parseFloat(String(cp.paymentHandoverPct)) / 100 : 0.30;
+      const constructionPhase = phases.find(p => p.type === "construction");
+      const handoverPhase = phases.find(p => p.type === "handover");
+      const salesStartMonth = constructionPhase ? constructionPhase.startMonth : 0;
+      const salesEndMonth = constructionPhase
+        ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
+        : totalMonths - 1;
+      const salesMonths = Math.max(1, salesEndMonth - salesStartMonth + 1);
+      const constructionEndMonth = constructionPhase
+        ? constructionPhase.startMonth + constructionPhase.duration - 1
+        : totalMonths - 3;
+      const handoverStartMonth = handoverPhase ? handoverPhase.startMonth : totalMonths - 2;
 
       // Use Wael revenue engine if sales plan exists
       let revenuePerMonth = new Array(totalMonths).fill(0);
@@ -2234,25 +2248,6 @@ export const cashFlowSettingsRouter = router({
 
       // Fallback: if no Wael data or all zeros, use default linear absorption
       if (revenuePerMonth.every(v => v === 0) && isOffplanScenario && totalRevenue > 0) {
-        const bookingPct = cp?.paymentBookingPct ? parseFloat(String(cp.paymentBookingPct)) / 100 : 0.10;
-        const constructionPct = cp?.paymentConstructionPct ? parseFloat(String(cp.paymentConstructionPct)) / 100 : 0.60;
-        const handoverPct = cp?.paymentHandoverPct ? parseFloat(String(cp.paymentHandoverPct)) / 100 : 0.30;
-
-        const constructionPhase = phases.find(p => p.type === "construction");
-        const handoverPhase = phases.find(p => p.type === "handover");
-
-        const salesStartMonth = constructionPhase ? constructionPhase.startMonth : 0;
-        const salesEndMonth = constructionPhase
-          ? constructionPhase.startMonth + Math.floor(constructionPhase.duration * 0.8) - 1
-          : totalMonths - 1;
-        const salesMonths = Math.max(1, salesEndMonth - salesStartMonth + 1);
-
-        const constructionEndMonth = constructionPhase
-          ? constructionPhase.startMonth + constructionPhase.duration - 1
-          : totalMonths - 3;
-
-        const handoverStartMonth = handoverPhase ? handoverPhase.startMonth : totalMonths - 2;
-
         const revenuePerSaleMonth = totalRevenue / salesMonths;
 
         for (let saleMonth = salesStartMonth; saleMonth <= salesEndMonth && saleMonth < totalMonths; saleMonth++) {

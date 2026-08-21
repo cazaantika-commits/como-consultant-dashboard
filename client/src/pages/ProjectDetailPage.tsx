@@ -349,9 +349,9 @@ export default function ProjectDetailPage() {
       <div className="min-h-screen flex items-center justify-center flex-col gap-4">
         <AlertCircle className="w-12 h-12 text-muted-foreground" />
         <h2 className="text-lg font-semibold">المشروع غير موجود</h2>
-        <Button onClick={() => navigate("/project-management")} variant="outline">
+        <Button onClick={() => navigate("/bateekha")} variant="outline">
           <ArrowRight className="w-4 h-4 ml-1" />
-          العودة لإدارة المشاريع
+          العودة للدراسات المالية
         </Button>
       </div>
     );
@@ -370,11 +370,11 @@ export default function ProjectDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/project-management")}
+              onClick={() => navigate("/bateekha")}
               className="text-white hover:bg-white/20"
             >
               <ArrowRight className="w-4 h-4 ml-1" />
-              إدارة المشاريع
+              الدراسات المالية
             </Button>
             <Separator orientation="vertical" className="h-5 bg-white/20" />
             <span className="text-stone-400 text-sm">تفاصيل المشروع</span>
@@ -409,7 +409,7 @@ export default function ProjectDetailPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => navigate("/project-management")}
+              onClick={() => navigate("/bateekha?tab=general")}
               className="bg-white/10 hover:bg-white/20 text-white gap-1.5"
             >
               <Pencil className="w-3.5 h-3.5" />

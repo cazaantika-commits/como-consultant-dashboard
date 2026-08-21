@@ -1,5 +1,6 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,9 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 
 const LAST_PROJECT_KEY = "como_last_project_id";
 
-export default function KnowledgeHubPage({ onBack }: { onBack: () => void }) {
+export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
+  const [, navigate] = useLocation();
+  const handleBack = onBack || (() => navigate("/"));
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -73,7 +76,7 @@ export default function KnowledgeHubPage({ onBack }: { onBack: () => void }) {
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 shrink-0">
+          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5 shrink-0">
             <ArrowRight className="w-4 h-4" />
             العودة
           </Button>

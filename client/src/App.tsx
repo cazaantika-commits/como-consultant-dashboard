@@ -35,12 +35,11 @@ import MeetingRoomPage from "./pages/MeetingRoomPage";
 import MeetingTrackingPage from "./pages/MeetingTrackingPage";
 import ExecutionDashboardPage from "./pages/ExecutionDashboardPage";
 import GoogleConnectPage from "./pages/GoogleConnectPage";
-import ProjectManagementPage from "./pages/ProjectManagementPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractsRegistryPage from "./pages/ContractsRegistryPage";
-import FactSheetPage from "./pages/FactSheetPage";
 import ActivityMonitorPage from "./pages/ActivityMonitorPage";
 import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
+import KnowledgeHubPage from "./pages/KnowledgeHubPage";
 import SentEmailsPage from "./pages/SentEmailsPage";
 import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import CommandCenterPage from "./pages/CommandCenterPage";
@@ -129,14 +128,13 @@ function Router() {
       <Route path="/meetings/tracking" component={MeetingTrackingPage} />
       <Route path="/execution-dashboard" component={ExecutionDashboardPage} />
       <Route path="/google-connect" component={GoogleConnectPage} />
-      <Route path="/project-management" component={ProjectManagementPage} />
       <Route path="/project/:id" component={ProjectDetailPage} />
       <Route path="/projects/:id" component={ProjectDetailPage} />
       <Route path="/contracts" component={ContractsRegistryPage} />
           <Route path="/news-manage" component={NewsTickerManagePage} />
-      <Route path="/fact-sheet" component={FactSheetPage} />
       <Route path="/activity-monitor" component={ActivityMonitorPage} />
       <Route path="/specialist-knowledge" component={SpecialistKnowledgePage} />
+      <Route path="/knowledge-analysis" component={KnowledgeHubPage} />
       <Route path="/sent-emails" component={SentEmailsPage} />
       <Route path="/executive" component={ExecutiveVIPPage} />
       <Route path="/command-center" component={CommandCenterPage} />

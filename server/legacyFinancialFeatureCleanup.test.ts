@@ -7,14 +7,14 @@ const readSource = (relativePath: string) =>
 
 describe("legacy financial feature cleanup", () => {
   const appSource = readSource("client/src/App.tsx");
-  const strategicStudiesSource = readSource("client/src/pages/ProjectManagementPage.tsx");
+  const homeSource = readSource("client/src/pages/Home.tsx");
   const commandCenterSource = readSource("client/src/pages/CommandCenterPage.tsx");
 
-  it("retains only independent Strategic Studies cards", () => {
-    expect(strategicStudiesSource).toContain('id: "fact-sheet" as View');
-    expect(strategicStudiesSource).toContain('id: "knowledge" as View');
-    expect(strategicStudiesSource).not.toContain('id: "financial" as View');
-    expect(strategicStudiesSource).not.toContain('id: "dynamic-portfolio" as View');
+  it("removes the retired Strategic Studies launcher while retaining Knowledge and Analysis", () => {
+    expect(homeSource).not.toContain('id: "main-projects"');
+    expect(homeSource).toContain('id: "main-kb", label: "المعرفة والتحليل"');
+    expect(appSource).not.toContain('path="/project-management"');
+    expect(appSource).not.toContain('path="/fact-sheet"');
   });
 
   it("removes legacy financial planning and dynamic portfolio routes while retaining Financial Studies", () => {

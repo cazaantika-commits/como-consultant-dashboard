@@ -1394,3 +1394,8 @@
 - [x] Add a concise Sheikh Issa executive briefing page before the portfolio-report cards, sourced from the existing portfolio obligation and escrow-liquidity data
 - [x] Add a read-only "الأشهر الأربعة القادمة" control to all four Executive Portfolio Reports that focuses each report on the upcoming executive period without changing any calculation
 - [x] Verify the executive briefing and four-month report focus in the browser and protect the behavior with regression tests
+- [x] Preserve the Knowledge and Analysis card, move it beside the other main cards, and place Financial Studies and Planning first in the main-card order
+- [x] Audit and remove only the Strategic Studies and Planning entry point and legacy Fact Sheet route after confirming no active card or report depends on them
+- [x] Verify the revised main-card order and the absence of the strategic entry in the browser, then protect the navigation with a regression test
+- [x] Render all retained main cards in one compact desktop row with Financial Studies first and responsive wrapping only on smaller screens
+- [x] Repair the pre-existing cash-flow response metadata scope error exposed by the full regression suite without changing any revenue or expense calculation
