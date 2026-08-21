@@ -1,0 +1,170 @@
+export type RegistrationMilestoneRequirement = {
+  serviceCode: string;
+  requirementCode: string;
+  nameAr: string;
+  reqType: "document" | "data" | "approval" | "action";
+  timing: string;
+  sourceNote: string;
+  isMandatory: false;
+};
+
+/**
+ * Supplemental, non-blocking evidence checklist for the existing off-plan
+ * registration flow. These entries deliberately do not alter any service,
+ * duration, dependency, or existing project schedule.
+ */
+export const registrationMilestoneRequirements: RegistrationMilestoneRequirement[] = [
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DOC-11",
+    nameAr: "رخصة البناء النهائية المعتمدة",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "خدمة تسجيل المشروع لدى دائرة الأراضي والأملاك",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DOC-12",
+    nameAr: "المخططات المعتمدة ومسح الوحدات",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "خدمة تسجيل المشروع لدى دائرة الأراضي والأملاك",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DOC-13",
+    nameAr: "التقرير الفني للمشروع من الجهة أو الاستشاري المعتمد",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "خدمة تسجيل المشروع لدى دائرة الأراضي والأملاك",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DOC-14",
+    nameAr: "شهادة عدم ممانعة من المطور الرئيس عند انطباقها",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "يتحدد حسب وضع الأرض والمطور الرئيس",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DATA-11",
+    nameAr: "جهة الاختصاص ومسار الاعتمادات للموقع",
+    reqType: "data",
+    timing: "قبل التقديم",
+    sourceNote: "تختلف باختلاف موقع المشروع والسلطة التنظيمية",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-REG",
+    requirementCode: "REQ-PROJ-REG-DATA-12",
+    nameAr: "دليل ضمان أو استكمال الإنشاء المطلوب للملف عند انطباقه",
+    reqType: "data",
+    timing: "قبل التقديم",
+    sourceNote: "يتحقق منه وفق متطلبات الملف التنظيمي الفعلية",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-ESCROW-OPEN",
+    requirementCode: "REQ-ESCROW-DOC-08",
+    nameAr: "اتفاقية أمين الحساب أو خطاب قبول البنك",
+    reqType: "document",
+    timing: "قبل الفتح",
+    sourceNote: "مستند افتتاح حساب الضمان",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-ESCROW-OPEN",
+    requirementCode: "REQ-ESCROW-DATA-07",
+    nameAr: "اسم أمين الحساب ومسؤول التواصل",
+    reqType: "data",
+    timing: "قبل الفتح",
+    sourceNote: "حساب الضمان مخصص لكل مشروع",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-ESCROW-OPEN",
+    requirementCode: "REQ-ESCROW-DATA-08",
+    nameAr: "رقم حساب الضمان وتاريخ تفعيله",
+    reqType: "data",
+    timing: "بعد الفتح",
+    sourceNote: "دليل تفعيل حساب الضمان للمشروع",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-PLAN",
+    requirementCode: "REQ-PROJ-PLAN-DOC-01",
+    nameAr: "خطة التدفق والصرف المعتمدة للمشروع",
+    reqType: "document",
+    timing: "قبل الاعتماد",
+    sourceNote: "الخطة المالية والزمنية المقدمة للمشروع",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-PLAN",
+    requirementCode: "REQ-PROJ-PLAN-DOC-02",
+    nameAr: "الجدول الزمني التنفيذي المعتمد للمشروع",
+    reqType: "document",
+    timing: "قبل الاعتماد",
+    sourceNote: "مرجع المراحل والإنجاز للمشروع",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-PLAN",
+    requirementCode: "REQ-PROJ-PLAN-DOC-03",
+    nameAr: "خطة نسب الإنجاز ومراحل طلب السحب",
+    reqType: "document",
+    timing: "قبل الاعتماد",
+    sourceNote: "للمتابعة مع أمين الحساب عند تشغيل المشروع",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-PROJ-PLAN",
+    requirementCode: "REQ-PROJ-PLAN-DATA-01",
+    nameAr: "تاريخ البدء والإكمال وخط الأساس المعتمد",
+    reqType: "data",
+    timing: "قبل الاعتماد",
+    sourceNote: "خط أساس المحطة ولا يغير جدول الخدمات الحالي",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-MKT-PERMIT",
+    requirementCode: "REQ-MKT-PERMIT-DOC-01",
+    nameAr: "شهادة اعتماد المشروع وحساب الضمان الفعال",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "لا يبدأ الإعلان قبل تحقق الاعتماد التنظيمي المطلوب",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-MKT-PERMIT",
+    requirementCode: "REQ-MKT-PERMIT-DOC-02",
+    nameAr: "المادة الإعلانية ونص الإعلان للاعتماد",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "تصريح الإعلان العقاري",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-MKT-PERMIT",
+    requirementCode: "REQ-MKT-PERMIT-DOC-03",
+    nameAr: "تفويض المطور الرئيس أو المالك عند انطباقه",
+    reqType: "document",
+    timing: "قبل التقديم",
+    sourceNote: "يتحدد بحسب ملكية الأرض ونموذج التطوير",
+    isMandatory: false,
+  },
+  {
+    serviceCode: "SRV-RERA-MKT-PERMIT",
+    requirementCode: "REQ-MKT-PERMIT-DATA-01",
+    nameAr: "رقم تصريح الإعلان وتاريخ صلاحيته",
+    reqType: "data",
+    timing: "بعد الإصدار",
+    sourceNote: "إثبات جاهزية الإعلان والإطلاق",
+    isMandatory: false,
+  },
+];
