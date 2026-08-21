@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
-import { XIcon } from "lucide-react";
+import { default as XIcon } from "lucide-react/dist/esm/icons/x.js";
 
 import { cn } from "@/lib/utils";
 

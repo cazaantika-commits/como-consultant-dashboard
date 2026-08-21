@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { AlertTriangle, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { trpc } from "@/lib/trpc";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { Button } from "@/components/ui/button";

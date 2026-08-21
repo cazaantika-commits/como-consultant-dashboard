@@ -3,11 +3,28 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import {
-  Loader2, Sparkles, CheckCircle2, XCircle, Clock, Play, ChevronDown, ChevronUp,
-  Brain, Globe, BarChart3, Target, TrendingUp, DollarSign, Users, ShieldCheck,
-  FileText, AlertTriangle, Zap, Database, RefreshCw, Eye,
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Play } from "lucide-react/dist/esm/icons/play.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
 import { Streamdown } from "streamdown";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";

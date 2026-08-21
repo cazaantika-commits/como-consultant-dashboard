@@ -10,11 +10,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  CreditCard, Plus, Search, Eye, CheckCircle, XCircle, Clock,
-  AlertCircle, Upload, FileText, Building2, DollarSign, Send,
-  ChevronRight, RotateCcw, Mail, ExternalLink, Banknote, Settings, Download, Calendar, Archive, ArchiveRestore, ArrowRight
-} from "lucide-react";
+import { default as CreditCard } from "lucide-react/dist/esm/icons/credit-card.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as RotateCcw } from "lucide-react/dist/esm/icons/rotate-ccw.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Banknote } from "lucide-react/dist/esm/icons/banknote.js";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
+import { default as ArchiveRestore } from "lucide-react/dist/esm/icons/archive-restore.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 
 type PaymentRequest = {
   id: number;

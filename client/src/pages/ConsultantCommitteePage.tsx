@@ -7,7 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, ClipboardCheck, Trophy, Medal, Award, Loader2, Sparkles, Save } from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as ClipboardCheck } from "lucide-react/dist/esm/icons/clipboard-check.js";
+import { default as Trophy } from "lucide-react/dist/esm/icons/trophy.js";
+import { default as Medal } from "lucide-react/dist/esm/icons/medal.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
 import { Streamdown } from "streamdown";
 
 const CRITERIA = [

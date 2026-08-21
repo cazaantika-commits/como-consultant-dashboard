@@ -12,13 +12,36 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
-import {
-  Building2, ChevronDown, ChevronRight, CheckCircle2, Circle, Clock,
-  Plus, Trash2, Upload, FileText, Loader2, AlertTriangle, X,
-  Zap, BarChart3, FolderOpen, Shield, Briefcase, HardHat, Home,
-  Paperclip, Download, Eye, Bot, ExternalLink, Users,
-  CalendarDays, CalendarClock, Bell, Timer,
-} from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Circle } from "lucide-react/dist/esm/icons/circle.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { default as Paperclip } from "lucide-react/dist/esm/icons/paperclip.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
+import { default as Bell } from "lucide-react/dist/esm/icons/bell.js";
+import { default as Timer } from "lucide-react/dist/esm/icons/timer.js";
 import { useLocation } from "wouter";
 import { format, formatDistanceToNow, isPast, isWithinInterval, addDays } from "date-fns";
 import { ar } from "date-fns/locale";

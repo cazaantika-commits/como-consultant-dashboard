@@ -168,11 +168,23 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 800,
+    // Keep production builds below the container memory limit: a single, giant
+    // vendor chunk caused Vite to be terminated while rendering final chunks.
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          dndkit: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "vendor-react";
+          if (id.includes("node_modules/@dnd-kit/")) return "vendor-dnd";
+          if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
+          if (id.includes("node_modules/lucide-react/")) return "vendor-icons";
+          if (id.includes("node_modules/framer-motion/")) return "vendor-motion";
+          if (id.includes("node_modules/recharts/")) return "vendor-charts";
+          if (id.includes("node_modules/pdfjs-dist/")) return "vendor-pdf";
+          if (id.includes("node_modules/xlsx/")) return "vendor-spreadsheet";
+          if (id.includes("node_modules/@tanstack/") || id.includes("node_modules/@trpc/")) return "vendor-data";
         },
       },
     },

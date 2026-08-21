@@ -1,6 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Bell, Mail, Check, CheckCheck, X, ExternalLink } from "lucide-react";
+import { default as Bell } from "lucide-react/dist/esm/icons/bell.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as CheckCheck } from "lucide-react/dist/esm/icons/check-check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 

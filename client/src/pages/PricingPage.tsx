@@ -6,7 +6,10 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { PROJECT_INPUTS, dbProjectToInputs } from "@/lib/projectData";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Loader2, Car, Info } from "lucide-react";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Car } from "lucide-react/dist/esm/icons/car.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { Button } from "@/components/ui/button";
 import { formatFullNumber } from "@/lib/numberFormat";
 import {

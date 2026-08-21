@@ -4,7 +4,10 @@ import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Lightbulb, Loader2, Sparkles } from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Lightbulb } from "lucide-react/dist/esm/icons/lightbulb.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { Streamdown } from "streamdown";
 
 const CRITERIA = [

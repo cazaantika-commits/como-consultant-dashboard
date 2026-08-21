@@ -9,25 +9,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ChevronDown,
-  ChevronLeft,
-  Calendar,
-  Loader2,
-  Check,
-  ZoomIn,
-  ZoomOut,
-  GripVertical,
-  Filter,
-  AlertTriangle,
-  CalendarX2,
-  Clock,
-  Plus,
-  Trash2,
-  X,
-  Crosshair,
-  Columns2,
-} from "lucide-react";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as ZoomIn } from "lucide-react/dist/esm/icons/zoom-in.js";
+import { default as ZoomOut } from "lucide-react/dist/esm/icons/zoom-out.js";
+import { default as GripVertical } from "lucide-react/dist/esm/icons/grip-vertical.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CalendarX2 } from "lucide-react/dist/esm/icons/calendar-x-2.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Crosshair } from "lucide-react/dist/esm/icons/crosshair.js";
+import { default as Columns2 } from "lucide-react/dist/esm/icons/columns-2.js";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 

@@ -5,11 +5,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useLocation, useRoute } from "wouter";
-import {
-  Users, ArrowRight, Send, Mic, MicOff, Volume2, FileText,
-  Upload, Play, Square, Loader2, CheckCircle, Clock,
-  FileUp, X, ChevronDown, ChevronUp, Sparkles, Download
-} from "lucide-react";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
+import { default as MicOff } from "lucide-react/dist/esm/icons/mic-off.js";
+import { default as Volume2 } from "lucide-react/dist/esm/icons/volume-2.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as Play } from "lucide-react/dist/esm/icons/play.js";
+import { default as Square } from "lucide-react/dist/esm/icons/square.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as FileUp } from "lucide-react/dist/esm/icons/file-up.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
 
 type Message = {
   id: number;

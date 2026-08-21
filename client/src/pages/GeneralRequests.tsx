@@ -8,12 +8,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import {
-  ClipboardList, Plus, Search, Eye, CheckCircle, XCircle, Clock,
-  AlertCircle, Upload, FileText, Send, ChevronRight, RotateCcw,
-  ExternalLink, Settings, Archive, ArchiveRestore, ArrowRight, Paperclip,
-  Users, Calendar, Video, HelpCircle, Gavel, FileCheck, Download
-} from "lucide-react";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as RotateCcw } from "lucide-react/dist/esm/icons/rotate-ccw.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
+import { default as ArchiveRestore } from "lucide-react/dist/esm/icons/archive-restore.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Paperclip } from "lucide-react/dist/esm/icons/paperclip.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Video } from "lucide-react/dist/esm/icons/video.js";
+import { default as HelpCircle } from "lucide-react/dist/esm/icons/circle-help.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
+import { default as FileCheck } from "lucide-react/dist/esm/icons/file-check.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type RequestType = "proposal_approval" | "contract_approval" | "meeting_request" | "zoom_meeting" | "inquiry" | "decision_request" | "other";

@@ -10,12 +10,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
-import {
-  Trophy, DollarSign, Scale, Brain, Shield, AlertTriangle,
-  CheckCircle2, ArrowLeft, Gavel, TrendingUp, TrendingDown,
-  BarChart3, FileText, Sparkles, Crown, Target, Minus,
-  ChevronUp, ChevronDown, Info, Loader2
-} from "lucide-react";
+import { default as Trophy } from "lucide-react/dist/esm/icons/trophy.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Crown } from "lucide-react/dist/esm/icons/crown.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Minus } from "lucide-react/dist/esm/icons/minus.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { Link } from "wouter";
 
 // Fee Deviation Zone definitions

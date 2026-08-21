@@ -1,5 +1,11 @@
 import React, { useMemo } from "react";
-import { ArrowRight, CalendarClock, Download, Loader2, TrendingDown, TrendingUp, WalletCards } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

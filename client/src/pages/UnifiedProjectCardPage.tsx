@@ -1,4 +1,6 @@
-import { ClipboardList, Database, Calculator } from "lucide-react";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
 import GeneralInputsPage from "./GeneralInputsPage";
 import FactSheetPage from "./FactSheetPage";
 

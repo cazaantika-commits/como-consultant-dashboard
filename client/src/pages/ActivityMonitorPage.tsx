@@ -5,24 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Loader2,
-  ArrowLeft,
-  Activity,
-  Search,
-  FileText,
-  Brain,
-  Database,
-  Bot,
-  BarChart3,
-  BookOpen,
-  RefreshCw,
-  Filter,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  Wrench,
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as Wrench } from "lucide-react/dist/esm/icons/wrench.js";
 import { useLocation } from "wouter";
 import { getLoginUrl } from "@/const";
 

@@ -1,4 +1,4 @@
-import { Loader2Icon } from "lucide-react";
+import { default as Loader2Icon } from "lucide-react/dist/esm/icons/loader-circle.js";
 
 import { cn } from "@/lib/utils";
 

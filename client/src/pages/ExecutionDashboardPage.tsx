@@ -6,11 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation } from "wouter";
-import {
-  Activity, CheckCircle2, XCircle, AlertTriangle, Clock, Wrench, 
-  ArrowRight, ChevronDown, ChevronUp, RefreshCw, BarChart3, Zap,
-  ArrowLeft, Shield, Target, TrendingUp
-} from "lucide-react";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Wrench } from "lucide-react/dist/esm/icons/wrench.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {

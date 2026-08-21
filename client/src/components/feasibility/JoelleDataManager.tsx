@@ -3,11 +3,23 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import {
-  Database, Globe, BarChart3, Building2, FileText, MapPin,
-  Users, RefreshCw, CheckCircle2, AlertTriangle, Clock,
-  ExternalLink, Upload, Info, Loader2, ChevronDown, ChevronUp,
-} from "lucide-react";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
 import { Streamdown } from "streamdown";
 
 const JOEL_AVATAR = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/mCOkEovAXTtxsABs.png";

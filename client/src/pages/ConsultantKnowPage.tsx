@@ -5,10 +5,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import {
-  ArrowLeft, UserCircle, Phone, MapPin, Award, Users, Building,
-  Mail, Edit3, Save, X, Briefcase, Hash, Plus, Trash2, ExternalLink
-} from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as UserCircle } from "lucide-react/dist/esm/icons/circle-user.js";
+import { default as Phone } from "lucide-react/dist/esm/icons/phone.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Building } from "lucide-react/dist/esm/icons/building.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Edit3 } from "lucide-react/dist/esm/icons/pen-line.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Hash } from "lucide-react/dist/esm/icons/hash.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 
 export default function ConsultantKnowPage() {
   const [editingId, setEditingId] = useState<number | null>(null);

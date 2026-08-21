@@ -2,7 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Loader2, Send, User, Sparkles } from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { useState, useEffect, useRef } from "react";
 import { Streamdown } from "streamdown";
 

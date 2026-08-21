@@ -3,10 +3,17 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  ArrowLeft, Mail, Send, CheckCircle2, XCircle, Clock,
-  ChevronDown, ChevronUp, RefreshCw, Search, Filter
-} from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
 import { Input } from "@/components/ui/input";
 import { useLocation } from "wouter";
 import {

@@ -6,9 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import {
-  Users, ArrowRight, Home, Check, Upload, FileText, X, Loader2
-} from "lucide-react";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 
 export default function NewMeetingPage() {
   const [, setLocation] = useLocation();

@@ -2,7 +2,10 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, ExternalLink, Loader2, XCircle } from "lucide-react";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
 import { useEffect, useState } from "react";
 import { getLoginUrl } from "@/const";
 

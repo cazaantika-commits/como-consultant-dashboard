@@ -6,10 +6,18 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { formatFullNumber } from "@/lib/numberFormat";
-import {
-  Save, Loader2, HardHat, TrendingUp, DollarSign, CalendarDays,
-  ChevronRight, ChevronLeft, WalletCards, Gauge, Clock3, ShieldCheck,
-} from "lucide-react";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
+import { default as Gauge } from "lucide-react/dist/esm/icons/gauge.js";
+import { default as Clock3 } from "lucide-react/dist/esm/icons/clock-3.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
 
 type CurveType = "standard" | "front_loaded" | "back_loaded" | "linear";
 const CONSTRUCTION_MONTHS_PER_PAGE = 20;

@@ -12,17 +12,15 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Upload,
-  FileText,
-  CheckCircle2,
-  AlertCircle,
-  Trash2,
-  ExternalLink,
-  Loader2,
-  Clock,
-  RefreshCw,
-} from "lucide-react";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
 import { toast } from "sonner";
 import { useState } from "react";
 

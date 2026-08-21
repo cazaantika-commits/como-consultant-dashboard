@@ -5,10 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import {
-  Users, Plus, Calendar, MessageSquare, FileText, Clock,
-  CheckCircle, XCircle, ArrowRight, Home, Trash2, PlayCircle, BarChart3
-} from "lucide-react";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as PlayCircle } from "lucide-react/dist/esm/icons/circle-play.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
 
 const statusMap: Record<string, { label: string; color: string; icon: any }> = {
   preparing: { label: "قيد التحضير", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Clock },

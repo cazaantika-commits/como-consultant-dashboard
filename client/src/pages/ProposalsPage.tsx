@@ -3,15 +3,28 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle, XCircle, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import * as pdfjsLib from 'pdfjs-dist';
+const PDFJS_MODULE_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.mjs";
+const PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.624/build/pdf.worker.min.mjs";
+let pdfJsLoader: Promise<any> | null = null;
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+async function loadPdfJs() {
+  pdfJsLoader ??= import(/* @vite-ignore */ PDFJS_MODULE_URL).then((module) => {
+    module.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+    return module;
+  });
+  return pdfJsLoader;
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-gray-500",
@@ -50,6 +63,7 @@ export default function ProposalsPage() {
 
   // Extract text from PDF
   const extractTextFromPDF = async (file: File): Promise<string> => {
+    const pdfjsLib = await loadPdfJs();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     

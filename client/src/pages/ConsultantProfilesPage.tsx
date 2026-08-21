@@ -5,7 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, ArrowRight, Building2, Globe, Users, Award, ChevronLeft, Plus, Trash2, UserPlus } from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as UserPlus } from "lucide-react/dist/esm/icons/user-plus.js";
 import { Link } from "wouter";
 import { getLoginUrl } from "@/const";
 

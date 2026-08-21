@@ -1410,3 +1410,5 @@
 - [x] Produce a preserve-first mapping for every existing Development Phases service: retain, clarify, optionally complement, or mark project-type-specific, without deleting or changing its duration, code, or dependency
 - [x] Add research-backed requirements and evidence checklists only to the existing registration, escrow, plan-approval, and marketing-permit services; preserve every existing service code, duration, dependency, and schedule behavior
 - [x] Verify the enriched registration milestone in the browser and prove the services, durations, dependencies, and existing project instances are unchanged
+- [x] Diagnose the failed deployment by reproducing the production build and inspecting local server logs before changing code
+- [x] Fix any confirmed code-level deployment blocker, verify the production build and tests, then save a deployment-ready checkpoint

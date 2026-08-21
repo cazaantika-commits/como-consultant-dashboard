@@ -10,11 +10,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import {
-  Brain, Target, TrendingUp, TrendingDown, ArrowUpDown, Plus,
-  BarChart3, Activity, Loader2, CheckCircle2, XCircle, MinusCircle,
-  Lightbulb, History, Crosshair, ArrowRight, AlertTriangle
-} from "lucide-react";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as ArrowUpDown } from "lucide-react/dist/esm/icons/arrow-up-down.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as MinusCircle } from "lucide-react/dist/esm/icons/circle-minus.js";
+import { default as Lightbulb } from "lucide-react/dist/esm/icons/lightbulb.js";
+import { default as History } from "lucide-react/dist/esm/icons/history.js";
+import { default as Crosshair } from "lucide-react/dist/esm/icons/crosshair.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, ScatterChart, Scatter, ZAxis, Cell, Legend,

@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, BarChart3, PieChart } from "lucide-react";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as PieChart } from "lucide-react/dist/esm/icons/chart-pie.js";
 
 export default function ProjectCashFlowSimplified() {
   return (

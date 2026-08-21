@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Building2 } from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
 
 interface ProjectSelectorProps {
   selectedId: number | null;

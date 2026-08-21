@@ -5,20 +5,18 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import {
-  Plus,
-  Trash2,
-  Edit2,
-  Check,
-  X,
-  ArrowLeft,
-  FolderOpen,
-  Tag,
-  GripVertical,
-  Eye,
-  EyeOff,
-  Palette,
-} from "lucide-react";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Edit2 } from "lucide-react/dist/esm/icons/pen.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Tag } from "lucide-react/dist/esm/icons/tag.js";
+import { default as GripVertical } from "lucide-react/dist/esm/icons/grip-vertical.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as EyeOff } from "lucide-react/dist/esm/icons/eye-off.js";
+import { default as Palette } from "lucide-react/dist/esm/icons/palette.js";
 import { Link } from "wouter";
 import { toast } from "sonner";
 

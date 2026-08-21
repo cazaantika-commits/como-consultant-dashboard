@@ -8,11 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import {
-  Shield, AlertTriangle, TrendingUp, TrendingDown, Activity, Eye,
-  BarChart3, Target, Zap, Building2, ChevronLeft, Loader2,
-  ShieldAlert, ShieldCheck, ShieldX, Info
-} from "lucide-react";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as ShieldX } from "lucide-react/dist/esm/icons/shield-x.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,

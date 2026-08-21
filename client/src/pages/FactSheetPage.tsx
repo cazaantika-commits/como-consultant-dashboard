@@ -12,11 +12,30 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import {
-  Building2, FileText, Users, Zap, Car, Calendar, ShieldAlert, Landmark, Scale,
-  Save, Loader2, ChevronLeft, Bot, CheckCircle2, AlertCircle, Ruler, Sparkles,
-  RefreshCw, Calculator, PenLine, Database, Info, ChevronDown, ChevronUp,
-} from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Car } from "lucide-react/dist/esm/icons/car.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Ruler } from "lucide-react/dist/esm/icons/ruler.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as PenLine } from "lucide-react/dist/esm/icons/pen-line.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 

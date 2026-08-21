@@ -1,5 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Send, Loader2, Trash2, History, Mic, MicOff, Square, Volume2, VolumeX, Pause, Mail, CheckCircle2 } from "lucide-react";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as History } from "lucide-react/dist/esm/icons/history.js";
+import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
+import { default as MicOff } from "lucide-react/dist/esm/icons/mic-off.js";
+import { default as Square } from "lucide-react/dist/esm/icons/square.js";
+import { default as Volume2 } from "lucide-react/dist/esm/icons/volume-2.js";
+import { default as VolumeX } from "lucide-react/dist/esm/icons/volume-x.js";
+import { default as Pause } from "lucide-react/dist/esm/icons/pause.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card } from "./ui/card";

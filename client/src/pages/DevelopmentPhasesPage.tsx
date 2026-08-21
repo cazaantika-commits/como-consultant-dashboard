@@ -1,20 +1,18 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import {
-  ArrowRight,
-  ClipboardList,
-  CalendarDays,
-  FileSignature,
-  Plus,
-  Pencil,
-  ChevronUp,
-  ChevronDown,
-  ToggleLeft,
-  ToggleRight,
-  Check,
-  X,
-  Loader2,
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as FileSignature } from "lucide-react/dist/esm/icons/file-pen-line.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ToggleLeft } from "lucide-react/dist/esm/icons/toggle-left.js";
+import { default as ToggleRight } from "lucide-react/dist/esm/icons/toggle-right.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

@@ -19,7 +19,12 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Download, Upload, ExternalLink } from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/_core/hooks/useAuth";
 

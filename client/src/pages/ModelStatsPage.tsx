@@ -4,7 +4,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, Clock, CheckCircle, AlertTriangle, Zap, Brain, Cpu, Loader2 } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Cpu } from "lucide-react/dist/esm/icons/cpu.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { useMemo } from "react";
 
 // Model color mapping

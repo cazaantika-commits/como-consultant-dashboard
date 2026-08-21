@@ -1,7 +1,10 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, TrendingUp, Users, FileText } from "lucide-react";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
 
 export default function ProjectLifecycleSimplified() {
   return (

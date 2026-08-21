@@ -21,7 +21,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { cn } from "@/lib/utils";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, VariantProps } from "class-variance-authority";
-import { PanelLeftIcon } from "lucide-react";
+import { default as PanelLeftIcon } from "lucide-react/dist/esm/icons/panel-left.js";
 import * as React from "react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";

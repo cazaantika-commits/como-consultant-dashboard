@@ -1,4 +1,8 @@
-import { ArrowRight, BarChart3, Download, FileSpreadsheet, Landmark } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as FileSpreadsheet } from "lucide-react/dist/esm/icons/file-spreadsheet.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";

@@ -13,7 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, CheckCircle2, AlertCircle, Edit3, Save, X, Info } from "lucide-react";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Edit3 } from "lucide-react/dist/esm/icons/pen-line.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { toast } from "sonner";
 
 interface StageDataTabProps {

@@ -13,11 +13,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  ArrowLeft, Clock, CheckCircle2, Lock, AlertCircle, Circle, FileText, Database,
-  ChevronRight, ChevronUp, ChevronDown, CalendarDays, Users, Building2, AlertTriangle, Timer, TrendingUp,
-  Edit3, Save, X, Bell, BellRing, RefreshCw, Settings2, GripVertical
-} from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Lock } from "lucide-react/dist/esm/icons/lock.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Circle } from "lucide-react/dist/esm/icons/circle.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Timer } from "lucide-react/dist/esm/icons/timer.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Edit3 } from "lucide-react/dist/esm/icons/pen-line.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Bell } from "lucide-react/dist/esm/icons/bell.js";
+import { default as BellRing } from "lucide-react/dist/esm/icons/bell-ring.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
+import { default as GripVertical } from "lucide-react/dist/esm/icons/grip-vertical.js";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";

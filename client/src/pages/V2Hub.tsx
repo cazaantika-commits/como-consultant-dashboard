@@ -1,5 +1,11 @@
 import { useLocation } from "wouter";
-import { ArrowRight, TrendingDown, Briefcase, Landmark, FileText, Users, Calendar } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
 
 const V2_PAGES = [
   {

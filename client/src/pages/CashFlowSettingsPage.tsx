@@ -24,7 +24,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Settings2, Save, RotateCcw, Building2, Clock, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as RotateCcw } from "lucide-react/dist/esm/icons/rotate-ccw.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
 import { getMonthLabel } from "@/lib/monthUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

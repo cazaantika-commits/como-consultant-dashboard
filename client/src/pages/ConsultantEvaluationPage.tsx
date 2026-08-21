@@ -6,7 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Trash2, DollarSign, Users, ExternalLink, TrendingUp, Target, CheckCircle2, Building, AlertTriangle, Shield, Settings2 } from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Building } from "lucide-react/dist/esm/icons/building.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // ===== Supervision Monthly Rate Dialog =====

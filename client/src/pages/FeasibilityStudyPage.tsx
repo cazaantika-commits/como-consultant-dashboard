@@ -9,14 +9,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import {
-  Building2, Save, Plus, Trash2, Calculator, DollarSign, BarChart3,
-  FileText, MapPin, Ruler, TrendingUp, PieChart, Loader2,
-  Sparkles, Copy, Brain, Globe, FolderOpen, ShieldCheck, Users,
-  Landmark, Percent, ChevronDown, BookOpen, Scale, AlertTriangle,
-  BarChart2, Target, Briefcase, Layers, CheckCircle2, ArrowDownCircle,
-  SquareStack, LandPlot, Warehouse, ShoppingBag, Clock, Calendar, Hammer, Info, Printer, Download,
-} from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as Ruler } from "lucide-react/dist/esm/icons/ruler.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as PieChart } from "lucide-react/dist/esm/icons/chart-pie.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Copy } from "lucide-react/dist/esm/icons/copy.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as ArrowDownCircle } from "lucide-react/dist/esm/icons/circle-arrow-down.js";
+import { default as SquareStack } from "lucide-react/dist/esm/icons/square-stack.js";
+import { default as LandPlot } from "lucide-react/dist/esm/icons/land-plot.js";
+import { default as Warehouse } from "lucide-react/dist/esm/icons/warehouse.js";
+import { default as ShoppingBag } from "lucide-react/dist/esm/icons/shopping-bag.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Hammer } from "lucide-react/dist/esm/icons/hammer.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as Printer } from "lucide-react/dist/esm/icons/printer.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
 import { useLocation } from "wouter";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import CashFlowSettingsPage from "@/pages/CashFlowSettingsPage";

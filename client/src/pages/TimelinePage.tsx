@@ -8,10 +8,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_DESIGN_PAYMENT_STAGES, getBuildForSaleSalesTimelineWindow, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
-import {
-  Calendar, Palette, Rocket, FileCheck, Megaphone, Target, HardHat,
-  Save, Loader2, Building2,
-} from "lucide-react";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Palette } from "lucide-react/dist/esm/icons/palette.js";
+import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
+import { default as FileCheck } from "lucide-react/dist/esm/icons/file-check.js";
+import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS

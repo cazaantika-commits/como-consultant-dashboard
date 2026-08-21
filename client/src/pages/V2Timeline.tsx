@@ -1,4 +1,5 @@
-import { ArrowRight, Download } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
 import { useLocation } from "wouter";
 
 // ===== DUMMY DATA =====

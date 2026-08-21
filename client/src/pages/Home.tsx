@@ -22,52 +22,50 @@ import { CSS } from "@dnd-kit/utilities";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import {
-  Bot,
-  ArrowLeft,
-  Sparkles,
-  Shield,
-  BarChart3,
-  FileText,
-  Users,
-  Zap,
-  Crown,
-  Archive,
-  Scale,
-  Gauge,
-  ShieldCheck,
-  Calculator,
-  ShieldAlert,
-  Brain,
-  MessageSquare,
-  Rocket,
-  BarChart2,
-  Send,
-  ChevronLeft,
-  Building2,
-  LogOut,
-  TrendingUp,
-  BrainCircuit,
-  Layers,
-  Target,
-  Activity,
-  ClipboardList,
-  BookOpen,
-  Mail,
-  Mic,
-  Calendar,
-  CalendarPlus,
-  CheckCircle2,
-  Loader2,
-  X,
-  HardHat,
-  Megaphone,
-  Newspaper,
-  FolderOpen,
-  Clock,
-  AlertTriangle,
-  Wallet,
-} from "lucide-react";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Crown } from "lucide-react/dist/esm/icons/crown.js";
+import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Gauge } from "lucide-react/dist/esm/icons/gauge.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
+import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as LogOut } from "lucide-react/dist/esm/icons/log-out.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as BrainCircuit } from "lucide-react/dist/esm/icons/brain-circuit.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as CalendarPlus } from "lucide-react/dist/esm/icons/calendar-plus.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
+import { default as Newspaper } from "lucide-react/dist/esm/icons/newspaper.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Wallet } from "lucide-react/dist/esm/icons/wallet.js";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";

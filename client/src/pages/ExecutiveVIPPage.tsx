@@ -4,27 +4,25 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertTriangle,
-  Star,
-  Building2,
-  FileText,
-  BarChart3,
-  DollarSign,
-  Briefcase,
-  MessageCircle,
-  ChevronLeft,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  ArrowRight,
-  CalendarDays,
-  Mail,
-  Volume2,
-  VolumeX,
-  Bell,
-  BellRing,
-} from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Star } from "lucide-react/dist/esm/icons/star.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as MessageCircle } from "lucide-react/dist/esm/icons/message-circle.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Volume2 } from "lucide-react/dist/esm/icons/volume-2.js";
+import { default as VolumeX } from "lucide-react/dist/esm/icons/volume-x.js";
+import { default as Bell } from "lucide-react/dist/esm/icons/bell.js";
+import { default as BellRing } from "lucide-react/dist/esm/icons/bell-ring.js";
 import { AgentChatBox } from "@/components/AgentChatBox";
 
 /* --- animated floating particles background --- */

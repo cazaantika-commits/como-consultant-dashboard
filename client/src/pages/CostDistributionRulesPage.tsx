@@ -15,7 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Check, X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

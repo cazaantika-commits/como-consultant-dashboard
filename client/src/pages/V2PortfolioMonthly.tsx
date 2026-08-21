@@ -1,4 +1,8 @@
-import { ArrowRight, CalendarDays, Download, FileSpreadsheet, Layers3 } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as FileSpreadsheet } from "lucide-react/dist/esm/icons/file-spreadsheet.js";
+import { default as Layers3 } from "lucide-react/dist/esm/icons/layers-3.js";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";

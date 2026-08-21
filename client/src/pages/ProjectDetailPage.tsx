@@ -10,12 +10,33 @@ import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { useLocation, useRoute } from "wouter";
 import { useMemo } from "react";
-import {
-  ArrowRight, Building2, MapPin, FileText, Users, Zap, Calendar,
-  Shield, Loader2, FolderOpen, Hash, Ruler, Home as HomeIcon, User,
-  Phone, Mail, Globe, Landmark, Clock, Gavel, ExternalLink, Pencil,
-  DollarSign, BarChart3, CheckCircle2, AlertCircle, Percent
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Hash } from "lucide-react/dist/esm/icons/hash.js";
+import { default as Ruler } from "lucide-react/dist/esm/icons/ruler.js";
+import { default as HomeIcon } from "lucide-react/dist/esm/icons/house.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Phone } from "lucide-react/dist/esm/icons/phone.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
 
 // Fact Sheet field groups - mirrors the database schema sections
 const FIELD_GROUPS = [

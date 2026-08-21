@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { default as LayoutDashboard } from "lucide-react/dist/esm/icons/layout-dashboard.js";
+import { default as LogOut } from "lucide-react/dist/esm/icons/log-out.js";
+import { default as PanelLeft } from "lucide-react/dist/esm/icons/panel-left.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';

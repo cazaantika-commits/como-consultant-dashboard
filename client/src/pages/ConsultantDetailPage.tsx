@@ -19,12 +19,30 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Loader2, ChevronLeft, Building2, Globe, Users, Award, Calendar,
-  FileText, Plus, Pencil, Trash2, Save, MessageSquare, Shield, Star,
-  AlertTriangle, ExternalLink, MapPin, Phone, Mail, Briefcase,
-  Image as ImageIcon, Layout, Eye
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Star } from "lucide-react/dist/esm/icons/star.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as Phone } from "lucide-react/dist/esm/icons/phone.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as ImageIcon } from "lucide-react/dist/esm/icons/image.js";
+import { default as Layout } from "lucide-react/dist/esm/icons/panels-top-left.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
 import { Link, useParams } from "wouter";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";

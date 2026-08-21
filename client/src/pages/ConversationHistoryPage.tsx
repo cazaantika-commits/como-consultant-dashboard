@@ -3,7 +3,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { Search, MessageSquare, Calendar, User, Trash2, ExternalLink } from "lucide-react";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import { Link } from "wouter";
 
 type AgentType = "salwa" | "farouq" | "khazen" | "buraq" | "khaled" | "alina" | "baz" | "joelle";

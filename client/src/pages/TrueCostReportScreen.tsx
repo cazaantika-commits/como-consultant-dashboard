@@ -5,19 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import {
-  ArrowRight,
-  Loader2,
-  Pencil,
-  Check,
-  X,
-  ShieldCheck,
-  Lock,
-  Unlock,
-  FileBarChart2,
-  Save,
-  Printer,
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as Lock } from "lucide-react/dist/esm/icons/lock.js";
+import { default as Unlock } from "lucide-react/dist/esm/icons/lock-open.js";
+import { default as FileBarChart2 } from "lucide-react/dist/esm/icons/file-chart-column.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Printer } from "lucide-react/dist/esm/icons/printer.js";
 import {
   AlertDialog,
   AlertDialogAction,

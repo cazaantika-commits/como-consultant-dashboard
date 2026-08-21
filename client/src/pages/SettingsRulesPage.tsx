@@ -10,11 +10,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_DESIGN_PAYMENT_STAGES, type DesignPaymentStage } from "@/lib/projectTiming";
 import { isFinancialStudiesSettingsItemVisible } from "@/lib/financialStudiesNavigation";
-import {
-  Settings, Save, Loader2, Building2, Calendar,
-  Percent, Clock, Banknote, HardHat, Megaphone,
-  FileCheck, Palette, AlertTriangle, Landmark, Shield,
-} from "lucide-react";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Banknote } from "lucide-react/dist/esm/icons/banknote.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
+import { default as FileCheck } from "lucide-react/dist/esm/icons/file-check.js";
+import { default as Palette } from "lucide-react/dist/esm/icons/palette.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TYPES

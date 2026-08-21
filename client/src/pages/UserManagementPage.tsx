@@ -5,7 +5,11 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Users, Shield, User, Clock } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
 import { toast } from "sonner";
 
 export default function UserManagementPage() {

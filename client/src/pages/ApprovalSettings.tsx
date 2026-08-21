@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, User, Mail, Shield, Save, ArrowLeft, Info } from "lucide-react";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { useLocation } from "wouter";
 
 export default function ApprovalSettings() {

@@ -2,10 +2,17 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Building2, MapPin, Ruler, Calendar, DollarSign,
-  Calculator, Hammer, TrendingUp, Save, Loader2, Pencil,
-} from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.js";
+import { default as Ruler } from "lucide-react/dist/esm/icons/ruler.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as Hammer } from "lucide-react/dist/esm/icons/hammer.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
 import {
   PROJECT_INPUTS,
   RATES,

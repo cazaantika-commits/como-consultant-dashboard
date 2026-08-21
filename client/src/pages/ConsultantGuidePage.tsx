@@ -1,5 +1,20 @@
 import { Link } from "wouter";
-import { ArrowLeft, BookOpen, ChevronDown, Scale, DollarSign, TrendingUp, Gavel, AlertTriangle, CheckCircle2, Info, Shield, Target, Sparkles, SlidersHorizontal, Building, Users } from "lucide-react";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as SlidersHorizontal } from "lucide-react/dist/esm/icons/sliders-horizontal.js";
+import { default as Building } from "lucide-react/dist/esm/icons/building.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
 import { useState } from "react";
 
 // ═══ Technical Evaluation Criteria — ordered by weight (highest first) ═══

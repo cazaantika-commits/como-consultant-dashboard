@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, ChevronDown, ChevronUp, Landmark, TrendingDown, TrendingUp } from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 import { trpc } from "@/lib/trpc";
 import type { PortfolioProjectMonthlyNet } from "@/lib/portfolioAggregation";
 import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";

@@ -15,9 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {
-  Table2, Settings2, Building2, ArrowLeft, Download, Info, BarChart3
-} from "lucide-react";
+import { default as Table2 } from "lucide-react/dist/esm/icons/table-2.js";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
 import { Link } from "wouter";
 import { getMonthLabel } from "@/lib/monthUtils";
 import { formatFullNumber } from "@/lib/numberFormat";

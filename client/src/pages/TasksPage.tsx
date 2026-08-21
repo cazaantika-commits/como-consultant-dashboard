@@ -22,33 +22,31 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import {
-  Loader2,
-  Plus,
-  ArrowRight,
-  Pencil,
-  CheckCircle2,
-  Trash2,
-  ExternalLink,
-  ListTodo,
-  Clock,
-  AlertTriangle,
-  CheckCheck,
-  XCircle,
-  Pause,
-  Bot,
-  User,
-  Terminal,
-  Search,
-  Activity,
-  Mail,
-  Zap,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as ListTodo } from "lucide-react/dist/esm/icons/list-todo.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCheck } from "lucide-react/dist/esm/icons/check-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Pause } from "lucide-react/dist/esm/icons/pause.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Terminal } from "lucide-react/dist/esm/icons/terminal.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
-import { Settings } from "lucide-react";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
 
 // Fallback defaults (used while loading from DB)
 const DEFAULT_PROJECTS = [

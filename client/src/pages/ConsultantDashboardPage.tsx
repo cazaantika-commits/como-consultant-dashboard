@@ -1,6 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight } from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 

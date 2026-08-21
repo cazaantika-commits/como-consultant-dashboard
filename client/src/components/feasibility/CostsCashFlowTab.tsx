@@ -4,11 +4,16 @@ import { DEFAULT_AVG_AREAS } from "@shared/feasibilityUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import {
-  Loader2, Sparkles, DollarSign,
-  TrendingUp, TrendingDown, BarChart3, Save,
-  Car, AlertTriangle, CheckCircle
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Car } from "lucide-react/dist/esm/icons/car.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
 
 
 

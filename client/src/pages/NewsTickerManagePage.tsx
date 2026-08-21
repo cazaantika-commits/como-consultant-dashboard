@@ -4,19 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Newspaper,
-  Plus,
-  Trash2,
-  Eye,
-  EyeOff,
-  Pencil,
-  Check,
-  X,
-  ArrowUp,
-  ArrowDown,
-  ArrowRight,
-} from "lucide-react";
+import { default as Newspaper } from "lucide-react/dist/esm/icons/newspaper.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as EyeOff } from "lucide-react/dist/esm/icons/eye-off.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as ArrowUp } from "lucide-react/dist/esm/icons/arrow-up.js";
+import { default as ArrowDown } from "lucide-react/dist/esm/icons/arrow-down.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 

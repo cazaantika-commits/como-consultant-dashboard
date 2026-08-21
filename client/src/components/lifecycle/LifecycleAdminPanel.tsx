@@ -6,10 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  Plus, Pencil, Trash2, ChevronDown, ChevronRight, X, Save,
-  Settings2, GripVertical, AlertTriangle, Layers, FileText, Database, CheckSquare, Zap, Check
-} from "lucide-react";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
+import { default as GripVertical } from "lucide-react/dist/esm/icons/grip-vertical.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Database } from "lucide-react/dist/esm/icons/database.js";
+import { default as CheckSquare } from "lucide-react/dist/esm/icons/square-check-big.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as Check } from "lucide-react/dist/esm/icons/check.js";
 import { toast } from "sonner";
 
 // ─────────────────────────────────────────────

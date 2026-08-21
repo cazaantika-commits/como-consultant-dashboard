@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Link } from "wouter";
-import {
-  Star,
-  FileText,
-  UserCircle,
-  BookOpen,
-  ArrowLeft,
-  Building2,
-  ChevronLeft,
-} from "lucide-react";
+import { default as Star } from "lucide-react/dist/esm/icons/star.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as UserCircle } from "lucide-react/dist/esm/icons/circle-user.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
 
 const PORTAL_ICONS = [
   {

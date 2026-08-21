@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as AccordionPrimitive from "@radix-ui/react-accordion";
-import { ChevronDownIcon } from "lucide-react";
+import { default as ChevronDownIcon } from "lucide-react/dist/esm/icons/chevron-down.js";
 
 import { cn } from "@/lib/utils";
 

@@ -15,7 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Download, BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as Minus } from "lucide-react/dist/esm/icons/minus.js";
 import { formatFullNumber } from "@/lib/numberFormat";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

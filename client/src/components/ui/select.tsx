@@ -1,6 +1,8 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { default as CheckIcon } from "lucide-react/dist/esm/icons/check.js";
+import { default as ChevronDownIcon } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUpIcon } from "lucide-react/dist/esm/icons/chevron-up.js";
 
 import { cn } from "@/lib/utils";
 

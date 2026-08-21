@@ -17,12 +17,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ArrowRight, TrendingUp, Target, Megaphone, Calendar, DollarSign,
-  Palette, Rocket, FileCheck, HardHat, Save, Loader2,
-  Building2, Percent, CreditCard, Table2, Info, Download, RefreshCw, Sparkles, ShieldCheck,
-  LayoutDashboard, Tags, WalletCards, BarChart3, CheckCircle2, ChevronRight, ChevronLeft,
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Palette } from "lucide-react/dist/esm/icons/palette.js";
+import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
+import { default as FileCheck } from "lucide-react/dist/esm/icons/file-check.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
+import { default as CreditCard } from "lucide-react/dist/esm/icons/credit-card.js";
+import { default as Table2 } from "lucide-react/dist/esm/icons/table-2.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as LayoutDashboard } from "lucide-react/dist/esm/icons/layout-dashboard.js";
+import { default as Tags } from "lucide-react/dist/esm/icons/tags.js";
+import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
 import { exportToExcel } from "@/lib/tableExport";
 import { formatFullNumber } from "@/lib/numberFormat";
 import {

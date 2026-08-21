@@ -5,11 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, Plus, Edit2, Trash2, Save, X, BookOpen, Scale, Building2, 
-  Hammer, DollarSign, Users, Star, RefreshCw, Briefcase, Ruler, FileText,
-  BarChart3, Eye, ChevronDown, ChevronUp
-} from "lucide-react";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Edit2 } from "lucide-react/dist/esm/icons/pen.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Hammer } from "lucide-react/dist/esm/icons/hammer.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Star } from "lucide-react/dist/esm/icons/star.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Ruler } from "lucide-react/dist/esm/icons/ruler.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
 import {
   Select,
   SelectContent,

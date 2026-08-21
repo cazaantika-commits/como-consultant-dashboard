@@ -12,11 +12,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Streamdown } from "streamdown";
 import { toast } from "sonner";
-import {
-  Upload, FileText, Search, Filter, Trash2, RefreshCw, Eye,
-  Building2, BarChart3, Globe, Calendar, Tag, CheckCircle2,
-  AlertCircle, Loader2, X, Download, BookOpen
-} from "lucide-react";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as Tag } from "lucide-react/dist/esm/icons/tag.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
 
 const SOURCES = [
   { value: "CBRE", label: "CBRE", color: "bg-green-500" },

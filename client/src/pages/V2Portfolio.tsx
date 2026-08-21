@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowRight, CalendarDays, ChevronDown, ChevronUp, Download, Landmark, TrendingDown, TrendingUp } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { FinancialSourceValue } from "@/components/FinancialSourceTrace";

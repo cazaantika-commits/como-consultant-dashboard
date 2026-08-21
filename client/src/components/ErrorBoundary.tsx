@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as RotateCcw } from "lucide-react/dist/esm/icons/rotate-ccw.js";
 import { Component, ReactNode } from "react";
 
 interface Props {

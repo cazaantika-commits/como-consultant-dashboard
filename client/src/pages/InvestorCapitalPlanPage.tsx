@@ -1,7 +1,11 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Landmark, PenTool, ShieldCheck, HardHat } from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as PenTool } from "lucide-react/dist/esm/icons/pen-tool.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
 import {
   PROJECT_INPUTS,
   RATES,

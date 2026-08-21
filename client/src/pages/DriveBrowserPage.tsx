@@ -5,24 +5,22 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
-import {
-  Folder,
-  FileText,
-  FileSpreadsheet,
-  FileImage,
-  File,
-  Search,
-  ChevronLeft,
-  Home,
-  RefreshCw,
-  HardDrive,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  ArrowRight,
-  FolderOpen,
-  ChevronRight,
-} from "lucide-react";
+import { default as Folder } from "lucide-react/dist/esm/icons/folder.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as FileSpreadsheet } from "lucide-react/dist/esm/icons/file-spreadsheet.js";
+import { default as FileImage } from "lucide-react/dist/esm/icons/file-image.js";
+import { default as File } from "lucide-react/dist/esm/icons/file.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as HardDrive } from "lucide-react/dist/esm/icons/hard-drive.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { useState, useMemo, useCallback } from "react";

@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ArrowRight, BriefcaseBusiness, CalendarClock, CalendarRange, Landmark, ShieldAlert, WalletCards } from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as BriefcaseBusiness } from "lucide-react/dist/esm/icons/briefcase-business.js";
+import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
+import { default as CalendarRange } from "lucide-react/dist/esm/icons/calendar-range.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
+import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import V2CapitalPortfolio from "@/pages/V2CapitalPortfolio";
 import V2Portfolio from "@/pages/V2Portfolio";
 import V2PortfolioEscrowLiquidity from "@/pages/V2PortfolioEscrowLiquidity";

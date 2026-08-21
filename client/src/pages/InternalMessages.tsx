@@ -8,12 +8,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import {
-  MessageSquare, Send, Inbox, Archive, Plus, Search,
-  AlertCircle, RefreshCw, Trash2, Reply, Paperclip,
-  Link2, CheckSquare, FolderOpen, X, Download, Calendar,
-  CheckCheck, ArchiveX, Clock
-} from "lucide-react";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as Inbox } from "lucide-react/dist/esm/icons/inbox.js";
+import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Reply } from "lucide-react/dist/esm/icons/reply.js";
+import { default as Paperclip } from "lucide-react/dist/esm/icons/paperclip.js";
+import { default as Link2 } from "lucide-react/dist/esm/icons/link-2.js";
+import { default as CheckSquare } from "lucide-react/dist/esm/icons/square-check-big.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as CheckCheck } from "lucide-react/dist/esm/icons/check-check.js";
+import { default as ArchiveX } from "lucide-react/dist/esm/icons/archive-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
 
 type MemberKey = "abdulrahman" | "wael" | "sheikh_issa";
 

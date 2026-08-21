@@ -29,34 +29,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { formatFullNumber } from "@/lib/numberFormat";
-import {
-  ArrowRight,
-  Plus,
-  FileJson,
-  BarChart3,
-  Settings,
-  Building2,
-  Users,
-  CheckCircle,
-  AlertCircle,
-  XCircle,
-  Trophy,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Trash2,
-  Eye,
-  EyeOff,
-  Pencil,
-  Home,
-  Calculator,
-  Shield,
-  Layers,
-  Loader2,
-  Copy,
-  MessageSquare,
-  FileBarChart2,
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as FileJson } from "lucide-react/dist/esm/icons/file-json.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Trophy } from "lucide-react/dist/esm/icons/trophy.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as EyeOff } from "lucide-react/dist/esm/icons/eye-off.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Copy } from "lucide-react/dist/esm/icons/copy.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as FileBarChart2 } from "lucide-react/dist/esm/icons/file-chart-column.js";
 import TrueCostReportScreen from "./TrueCostReportScreen";
 
 // ---- Types ----------------------------------------------------------------

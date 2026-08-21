@@ -1,11 +1,21 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Link } from "wouter";
-import { 
-  ArrowRight, Calendar, CheckCircle2, XCircle, Clock, 
-  Users, FileText, AlertTriangle, BarChart3, ChevronDown, 
-  ChevronUp, Loader2, ArrowLeft, Target, TrendingUp
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

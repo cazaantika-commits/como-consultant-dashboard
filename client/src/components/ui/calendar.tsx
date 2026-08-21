@@ -1,9 +1,7 @@
 import * as React from "react";
-import {
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "lucide-react";
+import { default as ChevronDownIcon } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronLeftIcon } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as ChevronRightIcon } from "lucide-react/dist/esm/icons/chevron-right.js";
 import { DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { cn } from "@/lib/utils";

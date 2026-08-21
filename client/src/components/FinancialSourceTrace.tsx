@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { useState, type ReactNode } from "react";
 import {
   Dialog,

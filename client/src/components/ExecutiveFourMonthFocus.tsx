@@ -1,4 +1,9 @@
-import { AlertTriangle, CalendarDays, Landmark, TrendingDown, TrendingUp, X } from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
 import { trpc } from "@/lib/trpc";
 import type { PortfolioProjectMonthlyNet } from "@/lib/portfolioAggregation";
 import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";

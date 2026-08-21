@@ -4,7 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, BookOpen, Lightbulb, TrendingUp, Award, GraduationCap, Eye } from "lucide-react";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Lightbulb } from "lucide-react/dist/esm/icons/lightbulb.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as GraduationCap } from "lucide-react/dist/esm/icons/graduation-cap.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const typeIcons: Record<string, any> = {

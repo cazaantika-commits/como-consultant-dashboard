@@ -8,10 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Building2, Plus, Search, Edit2, Trash2, Eye, Upload, FileText,
-  Globe, Phone, Mail, CheckCircle, AlertCircle, Banknote, Shield,
-  ExternalLink, User, CreditCard,
-} from "lucide-react";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Edit2 } from "lucide-react/dist/esm/icons/pen.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Globe } from "lucide-react/dist/esm/icons/globe.js";
+import { default as Phone } from "lucide-react/dist/esm/icons/phone.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as Banknote } from "lucide-react/dist/esm/icons/banknote.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as CreditCard } from "lucide-react/dist/esm/icons/credit-card.js";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 

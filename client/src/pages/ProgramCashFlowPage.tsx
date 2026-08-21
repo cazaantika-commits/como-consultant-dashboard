@@ -13,14 +13,41 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { formatFullNumber } from "@/lib/numberFormat";
-import {
-  CalendarDays, Plus, Trash2, Edit, DollarSign, TrendingDown, TrendingUp,
-  BarChart3, ArrowRight, Building2, Layers, Settings2, FolderOpen,
-  ChevronLeft, Save, RefreshCw, Download, AlertTriangle, CheckCircle2,
-  Clock, Landmark, Briefcase, Hammer, Eye, FileText, Percent, FileSpreadsheet,
-  GitCompare, Wallet, Building, ShieldCheck, ArrowUpDown, Info, ListChecks,
-  CircleDollarSign
-} from "lucide-react";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as Edit } from "lucide-react/dist/esm/icons/square-pen.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Hammer } from "lucide-react/dist/esm/icons/hammer.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
+import { default as FileSpreadsheet } from "lucide-react/dist/esm/icons/file-spreadsheet.js";
+import { default as GitCompare } from "lucide-react/dist/esm/icons/git-compare.js";
+import { default as Wallet } from "lucide-react/dist/esm/icons/wallet.js";
+import { default as Building } from "lucide-react/dist/esm/icons/building.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as ArrowUpDown } from "lucide-react/dist/esm/icons/arrow-up-down.js";
+import { default as Info } from "lucide-react/dist/esm/icons/info.js";
+import { default as ListChecks } from "lucide-react/dist/esm/icons/list-checks.js";
+import { default as CircleDollarSign } from "lucide-react/dist/esm/icons/circle-dollar-sign.js";
 
 // ═══════════════════════════════════════════════════════════════
 // Types & Constants

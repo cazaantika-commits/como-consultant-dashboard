@@ -14,10 +14,18 @@ import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type Scenario
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { formatFullNumber } from "@/lib/numberFormat";
-import {
-  DollarSign, TrendingUp, BarChart2, Briefcase, Building2,
-  Users, Sparkles, Landmark, Activity, Layers, CalendarClock, ShieldCheck
-} from "lucide-react";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
 
 const fmt = (n: number) =>
   n === 0 ? "—" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n));

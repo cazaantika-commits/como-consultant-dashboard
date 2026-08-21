@@ -14,40 +14,38 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Loader2,
-  Bot,
-  ArrowRight,
-  Search,
-  Activity,
-  Mail,
-  Zap,
-  CheckCircle2,
-  Clock,
-  AlertTriangle,
-  ListTodo,
-  Pause,
-  XCircle,
-  BarChart3,
-  TrendingUp,
-  Filter,
-  FileText,
-  RefreshCw,
-  Crown,
-  Archive,
-  Scale,
-  Gauge,
-  ShieldCheck,
-  Calculator,
-  Rocket,
-  BarChart2,
-  Send,
-  Building2,
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as ListTodo } from "lucide-react/dist/esm/icons/list-todo.js";
+import { default as Pause } from "lucide-react/dist/esm/icons/pause.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
+import { default as Crown } from "lucide-react/dist/esm/icons/crown.js";
+import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Gauge } from "lucide-react/dist/esm/icons/gauge.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
+import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
+import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
-import { MessageCircle } from "lucide-react";
+import { default as MessageCircle } from "lucide-react/dist/esm/icons/message-circle.js";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   new: { label: "لم تبدأ", color: "bg-slate-100 text-slate-600 border-slate-200", icon: ListTodo },

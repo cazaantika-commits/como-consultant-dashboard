@@ -4,87 +4,85 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getCommandCenterTokenKey, getPersonaLoginHint, resolveCommandCenterPersona, type CommandCenterPersona } from "@/lib/commandCenterIdentity";
-import {
-  FileText,
-  ClipboardList,
-  BookOpen,
-  Star,
-  Megaphone,
-  Bell,
-  Send,
-  CreditCard,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  MessageCircle,
-  X,
-  Loader2,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Eye,
-  EyeOff,
-  User,
-  Trash2,
-  ArrowLeft,
-  ArrowRight,
-  Target,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  Calendar,
-  BarChart3,
-  Plus,
-  Pencil,
-  Flag,
-  Activity,
-  ChevronDown,
-  ChevronUp,
-  Mic,
-  MicOff,
-  Square,
-  Volume2,
-  VolumeX,
-  MessageSquare,
-  DollarSign,
-  Award,
-  Gavel,
-  Building,
-  Scale,
-  Trophy,
-  Lock,
-  Unlock,
-  Brain,
-  Sparkles,
-  SlidersHorizontal,
-  ShieldCheck,
-  BookText,
-  Paperclip,
-  LinkIcon,
-  Upload,
-  ExternalLink,
-  FileUp,
-  HelpCircle,
-  Layers,
-  FileBarChart2,
-  PieChart,
-  BarChart2,
-  Briefcase,
-  FolderOpen,
-  CalendarDays,
-  ClipboardCheck,
-  Users,
-  LineChart,
-  Building2,
-  FileSearch,
-  BellRing,
-  Landmark,
-  LayoutDashboard,
-  Gauge,
-  Map,
-  Handshake,
-  HardHat,
-} from "lucide-react";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Star } from "lucide-react/dist/esm/icons/star.js";
+import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
+import { default as Bell } from "lucide-react/dist/esm/icons/bell.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
+import { default as CreditCard } from "lucide-react/dist/esm/icons/credit-card.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as ChevronRight } from "lucide-react/dist/esm/icons/chevron-right.js";
+import { default as LogOut } from "lucide-react/dist/esm/icons/log-out.js";
+import { default as MessageCircle } from "lucide-react/dist/esm/icons/message-circle.js";
+import { default as X } from "lucide-react/dist/esm/icons/x.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as EyeOff } from "lucide-react/dist/esm/icons/eye-off.js";
+import { default as User } from "lucide-react/dist/esm/icons/user.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
+import { default as Minus } from "lucide-react/dist/esm/icons/minus.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Flag } from "lucide-react/dist/esm/icons/flag.js";
+import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
+import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
+import { default as MicOff } from "lucide-react/dist/esm/icons/mic-off.js";
+import { default as Square } from "lucide-react/dist/esm/icons/square.js";
+import { default as Volume2 } from "lucide-react/dist/esm/icons/volume-2.js";
+import { default as VolumeX } from "lucide-react/dist/esm/icons/volume-x.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as Award } from "lucide-react/dist/esm/icons/award.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
+import { default as Building } from "lucide-react/dist/esm/icons/building.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Trophy } from "lucide-react/dist/esm/icons/trophy.js";
+import { default as Lock } from "lucide-react/dist/esm/icons/lock.js";
+import { default as Unlock } from "lucide-react/dist/esm/icons/lock-open.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
+import { default as SlidersHorizontal } from "lucide-react/dist/esm/icons/sliders-horizontal.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as BookText } from "lucide-react/dist/esm/icons/book-text.js";
+import { default as Paperclip } from "lucide-react/dist/esm/icons/paperclip.js";
+import { default as LinkIcon } from "lucide-react/dist/esm/icons/link.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as FileUp } from "lucide-react/dist/esm/icons/file-up.js";
+import { default as HelpCircle } from "lucide-react/dist/esm/icons/circle-help.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as FileBarChart2 } from "lucide-react/dist/esm/icons/file-chart-column.js";
+import { default as PieChart } from "lucide-react/dist/esm/icons/chart-pie.js";
+import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
+import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as CalendarDays } from "lucide-react/dist/esm/icons/calendar-days.js";
+import { default as ClipboardCheck } from "lucide-react/dist/esm/icons/clipboard-check.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as LineChart } from "lucide-react/dist/esm/icons/chart-line.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as FileSearch } from "lucide-react/dist/esm/icons/file-search.js";
+import { default as BellRing } from "lucide-react/dist/esm/icons/bell-ring.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as LayoutDashboard } from "lucide-react/dist/esm/icons/layout-dashboard.js";
+import { default as Gauge } from "lucide-react/dist/esm/icons/gauge.js";
+import { default as Map } from "lucide-react/dist/esm/icons/map.js";
+import { default as Handshake } from "lucide-react/dist/esm/icons/handshake.js";
+import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

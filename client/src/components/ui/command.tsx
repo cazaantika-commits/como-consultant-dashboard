@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
-import { SearchIcon } from "lucide-react";
+import { default as SearchIcon } from "lucide-react/dist/esm/icons/search.js";
 
 import { cn } from "@/lib/utils";
 import {

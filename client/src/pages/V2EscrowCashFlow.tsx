@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { AlertTriangle, ArrowRight, CalendarClock, Download, Landmark, Loader2, ShieldCheck, WalletCards } from "lucide-react";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";

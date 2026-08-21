@@ -4,21 +4,19 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Loader2,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Zap,
-  ClipboardList,
-  Bot,
-  RotateCcw,
-  ArrowLeft,
-  BarChart3,
-  TrendingUp,
-  AlertTriangle,
-} from "lucide-react";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
+import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
+import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
+import { default as RotateCcw } from "lucide-react/dist/esm/icons/rotate-ccw.js";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
 import { useLocation } from "wouter";
 import { getLoginUrl } from "@/const";
 

@@ -13,13 +13,33 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import {
-  ArrowRight, Plus, Pencil, Trash2, FileText, Upload, Search,
-  Scale, Loader2, CheckCircle, XCircle, Clock, AlertTriangle,
-  Building2, Filter, Eye, Brain, Settings, ChevronDown,
-  Calendar, DollarSign, Users as UsersIcon, Shield, FolderOpen,
-  Download, BarChart3, Tag
-} from "lucide-react";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
+import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
+import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Upload } from "lucide-react/dist/esm/icons/upload.js";
+import { default as Search } from "lucide-react/dist/esm/icons/search.js";
+import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check-big.js";
+import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as Filter } from "lucide-react/dist/esm/icons/filter.js";
+import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
+import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
+import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
+import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
+import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
+import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
+import { default as UsersIcon } from "lucide-react/dist/esm/icons/users.js";
+import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Download } from "lucide-react/dist/esm/icons/download.js";
+import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
+import { default as Tag } from "lucide-react/dist/esm/icons/tag.js";
 
 // ═══════════════════════════════════════════════════
 // Constants
