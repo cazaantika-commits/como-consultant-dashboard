@@ -10,6 +10,8 @@ export const EXECUTIVE_PORTFOLIO_REPORTS = [
 
 export type ExecutivePortfolioReportId = (typeof EXECUTIVE_PORTFOLIO_REPORTS)[number]["id"];
 
-export function canOpenExecutivePortfolioReports(memberId: string | null | undefined): boolean {
-  return memberId === EXECUTIVE_PORTFOLIO_MEMBER_ID;
+export function canOpenExecutivePortfolioReports(_memberId: string | null | undefined): boolean {
+  // The mobile Command Center is one shared decision surface. Identity only
+  // personalizes the greeting; it does not hide portfolio reports.
+  return true;
 }

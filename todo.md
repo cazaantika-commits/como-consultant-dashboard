@@ -1412,3 +1412,8 @@
 - [x] Verify the enriched registration milestone in the browser and prove the services, durations, dependencies, and existing project instances are unchanged
 - [x] Diagnose the failed deployment by reproducing the production build and inspecting local server logs before changing code
 - [x] Fix any confirmed code-level deployment blocker, verify the production build and tests, then save a deployment-ready checkpoint
+- [x] Audit the current Command Center content and establish a single mobile information hierarchy shared by Wael and Sheikh Issa, without role-based content differences
+- [x] Build a unified responsive mobile Command Center with personal greeting only, no secretary image, and the same Command Center content available to every member
+- [x] Preserve desktop-only access to the full Sales workspace while keeping Command Center mobile controls read-only and content-complete
+- [x] Verify the unified mobile and desktop Command Center in the browser and protect the shared-content and no-secretary-image rules with regression tests
+- [x] Refine the Command Center mobile login screen into the approved light visual language and prevent the bilingual title from clipping on a 375px viewport

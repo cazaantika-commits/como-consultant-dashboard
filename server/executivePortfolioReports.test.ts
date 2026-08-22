@@ -9,11 +9,11 @@ import {
 const executiveReportsSource = readFileSync("client/src/components/ExecutivePortfolioReports.tsx", "utf8");
 
 describe("Executive portfolio report access", () => {
-  it("reserves the Command Center executive portfolio section for Sheikh Issa", () => {
+  it("keeps the Command Center executive portfolio section available to every known member", () => {
     expect(canOpenExecutivePortfolioReports("sheikh_issa")).toBe(true);
-    expect(canOpenExecutivePortfolioReports("wael")).toBe(false);
-    expect(canOpenExecutivePortfolioReports("abdulrahman")).toBe(false);
-    expect(canOpenExecutivePortfolioReports(undefined)).toBe(false);
+    expect(canOpenExecutivePortfolioReports("wael")).toBe(true);
+    expect(canOpenExecutivePortfolioReports("abdulrahman")).toBe(true);
+    expect(canOpenExecutivePortfolioReports(undefined)).toBe(true);
   });
 
   it("keeps exactly the four consolidated executive reports in the section", () => {

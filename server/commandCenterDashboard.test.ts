@@ -42,9 +42,21 @@ describe("Command Center dashboard card registry", () => {
     expect(source).toContain("لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة");
   });
 
-  it("mounts the executive portfolio section only behind Sheikh Issa's access guard", () => {
+  it("mounts the executive portfolio section for all Command Center members", () => {
     expect(source).toContain("canOpenExecutivePortfolioReports(member?.memberId)");
-    expect(source).toContain('activeBubble === "executive_portfolio_reports" && canOpenExecutiveReports');
+    expect(source).toContain('activeBubble === "executive_portfolio_reports")');
     expect(source).toContain("<ExecutivePortfolioReports onBack");
+    expect(source).not.toContain("هذه التقارير مخصصة للشيخ عيسى");
+  });
+
+  it("uses a generic assistant icon on mobile rather than the secretary image", () => {
+    expect(source).toContain('<MessageCircle className="h-6 w-6 text-white sm:hidden" />');
+    expect(source).toContain('className="hidden sm:block relative flex-shrink-0"');
+  });
+
+  it("keeps the mobile Command Center login light and avoids a clipped bilingual title", () => {
+    expect(source).toContain('bg-gradient-to-br from-slate-50 via-amber-50 to-indigo-50');
+    expect(source).toContain('COMO Developments</p>');
+    expect(source).not.toContain('COMO Developments — Command Center');
   });
 });

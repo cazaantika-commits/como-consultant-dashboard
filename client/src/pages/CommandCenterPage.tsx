@@ -392,42 +392,42 @@ function LoginScreen({ onLogin, hint }: { onLogin: (token: string) => void; hint
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4" dir="rtl">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-5">
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-amber-50 to-indigo-50 flex items-center justify-center p-4" dir="rtl">
+      {/* Light background pattern */}
+      <div className="absolute inset-0 opacity-40">
         <div className="absolute inset-0" style={{
-          backgroundImage: "radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle at 25% 25%, rgba(245,158,11,0.2) 1px, transparent 1px)",
           backgroundSize: "40px 40px"
         }} />
       </div>
 
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg shadow-amber-500/20 mb-4">
-            <span className="text-3xl font-bold text-white">C</span>
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 shadow-lg shadow-amber-500/25 mb-3 sm:mb-4">
+            <span className="text-2xl sm:text-3xl font-bold text-white">C</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">مركز القيادة</h1>
-          <p className="text-slate-400 text-sm mt-1">COMO Developments — Command Center</p>
-          {hint && <p className="text-amber-300 text-sm mt-3 font-medium">{hint}</p>}
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">مركز القيادة</h1>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1" dir="ltr">COMO Developments</p>
+          {hint && <p className="text-amber-700 text-sm mt-3 font-bold">{hint}</p>}
         </div>
 
         {/* Login Card */}
-        <Card className="bg-white/5 backdrop-blur-xl border-white/10 p-8 rounded-2xl shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <Card className="bg-white/90 backdrop-blur-xl border-slate-200 p-5 sm:p-8 rounded-2xl shadow-xl shadow-slate-300/30">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">رمز الدخول</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2">رمز الدخول</label>
               <Input
                 type="password"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="أدخل رمز الدخول الخاص بك"
-                className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 h-12 text-base rounded-xl focus:border-amber-400/50 focus:ring-amber-400/20"
+                className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 h-12 text-base rounded-xl focus:border-amber-400 focus:ring-amber-400/20"
                 dir="ltr"
               />
             </div>
             {error && (
-              <p className="text-red-400 text-sm flex items-center gap-1.5">
+              <p className="text-red-600 text-sm flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4" />
                 {error}
               </p>
@@ -442,7 +442,7 @@ function LoginScreen({ onLogin, hint }: { onLogin: (token: string) => void; hint
           </form>
         </Card>
 
-        <p className="text-center text-slate-500 text-xs mt-6">
+        <p className="text-center text-slate-500 text-xs mt-5 sm:mt-6">
           الوصول مقتصر على الأعضاء المصرح لهم فقط
         </p>
       </div>
@@ -652,9 +652,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-l from-amber-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md">
-              <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
-            </div>
+            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
+            <div className="flex sm:hidden h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-white shadow-md"><MessageCircle className="h-5 w-5" /></div>
             <div>
               <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
               <p className="text-[11px] text-emerald-600 flex items-center gap-1">
@@ -677,9 +676,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-10">
-              <div className="w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg">
-                <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
-              </div>
+              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
+              <div className="flex sm:hidden h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white mx-auto mb-4 shadow-lg"><MessageCircle className="h-7 w-7" /></div>
               <p className="text-slate-700 font-semibold mb-1">مرحباً {memberName}</p>
               <p className="text-slate-400 text-sm">كيف يمكنني مساعدتك اليوم؟</p>
               <p className="text-slate-400 text-xs mt-2">يمكنك الكتابة أو استخدام الميكروفون 🎙️</p>
@@ -4183,21 +4181,12 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // If viewing work schedule (read-only)
-  if (activeBubble === "executive_portfolio_reports" && canOpenExecutiveReports) {
+  if (activeBubble === "executive_portfolio_reports") {
     return (
       <div className="min-h-screen bg-slate-50" dir="rtl">
         <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
         <ExecutivePortfolioReports onBack={() => setActiveBubble(null)} />
         <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
-
-  if (activeBubble === "executive_portfolio_reports") {
-    return (
-      <div className="min-h-screen bg-slate-50" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <div className="mx-auto max-w-xl px-4 py-12 text-center"><Lock className="mx-auto h-8 w-8 text-slate-400" /><h2 className="mt-3 text-lg font-black text-slate-900">هذه التقارير مخصصة للشيخ عيسى</h2><button onClick={() => setActiveBubble(null)} className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-black text-slate-700">العودة إلى مركز القيادة</button></div>
       </div>
     );
   }
@@ -4368,16 +4357,16 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
           <div className="absolute bottom-0 right-0 w-56 h-56 rounded-full translate-x-1/3 translate-y-1/3 opacity-10"
             style={{background: 'radial-gradient(circle, #6366f1, transparent)'}} />
-          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-5 p-5 sm:p-7">
+          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-0 sm:gap-5 p-4 sm:p-7">
             {/* Salwa image - larger with warm gold ring */}
-            <div className="relative flex-shrink-0">
+            <div className="hidden sm:block relative flex-shrink-0">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
                 style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.5), 0 8px 28px rgba(245,158,11,0.2)'}}>
                 <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
             </div>
-            <div className="flex-1 text-center sm:text-right">
+            <div className="flex-1 text-right">
               {/* Date badge - dark text */}
               <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2"
                 style={{background: 'rgba(0,0,0,0.06)', color: '#374151', border: '1px solid rgba(0,0,0,0.1)'}}>
@@ -4431,12 +4420,12 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+              <div className="flex flex-wrap gap-3 justify-start">
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.97]"
                   style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.45)'}}>
                   <MessageSquare className="w-4 h-4" />
-                  &#x62a;&#x62d;&#x62f;&#x62b; &#x645;&#x639; &#x633;&#x644;&#x648;&#x649;
+                  <span className="sm:hidden">المساعد الرقمي</span><span className="hidden sm:inline">تحدث مع سلوى</span>
                 </button>
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
@@ -4693,7 +4682,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#6366f1,#10b981)'}} />
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">المالية والتشغيل</span>
                 </div>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <CardTile bubble={BUBBLES[1]} size="md" />
                   <CardTile bubble={BUBBLES[2]} size="md" />
                   <CardTile bubble={BUBBLES[4]} size="md" />
@@ -4717,7 +4706,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#3b82f6,#ec4899)'}} />
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">أدوات أخرى</span>
                 </div>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
                   <IconTile bubble={BUBBLES[6]} size="md" />
                   <IconTile bubble={BUBBLES[7]} size="md" />
                   <IconTile bubble={BUBBLES[8]} size="md" />
@@ -4731,10 +4720,11 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
       <button
         onClick={() => setShowSalwa(true)}
-        className="fixed bottom-6 left-6 w-16 h-16 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 overflow-hidden"
+        className="fixed bottom-5 left-4 sm:bottom-6 sm:left-6 w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40 overflow-hidden bg-amber-500"
         style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.4), 0 8px 32px rgba(245,158,11,0.3)'}}
       >
-        <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
+        <MessageCircle className="h-6 w-6 text-white sm:hidden" />
+        <img src={SALWA_AVATAR_URL} alt="سلوى" className="hidden sm:block w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
       <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
@@ -4885,10 +4875,10 @@ export default function CommandCenterPage() {
   // Loading state
   if (token && verification.isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-indigo-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-amber-400 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">جاري التحقق...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-amber-600 mx-auto mb-3" />
+          <p className="text-slate-600 text-sm">جاري التحقق...</p>
         </div>
       </div>
     );
