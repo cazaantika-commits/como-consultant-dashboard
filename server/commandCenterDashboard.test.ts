@@ -61,8 +61,9 @@ describe("Command Center dashboard card registry", () => {
   });
 
   it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
-    expect(source).toContain('como-hijabi-advisor-portrait_b3437e42.png');
-    expect(source).not.toContain('salwa-enhanced_0251b1a8.png');
+    expect(source).toContain('layla-closeup-advisor_4c57020b.png');
+    expect(source).toContain('تحدث مع ليلى');
+    expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
 

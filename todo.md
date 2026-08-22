@@ -1426,3 +1426,6 @@
 - [x] Verify the compact Command Center density on desktop and mobile without reducing legibility or changing underlying content
 - [x] Replace the colorful oversized-card language in Command Center with compact neutral executive modules, reserving color for status and priority only
 - [x] Keep the Command Center desktop first viewport focused on the greeting, decision summary, financial alert, and four compact entry modules
+- [x] Generate a refined close-up portrait of Layla, a professional modest Eastern hijabi advisor, and replace the current Command Center advisor image
+- [x] Rename the Command Center assistant from Salwa to Layla in visible labels and accessibility text without changing assistant functionality
+- [x] Verify Layla’s portrait crop and name visually in the Command Center desktop header and mobile-safe assistant controls

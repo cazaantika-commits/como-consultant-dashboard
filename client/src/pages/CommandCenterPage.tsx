@@ -116,7 +116,7 @@ import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
 import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
-const SALWA_AVATAR_URL = "/manus-storage/como-hijabi-advisor-portrait_b3437e42.png";
+const LAYLA_AVATAR_URL = "/manus-storage/layla-closeup-advisor_4c57020b.png";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
@@ -505,7 +505,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
       await chatMutation.mutateAsync({ token, message: msg });
       utils.commandCenter.getChatHistory.invalidate({ token });
     } catch (err: any) {
-      toast.error("خطأ في الاتصال بسلوى");
+      toast.error("خطأ في الاتصال بليلى");
     } finally {
       setIsLoading(false);
     }
@@ -652,10 +652,10 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-l from-amber-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
+            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={LAYLA_AVATAR_URL} alt="ليلى" className="w-full h-full object-cover" /></div>
             <div className="flex sm:hidden h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-white shadow-md"><MessageCircle className="h-5 w-5" /></div>
             <div>
-              <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
+              <h3 className="font-bold text-slate-800 text-sm">ليلى</h3>
               <p className="text-[11px] text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 متصلة الآن
@@ -676,7 +676,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-10">
-              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
+              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={LAYLA_AVATAR_URL} alt="ليلى" className="w-full h-full object-cover" /></div>
               <div className="flex sm:hidden h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white mx-auto mb-4 shadow-lg"><MessageCircle className="h-7 w-7" /></div>
               <p className="text-slate-700 font-semibold mb-1">مرحباً {memberName}</p>
               <p className="text-slate-400 text-sm">كيف يمكنني مساعدتك اليوم؟</p>
@@ -718,7 +718,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
                     <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-xs text-white/70">سلوى تفكر...</span>
+                  <span className="text-xs text-white/70">ليلى تفكر...</span>
                 </div>
               </div>
             </div>
@@ -771,7 +771,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لسلوى..."}
+              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لليلى..."}
               className="flex-1 min-h-[44px] max-h-[120px] resize-none rounded-xl border-slate-200 text-sm focus:border-amber-400 focus:ring-amber-400/20"
               rows={1}
               disabled={isRecording || isTranscribing}
@@ -2329,7 +2329,7 @@ function NewsTicker({ token }: { token: string }) {
   const defaultItems = [
     { id: -1, label: 'مركز القيادة', text: 'مرحباً بكم في مركز القيادة — COMO Developments Command Center', isUrgent: false, needsResponse: false },
     { id: -2, label: 'مركز القيادة', text: 'تابعوا آخر التطورات في مشاريعنا العقارية', isUrgent: false, needsResponse: false },
-    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع سلوى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
+    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع ليلى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
   ];
 
   const displayItems = liveItems.length > 0 ? liveItems : defaultItems;
@@ -4354,7 +4354,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
               <div className="h-20 w-[4.25rem] overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
-                <img src={SALWA_AVATAR_URL} alt="مستشارة مركز القيادة" className="h-full w-full object-cover object-top" />
+                <img src={LAYLA_AVATAR_URL} alt="ليلى، مستشارة مركز القيادة" className="h-full w-full object-cover object-top" />
               </div>
               <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
             </div>
@@ -4413,7 +4413,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]">
                   <MessageSquare className="w-4 h-4" />
-                  <span>المساعد الرقمي</span>
+                  <span>تحدث مع ليلى</span>
                 </button>
                 <button onClick={() => setActiveBubble("reports")}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
@@ -4684,7 +4684,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.4), 0 8px 32px rgba(245,158,11,0.3)'}}
       >
         <MessageCircle className="h-6 w-6 text-white sm:hidden" />
-        <img src={SALWA_AVATAR_URL} alt="سلوى" className="hidden sm:block w-full h-full object-cover" />
+        <img src={LAYLA_AVATAR_URL} alt="ليلى" className="hidden sm:block w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
       <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
