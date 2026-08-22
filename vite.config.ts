@@ -171,23 +171,11 @@ export default defineConfig({
     // Keep production builds below the container memory limit: a single, giant
     // vendor chunk caused Vite to be terminated while rendering final chunks.
     reportCompressedSize: false,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-
-          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return "vendor-react";
-          if (id.includes("node_modules/@dnd-kit/")) return "vendor-dnd";
-          if (id.includes("node_modules/@radix-ui/")) return "vendor-radix";
-          if (id.includes("node_modules/lucide-react/")) return "vendor-icons";
-          if (id.includes("node_modules/framer-motion/")) return "vendor-motion";
-          if (id.includes("node_modules/recharts/")) return "vendor-charts";
-          if (id.includes("node_modules/pdfjs-dist/")) return "vendor-pdf";
-          if (id.includes("node_modules/xlsx/")) return "vendor-spreadsheet";
-          if (id.includes("node_modules/@tanstack/") || id.includes("node_modules/@trpc/")) return "vendor-data";
-        },
-      },
-    },
+    // Let Rollup derive dependency-safe chunks automatically. The former
+    // manual vendor grouping created a circular production import between the
+    // chart bundle and the application entry point, leaving the published
+    // React root blank. Direct Lucide imports and on-demand PDF loading keep
+    // the graph small enough without forcing unsafe chunk boundaries.
   },
   server: {
     host: true,

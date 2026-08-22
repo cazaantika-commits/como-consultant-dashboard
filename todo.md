@@ -1417,3 +1417,5 @@
 - [x] Preserve desktop-only access to the full Sales workspace while keeping Command Center mobile controls read-only and content-complete
 - [x] Verify the unified mobile and desktop Command Center in the browser and protect the shared-content and no-secretary-image rules with regression tests
 - [x] Refine the Command Center mobile login screen into the approved light visual language and prevent the bilingual title from clipping on a 375px viewport
+- [x] Diagnose why the published Command Center cannot be opened, verify the live deployment and authentication path, and repair any confirmed application-level blocker
+- [x] Diagnose why the published Command Center cannot be opened, verify the live deployment and authentication path, and repair any confirmed application-level blocker
