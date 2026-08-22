@@ -116,7 +116,7 @@ import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
 import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
-const LAYLA_AVATAR_URL = "/manus-storage/layla-closeup-advisor_4c57020b.png";
+const LAYLA_AVATAR_URL = "/manus-storage/layla-closeup-advisor_5627b39e.png";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {

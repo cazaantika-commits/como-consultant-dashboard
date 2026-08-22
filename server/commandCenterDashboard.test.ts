@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 const source = readFileSync("client/src/pages/CommandCenterPage.tsx", "utf8");
 const routerSource = readFileSync("server/routers/commandCenter.ts", "utf8");
+const serverSource = readFileSync("server/_core/index.ts", "utf8");
+const storageProxySource = readFileSync("server/_core/storageProxy.ts", "utf8");
 
 describe("Command Center dashboard card registry", () => {
   it("does not render stale tile indexes beyond the current nine-card BUBBLES registry", () => {
@@ -61,10 +63,17 @@ describe("Command Center dashboard card registry", () => {
   });
 
   it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
-    expect(source).toContain('layla-closeup-advisor_4c57020b.png');
+    expect(source).toContain('layla-closeup-advisor_5627b39e.png');
     expect(source).toContain('تحدث مع ليلى');
     expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
+  });
+
+  it("serves Layla's permanent portrait through the project storage proxy", () => {
+    expect(serverSource).toContain('import { registerStorageProxy } from "./storageProxy";');
+    expect(serverSource.indexOf('registerStorageProxy(app);')).toBeLessThan(serverSource.indexOf('registerOAuthRoutes(app);'));
+    expect(storageProxySource).toContain('app.get("/manus-storage/*"');
+    expect(storageProxySource).toContain('v1/storage/presign/get');
   });
 
   it("uses compact neutral executive action cards rather than oversized colored priority blocks", () => {

@@ -1429,3 +1429,4 @@
 - [x] Generate a refined close-up portrait of Layla, a professional modest Eastern hijabi advisor, and replace the current Command Center advisor image
 - [x] Rename the Command Center assistant from Salwa to Layla in visible labels and accessibility text without changing assistant functionality
 - [x] Verify Layla’s portrait crop and name visually in the Command Center desktop header and mobile-safe assistant controls
+- [x] Repair the Command Center storage route so Layla’s approved portrait loads reliably from permanent project storage
