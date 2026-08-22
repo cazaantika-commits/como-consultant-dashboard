@@ -65,4 +65,11 @@ describe("Command Center dashboard card registry", () => {
     expect(source).not.toContain('salwa-enhanced_0251b1a8.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
+
+  it("uses compact neutral executive action cards rather than oversized colored priority blocks", () => {
+    expect(source).toContain('min-h-[102px]');
+    expect(source).toContain('borderRight: `4px solid ${accentColor}`');
+    expect(source).toContain('grid grid-cols-2 gap-2 sm:grid-cols-4');
+    expect(source).not.toContain('hover:shadow-2xl');
+  });
 });

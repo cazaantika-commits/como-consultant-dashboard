@@ -1422,3 +1422,7 @@
 - [x] Audit and restructure the Command Center information hierarchy so the executive summary, urgent decisions, and report access are visually ordered on desktop and mobile
 - [x] Generate and integrate a professional modest Eastern hijabi advisor portrait into the Command Center desktop header, replacing the current broken or empty portrait presentation
 - [x] Verify the reordered Command Center visually on desktop and mobile, with the correct personal greeting and no broken portrait states
+- [x] Reduce oversized Command Center priority cards, compress secondary cards, and keep the executive summary and core actions visible within the first desktop viewport
+- [x] Verify the compact Command Center density on desktop and mobile without reducing legibility or changing underlying content
+- [x] Replace the colorful oversized-card language in Command Center with compact neutral executive modules, reserving color for status and priority only
+- [x] Keep the Command Center desktop first viewport focused on the greeting, decision summary, financial alert, and four compact entry modules

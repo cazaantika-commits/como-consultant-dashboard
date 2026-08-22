@@ -4347,28 +4347,27 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     <div className="min-h-screen bg-slate-50" dir="rtl">
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
-      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:py-7">
+      <main className="mx-auto w-full max-w-5xl px-4 py-4 sm:py-5">
         {/* Executive greeting: the stable visual starting point for every visit */}
-        <section className="relative mb-5 overflow-hidden rounded-3xl border border-amber-100 bg-gradient-to-l from-white via-amber-50/70 to-white shadow-sm">
-          <div className="absolute -left-20 -top-24 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
-          <div className="absolute -bottom-24 right-0 h-52 w-52 rounded-full bg-indigo-100/50 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-7">
+        <section className="relative mb-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="absolute inset-y-0 right-0 w-1 bg-amber-500" />
+          <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
-              <div className="h-28 w-24 overflow-hidden rounded-2xl bg-amber-100 shadow-xl shadow-amber-900/10 ring-4 ring-white">
+              <div className="h-20 w-[4.25rem] overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
                 <img src={SALWA_AVATAR_URL} alt="مستشارة مركز القيادة" className="h-full w-full object-cover object-top" />
               </div>
-              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white bg-emerald-400" />
+              <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
             </div>
             <div className="flex-1 text-right">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-bold text-amber-800"><Gauge className="h-3.5 w-3.5" /> ملخص مركز القيادة</span>
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800"><Gauge className="h-3.5 w-3.5" /> ملخص مركز القيادة</span>
                 <span className="text-xs font-medium text-slate-500">{new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               </div>
-              <h2 className="mb-1 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{member.greeting}</h2>
-              <p className="mb-4 text-sm text-slate-600">ملخص القرارات والتقارير والمتابعة التشغيلية في مكان واحد.</p>
+              <h2 className="mb-0.5 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{member.greeting}</h2>
+              <p className="mb-3 text-sm text-slate-600">القرارات والتقارير والمتابعة التشغيلية في مكان واحد.</p>
               {/* Personalized stats chips - clickable */}
               {counts.data && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="mb-3 flex flex-wrap gap-1.5">
                   {(counts.data.requests ?? 0) > 0 && (
                     <button onClick={() => setActiveBubble("requests")}
                       className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-all hover:scale-105 active:scale-95"
@@ -4410,14 +4409,14 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap gap-2.5">
+              <div className="flex flex-wrap gap-2">
                 <button onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-500/25 transition hover:bg-amber-600 active:scale-[0.98]">
+                  className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]">
                   <MessageSquare className="w-4 h-4" />
                   <span>المساعد الرقمي</span>
                 </button>
                 <button onClick={() => setActiveBubble("reports")}
-                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
                   <FileBarChart2 className="w-4 h-4" />
                   التقارير
                 </button>
@@ -4426,7 +4425,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
         </section>
 
-        <section className="mb-5">
+        <section className="mb-4">
           <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
         </section>
 
@@ -4442,7 +4441,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             else { setActiveBubble(type); }
           };
 
-          // Bold solid-color theme map — each card is a vivid solid color with white text
+          // Restrained color: used only for semantic icons and status, never as a full card background.
           const solidColorMap: Record<string, {solid:string;shadow:string}> = {
             'from-indigo-600 to-indigo-800':  {solid:'#6366f1', shadow:'rgba(99,102,241,0.45)'},
             'from-emerald-600 to-emerald-800':{solid:'#10b981', shadow:'rgba(16,185,129,0.45)'},
@@ -4492,22 +4491,22 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === 'number' && count > 0;
             const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
-            const iconBoxSize = size === 'lg' ? 72 : size === 'md' ? 60 : 52;
-            const iconSize = size === 'lg' ? 30 : size === 'md' ? 26 : 22;
-            const fontSize = size === 'lg' ? '0.85rem' : size === 'md' ? '0.78rem' : '0.72rem';
+            const iconBoxSize = size === 'lg' ? 48 : size === 'md' ? 42 : 36;
+            const iconSize = size === 'lg' ? 22 : size === 'md' ? 19 : 17;
+            const fontSize = size === 'lg' ? '0.78rem' : size === 'md' ? '0.72rem' : '0.68rem';
             return (
               <button
                 onClick={() => handleBubbleClick(bubble.type)}
-                className="group flex flex-col items-center gap-3 p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5 active:scale-95 w-full"
-                style={{background:'#ffffff', border:'1px solid rgba(0,0,0,0.07)'}}
+                className="group flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-none transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98] w-full"
+                style={{background:'#ffffff'}}
               >
                 <div className="relative" style={{width: iconBoxSize, height: iconBoxSize}}>
                   <div
                     className="flex items-center justify-center w-full h-full transition-transform duration-200 group-hover:scale-105"
                     style={{
                       background: sc.solid,
-                      borderRadius: size === 'lg' ? '20px' : '16px',
-                      boxShadow: `0 4px 14px ${sc.shadow}`,
+                      borderRadius: '10px',
+                      boxShadow: 'none',
                     }}
                   >
                     <bubble.icon style={{width: iconSize, height: iconSize, color:'white', filter:'drop-shadow(0 1px 3px rgba(0,0,0,0.2))'}} />
@@ -4536,34 +4535,24 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             const count = counts.data?.[bubble.type as keyof typeof counts.data] || 0;
             const hasCount = typeof count === "number" && count > 0;
             const sc = solidColorMap[bubble.color] || {solid:'#64748b', shadow:'rgba(100,116,139,0.45)'};
-            const tileSize = size === 'lg' ? 80 : size === 'md' ? 64 : 52;
-            const iconSize = size === 'lg' ? 32 : size === 'md' ? 26 : 22;
-            const fontSize = size === 'lg' ? '0.82rem' : size === 'md' ? '0.72rem' : '0.65rem';
-            const shape = (bubble as any).shape || 'rounded';
-
-            // Shape-specific styles
-            const shapeStyle: React.CSSProperties = shape === 'circle'
-              ? { borderRadius: '50%' }
-              : shape === 'hexagon'
-              ? { borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%' }
-              : shape === 'diamond'
-              ? { borderRadius: '0', transform: 'rotate(45deg)', width: tileSize * 0.85, height: tileSize * 0.85 }
-              : { borderRadius: size === 'lg' ? '22px' : '18px' }; // rounded
-
-            const iconTransform = shape === 'diamond' ? { transform: 'rotate(-45deg)' } : {};
+            const tileSize = size === 'lg' ? 48 : size === 'md' ? 42 : 36;
+            const iconSize = size === 'lg' ? 21 : size === 'md' ? 18 : 16;
+            const fontSize = size === 'lg' ? '0.74rem' : size === 'md' ? '0.68rem' : '0.64rem';
+            const shapeStyle: React.CSSProperties = { borderRadius: '10px' };
+            const iconTransform = {};
 
             return (
               <button
                 onClick={() => handleBubbleClick(bubble.type)}
-                className="group flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95"
+                className="group flex flex-col items-center gap-1.5 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
                 style={{background:'transparent', border:'none', cursor:'pointer'}}
               >
                 <div
-                  className="relative flex items-center justify-center transition-all duration-200 group-hover:scale-110 group-hover:shadow-xl"
+                  className="relative flex items-center justify-center transition-all duration-200 group-hover:scale-105"
                   style={{
                     width: tileSize, height: tileSize,
                     background: sc.solid,
-                    boxShadow: `0 4px 16px ${sc.shadow}`,
+                    boxShadow: 'none',
                     ...shapeStyle,
                   }}
                 >
@@ -4589,7 +4578,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           // 0=طلبات الصرف, 1=تقييم الاستشاريين, 2=المراحل والأداء, 3=الاعتمادات الرسمية
           // 4=التقارير, 5=محاضر الاجتماعات, 6=برنامج العمل, 7=الإعلانات, 8=التواصل الداخلي
 
-          // Hero priority card — large horizontal card for payment/general requests
+          // Compact executive action row: priority is expressed through the leading rule and count, not a giant colored block.
           const HeroPriorityCard = ({ bubble, accentColor, gradientFrom, gradientTo }: {
             bubble: typeof BUBBLES[0];
             accentColor: string;
@@ -4602,79 +4591,58 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             return (
               <button
                 onClick={() => handleBubbleClick(bubble.type)}
-                className="group relative overflow-hidden flex items-center gap-5 p-5 rounded-2xl w-full transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.98]"
+                className="group relative flex min-h-[102px] items-center gap-3 overflow-hidden rounded-xl border border-slate-200 bg-white p-3 text-right shadow-sm transition hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
                 style={{
-                  background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
-                  boxShadow: `0 6px 28px ${sc.shadow}`,
-                  border: `1.5px solid rgba(255,255,255,0.25)`,
+                  borderRight: `4px solid ${accentColor}`,
                 }}
               >
-                {/* Decorative shimmer */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                  style={{background:'linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%)', borderRadius:'inherit'}} />
-                {/* Icon box */}
-                <div className="relative flex-shrink-0 flex items-center justify-center rounded-2xl"
-                  style={{width:64, height:64, background:'rgba(255,255,255,0.2)', backdropFilter:'blur(8px)', border:'1.5px solid rgba(255,255,255,0.3)'}}>
-                  <bubble.icon style={{width:30, height:30, color:'white', filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.25))'}} />
+                <div className="relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg" style={{background:`${accentColor}16`, color: accentColor}}>
+                  <bubble.icon className="h-5 w-5" />
                   {hasCount && (
-                    <div className="absolute -top-2 -right-2 min-w-[26px] h-[26px] px-1.5 rounded-full flex items-center justify-center text-xs font-black animate-pulse"
-                      style={{background:'#ef4444', color:'white', boxShadow:'0 3px 10px rgba(239,68,68,0.7)', border:'2px solid white'}}>
+                    <div className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-black text-white ring-2 ring-white">
                       {count}
                     </div>
                   )}
                 </div>
-                {/* Text */}
                 <div className="flex-1 text-right">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      {hasCount ? (
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                          style={{background:'rgba(239,68,68,0.2)', color:'#fecaca', border:'1px solid rgba(239,68,68,0.35)'}}>
-                          {count} معلق
-                        </span>
-                      ) : (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                          style={{background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.8)'}}>
-                          لا يوجد معلق
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-lg font-black text-white tracking-tight">{bubble.label}</h3>
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-black text-slate-900">{bubble.label}</h3>
+                    <span className={hasCount ? "rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-black text-rose-700" : "rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700"}>
+                      {hasCount ? `${count} معلق` : 'مستقر'}
+                    </span>
                   </div>
-                  <p className="text-sm text-right" style={{color:'rgba(255,255,255,0.75)'}}>
+                  <p className="line-clamp-2 text-xs leading-5 text-slate-500">
                     {subtitles[bubble.type] || ''}
                   </p>
                 </div>
-                {/* Arrow */}
-                <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full transition-transform group-hover:-translate-x-1"
-                  style={{background:'rgba(255,255,255,0.15)'}}>
-                  <ArrowRight className="w-4 h-4 text-white" />
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400 transition-transform group-hover:-translate-x-0.5">
+                  <ArrowRight className="h-4 w-4" />
                 </div>
               </button>
             );
           };
 
           return (
-            <div className="mb-4 space-y-4">
+            <div className="mb-3 space-y-3">
               {/* ═══ PRIORITY SECTION ═══ */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#f59e0b,#ef4444)'}} />
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">الأولوية القصوى</span>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="h-4 w-1 rounded-full bg-slate-900" />
+                  <span className="text-[11px] font-black tracking-wide text-slate-700">القرارات والمتابعة</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <HeroPriorityCard bubble={BUBBLES[0]} accentColor="#f59e0b" gradientFrom="#f59e0b" gradientTo="#d97706" />
-                  <HeroPriorityCard bubble={BUBBLES[3]} accentColor="#f97316" gradientFrom="#ea580c" gradientTo="#c2410c" />
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <HeroPriorityCard bubble={BUBBLES[0]} accentColor="#b45309" gradientFrom="#f59e0b" gradientTo="#d97706" />
+                  <HeroPriorityCard bubble={BUBBLES[3]} accentColor="#c2410c" gradientFrom="#ea580c" gradientTo="#c2410c" />
                 </div>
               </div>
 
               {/* ═══ SECONDARY SECTION ═══ */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#6366f1,#10b981)'}} />
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">المالية والتشغيل</span>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="h-4 w-1 rounded-full bg-slate-400" />
+                  <span className="text-[11px] font-black tracking-wide text-slate-700">الوصول التنفيذي</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <CardTile bubble={BUBBLES[1]} size="md" />
                   <CardTile bubble={BUBBLES[2]} size="md" />
                   <CardTile bubble={BUBBLES[4]} size="md" />
@@ -4684,21 +4652,21 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
               {canOpenExecutiveReports && (
                 <div>
-                  <div className="flex items-center gap-2 mb-3"><div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#4f46e5,#0891b2)'}} /><span className="text-xs font-bold text-slate-500 uppercase tracking-widest">مراجعة المحفظة</span></div>
-                  <button onClick={() => setActiveBubble("executive_portfolio_reports")} className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-gradient-to-l from-indigo-50 via-white to-sky-50 p-4 text-right shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-200"><Briefcase className="h-6 w-6" /></span><div><p className="text-sm font-black text-slate-900">تقارير المحفظة التنفيذية</p><p className="mt-1 text-xs text-slate-600">تجميع المشاريع، العرض الشهري، سيولة الإسكرو، ومحفظة رأس المال</p></div></div>
-                    <span className="rounded-full border border-indigo-200 bg-white px-2.5 py-1 text-[10px] font-black text-indigo-700">عرض فقط</span>
+                  <div className="mb-2 flex items-center gap-2"><div className="h-4 w-1 rounded-full bg-slate-400" /><span className="text-[11px] font-black tracking-wide text-slate-700">تقارير المحفظة</span></div>
+                  <button onClick={() => setActiveBubble("executive_portfolio_reports")} className="group flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 text-right shadow-sm transition hover:border-slate-300 hover:shadow-md">
+                    <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white"><Briefcase className="h-5 w-5" /></span><div><p className="text-sm font-black text-slate-900">تقارير المحفظة التنفيذية</p><p className="mt-0.5 text-xs text-slate-500">التجميع، العرض الشهري، السيولة، ورأس المال</p></div></div>
+                    <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-600">عرض</span>
                   </button>
                 </div>
               )}
 
               {/* ═══ OTHER SECTION ═══ */}
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded-full" style={{background:'linear-gradient(180deg,#3b82f6,#ec4899)'}} />
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">أدوات أخرى</span>
+                <div className="mb-2 flex items-center gap-2">
+                  <div className="h-4 w-1 rounded-full bg-slate-300" />
+                  <span className="text-[11px] font-black tracking-wide text-slate-500">أدوات أخرى</span>
                 </div>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   <IconTile bubble={BUBBLES[6]} size="md" />
                   <IconTile bubble={BUBBLES[7]} size="md" />
                   <IconTile bubble={BUBBLES[8]} size="md" />
