@@ -1430,3 +1430,4 @@
 - [x] Rename the Command Center assistant from Salwa to Layla in visible labels and accessibility text without changing assistant functionality
 - [x] Verify Layla’s portrait crop and name visually in the Command Center desktop header and mobile-safe assistant controls
 - [x] Repair the Command Center storage route so Layla’s approved portrait loads reliably from permanent project storage
+- [x] Soften the Financial Studies card palette with calm watercolor accents, including a light lemon tone, while preserving readable labels and borders

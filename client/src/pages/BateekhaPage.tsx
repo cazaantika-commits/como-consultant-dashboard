@@ -40,19 +40,19 @@ type TabId = FinancialStudiesTabId;
 type TileTone = { accent: string; wash: string; icon: string; border: string };
 
 const TONES: TileTone[] = [
-  { accent: "#0f766e", wash: "#f0fdfa", icon: "#ccfbf1", border: "#99f6e4" },
-  { accent: "#2563eb", wash: "#eff6ff", icon: "#dbeafe", border: "#bfdbfe" },
-  { accent: "#d97706", wash: "#fffbeb", icon: "#fef3c7", border: "#fde68a" },
-  { accent: "#7c3aed", wash: "#f5f3ff", icon: "#ede9fe", border: "#ddd6fe" },
-  { accent: "#be185d", wash: "#fff1f2", icon: "#ffe4e6", border: "#fecdd3" },
-  { accent: "#0369a1", wash: "#f0f9ff", icon: "#e0f2fe", border: "#bae6fd" },
-  { accent: "#b45309", wash: "#fff7ed", icon: "#ffedd5", border: "#fed7aa" },
-  { accent: "#047857", wash: "#ecfdf5", icon: "#d1fae5", border: "#a7f3d0" },
-  { accent: "#6d28d9", wash: "#f5f3ff", icon: "#ede9fe", border: "#ddd6fe" },
-  { accent: "#c2410c", wash: "#fff7ed", icon: "#ffedd5", border: "#fed7aa" },
-  { accent: "#0f766e", wash: "#f0fdfa", icon: "#ccfbf1", border: "#99f6e4" },
-  { accent: "#4338ca", wash: "#eef2ff", icon: "#e0e7ff", border: "#c7d2fe" },
-  { accent: "#9f1239", wash: "#fff1f2", icon: "#ffe4e6", border: "#fecdd3" },
+  { accent: "#3f9e96", wash: "#f2fbf8", icon: "#d8f1ec", border: "#bce9e0" },
+  { accent: "#5b91d7", wash: "#f2f7fe", icon: "#dceafe", border: "#c4dcf7" },
+  { accent: "#b8a13a", wash: "#fffdf0", icon: "#f7edb9", border: "#ece0a0" },
+  { accent: "#9276c9", wash: "#f8f5ff", icon: "#e9e0fa", border: "#d8c9f0" },
+  { accent: "#bf7893", wash: "#fff5f7", icon: "#f9dfe7", border: "#efc5d2" },
+  { accent: "#5a9fbe", wash: "#f2fafc", icon: "#d9edf4", border: "#bddfe9" },
+  { accent: "#c38b5c", wash: "#fff8f1", icon: "#f6e3d2", border: "#ead0b7" },
+  { accent: "#4f9b86", wash: "#f2faf6", icon: "#d9eee4", border: "#c0e3d3" },
+  { accent: "#7c7bc4", wash: "#f5f5fe", icon: "#e1e1f7", border: "#cccbeb" },
+  { accent: "#c07f6a", wash: "#fff7f4", icon: "#f6dfd7", border: "#ebc9be" },
+  { accent: "#4d9a92", wash: "#f2fbf9", icon: "#d7eeea", border: "#bce4de" },
+  { accent: "#6d82b8", wash: "#f4f6fd", icon: "#dfe5f6", border: "#c7d1ec" },
+  { accent: "#b97386", wash: "#fff5f7", icon: "#f4dce4", border: "#eac3cf" },
 ];
 
 const TABS: { id: TabId; label: string; description: string; icon: any; projectScoped: boolean }[] = [
@@ -154,10 +154,10 @@ export default function BateekhaPage() {
               const Icon = tab.icon;
               const tone = TONES[index % TONES.length];
               const disabled = tab.projectScoped && !selectedProjectId;
-              return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: tone.border, background: `linear-gradient(135deg, ${tone.wash}, #ffffff 72%)` }}>
+              return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: tone.border, background: `linear-gradient(135deg, ${tone.wash} 0%, #ffffff 74%)` }}>
                 <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tone.accent }} />
                 <span className="text-[15px] font-black text-slate-900">{tab.label}</span>
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-white shadow-sm" style={{ backgroundColor: tone.accent, boxShadow: `0 10px 20px ${tone.accent}30` }}><Icon className="h-6 w-6" /></span>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-white shadow-sm" style={{ backgroundColor: tone.accent, boxShadow: `0 10px 20px ${tone.accent}22` }}><Icon className="h-6 w-6" /></span>
               </button>;
             })}
           </div>

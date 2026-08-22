@@ -22,6 +22,14 @@ describe("Financial Studies flat project-first navigation", () => {
     expect(source).not.toContain("العودة إلى جميع الأقسام");
   });
 
+  it("uses a calm watercolor palette with a soft lemon study tile", () => {
+    expect(source).toContain('accent: "#b8a13a"');
+    expect(source).toContain('wash: "#fffdf0"');
+    expect(source).toContain('border: "#ece0a0"');
+    expect(source).toContain('linear-gradient(135deg, ${tone.wash} 0%, #ffffff 74%)');
+    expect(source).toContain('boxShadow: `0 10px 20px ${tone.accent}22`');
+  });
+
   it("owns project selection at the Financial Studies entry rather than the page cards", () => {
     expect(source).toContain("اختر المشروع مرة واحدة");
     expect(source).toContain("العودة تعيدك إلى هذا الدليل فقط");
