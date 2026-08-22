@@ -1419,3 +1419,6 @@
 - [x] Refine the Command Center mobile login screen into the approved light visual language and prevent the bilingual title from clipping on a 375px viewport
 - [x] Diagnose why the published Command Center cannot be opened, verify the live deployment and authentication path, and repair any confirmed application-level blocker
 - [x] Diagnose why the published Command Center cannot be opened, verify the live deployment and authentication path, and repair any confirmed application-level blocker
+- [x] Audit and restructure the Command Center information hierarchy so the executive summary, urgent decisions, and report access are visually ordered on desktop and mobile
+- [x] Generate and integrate a professional modest Eastern hijabi advisor portrait into the Command Center desktop header, replacing the current broken or empty portrait presentation
+- [x] Verify the reordered Command Center visually on desktop and mobile, with the correct personal greeting and no broken portrait states

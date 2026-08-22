@@ -116,7 +116,7 @@ import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
 import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
-const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
+const SALWA_AVATAR_URL = "/manus-storage/como-hijabi-advisor-portrait_b3437e42.png";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
@@ -4344,38 +4344,28 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
   // Main dashboard
   return (
-    <div className="min-h-screen" dir="rtl" style={{background: 'linear-gradient(160deg, #f8f6ff 0%, #fff7ed 55%, #f0fdf4 100%)'}}>
+    <div className="min-h-screen bg-slate-50" dir="rtl">
       <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
       <NewsTicker token={token} />
-      <div className="w-full px-4 py-4">
-        <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
-        {/* Hero Card */}
-        <div className="relative overflow-hidden rounded-3xl mb-4 shadow-lg"
-          style={{background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 60%, #f8f6ff 100%)', border: '1.5px solid #e5e7eb'}}>
-          {/* Subtle decorative blobs */}
-          <div className="absolute top-0 left-0 w-72 h-72 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-10"
-            style={{background: 'radial-gradient(circle, #f59e0b, transparent)'}} />
-          <div className="absolute bottom-0 right-0 w-56 h-56 rounded-full translate-x-1/3 translate-y-1/3 opacity-10"
-            style={{background: 'radial-gradient(circle, #6366f1, transparent)'}} />
-          <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-0 sm:gap-5 p-4 sm:p-7">
-            {/* Salwa image - larger with warm gold ring */}
-            <div className="hidden sm:block relative flex-shrink-0">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden"
-                style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.5), 0 8px 28px rgba(245,158,11,0.2)'}}>
-                <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" />
+      <main className="mx-auto w-full max-w-6xl px-4 py-5 sm:py-7">
+        {/* Executive greeting: the stable visual starting point for every visit */}
+        <section className="relative mb-5 overflow-hidden rounded-3xl border border-amber-100 bg-gradient-to-l from-white via-amber-50/70 to-white shadow-sm">
+          <div className="absolute -left-20 -top-24 h-64 w-64 rounded-full bg-amber-200/30 blur-3xl" />
+          <div className="absolute -bottom-24 right-0 h-52 w-52 rounded-full bg-indigo-100/50 blur-3xl" />
+          <div className="relative z-10 flex flex-col items-start gap-4 p-5 sm:flex-row sm:items-center sm:gap-6 sm:p-7">
+            <div className="relative hidden flex-shrink-0 sm:block">
+              <div className="h-28 w-24 overflow-hidden rounded-2xl bg-amber-100 shadow-xl shadow-amber-900/10 ring-4 ring-white">
+                <img src={SALWA_AVATAR_URL} alt="مستشارة مركز القيادة" className="h-full w-full object-cover object-top" />
               </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-white bg-emerald-400" />
             </div>
             <div className="flex-1 text-right">
-              {/* Date badge - dark text */}
-              <span className="inline-block text-xs font-semibold px-3 py-1 rounded-full mb-2"
-                style={{background: 'rgba(0,0,0,0.06)', color: '#374151', border: '1px solid rgba(0,0,0,0.1)'}}>
-                {new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-              </span>
-              {/* Greeting - black bold */}
-              <h2 className="text-2xl sm:text-3xl font-black mb-1 leading-tight" style={{color:"#111827"}}>{member.greeting}</h2>
-              {/* Subtitle - dark gray */}
-              <p className="text-sm mb-3" style={{color: '#374151'}}>&#x633;&#x644;&#x648;&#x649; &mdash; &#x627;&#x644;&#x645;&#x646;&#x633;&#x642;&#x629; &#x627;&#x644;&#x630;&#x643;&#x64a;&#x629; &#x644;&#x645;&#x634;&#x627;&#x631;&#x64a;&#x639; COMO Developments</p>
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-white/80 px-3 py-1 text-xs font-bold text-amber-800"><Gauge className="h-3.5 w-3.5" /> ملخص مركز القيادة</span>
+                <span className="text-xs font-medium text-slate-500">{new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+              </div>
+              <h2 className="mb-1 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">{member.greeting}</h2>
+              <p className="mb-4 text-sm text-slate-600">ملخص القرارات والتقارير والمتابعة التشغيلية في مكان واحد.</p>
               {/* Personalized stats chips - clickable */}
               {counts.data && (
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -4420,23 +4410,25 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   )}
                 </div>
               )}
-              <div className="flex flex-wrap gap-3 justify-start">
+              <div className="flex flex-wrap gap-2.5">
                 <button onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', boxShadow: '0 4px 20px rgba(245,158,11,0.45)'}}>
+                  className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-500/25 transition hover:bg-amber-600 active:scale-[0.98]">
                   <MessageSquare className="w-4 h-4" />
-                  <span className="sm:hidden">المساعد الرقمي</span><span className="hidden sm:inline">تحدث مع سلوى</span>
+                  <span>المساعد الرقمي</span>
                 </button>
-                <button onClick={() => setShowSalwa(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
-                  style={{background: 'rgba(0,0,0,0.05)', color: '#111827', border: '1px solid rgba(0,0,0,0.12)'}}>
-                  <Mic className="w-4 h-4" />
-                  &#x631;&#x633;&#x627;&#x644;&#x629; &#x635;&#x648;&#x62a;&#x64a;&#x629;
+                <button onClick={() => setActiveBubble("reports")}
+                  className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
+                  <FileBarChart2 className="w-4 h-4" />
+                  التقارير
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section className="mb-5">
+          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
+        </section>
 
         {/* Bento Grid */}
         {(() => {
@@ -4716,7 +4708,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           );
         })()}
 
-      </div>
+      </main>
 
       <button
         onClick={() => setShowSalwa(true)}

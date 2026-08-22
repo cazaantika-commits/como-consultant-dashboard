@@ -51,12 +51,18 @@ describe("Command Center dashboard card registry", () => {
 
   it("uses a generic assistant icon on mobile rather than the secretary image", () => {
     expect(source).toContain('<MessageCircle className="h-6 w-6 text-white sm:hidden" />');
-    expect(source).toContain('className="hidden sm:block relative flex-shrink-0"');
+    expect(source).toContain('className="relative hidden flex-shrink-0 sm:block"');
   });
 
   it("keeps the mobile Command Center login light and avoids a clipped bilingual title", () => {
     expect(source).toContain('bg-gradient-to-br from-slate-50 via-amber-50 to-indigo-50');
     expect(source).toContain('COMO Developments</p>');
     expect(source).not.toContain('COMO Developments — Command Center');
+  });
+
+  it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
+    expect(source).toContain('como-hijabi-advisor-portrait_b3437e42.png');
+    expect(source).not.toContain('salwa-enhanced_0251b1a8.png');
+    expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
 });
