@@ -22,10 +22,14 @@ describe("Financial Studies flat project-first navigation", () => {
     expect(source).not.toContain("العودة إلى جميع الأقسام");
   });
 
-  it("uses a calm watercolor palette with a soft lemon study tile", () => {
-    expect(source).toContain('accent: "#b8a13a"');
-    expect(source).toContain('wash: "#fffdf0"');
-    expect(source).toContain('border: "#ece0a0"');
+  it("uses the requested varied pink, turquoise, yellow, burgundy, and blue palette without repeated accents", () => {
+    expect(source).toContain('accent: "#d65f9b"');
+    expect(source).toContain('accent: "#149b9a"');
+    expect(source).toContain('accent: "#d4a91f"');
+    expect(source).toContain('accent: "#9b304a"');
+    expect(source).toContain('accent: "#3c78d8"');
+    const accents = source.match(/accent: "#[0-9a-f]{6}"/g) ?? [];
+    expect(new Set(accents).size).toBe(accents.length);
     expect(source).toContain('linear-gradient(135deg, ${tone.wash} 0%, #ffffff 74%)');
     expect(source).toContain('boxShadow: `0 10px 20px ${tone.accent}22`');
   });

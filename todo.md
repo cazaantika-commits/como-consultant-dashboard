@@ -1431,3 +1431,5 @@
 - [x] Verify Layla’s portrait crop and name visually in the Command Center desktop header and mobile-safe assistant controls
 - [x] Repair the Command Center storage route so Layla’s approved portrait loads reliably from permanent project storage
 - [x] Soften the Financial Studies card palette with calm watercolor accents, including a light lemon tone, while preserving readable labels and borders
+- [x] Replace the Financial Studies palette with the requested pink, turquoise, yellow, burgundy, and blue card sequence
+- [x] Ensure every Financial Studies card has its own distinct accent shade with no repeated card color

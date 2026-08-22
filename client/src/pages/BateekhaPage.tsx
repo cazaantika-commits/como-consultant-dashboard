@@ -40,19 +40,19 @@ type TabId = FinancialStudiesTabId;
 type TileTone = { accent: string; wash: string; icon: string; border: string };
 
 const TONES: TileTone[] = [
-  { accent: "#3f9e96", wash: "#f2fbf8", icon: "#d8f1ec", border: "#bce9e0" },
-  { accent: "#5b91d7", wash: "#f2f7fe", icon: "#dceafe", border: "#c4dcf7" },
-  { accent: "#b8a13a", wash: "#fffdf0", icon: "#f7edb9", border: "#ece0a0" },
-  { accent: "#9276c9", wash: "#f8f5ff", icon: "#e9e0fa", border: "#d8c9f0" },
-  { accent: "#bf7893", wash: "#fff5f7", icon: "#f9dfe7", border: "#efc5d2" },
-  { accent: "#5a9fbe", wash: "#f2fafc", icon: "#d9edf4", border: "#bddfe9" },
-  { accent: "#c38b5c", wash: "#fff8f1", icon: "#f6e3d2", border: "#ead0b7" },
-  { accent: "#4f9b86", wash: "#f2faf6", icon: "#d9eee4", border: "#c0e3d3" },
-  { accent: "#7c7bc4", wash: "#f5f5fe", icon: "#e1e1f7", border: "#cccbeb" },
-  { accent: "#c07f6a", wash: "#fff7f4", icon: "#f6dfd7", border: "#ebc9be" },
-  { accent: "#4d9a92", wash: "#f2fbf9", icon: "#d7eeea", border: "#bce4de" },
-  { accent: "#6d82b8", wash: "#f4f6fd", icon: "#dfe5f6", border: "#c7d1ec" },
-  { accent: "#b97386", wash: "#fff5f7", icon: "#f4dce4", border: "#eac3cf" },
+  { accent: "#d65f9b", wash: "#fff3f8", icon: "#f8d9e8", border: "#edbdd5" },
+  { accent: "#149b9a", wash: "#effcfb", icon: "#d1f1ee", border: "#afe4df" },
+  { accent: "#d4a91f", wash: "#fffbed", icon: "#f8edbc", border: "#ecd977" },
+  { accent: "#9b304a", wash: "#fff4f6", icon: "#f4d9df", border: "#e8b9c4" },
+  { accent: "#3c78d8", wash: "#f1f6ff", icon: "#d6e5fb", border: "#b9d2f5" },
+  { accent: "#d26c4d", wash: "#fff6f2", icon: "#f8ded4", border: "#edc3b6" },
+  { accent: "#835bce", wash: "#f7f3ff", icon: "#e6dcfa", border: "#d1c0f2" },
+  { accent: "#4b9f78", wash: "#f1fbf6", icon: "#d8efdf", border: "#bce2cb" },
+  { accent: "#b94379", wash: "#fff3f8", icon: "#f6d9e7", border: "#eab9d0" },
+  { accent: "#3c91c2", wash: "#f1faff", icon: "#d5edf7", border: "#b8ddeb" },
+  { accent: "#c7801e", wash: "#fff9f0", icon: "#f4e2c5", border: "#e8c99a" },
+  { accent: "#5167b2", wash: "#f3f5ff", icon: "#dde3f7", border: "#c2ccef" },
+  { accent: "#b96045", wash: "#fff5f1", icon: "#f3dbd3", border: "#e6bdb0" },
 ];
 
 const TABS: { id: TabId; label: string; description: string; icon: any; projectScoped: boolean }[] = [
