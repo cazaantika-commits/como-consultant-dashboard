@@ -21,8 +21,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/_core/hooks/useAuth";
 import ProjectLifecyclePage from "./ProjectLifecyclePage";
 import WorkSchedulePage from "./WorkSchedulePage";
+import ProjectLaunchGatePage from "./ProjectLaunchGatePage";
+import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
 
-type View = "icons" | "compliance" | "schedule" | "contracts";
+type View = "icons" | "launch" | "compliance" | "schedule" | "contracts";
 
 interface Stage {
   id: number;
@@ -330,6 +332,15 @@ function ContractsPlaceholder() {
 
 const SECTIONS = [
   {
+    id: "launch" as View,
+    label: "بوابة انطلاق المشروع",
+    description: "قراءة الجاهزية والقرار التالي قبل التكليف",
+    icon: Rocket,
+    gradient: "linear-gradient(135deg, #0891b2, #0f766e)",
+    shadow: "rgba(8, 145, 178, 0.32)",
+    borderColor: "#0891b2",
+  },
+  {
     id: "compliance" as View,
     label: "مسار الامتثال التنظيمي",
     description: "مراحل DLD/RERA — الخدمات والمتطلبات",
@@ -365,9 +376,9 @@ export default function DevelopmentPhasesPage() {
   const activeSection = SECTIONS.find((s) => s.id === activeView);
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-3">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           {activeView === "icons" ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
@@ -403,7 +414,7 @@ export default function DevelopmentPhasesPage() {
       </header>
 
       {activeView === "icons" && (
-        <main className="max-w-2xl mx-auto px-6 py-12">
+        <main className="w-full min-w-0 max-w-2xl mx-auto px-4 py-8 sm:px-6 sm:py-12">
           <div className="text-center mb-10">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-700 mb-4 shadow-xl shadow-violet-500/25">
               <ClipboardList className="w-7 h-7 text-white" />
@@ -411,10 +422,10 @@ export default function DevelopmentPhasesPage() {
             <h2 className="text-2xl font-bold text-foreground mb-2">جولة في مراحل التطوير</h2>
             <p className="text-sm text-muted-foreground">متابعة الامتثال التنظيمي وإدارة المراحل والعقود</p>
           </div>
-          <div className="grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {SECTIONS.map((item) => (
               <button key={item.id} onClick={() => setActiveView(item.id)}
-                className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden">
+                className="group relative min-w-0 flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden">
                 <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ backgroundColor: item.borderColor }} />
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none"
                   style={{ background: `radial-gradient(circle at 50% 0%, ${item.shadow} 0%, transparent 70%)` }} />
@@ -433,6 +444,7 @@ export default function DevelopmentPhasesPage() {
       {activeView === "compliance" && <ProjectLifecyclePage embedded onProjectChange={setSharedProjectId} />}
       {activeView === "schedule" && <WorkSchedulePage initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
       {activeView === "contracts" && <ContractsPlaceholder />}
+      {activeView === "launch" && <ProjectLaunchGatePage embedded />}
     </div>
   );
 }

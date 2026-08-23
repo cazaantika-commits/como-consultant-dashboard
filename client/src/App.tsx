@@ -84,6 +84,7 @@ import V2WaelSales from "./pages/V2WaelSales";
 import V2Timeline from "./pages/V2Timeline";
 import V2Hub from "./pages/V2Hub";
 import BateekhaPage from "./pages/BateekhaPage";
+import ProjectLaunchGatePage from "./pages/ProjectLaunchGatePage";
 
 function Router() {
   return (
@@ -165,6 +166,7 @@ function Router() {
       <Route path="/v2/timeline" component={V2Timeline} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
+      <Route path="/project-launch" component={ProjectLaunchGatePage} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />

@@ -1449,3 +1449,6 @@
 - [x] Replace the technical filter panel with a Property Finder-style search start that exposes the core choices and a clear «ابدأ البحث» action
 - [x] Make search results and evidence appear only after the user starts a saved market search
 - [x] Conduct a complete owner-side readiness review of the application before the first consultant appointment or live project start, then present ranked development recommendations without implementing changes
+- [x] Build a read-only Project Launch Gate that aggregates existing sources without moving, deleting, or changing any original data or calculations
+- [x] Add regression tests proving the Project Launch Gate has no write path to project, financial, market, lifecycle, consultant, contract, or source-document records
+- [x] Fix mobile overflow in Project Launch Gate and Development Phases so the full RTL content remains visible within the viewport
