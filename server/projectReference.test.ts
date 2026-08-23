@@ -8,7 +8,7 @@ describe("project reference and baseline", () => {
   it("builds a read-only preparing baseline before an active contract exists", () => {
     const reference = buildProjectReference({
       project: { id: 4, name: "مشروع تجريبي", plotNumber: "12", titleDeedNumber: "TD-1", permittedUse: "سكني", gfaSqft: 50000, driveFolderId: "folder" },
-      officialDocuments: [{ sourceName: "سند الملكية.pdf", category: "official_land_document", updatedAt: "2026-08-20" }],
+      officialDocuments: [{ sourceName: "سند الملكية.pdf", category: "official_land_document", updatedAt: "2026-08-20", sourceType: "google_drive", sourceId: "drive-file-1", sourcePath: null }],
       approvedMarketDecision: { decidedAt: "2026-08-21", notes: null },
       verifiedEvidenceCount: 2,
       plannedServices: 3,
@@ -19,6 +19,8 @@ describe("project reference and baseline", () => {
     expect(reference.readOnly).toBe(true);
     expect(reference.baseline.status).toBe("waiting_for_appointment");
     expect(reference.sources.find((source) => source.id === "market")?.status).toBe("ready");
+    expect(reference.driveFolder.url).toContain("drive.google.com/drive/folders/folder");
+    expect(reference.officialDocuments[0]?.driveUrl).toContain("drive.google.com/open?id=drive-file-1");
   });
 
   it("never adds a write procedure to the reference router", () => {

@@ -1,5 +1,6 @@
 import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { z } from "zod";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   designsAndPermits,
   documentIndex,
@@ -15,7 +16,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 
 type ReferenceSeed = {
   project: Record<string, unknown>;
-  officialDocuments: Array<{ sourceName: string; category: string | null; updatedAt: string }>;
+  officialDocuments: Array<{ sourceName: string; category: string | null; updatedAt: string; sourceType: string; sourceId: string | null; sourcePath: string | null }>;
   approvedMarketDecision?: { decidedAt: string; notes: string | null };
   verifiedEvidenceCount: number;
   plannedServices: number;
@@ -35,6 +36,12 @@ function statusFromChecks(checks: boolean[]): ReferenceStatus {
   if (available === checks.length && available > 0) return "ready";
   if (available > 0) return "partial";
   return "not_ready";
+}
+
+function getDriveDocumentUrl(document: ReferenceSeed["officialDocuments"][number]) {
+  if (document.sourceType !== "google_drive") return undefined;
+  if (document.sourcePath?.startsWith("https://")) return document.sourcePath;
+  return document.sourceId ? `https://drive.google.com/open?id=${document.sourceId}` : undefined;
 }
 
 export function buildProjectReference(seed: ReferenceSeed) {
@@ -118,8 +125,14 @@ export function buildProjectReference(seed: ReferenceSeed) {
   return {
     readOnly: true,
     project: { id: project.id, name: project.name, financingScenario: project.financingScenario ?? null },
+    driveFolder: hasValue(project.driveFolderId)
+      ? { configured: true, url: `https://drive.google.com/drive/folders/${project.driveFolderId}` }
+      : { configured: false, url: null },
     sources: sourceCards,
-    officialDocuments: seed.officialDocuments.slice(0, 5),
+    officialDocuments: seed.officialDocuments.slice(0, 5).map((document) => ({
+      ...document,
+      driveUrl: getDriveDocumentUrl(document),
+    })),
     baseline: {
       status: contractReady && hasReferencePack ? "ready_to_confirm" : hasReferencePack ? "waiting_for_appointment" : "preparing",
       statusLabel: contractReady && hasReferencePack ? "جاهز لتثبيت خط الأساس" : hasReferencePack ? "بانتظار التعيين" : "قيد الإعداد",
@@ -140,6 +153,12 @@ export function buildProjectReference(seed: ReferenceSeed) {
       state: "prepared_only",
       title: "قرار التغيير",
       detail: "لن يُفعّل طلب تغيير أو يكتب في الكلفة أو البرنامج أو التدفقات قبل تثبيت خط أساس معتمد وبدء المشروع فعليًا.",
+      activationRule: "يتاح بعد تثبيت خط أساس تنفيذي معتمد فقط.",
+      template: [
+        "السبب والوثيقة المرجعية",
+        "الأثر على النطاق والبرنامج والكلفة والتدفقات",
+        "القرار المطلوب والاعتماد",
+      ],
     },
   };
 }
@@ -153,7 +172,7 @@ export const projectReferenceRouter = router({
 
       const [projectRows, documentRows, decisionRows, evidenceRows, serviceRows, legalRows, permitRows, contractRows] = await Promise.all([
         db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1),
-        db.select({ sourceName: documentIndex.sourceName, category: documentIndex.category, updatedAt: documentIndex.updatedAt })
+        db.select({ sourceName: documentIndex.sourceName, category: documentIndex.category, updatedAt: documentIndex.updatedAt, sourceType: documentIndex.sourceType, sourceId: documentIndex.sourceId, sourcePath: documentIndex.sourcePath })
           .from(documentIndex).where(and(eq(documentIndex.projectId, input.projectId), eq(documentIndex.indexStatus, "indexed"))).orderBy(desc(documentIndex.updatedAt)),
         db.select({ decidedAt: marketDecisionApprovals.decidedAt, notes: marketDecisionApprovals.notes })
           .from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, input.projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).orderBy(desc(marketDecisionApprovals.decidedAt)).limit(1),

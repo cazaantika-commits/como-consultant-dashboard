@@ -1469,3 +1469,6 @@
 - [x] Audit existing project documents, decisions, and baseline-related sources to create a non-duplicative owner-side reference view
 - [x] Build a read-only project reference and baseline view without moving Google Drive files or changing project, financial, lifecycle, or market records
 - [x] Prepare a controlled change-decision view for later project execution without activating changes before a project starts
+- [x] Link the project reference document index to the selected Google Drive folder as a direct read-only source without copying files
+- [x] Add a prepared-only change request that remains unavailable until a future approved baseline exists
+- [x] Replace homepage placeholder counts with source-backed project, task, meeting, and alert indicators

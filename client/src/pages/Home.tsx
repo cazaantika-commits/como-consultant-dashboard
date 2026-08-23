@@ -332,6 +332,11 @@ export default function Home() {
     { enabled: effectivelyAuthenticated, staleTime: 60_000 }
   );
   const overdueCount = deadlineAlerts.filter((a: any) => a.severity === 'overdue').length;
+  const { data: homepageProjects = [] } = trpc.projects.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
+  const { data: homepageTaskStats } = trpc.tasks.stats.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
+  const { data: homepageMeetings = [] } = trpc.meetings.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
+  const openTaskCount = (homepageTaskStats?.new ?? 0) + (homepageTaskStats?.progress ?? 0) + (homepageTaskStats?.hold ?? 0);
+  const preparingMeetingCount = homepageMeetings.filter((meeting: any) => meeting.status === "preparing").length;
 
   const coordinator = agentsList.find((a: any) => a.isCoordinator === 1);
   const teamAgents = agentsList.filter((a: any) => a.isCoordinator !== 1);
@@ -405,9 +410,9 @@ export default function Home() {
   const NAV_MAIN = [
     { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
     { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)", badge: overdueCount > 0 ? overdueCount : undefined },
-    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)", badge: 5 },
+    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)" },
     { id: "main-kb", label: "المعرفة والتحليل", icon: BookOpen, path: "/knowledge-analysis", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)", badge: 2 },
+    { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)" },
   ];
 
   const NAV_TOOLS = [
@@ -665,8 +670,8 @@ export default function Home() {
                     <FolderOpen className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">5</p>
-                    <p className="text-[10px] text-muted-foreground">مشاريع نشطة</p>
+                    <p className="text-xl font-extrabold text-foreground">{homepageProjects.length}</p>
+                    <p className="text-[10px] text-muted-foreground">مشاريع مسجلة</p>
                   </div>
                 </div>
               </div>
@@ -677,8 +682,8 @@ export default function Home() {
                     <ClipboardList className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">12</p>
-                    <p className="text-[10px] text-muted-foreground">مهام معلقة</p>
+                    <p className="text-xl font-extrabold text-foreground">{openTaskCount}</p>
+                    <p className="text-[10px] text-muted-foreground">مهام مفتوحة</p>
                   </div>
                 </div>
               </div>
@@ -689,8 +694,8 @@ export default function Home() {
                     <Clock className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">3</p>
-                    <p className="text-[10px] text-muted-foreground">اجتماعات قادمة</p>
+                    <p className="text-xl font-extrabold text-foreground">{preparingMeetingCount}</p>
+                    <p className="text-[10px] text-muted-foreground">اجتماعات قيد التحضير</p>
                   </div>
                 </div>
               </div>
@@ -701,8 +706,8 @@ export default function Home() {
                     <AlertTriangle className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">2</p>
-                    <p className="text-[10px] text-muted-foreground">تنبيهات عاجلة</p>
+                    <p className="text-xl font-extrabold text-foreground">{overdueCount}</p>
+                    <p className="text-[10px] text-muted-foreground">تنبيهات تأخير</p>
                   </div>
                 </div>
               </div>
