@@ -41,6 +41,7 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
     { label: "مجلد وثائق المشروع", present: Boolean(seed.project.driveFolderId) },
   ];
   const factsStatus = statusFromCount(factItems.filter((item) => item.present).length, factItems.length);
+  const missingFactLabels = factItems.filter((item) => !item.present).map((item) => item.label);
 
   const marketStatus: GateStatus = seed.hasApprovedMarketDecision && seed.verifiedEvidenceCount > 0 && seed.hasMarketProfile
     ? "complete"
@@ -57,6 +58,16 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
     : seed.proposalCount > 0
       ? "partial"
       : "missing";
+
+  const marketMissing = [
+    !seed.hasMarketProfile ? "فلترة سوق محفوظة" : null,
+    seed.verifiedEvidenceCount === 0 ? "دليل سوق موثق" : null,
+    !seed.hasApprovedMarketDecision ? "قرار سوق معتمد" : null,
+  ].filter(Boolean) as string[];
+  const programMissing = [
+    seed.activeLifecycleStages === 0 ? "مراحل تنظيمية نشطة" : null,
+    seed.plannedServices === 0 ? "خدمة لها موعد مخطط" : null,
+  ].filter(Boolean) as string[];
 
   let nextDecision = "أكمل بطاقة المشروع ووثائق الأرض من المصدر المعتمد.";
   let nextActionHref = "/project";
@@ -88,6 +99,8 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
         description: "تُقرأ من بطاقة المشروع وملفات الوثائق؛ لا تُعدل من هذه البوابة.",
         status: factsStatus,
         detail: `${factItems.filter((item) => item.present).length} من ${factItems.length} حقول تأسيسية متاحة`,
+        reason: factsStatus === "complete" ? "تتوفر حقائق الأرض والوثائق الأساسية من المصادر الحالية." : `ينقص: ${missingFactLabels.join("، ")}.`,
+        nextAction: factsStatus === "complete" ? "انتقل إلى مراجعة قرار السوق." : `استكمل الحقول الناقصة في بطاقة المشروع: ${missingFactLabels.join("، ")}.`,
         items: factItems,
         href: `/project/${seed.project.id}`,
         sourceLabel: "بطاقة المشروع وخازن",
@@ -98,6 +111,8 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
         description: "يتطلب فلترة سوق محفوظة ودليلًا موثقًا وقرار سوق معتمدًا.",
         status: marketStatus,
         detail: `${seed.verifiedEvidenceCount} دليل موثق${seed.hasApprovedMarketDecision ? " · قرار سوق معتمد" : " · لم يعتمد قرار سوق بعد"}`,
+        reason: marketStatus === "complete" ? "فلترة السوق والدليل والقرار المعتمد مكتملة." : `ينقص: ${marketMissing.join("، ")}.`,
+        nextAction: marketStatus === "complete" ? "احفظ قرار السوق مرجعًا لمرحلة البرنامج والتكليف." : "حدد ما تريد بحثه، وثّق الأدلة المتوافقة، ثم راجع قرار السوق واعتمده.",
         items: [
           { label: "فلترة سوق محفوظة", present: seed.hasMarketProfile },
           { label: "دليل سوق موثق", present: seed.verifiedEvidenceCount > 0 },
@@ -112,6 +127,8 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
         description: "يبيّن وجود برنامج أولي فقط؛ لا يغيّر تواريخ أو حالات مسار الامتثال.",
         status: programStatus,
         detail: `${seed.plannedServices} خدمة لها موعد مخطط ضمن ${seed.activeLifecycleStages} مراحل نشطة`,
+        reason: programStatus === "complete" ? "يوجد مسار تنظيمي نشط وخدمة واحدة على الأقل بموعد مخطط." : `ينقص: ${programMissing.join("، ")}.`,
+        nextAction: programStatus === "complete" ? "جهّز موجز ونطاق تكليف الاستشاري بالاستناد إلى البرنامج." : "افتح جولة المراحل وحدد البرنامج الأولي ومواعيد الخدمات الأساسية.",
         items: [
           { label: "مراحل تنظيمية نشطة", present: seed.activeLifecycleStages > 0 },
           { label: "خدمة واحدة على الأقل لها موعد مخطط", present: seed.plannedServices > 0 },
@@ -125,6 +142,8 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
         description: "يعرض الوضع الحالي للعروض والعقود فقط؛ لا ينشئ أو يغير عقدًا من هذه البوابة.",
         status: appointmentStatus,
         detail: `${seed.proposalCount} عرض استشاري · ${seed.activeContractCount} عقد نشط`,
+        reason: appointmentStatus === "complete" ? "يوجد عقد أو تكليف نشط مسجل للمشروع." : appointmentStatus === "partial" ? "توجد عروض استشارية، لكن لم يسجل عقد أو تكليف نشط بعد." : "لا يوجد عرض استشاري أو عقد مسجل بعد.",
+        nextAction: appointmentStatus === "complete" ? "ثبّت خط الأساس للتنفيذ قبل بدء الأعمال." : appointmentStatus === "partial" ? "قارن العروض وحدد قرار التعيين ثم سجل العقد أو التكليف." : "جهّز حزمة التكليف وابدأ طلب عروض الاستشاريين.",
         items: [
           { label: "عرض استشاري واحد على الأقل", present: seed.proposalCount > 0 },
           { label: "عقد أو تكليف نشط", present: seed.activeContractCount > 0 },

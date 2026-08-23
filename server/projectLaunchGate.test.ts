@@ -22,6 +22,8 @@ describe("Project Launch Gate", () => {
     expect(gate.readyForTender).toBe(true);
     expect(gate.gates.map((item) => item.status)).toEqual(["complete", "complete", "complete", "partial"]);
     expect(gate.nextDecision).toContain("راجع عروض الاستشاريين");
+    expect(gate.gates[3].reason).toContain("لم يسجل عقد");
+    expect(gate.gates[3].nextAction).toContain("حدد قرار التعيين");
   });
 
   it("identifies missing facts before allowing later preparation steps", () => {
@@ -32,6 +34,8 @@ describe("Project Launch Gate", () => {
     expect(gate.readyForTender).toBe(false);
     expect(gate.gates[0].status).toBe("missing");
     expect(gate.nextDecision).toContain("بطاقة المشروع");
+    expect(gate.gates[0].reason).toContain("رقم الأرض");
+    expect(gate.gates[0].nextAction).toContain("استكمل الحقول الناقصة");
   });
 
   it("contains a read-only query only and no source-record write operation", () => {
@@ -44,5 +48,16 @@ describe("Project Launch Gate", () => {
     expect(launchPageSource).toContain("w-full min-w-0 max-w-full overflow-x-hidden");
     expect(phasesPageSource).toContain("grid-cols-1 sm:grid-cols-2 lg:grid-cols-4");
     expect(phasesPageSource).toContain("w-full max-w-full overflow-x-hidden");
+  });
+
+  it("shows a reason and concrete next action for every checkpoint", () => {
+    const gate = buildProjectLaunchGate({
+      project: { id: 9, plotNumber: "9", titleDeedNumber: "TD-9", permittedUse: "Residential", gfaSqft: "1", driveFolderId: "drive-9" },
+      hasMarketProfile: true, verifiedEvidenceCount: 1, hasApprovedMarketDecision: true,
+      activeLifecycleStages: 2, plannedServices: 1, proposalCount: 0, activeContractCount: 0,
+    });
+    expect(gate.gates.every((item) => Boolean(item.reason) && Boolean(item.nextAction))).toBe(true);
+    expect(launchPageSource).toContain("سبب الحالة");
+    expect(launchPageSource).toContain("الإجراء التالي");
   });
 });
