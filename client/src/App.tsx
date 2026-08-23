@@ -85,6 +85,7 @@ import V2Timeline from "./pages/V2Timeline";
 import V2Hub from "./pages/V2Hub";
 import BateekhaPage from "./pages/BateekhaPage";
 import ProjectLaunchGatePage from "./pages/ProjectLaunchGatePage";
+import ProjectReferencePage from "./pages/ProjectReferencePage";
 import ConsultantAppointmentPackPage from "./pages/ConsultantAppointmentPackPage";
 import ContractDeliverablesPage from "./pages/ContractDeliverablesPage";
 
@@ -169,6 +170,7 @@ function Router() {
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/project-launch" component={ProjectLaunchGatePage} />
+      <Route path="/project-reference" component={ProjectReferencePage} />
       <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />
       <Route path="/contract-deliverables" component={ContractDeliverablesPage} />
       <Route path="/user-management" component={UserManagementPage} />

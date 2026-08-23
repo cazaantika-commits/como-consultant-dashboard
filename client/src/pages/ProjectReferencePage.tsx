@@ -1,0 +1,63 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { default as BookOpenCheck } from "lucide-react/dist/esm/icons/book-open-check.js";
+import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
+import { default as CircleAlert } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as CircleDashed } from "lucide-react/dist/esm/icons/circle-dashed.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+
+type ReferenceStatus = "ready" | "partial" | "not_ready";
+
+const STATUS_STYLE: Record<ReferenceStatus, { label: string; icon: typeof CheckCircle2; className: string }> = {
+  ready: { label: "متاح", icon: CheckCircle2, className: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+  partial: { label: "جزئي", icon: CircleAlert, className: "border-amber-200 bg-amber-50 text-amber-700" },
+  not_ready: { label: "غير موثق", icon: CircleDashed, className: "border-slate-200 bg-slate-50 text-slate-600" },
+};
+
+export default function ProjectReferencePage() {
+  const [, navigate] = useLocation();
+  const { data: projects = [], isLoading: isLoadingProjects } = trpc.projects.list.useQuery();
+  const [projectId, setProjectId] = useState<number | null>(null);
+  const referenceQuery = trpc.projectReference.get.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });
+  const reference = referenceQuery.data;
+
+  return (
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
+      <header className="sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-sm">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/project-launch")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى بوابة الانطلاق</Button>
+          <span className="h-5 w-px bg-border" />
+          <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white"><BookOpenCheck className="h-3.5 w-3.5" /></span><h1 className="text-sm font-bold text-foreground">مرجعية المشروع وخط الأساس</h1></div>
+        </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-9">
+        <section className="rounded-3xl border border-teal-200/70 bg-gradient-to-l from-teal-50/80 via-white to-cyan-50/60 p-6 shadow-sm md:p-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-xs font-bold text-teal-800"><ShieldCheck className="h-3.5 w-3.5" /> قراءة فقط من المصادر المعتمدة</span><h2 className="mt-3 text-2xl font-extrabold text-foreground">ما هي مراجع المشروع قبل تثبيت خط الأساس؟</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">يجمع هذا العرض روابط الحقائق والوثائق وقرار السوق والبرنامج والسجل القانوني. لا ينقل ملفات Drive، ولا يغيّر أي رقم أو تاريخ أو حالة.</p></div>
+            <div className="w-full md:w-80"><label className="mb-2 block text-xs font-bold text-foreground">اختر المشروع لمراجعة مرجعيته</label><select value={projectId ?? ""} onChange={(event) => setProjectId(event.target.value ? Number(event.target.value) : null)} disabled={isLoadingProjects} className="h-11 w-full rounded-xl border border-teal-300 bg-white px-3 text-sm font-semibold text-foreground outline-none ring-offset-background focus:ring-2 focus:ring-teal-500"><option value="">— اختر مشروعًا —</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></div>
+          </div>
+        </section>
+
+        {!projectId && !isLoadingProjects && <div className="mt-8 rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">اختر مشروعًا أولًا. ستظهر المصادر الحالية كما هي، من دون إنشاء نسخة أخرى منها.</div>}
+        {referenceQuery.isLoading && <div className="flex justify-center py-20"><Loader2 className="h-7 w-7 animate-spin text-teal-600" /></div>}
+
+        {reference && <section className="mt-6 space-y-5">
+          <div className="rounded-2xl border border-slate-200 bg-card p-5 shadow-sm"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><p className="text-xs font-bold text-muted-foreground">خط أساس المشروع: {reference.project.name}</p><h3 className="mt-1 text-lg font-extrabold text-foreground">{reference.baseline.statusLabel}</h3><p className="mt-1 text-sm leading-6 text-muted-foreground">{reference.baseline.detail}</p></div><span className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-[11px] font-bold text-teal-800">لا يوجد خط أساس تنفيذي مفعّل الآن</span></div><div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{reference.baseline.checks.map((check: any) => <div key={check.label} className={`rounded-xl border px-3 py-3 text-xs font-bold ${check.present ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-600"}`}><span className={`ml-2 inline-block h-2 w-2 rounded-full ${check.present ? "bg-emerald-500" : "bg-slate-300"}`} />{check.label}</div>)}</div></div>
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{reference.sources.map((source: any) => { const style = STATUS_STYLE[source.status as ReferenceStatus]; const StatusIcon = style.icon; return <article key={source.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold text-foreground">{source.title}</h3><p className="mt-1 text-xs text-muted-foreground">المصدر: {source.source}</p></div><span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-bold ${style.className}`}><StatusIcon className="h-3.5 w-3.5" />{style.label}</span></div><p className="mt-4 rounded-xl bg-muted/45 px-3 py-3 text-xs leading-5 text-foreground">{source.detail}</p><button onClick={() => navigate(source.href)} className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900"><ExternalLink className="h-3.5 w-3.5" /> افتح المصدر</button></article>; })}</div>
+
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]"><section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-teal-700" /><h3 className="font-extrabold text-foreground">أحدث الوثائق المفهرسة</h3></div>{reference.officialDocuments.length > 0 ? <div className="mt-4 space-y-2">{reference.officialDocuments.map((document: any) => <div key={`${document.sourceName}-${document.updatedAt}`} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3"><p className="text-sm font-bold text-foreground">{document.sourceName}</p><p className="mt-1 text-xs text-muted-foreground">{document.category || "وثيقة مرجعية"} · آخر فهرسة: {document.updatedAt || "غير محدد"}</p></div>)}</div> : <p className="mt-4 rounded-xl border border-dashed border-slate-200 p-4 text-xs leading-5 text-muted-foreground">لا يوجد مستند مفهرس لهذا المشروع بعد. يبقى Google Drive هو مكان الملف الأصلي.</p>}</section>
+            <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5 shadow-sm"><p className="text-xs font-bold text-amber-800">مرحلة لاحقة عند بدء التنفيذ</p><h3 className="mt-1 font-extrabold text-foreground">{reference.changeControl.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{reference.changeControl.detail}</p><div className="mt-4 rounded-xl border border-amber-200 bg-white/70 px-3 py-3 text-xs font-bold text-amber-900">حالة اليوم: تجهيز فقط، بلا طلبات تغيير مفعّلة.</div></section>
+          </div>
+        </section>}
+      </main>
+    </div>
+  );
+}

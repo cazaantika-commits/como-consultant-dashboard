@@ -85,7 +85,7 @@ export default function ProjectLaunchGatePage({ embedded = false }: { embedded?:
                   <p className="text-xs font-bold text-muted-foreground">القرار التالي للمشروع: {gate.project.name}</p>
                   <h3 className="mt-1 text-lg font-extrabold text-foreground">{gate.nextDecision}</h3>
                 </div>
-                <Button onClick={() => navigate(gate.nextActionHref)} className="gap-2 bg-slate-900 text-white hover:bg-slate-800"><ExternalLink className="w-4 h-4" /> افتح المصدر المناسب</Button>
+                <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => navigate("/project-reference")} className="gap-2 border-teal-200 bg-white text-teal-800 hover:bg-teal-50"><BookOpenCheck className="w-4 h-4" /> مرجع المشروع</Button><Button onClick={() => navigate(gate.nextActionHref)} className="gap-2 bg-slate-900 text-white hover:bg-slate-800"><ExternalLink className="w-4 h-4" /> افتح المصدر المناسب</Button></div>
               </div>
             </div>
 

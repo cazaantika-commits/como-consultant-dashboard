@@ -1466,3 +1466,6 @@
 - [x] Keep JSON retirement and AI offer-reading extraction as deferred migration work until every existing JSON field has a verified equivalent source-backed destination
 - [x] Unify consultant technical evaluation and sovereign committee decision inside Command Center using the existing shared records, while retaining legacy pages as references
 - [x] Fix horizontal overflow in the legacy committee reference page so its official-decision guidance remains fully visible on mobile
+- [x] Audit existing project documents, decisions, and baseline-related sources to create a non-duplicative owner-side reference view
+- [x] Build a read-only project reference and baseline view without moving Google Drive files or changing project, financial, lifecycle, or market records
+- [x] Prepare a controlled change-decision view for later project execution without activating changes before a project starts
