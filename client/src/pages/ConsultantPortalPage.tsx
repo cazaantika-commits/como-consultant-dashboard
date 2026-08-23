@@ -9,6 +9,15 @@ import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js"
 import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
 import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
 
+const CONSULTANT_WORKFLOW = [
+  { step: "01", title: "جهّز طلب العروض", description: "راجِع موجز المشروع والنطاق والبرنامج قبل مخاطبة أي مكتب.", href: "/consultant-appointment-pack", icon: FileText, tone: "border-sky-200 bg-sky-50 text-sky-800" },
+  { step: "02", title: "حدّد المكاتب المناسبة", description: "أضف المكاتب إلى المشروع من القائمة الأساسية من دون تكرار بيانات التواصل.", href: "/consultant-know", icon: UserCircle, tone: "border-violet-200 bg-violet-50 text-violet-800" },
+  { step: "03", title: "حلّل العرض والنطاق", description: "قارن العرض بالنطاق المطلوب وحدد فجوات التصاميم والإشراف لكل مكتب.", href: "/consultant-proposals", icon: FileText, tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  { step: "04", title: "وثّق التكلفة الحقيقية", description: "أدخل الأتعاب من العرض وراجع الفجوات؛ لا يُتخذ قرار تلقائي من هذا الجدول.", href: "/consultant-evaluation", icon: Star, tone: "border-amber-200 bg-amber-50 text-amber-800" },
+  { step: "05", title: "قيّم وخذ قرار اللجنة", description: "التقييم الفني والقرار النهائي في مركز القيادة؛ الترتيب مرجع واللجنة صاحبة القرار.", href: "/command-center", icon: Building2, tone: "border-cyan-200 bg-cyan-50 text-cyan-800" },
+  { step: "06", title: "وثّق العقد والتسليمات", description: "بعد القرار المؤكد فقط، سجّل العقد ثم تابع تسليماته من دون إعادة إدخال نطاقه.", href: "/contract-deliverables", icon: BookOpen, tone: "border-rose-200 bg-rose-50 text-rose-800" },
+];
+
 const PORTAL_ICONS = [
   {
     id: "evaluation",
@@ -94,8 +103,44 @@ export default function ConsultantPortalPage() {
         </div>
       </div>
 
+      <section className="max-w-6xl mx-auto px-6 pt-8">
+        <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-semibold tracking-wide text-stone-500">مسار عمل واحد</p>
+              <h2 className="mt-1 text-xl font-bold text-stone-900">من طلب العروض إلى التسليمات</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-600">هذه الخريطة ترتب الصفحات الحالية فقط. لا تنشئ عرضًا أو قرارًا أو عقدًا تلقائيًا، ولا تلغي أي صفحة موجودة.</p>
+            </div>
+            <span className="inline-flex w-fit rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">القرار النهائي يبقى للجنة</span>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {CONSULTANT_WORKFLOW.map((item) => {
+              const StepIcon = item.icon;
+              return (
+                <Link key={item.step} href={item.href} className="group block">
+                  <article className={`h-full rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${item.tone}`}>
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-white/85 px-2 text-xs font-bold shadow-sm">{item.step}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <StepIcon className="h-4 w-4 shrink-0" />
+                          <h3 className="font-bold">{item.title}</h3>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 opacity-85">{item.description}</p>
+                        <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold opacity-90">فتح الخطوة <ChevronLeft className="h-3.5 w-3.5" /></span>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* Icons Grid */}
-      <div className="max-w-6xl mx-auto px-6 -mt-6">
+      <div className="max-w-6xl mx-auto px-6 pt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {PORTAL_ICONS.map((item, index) => {
             const Icon = item.icon;

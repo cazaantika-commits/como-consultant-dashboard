@@ -1459,3 +1459,8 @@
 - [x] Add an explicit draft-only request-for-proposals path from a completed appointment pack, with no automatic email or external access
 - [x] Add a post-appointment deliverables register linked to the selected project contract without changing existing contract records
 - [x] Audit the Consultant Offices card and Command Center consultant-evaluation experience, then recommend a single non-duplicative selection path before any related implementation
+- [ ] Audit all consultant-offer JSON inputs and map every preserved field to a source-backed agent-extracted draft before removing any dependency on JSON
+- [ ] Replace JSON-first consultant offer entry with an AI-assisted document-reading draft that requires human review before affecting fees, scope, or evaluation
+- [x] Reorder consultant navigation around one coherent path: RFP brief, offer extraction, CPA and fees, technical evaluation, committee decision, contract, and deliverables
+- [x] Add a read-only consultant workflow map that guides the existing RFP, offer analysis, evaluation, decision, contract, and deliverables pages without changing their records
+- [x] Keep JSON retirement and AI offer-reading extraction as deferred migration work until every existing JSON field has a verified equivalent source-backed destination
