@@ -1434,3 +1434,4 @@
 - [x] Replace the Financial Studies palette with the requested pink, turquoise, yellow, burgundy, and blue card sequence
 - [x] Ensure every Financial Studies card has its own distinct accent shade with no repeated card color
 - [x] Audit Knowledge and Analysis workflows, data sources, and current gaps; provide recommendations before making changes
+- [x] Build the first Market Decision screen in Knowledge and Analysis as a read-only review surface with no automatic writes to pricing or cash flows

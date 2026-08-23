@@ -7,19 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as Target } from "lucide-react/dist/esm/icons/target.js";
 import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
 import { default as Database } from "lucide-react/dist/esm/icons/database.js";
 import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
 import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
 import JoelleEngineTab from "@/components/feasibility/JoelleEngineTab";
+import MarketDecisionTab from "@/components/feasibility/MarketDecisionTab";
 import JoelleDataManager from "@/components/feasibility/JoelleDataManager";
 import CostsCashFlowTab from "@/components/feasibility/CostsCashFlowTab";
 import MarketReportsPage from "./MarketReportsPage";
 import RiskDashboardPage from "./RiskDashboardPage";
 
-type TabId = "research" | "market-reports" | "data-sources" | "risk" | "pricing";
+type TabId = "market-decision" | "research" | "market-reports" | "data-sources" | "risk" | "pricing";
 
 const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
+  { id: "market-decision", label: "قرار السوق", icon: Target },
   { id: "research", label: "الدراسات والأبحاث", icon: BookOpen },
   { id: "market-reports", label: "تقارير السوق", icon: BarChart2 },
   { id: "data-sources", label: "البيانات والمصادر", icon: Database },
@@ -35,7 +38,7 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
   const { isAuthenticated } = useAuth();
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
-  const [activeTab, setActiveTab] = useState<TabId>("research");
+  const [activeTab, setActiveTab] = useState<TabId>("market-decision");
 
   // Auto-select last opened project (or first project as fallback)
   useEffect(() => {
@@ -135,6 +138,11 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
 
       {/* Content */}
       <main className="py-4">
+        {activeTab === "market-decision" && (
+          <div className="max-w-[98%] mx-auto px-4">
+            <MarketDecisionTab projectId={selectedProjectId} onOpenResearch={() => setActiveTab("research")} />
+          </div>
+        )}
         {activeTab === "research" && (
           <div className="max-w-[98%] mx-auto px-4">
             <JoelleEngineTab projectId={selectedProjectId} studyId={studyId} />
