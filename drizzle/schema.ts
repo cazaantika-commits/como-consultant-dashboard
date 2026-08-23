@@ -974,6 +974,43 @@ export const projectContracts = mysqlTable("projectContracts", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+// مسودات داخلية فقط تنشأ من حزمة التكليف المكتملة؛ لا ترسل إلى أي طرف خارجي.
+export const consultantRfpDrafts = mysqlTable("consultant_rfp_drafts", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
+	title: varchar({ length: 500 }).notNull(),
+	status: mysqlEnum("rfp_status", ["draft", "ready_for_review", "issued", "archived"]).default("draft").notNull(),
+	packSnapshotJson: longtext("pack_snapshot_json").notNull(),
+	notes: text(),
+	createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("crd_project").on(table.projectId),
+	index("crd_status").on(table.status),
+]);
+
+// سجل تسليمات مستقل يرتبط بعقد موجود ولا يغير سجله أو شروطه.
+export const contractDeliverables = mysqlTable("contract_deliverables", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	contractId: int("contract_id").notNull().references(() => projectContracts.id, { onDelete: "cascade" }),
+	createdByUserId: int("created_by_user_id").notNull().references(() => users.id),
+	title: varchar({ length: 500 }).notNull(),
+	description: text(),
+	acceptanceCriteria: text("acceptance_criteria"),
+	dueDate: varchar("due_date", { length: 50 }),
+	status: mysqlEnum("delivery_status", ["not_started", "submitted", "accepted", "returned", "overdue"]).default("not_started").notNull(),
+	referenceUrl: varchar("reference_url", { length: 1000 }),
+	ownerNotes: text("owner_notes"),
+	createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("cd_project").on(table.projectId),
+	index("cd_contract").on(table.contractId),
+	index("cd_status").on(table.status),
+]);
+
 export const projectKpis = mysqlTable("projectKpis", {
 	id: int().autoincrement().notNull(),
 	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" } ),

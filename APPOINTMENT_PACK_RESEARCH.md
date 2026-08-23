@@ -24,3 +24,15 @@
 [1]: https://www.designingbuildings.co.uk/wiki/Scope_of_services "Scope of services — Designing Buildings"
 
 [2]: https://www.riba.org/work/business-tools/riba-contracts/riba-standard-professional-services-contract-architectural-services/ "RIBA Standard Professional Services Contract"
+
+## قائمة مراجعة التكليف وطلب العروض
+
+تشترط قائمة المراجعة داخل COMO أربعة عناصر قبل إنشاء المسودة: حقائق المشروع، مرجع السوق المعتمد، البرنامج الأولي، ومصفوفة نطاق الاستشاري. هذا يتبع مبدأ أن طلب العروض الجيد يحدد الخلفية والتسليمات والمواصفات ومتطلبات التقديم والمواعيد وشروط الدفع ومعايير التقييم قبل دعوة الجهات. [3]
+
+تُنشأ في النظام **مسودة داخلية** فقط بعد اكتمال القائمة. لا ترسل بريدًا أو دعوة أو تمنح وصولًا خارجيًا. يتطلب طلب العروض الفعلي لاحقًا موافقة صريحة من المالك، ثم يبقى تقييم المنهجية والفريق والخبرة والسعر متعدد المعايير، لا اختيارًا تلقائيًا للأقل كلفة. [3] [4]
+
+سجل التسليمات يربط العقد القائم بالمخرجات ومعيار القبول والحالة والاستحقاق، من دون تعديل نص العقد أو حالته أو مرفقاته.
+
+[3]: https://volunteer.ewb-usa.org/s/article/Introduction-to-Request-for-Proposal-RFP-and-Contract-Guidance "Introduction to Request for Proposal and Contract Guidance"
+
+[4]: https://conwize.io/glossary/request-for-proposal-rfp-a-formal-solicitation-document-used-to-invite-and-evaluate-contractor-or-consultant-proposals-in-construction-procurement/ "Request for Proposal in Construction Procurement"

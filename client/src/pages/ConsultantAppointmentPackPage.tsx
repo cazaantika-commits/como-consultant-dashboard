@@ -10,6 +10,8 @@ import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js
 import { default as LockKeyhole } from "lucide-react/dist/esm/icons/lock-keyhole.js";
 import { default as MapPinned } from "lucide-react/dist/esm/icons/map-pinned.js";
 import { default as Route } from "lucide-react/dist/esm/icons/route.js";
+import { default as ListChecks } from "lucide-react/dist/esm/icons/list-checks.js";
+import { default as Send } from "lucide-react/dist/esm/icons/send.js";
 
 function SourceTag({ children }: { children: React.ReactNode }) {
   return <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600">المصدر: {children}</span>;
@@ -20,6 +22,10 @@ export default function ConsultantAppointmentPackPage() {
   const [projectId, setProjectId] = useState<number | null>(null);
   const { data: projects = [], isLoading: isLoadingProjects } = trpc.projects.list.useQuery();
   const packQuery = trpc.consultantAppointmentPack.get.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });
+  const reviewQuery = trpc.consultantProcurement.getPackReview.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });
+  const draftsQuery = trpc.consultantProcurement.listRfpDrafts.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });
+  const utils = trpc.useUtils();
+  const createDraft = trpc.consultantProcurement.createRfpDraft.useMutation({ onSuccess: () => { if (projectId) { utils.consultantProcurement.listRfpDrafts.invalidate({ projectId }); } } });
   const pack = packQuery.data;
 
   return (
@@ -53,6 +59,7 @@ export default function ConsultantAppointmentPackPage() {
           </div>
 
           <section className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/40 p-5"><p className="text-sm font-extrabold text-violet-950">ما الذي لا تفعله هذه المعاينة؟</p><p className="mt-2 text-sm leading-6 text-violet-950/75">لا ترسل الحزمة إلى أي مكتب، ولا تنشئ طلب عروض أو عقدًا، ولا تختار استشاريًا. وظيفتها فقط أن تكشف أن نطاق التكليف القادم قائم على مصادر معتمدة، ويمكن مراجعته قبل أي إصدار خارجي.</p></section>
+          {reviewQuery.data && <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-2"><ListChecks className="h-5 w-5 text-violet-700" /><div><h4 className="font-extrabold text-foreground">قائمة مراجعة الحزمة قبل طلب العروض</h4><p className="mt-1 text-xs text-muted-foreground">تقرأ هذه القائمة مصادرها ولا تحفظ أي تعديل فيها.</p></div></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${reviewQuery.data.complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{reviewQuery.data.complete ? "الحزمة جاهزة لمسودة طلب عروض" : "تحتاج استكمال"}</span></div><div className="mt-4 grid gap-3 md:grid-cols-2">{reviewQuery.data.items.map((item: any) => <div key={item.key} className={`rounded-xl border p-3 ${item.complete ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}><p className="text-sm font-bold text-foreground">{item.complete ? "✓" : "○"} {item.label}</p><p className="mt-1 text-[11px] font-bold text-muted-foreground">المصدر: {item.source}</p>{!item.complete && <p className="mt-2 text-xs leading-5 text-amber-900">الإجراء: {item.action}</p>}</div>)}</div><div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4"><Button disabled={!reviewQuery.data.complete || createDraft.isPending} onClick={() => createDraft.mutate({ projectId })} className="gap-1.5 bg-violet-700 hover:bg-violet-800"><Send className="h-4 w-4" /> إنشاء مسودة طلب عروض داخلية</Button><Button variant="outline" onClick={() => navigate("/contract-deliverables")}>فتح سجل التسليمات بعد التعيين</Button><p className="text-xs text-muted-foreground">{draftsQuery.data?.length ? `يوجد ${draftsQuery.data.length} مسودة داخلية. لم يُرسل أي طلب.` : "لن يُرسل أي طلب أو دعوة تلقائيًا."}</p></div>{createDraft.data && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{createDraft.data.message}</p>}</section>}
         </section>}
       </main>
     </div>

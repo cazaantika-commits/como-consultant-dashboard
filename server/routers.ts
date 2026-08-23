@@ -56,6 +56,7 @@ import { waelSalesPlanRouter } from "./routers/waelSalesPlan";
 import { officialDocumentsRouter } from "./routers/officialDocuments";
 import { projectLaunchGateRouter } from "./routers/projectLaunchGate";
 import { consultantAppointmentPackRouter } from "./routers/consultantAppointmentPack";
+import { consultantProcurementRouter } from "./routers/consultantProcurement";
 import { adminProcedure } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -133,6 +134,7 @@ export const appRouter = router({
   officialDocuments: officialDocumentsRouter,
   projectLaunchGate: projectLaunchGateRouter,
   consultantAppointmentPack: consultantAppointmentPackRouter,
+  consultantProcurement: consultantProcurementRouter,
 
   // User Management (admin only)
   userManagement: router({

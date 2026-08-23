@@ -1455,3 +1455,6 @@
 - [x] Add clear readiness states, reasons, and next actions for each Project Launch Gate checkpoint without writing to any source record
 - [x] Build a read-only consultant appointment pack preview that assembles approved project, market, program, and scope information from existing sources without duplicating or changing them
 - [x] Add regression tests proving the appointment pack has no write path to project, financial, market, lifecycle, consultant, contract, or source-document records
+- [x] Add an internal appointment-pack review checklist that reads required source readiness without changing source records
+- [x] Add an explicit draft-only request-for-proposals path from a completed appointment pack, with no automatic email or external access
+- [x] Add a post-appointment deliverables register linked to the selected project contract without changing existing contract records
