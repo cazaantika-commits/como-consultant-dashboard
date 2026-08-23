@@ -1458,3 +1458,4 @@
 - [x] Add an internal appointment-pack review checklist that reads required source readiness without changing source records
 - [x] Add an explicit draft-only request-for-proposals path from a completed appointment pack, with no automatic email or external access
 - [x] Add a post-appointment deliverables register linked to the selected project contract without changing existing contract records
+- [x] Audit the Consultant Offices card and Command Center consultant-evaluation experience, then recommend a single non-duplicative selection path before any related implementation
