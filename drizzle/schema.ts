@@ -1489,6 +1489,56 @@ export const marketReports = mysqlTable("market_reports", {
 	index("market_reports_source").on(table.source),
 	index("market_reports_community").on(table.community),
 	index("market_reports_year_quarter").on(table.reportYear, table.reportQuarter),
+	]);
+
+// ═══════════════════════════════════════════
+// Project Market Evidence and Decision Approval
+// ═══════════════════════════════════════════
+// Each row is a traceable piece of market evidence for one project. It does not
+// update pricing, product mix, revenue, or cash-flow values by itself.
+export const projectMarketEvidence = mysqlTable("project_market_evidence", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int().notNull().references(() => users.id),
+	evidenceType: mysqlEnum("evidence_type", ["comparable", "market_report", "transaction", "regulatory", "assumption", "other"]).notNull(),
+	sourceType: mysqlEnum("source_type", ["DLD", "market_report", "broker", "developer", "listing_portal", "manual", "other"]).notNull(),
+	sourceName: varchar("source_name", { length: 255 }).notNull(),
+	sourceUrl: text("source_url"),
+	sourceDate: varchar("source_date", { length: 10 }),
+	confidenceGrade: mysqlEnum("confidence_grade", ["high", "medium", "low"]).default("medium").notNull(),
+	verificationStatus: mysqlEnum("verification_status", ["draft", "verified", "excluded"]).default("draft").notNull(),
+	marketReportId: int("market_report_id"),
+	comparableName: varchar("comparable_name", { length: 255 }),
+	community: varchar({ length: 255 }),
+	assetClass: mysqlEnum("asset_class", ["residential", "retail", "office", "mixed_use", "land", "other"]).default("residential").notNull(),
+	unitType: varchar("unit_type", { length: 100 }),
+	unitAreaSqft: decimal("unit_area_sqft", { precision: 14, scale: 2 }),
+	pricePerSqft: decimal("price_per_sqft", { precision: 14, scale: 2 }),
+	transactionValue: decimal("transaction_value", { precision: 18, scale: 2 }),
+	paymentPlanSummary: text("payment_plan_summary"),
+	notes: text(),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("market_evidence_project").on(table.projectId),
+	index("market_evidence_project_status").on(table.projectId, table.verificationStatus),
+	index("market_evidence_project_source_date").on(table.projectId, table.sourceDate),
+]);
+
+// Approval records intentionally snapshot a reviewed decision and its evidence.
+// The next phase may hand off an approved record to pricing, but this table does
+// not write to any commercial or financial source of truth.
+export const marketDecisionApprovals = mysqlTable("market_decision_approvals", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int().notNull().references(() => users.id),
+	decisionStatus: mysqlEnum("decision_status", ["reviewed", "approved", "rejected"]).notNull(),
+	decisionSnapshotJson: longtext("decision_snapshot_json").notNull(),
+	evidenceSnapshotJson: longtext("evidence_snapshot_json").notNull(),
+	notes: text(),
+	decidedAt: timestamp("decided_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+	index("market_decision_approvals_project").on(table.projectId, table.decidedAt),
 ]);
 
 // ═══════════════════════════════════════════

@@ -38,6 +38,7 @@ import { cashFlowProgramRouter } from "./routers/cashFlowProgram";
 import { phaseManagementRouter } from "./routers/phaseManagement";
 import { joelleEngineRouter } from "./routers/joelleEngine";
 import { marketReportsRouter } from "./routers/marketReports";
+import { marketEvidenceRouter } from "./routers/marketEvidence";
 import { riskDashboardRouter } from "./routers/riskDashboard";
 import { selfLearningRouter } from "./routers/selfLearning";
 import { sectionStatusRouter } from "./routers/sectionStatus";
@@ -110,6 +111,7 @@ export const appRouter = router({
   consultantsRegistry: consultantsRegistryRouter,
   joelleEngine: joelleEngineRouter,
   marketReports: marketReportsRouter,
+  marketEvidence: marketEvidenceRouter,
   riskDashboard: riskDashboardRouter,
   selfLearning: selfLearningRouter,
   sectionStatus: sectionStatusRouter,
