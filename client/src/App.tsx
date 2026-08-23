@@ -85,6 +85,7 @@ import V2Timeline from "./pages/V2Timeline";
 import V2Hub from "./pages/V2Hub";
 import BateekhaPage from "./pages/BateekhaPage";
 import ProjectLaunchGatePage from "./pages/ProjectLaunchGatePage";
+import ConsultantAppointmentPackPage from "./pages/ConsultantAppointmentPackPage";
 
 function Router() {
   return (
@@ -167,6 +168,7 @@ function Router() {
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/project-launch" component={ProjectLaunchGatePage} />
+      <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
       <Route path="/internal-messages" component={InternalMessages} />

@@ -79,7 +79,7 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
     nextActionHref = "/development-phases";
   } else if (factsStatus === "complete" && marketStatus === "complete" && programStatus === "complete" && appointmentStatus === "missing") {
     nextDecision = "المشروع جاهز لبدء طلب عروض الاستشاريين وإصدار حزمة التكليف.";
-    nextActionHref = "/consultant-portal";
+    nextActionHref = "/consultant-appointment-pack";
   } else if (appointmentStatus === "partial") {
     nextDecision = "راجع عروض الاستشاريين وحدد قرار التعيين قبل إعداد خط الأساس.";
     nextActionHref = "/consultant-portal";
@@ -148,8 +148,8 @@ export function buildProjectLaunchGate(seed: LaunchGateSeed) {
           { label: "عرض استشاري واحد على الأقل", present: seed.proposalCount > 0 },
           { label: "عقد أو تكليف نشط", present: seed.activeContractCount > 0 },
         ],
-        href: appointmentStatus === "complete" ? "/contracts" : "/consultant-portal",
-        sourceLabel: appointmentStatus === "complete" ? "سجل العقود" : "المكاتب الاستشارية",
+        href: appointmentStatus === "complete" ? "/contracts" : appointmentStatus === "missing" ? "/consultant-appointment-pack" : "/consultant-portal",
+        sourceLabel: appointmentStatus === "complete" ? "سجل العقود" : appointmentStatus === "missing" ? "حزمة التكليف" : "المكاتب الاستشارية",
       },
     ],
   };

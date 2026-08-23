@@ -1453,3 +1453,5 @@
 - [x] Add regression tests proving the Project Launch Gate has no write path to project, financial, market, lifecycle, consultant, contract, or source-document records
 - [x] Fix mobile overflow in Project Launch Gate and Development Phases so the full RTL content remains visible within the viewport
 - [x] Add clear readiness states, reasons, and next actions for each Project Launch Gate checkpoint without writing to any source record
+- [x] Build a read-only consultant appointment pack preview that assembles approved project, market, program, and scope information from existing sources without duplicating or changing them
+- [x] Add regression tests proving the appointment pack has no write path to project, financial, market, lifecycle, consultant, contract, or source-document records
