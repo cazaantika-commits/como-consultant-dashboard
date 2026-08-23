@@ -2479,6 +2479,16 @@ function EvaluationView({ token, memberRole, memberId }: { token: string; member
           )}
         </div>
 
+        <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-bold text-violet-950">بوابة القرار الرسمية</h3>
+              <p className="mt-1 text-sm text-violet-800">الأتعاب والتقييم الفني والتحليل المرجعي تجتمع هنا، والقرار السيادي يُسجّل ويُؤكد من مركز القيادة فقط.</p>
+            </div>
+            <Badge className="w-fit border-violet-200 bg-white text-violet-800">مرجع لا اختيار آلي</Badge>
+          </div>
+        </div>
+
         {/* Create Session Modal */}
         {showCreateSession && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" dir="rtl">

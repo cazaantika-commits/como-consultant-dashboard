@@ -14,7 +14,7 @@ import { default as Medal } from "lucide-react/dist/esm/icons/medal.js";
 import { default as Award } from "lucide-react/dist/esm/icons/award.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
-import { default as Save } from "lucide-react/dist/esm/icons/save.js";
+import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
 import { Streamdown } from "streamdown";
 
 const CRITERIA = [
@@ -41,14 +41,6 @@ export default function ConsultantCommitteePage() {
   const evaluatorScoresQuery = trpc.evaluatorScores.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const evaluationQuery = trpc.evaluation.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
   const committeeQuery = trpc.committee.getByProject.useQuery(selectedProjectId || 0, { enabled: !!selectedProjectId });
-
-  const saveMutation = trpc.committee.upsert.useMutation({
-    onSuccess: () => {
-      committeeQuery.refetch();
-      toast.success("تم حفظ قرار اللجنة بنجاح");
-    },
-    onError: () => toast.error("حدث خطأ في الحفظ"),
-  });
 
   const analyzeMutation = trpc.committee.analyzeDecision.useMutation({
     onSuccess: (data) => {
@@ -139,18 +131,6 @@ export default function ConsultantCommitteePage() {
 
   const top3 = rankings.slice(0, 3);
 
-  const handleSave = () => {
-    if (!selectedProjectId) return;
-    saveMutation.mutate({
-      projectId: selectedProjectId,
-      selectedConsultantId: selectedConsultantId ? parseInt(selectedConsultantId) : undefined,
-      decisionType,
-      negotiationTarget,
-      committeeNotes,
-      aiAnalysis: aiAnalysis || undefined,
-    });
-  };
-
   const handleAnalyze = () => {
     if (!selectedProject || !selectedConsultantId) {
       toast.error("يرجى اختيار الاستشاري أولاً");
@@ -169,33 +149,44 @@ export default function ConsultantCommitteePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-stone-100" dir="rtl">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-stone-50" dir="rtl">
       {/* Header */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-stone-700 via-stone-800 to-neutral-900" />
-        <div className="relative max-w-5xl mx-auto px-6 py-10">
-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+      <div className="w-full border-b border-stone-200 bg-white">
+        <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6">
+          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors mb-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             العودة لمكاتب الاستشارات
           </Link>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-lg shrink-0">
+            <div className="w-14 h-14 rounded-xl bg-rose-500 flex items-center justify-center shadow-sm shrink-0">
               <ClipboardCheck className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">قرارات اللجنة</h1>
-              <p className="text-stone-400 text-sm">القرارات النهائية مع تحليل ذكي لأسباب الاختيار</p>
+              <h1 className="text-3xl font-bold text-stone-900">مرجع قرار اللجنة</h1>
+              <p className="text-stone-500 text-sm">مقارنة وتحليل فقط؛ القرار النهائي الرسمي داخل مركز القيادة</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6">
+        <div className="mb-6 rounded-2xl border border-violet-200 bg-violet-50 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-bold text-violet-950">القرار الرسمي في مركز القيادة</h2>
+              <p className="mt-1 text-sm text-violet-800">تبقى هذه الصفحة مرجعًا للمقارنة والتحليل. التسجيل والتأكيد الرسميان لا يتمان إلا من واجهة التقييم داخل مركز القيادة.</p>
+            </div>
+            <Link href="/command-center" className="inline-flex w-fit items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-800">
+              <Gavel className="w-4 h-4" />
+              فتح القرار الرسمي في مركز القيادة
+            </Link>
+          </div>
+        </div>
         {/* Project Selection */}
         <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-6 shadow-sm">
           <label className="text-sm font-medium text-stone-600 mb-2 block">اختر المشروع</label>
           <Select value={selectedProjectId?.toString() || ""} onValueChange={(v) => { setSelectedProjectId(parseInt(v)); setAiAnalysis(null); }}>
-            <SelectTrigger className="max-w-md">
+            <SelectTrigger className="w-full max-w-md">
               <SelectValue placeholder="اختر مشروعاً" />
             </SelectTrigger>
             <SelectContent>
@@ -271,9 +262,10 @@ export default function ConsultantCommitteePage() {
               </div>
             )}
 
-            {/* Committee Decision Form */}
+            {/* Read-only decision analysis */}
             <div className="bg-white rounded-2xl border border-stone-200 p-5 mb-6 shadow-sm">
-              <h2 className="font-bold text-stone-800 mb-4">قرار اللجنة</h2>
+              <h2 className="font-bold text-stone-800 mb-1">محاكاة تحليلية للقرار</h2>
+              <p className="mb-4 text-sm text-stone-500">لا تحفظ هذه المحاكاة قرارًا. استخدم مركز القيادة لتسجيل أو تأكيد القرار الرسمي.</p>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -326,9 +318,6 @@ export default function ConsultantCommitteePage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button onClick={handleSave} className="bg-stone-800 hover:bg-stone-900 text-white gap-2">
-                    <Save className="w-4 h-4" /> حفظ القرار
-                  </Button>
                   <Button
                     onClick={handleAnalyze}
                     disabled={analyzing || !selectedConsultantId}

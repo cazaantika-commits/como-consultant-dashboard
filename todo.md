@@ -1464,3 +1464,5 @@
 - [x] Reorder consultant navigation around one coherent path: RFP brief, offer extraction, CPA and fees, technical evaluation, committee decision, contract, and deliverables
 - [x] Add a read-only consultant workflow map that guides the existing RFP, offer analysis, evaluation, decision, contract, and deliverables pages without changing their records
 - [x] Keep JSON retirement and AI offer-reading extraction as deferred migration work until every existing JSON field has a verified equivalent source-backed destination
+- [x] Unify consultant technical evaluation and sovereign committee decision inside Command Center using the existing shared records, while retaining legacy pages as references
+- [x] Fix horizontal overflow in the legacy committee reference page so its official-decision guidance remains fully visible on mobile
