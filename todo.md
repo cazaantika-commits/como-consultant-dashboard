@@ -1435,6 +1435,6 @@
 - [x] Ensure every Financial Studies card has its own distinct accent shade with no repeated card color
 - [x] Audit Knowledge and Analysis workflows, data sources, and current gaps; provide recommendations before making changes
 - [x] Build the first Market Decision screen in Knowledge and Analysis as a read-only review surface with no automatic writes to pricing or cash flows
-- [ ] Conduct an owner-side operational readiness review of the whole development-management application and recommend the next improvement priorities before consultant appointments or project starts
+- [x] Defer the owner-side operational readiness review at the user's request; retain it in the work history for a later dedicated review before consultant appointments or project starts
 - [x] Add a project-specific market evidence register with comparable records, source dates, freshness, and confidence grades
 - [x] Add an explicit decision review and approval record that remains separate from pricing until a later approved handoff
