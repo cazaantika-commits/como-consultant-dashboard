@@ -65,6 +65,7 @@ function StageReadiness({ ready, title, detail }: { ready: boolean; title: strin
 export default function MarketDecisionTab({ projectId, onOpenResearch }: { projectId: number | null; onOpenResearch: () => void }) {
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
   const stagesQuery = trpc.joelleEngine.getStages.useQuery(projectId || 0, { enabled: !!projectId });
+  const marketProfileQuery = trpc.marketEvidence.getSearchProfile.useQuery({ projectId: projectId || 0 }, { enabled: !!projectId });
 
   const decision = useMemo(() => {
     const stages = (stagesQuery.data || []) as StageRecord[];
@@ -128,6 +129,10 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
           </div>
         </div>
       </section>
+
+      <MarketSearchProfilePanel projectId={projectId} project={project} />
+
+      {marketProfileQuery.data && <>
 
       <section className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
         <Card className="border-slate-200 shadow-sm">
@@ -208,8 +213,6 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
         </Card>
       </section>
 
-      <MarketSearchProfilePanel projectId={projectId} project={project} />
-
       <MarketEvidencePanel projectId={projectId} decisionSnapshot={{ product: decision.product, pricing: decision.pricing }} />
 
       <Card className="border-teal-200 bg-teal-50/35 shadow-sm">
@@ -224,6 +227,7 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
           </Button>
         </CardContent>
       </Card>
+      </>}
     </div>
   );
 }

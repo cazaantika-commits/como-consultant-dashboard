@@ -1444,3 +1444,7 @@
 - [x] Add a filtered bulk-import path for DLD comparable transactions without bypassing the project market profile
 - [x] Link uploaded market reports to the active project market profile and record their relevance to the decision
 - [x] Add an explicit approved-only handoff from the market decision to pricing, with no connection to cash flows
+- [x] Redesign Market Decision so the required «ماذا نبحث؟» filter is the first clear step before DLD import, reports, or evidence
+- [x] Hide downstream market-search actions until the comparison-market filter is explicitly saved
+- [x] Replace the technical filter panel with a Property Finder-style search start that exposes the core choices and a clear «ابدأ البحث» action
+- [x] Make search results and evidence appear only after the user starts a saved market search

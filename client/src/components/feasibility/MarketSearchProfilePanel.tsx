@@ -56,10 +56,14 @@ export default function MarketSearchProfilePanel({ projectId, project }: { proje
   const utils = trpc.useUtils();
   const profileQuery = trpc.marketEvidence.getSearchProfile.useQuery({ projectId }, { enabled: !!projectId });
   const [editing, setEditing] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [form, setForm] = useState<SearchProfileForm>(EMPTY);
 
   useEffect(() => {
-    if (!profileQuery.isLoading) setForm(profileToForm(profileQuery.data, project));
+    if (!profileQuery.isLoading) {
+      setForm(profileToForm(profileQuery.data, project));
+      if (!profileQuery.data) setEditing(true);
+    }
   }, [profileQuery.data, profileQuery.isLoading, project]);
 
   const save = trpc.marketEvidence.saveSearchProfile.useMutation({
@@ -95,27 +99,28 @@ export default function MarketSearchProfilePanel({ projectId, project }: { proje
     });
   };
 
-  return <Card className="border-sky-200 bg-gradient-to-l from-sky-50/65 via-white to-white shadow-sm">
+  return <Card className="border-sky-200 bg-gradient-to-l from-sky-50/75 via-white to-cyan-50/40 shadow-sm">
     <CardContent className="p-5">
       <div className="flex flex-col justify-between gap-4 border-b border-sky-100 pb-4 lg:flex-row lg:items-start">
-        <div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-700 text-white"><Filter className="h-5 w-5" /></div><div><p className="text-xs font-bold text-sky-700">قبل بدء البحث</p><h3 className="mt-1 font-bold text-slate-900">فلترة سوق المقارنة</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">هذه البطاقة تحدد بالضبط ما الذي نبحث عنه. لا يمكن توثيق فيلا أو أرض عند اختيار مقارنة شقق للبيع.</p></div></div>
-        <Button size="sm" variant={profile ? "outline" : "default"} onClick={() => setEditing((value) => !value)} className={profile ? "gap-1.5 border-sky-300 text-sky-800" : "gap-1.5 bg-sky-700 hover:bg-sky-800"}>{profile ? <Pencil className="h-3.5 w-3.5" /> : <SearchCheck className="h-3.5 w-3.5" />}{profile ? "تعديل الفلترة" : "تحديد سوق المقارنة"}</Button>
+        <div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-700 text-white"><Filter className="h-5 w-5" /></div><div><p className="text-xs font-bold text-sky-700">الخطوة 1 · قبل بدء البحث</p><h3 className="mt-1 text-lg font-bold text-slate-900">ماذا تريد أن تبحث عنه؟</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">اختر السوق المطلوب كما تفعل في منصة بحث عقاري: نوع العملية، المنتج، المنطقة والحالة؛ وبعدها يبدأ النظام بعرض الدليل المطابق فقط.</p></div></div>
+        {profile && <Button size="sm" variant="outline" onClick={() => setEditing((value) => !value)} className="gap-1.5 border-sky-300 text-sky-800"><Pencil className="h-3.5 w-3.5" />تعديل البحث</Button>}
       </div>
 
       {profile && !editing && <div className="mt-4 grid gap-2 md:grid-cols-4">{summary.map((item) => <div key={item} className="rounded-xl border border-sky-100 bg-white px-3 py-2 text-xs font-bold text-slate-700">{item}</div>)}{profile.unitTypesJson && <div className="rounded-xl border border-sky-100 bg-white px-3 py-2 text-xs text-slate-600"><span className="font-bold text-slate-800">الوحدات: </span>{fromJson(profile.unitTypesJson)}</div>}<div className="flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800"><MapPin className="h-3.5 w-3.5" />المقارنات خارج النطاق تُستبعد تلقائيًا</div></div>}
 
-      {!profile && !editing && <div className="mt-4 rounded-xl border border-dashed border-sky-200 bg-white px-4 py-5 text-center"><p className="text-sm font-bold text-slate-800">لم تُحدد فلترة السوق بعد</p><p className="mt-1 text-xs text-slate-500">حدد المنتج والموقع والحالة أولًا، ثم أضف المقارنات أو ابدأ البحث.</p></div>}
-
       {editing && <form onSubmit={submit} className="mt-4 rounded-2xl border border-sky-200 bg-white p-4">
-        <div className="mb-3"><h4 className="text-sm font-bold text-slate-900">ما الذي نبحث عنه تحديدًا؟</h4><p className="mt-0.5 text-xs text-slate-500">اتبع التسلسل: الغرض، نوع المنتج، النطاق الجغرافي، الحالة، ثم النطاقات المالية والزمنية.</p></div>
-        <div className="grid gap-3 md:grid-cols-4">
-          <Field label="الغرض"><Select value={form.transactionPurpose} onChange={(value) => setField("transactionPurpose", value as SearchProfileForm["transactionPurpose"])} options={[["sale", "بيع"], ["rent", "إيجار"]]} /></Field>
+        <div className="mb-4 rounded-xl border border-sky-100 bg-sky-50/70 p-3"><p className="text-xs font-bold text-sky-900">حدّد السوق أولًا، ثم اضغط «ابدأ البحث في السوق»</p><p className="mt-1 text-[11px] leading-5 text-sky-800">لن تظهر معاملات DLD أو التقارير أو المقارنات قبل حفظ هذه الاختيارات. أي فيلا أو أرض خارج هذا التعريف تستبعد تلقائيًا.</p></div>
+        <div className="grid gap-3 border-b border-slate-100 pb-4 md:grid-cols-3">
+          <ChoiceGroup label="نوع العملية" options={[["sale", "للبيع"], ["rent", "للإيجار"]]} value={form.transactionPurpose} onChange={(value) => setField("transactionPurpose", value as SearchProfileForm["transactionPurpose"])} />
+          <ChoiceGroup label="نوع المنتج" options={[["apartment", "شقق"], ["villa", "فلل"], ["townhouse", "تاون هاوس"], ["plot", "أرض"]]} value={form.productForm} onChange={(value) => setField("productForm", value as SearchProfileForm["productForm"])} />
+          <ChoiceGroup label="حالة المشروع" options={[["offplan", "أوف بلان"], ["ready", "جاهز"], ["any", "أي حالة"]]} value={form.developmentStatus} onChange={(value) => setField("developmentStatus", value as SearchProfileForm["developmentStatus"])} />
+        </div>
+        <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/35 p-3"><p className="mb-2 text-xs font-bold text-slate-800">أين نبحث؟</p><div className="grid gap-3 md:grid-cols-2"><Field label="المجتمع الأساسي *"><input required value={form.primaryCommunity} onChange={(event) => setField("primaryCommunity", event.target.value)} className="field bg-white ring-1 ring-sky-200 shadow-sm" placeholder="مثال: ند الشبا جاردينز" /></Field><Field label="مجتمعات بديلة للمقارنة"><input value={form.alternativeCommunitiesText} onChange={(event) => setField("alternativeCommunitiesText", event.target.value)} className="field bg-white ring-1 ring-slate-200 shadow-sm" placeholder="افصل بفاصلة: مجان، دبي لاند" /></Field></div></div>
+        <button type="button" onClick={() => setShowAdvanced((value) => !value)} className="mt-4 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-right text-xs font-bold text-slate-700 hover:border-sky-300 hover:bg-sky-50"><span>خيارات متقدمة لتضييق البحث</span><span className="text-sky-800">{showAdvanced ? "إخفاء" : "المساحة · السعر · التاريخ · نوع الدليل"}</span></button>
+        {showAdvanced && <div className="mt-3 grid gap-3 md:grid-cols-4">
           <Field label="نوع الدليل المطلوب"><Select value={form.evidenceMode} onChange={(value) => setField("evidenceMode", value as SearchProfileForm["evidenceMode"])} options={[["closed_transaction", "معاملات مكتملة"], ["active_listing", "عروض قائمة"], ["new_project", "مشاريع جديدة"], ["market_report", "تقارير سوق"], ["mixed", "مزيج من الأدلة"]]} /></Field>
           <Field label="فئة الأصل"><Select value={form.assetClass} onChange={(value) => setField("assetClass", value as SearchProfileForm["assetClass"])} options={[["residential", "سكني"], ["retail", "تجاري"], ["office", "مكاتب"], ["mixed_use", "متعدد الاستخدام"], ["land", "أرض"], ["other", "أخرى"]]} /></Field>
           <Field label="شكل المنتج"><Select value={form.productForm} onChange={(value) => setField("productForm", value as SearchProfileForm["productForm"])} options={[["apartment", "شقق"], ["villa", "فلل"], ["townhouse", "تاون هاوس"], ["plot", "أراضٍ"], ["retail_unit", "وحدات تجارية"], ["office_unit", "وحدات مكتبية"], ["mixed_use_unit", "وحدة متعددة الاستخدام"], ["other", "أخرى"]]} /></Field>
-          <Field label="المجتمع الأساسي *"><input required value={form.primaryCommunity} onChange={(event) => setField("primaryCommunity", event.target.value)} className="field" placeholder="مثال: ند الشبا جاردينز" /></Field>
-          <Field label="مجتمعات بديلة"><input value={form.alternativeCommunitiesText} onChange={(event) => setField("alternativeCommunitiesText", event.target.value)} className="field" placeholder="افصل بفاصلة: مجان، دبي لاند" /></Field>
-          <Field label="حالة المشروع"><Select value={form.developmentStatus} onChange={(value) => setField("developmentStatus", value as SearchProfileForm["developmentStatus"])} options={[["offplan", "أوف بلان فقط"], ["ready", "جاهز فقط"], ["any", "أي حالة"]]} /></Field>
           <Field label="أنواع الوحدات"><input value={form.unitTypesText} onChange={(event) => setField("unitTypesText", event.target.value)} className="field" placeholder="مثال: استديو، غرفة وصالة" /></Field>
           <Field label="المساحة من قدم²"><input inputMode="decimal" value={form.minAreaSqft} onChange={(event) => setField("minAreaSqft", event.target.value)} className="field" /></Field>
           <Field label="المساحة إلى قدم²"><input inputMode="decimal" value={form.maxAreaSqft} onChange={(event) => setField("maxAreaSqft", event.target.value)} className="field" /></Field>
@@ -123,8 +128,8 @@ export default function MarketSearchProfilePanel({ projectId, project }: { proje
           <Field label="السعر إلى د.إ/قدم²"><input inputMode="decimal" value={form.maxPricePerSqft} onChange={(event) => setField("maxPricePerSqft", event.target.value)} className="field" /></Field>
           <Field label="تاريخ المعاملة من"><input type="date" value={form.transactionDateFrom} onChange={(event) => setField("transactionDateFrom", event.target.value)} className="field" /></Field>
           <Field label="تاريخ المعاملة إلى"><input type="date" value={form.transactionDateTo} onChange={(event) => setField("transactionDateTo", event.target.value)} className="field" /></Field>
-        </div>
-        <div className="mt-4 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => { setForm(profileToForm(profile, project)); setEditing(false); }}>إلغاء</Button><Button type="submit" disabled={save.isPending} className="bg-sky-700 hover:bg-sky-800">حفظ فلترة المقارنة</Button></div>
+        </div>}
+        <div className="mt-4 flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => { setForm(profileToForm(profile, project)); setEditing(Boolean(!profile)); }}>إلغاء</Button>{profile && <Button type="submit" disabled={save.isPending} className="bg-sky-700 hover:bg-sky-800">تحديث البحث</Button>}{!profile && <Button type="submit" disabled={save.isPending} className="gap-1.5 bg-sky-700 hover:bg-sky-800"><SearchCheck className="h-4 w-4" />ابدأ البحث في السوق</Button>}</div>
       </form>}
     </CardContent>
   </Card>;
@@ -132,3 +137,4 @@ export default function MarketSearchProfilePanel({ projectId, project }: { proje
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block text-xs font-medium text-slate-600"><span className="mb-1 block">{label}</span>{children}</label>; }
 function Select({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: [string, string][] }) { return <select value={value} onChange={(event) => onChange(event.target.value)} className="field">{options.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}</select>; }
+function ChoiceGroup({ label, options, value, onChange }: { label: string; options: [string, string][]; value: string; onChange: (value: string) => void }) { return <div><p className="mb-1.5 text-xs font-bold text-slate-700">{label}</p><div className="flex flex-wrap gap-1.5">{options.map(([optionValue, optionLabel]) => <button type="button" key={optionValue} onClick={() => onChange(optionValue)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold transition-colors ${value === optionValue ? "border-sky-600 bg-sky-700 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:text-sky-800"}`}>{optionLabel}</button>)}</div></div>; }
