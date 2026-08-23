@@ -1472,3 +1472,7 @@
 - [x] Link the project reference document index to the selected Google Drive folder as a direct read-only source without copying files
 - [x] Add a prepared-only change request that remains unavailable until a future approved baseline exists
 - [x] Replace homepage placeholder counts with source-backed project, task, meeting, and alert indicators
+- [x] Classify indexed Drive documents by project-launch gate and show their gate relevance without copying files
+- [x] Add a baseline approval record that can be created only when all required baseline sources are ready
+- [x] Add change requests that reference an approved baseline and display approved changes in Command Center without altering financial values automatically
+- [x] Conduct a complete self-review of the document, baseline, change, and Command Center flow before delivery

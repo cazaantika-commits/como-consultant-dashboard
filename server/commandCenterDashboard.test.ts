@@ -69,6 +69,15 @@ describe("Command Center dashboard card registry", () => {
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
 
+  it("shows only approved baseline-linked change decisions without auto-updating financial values", () => {
+    expect(source).toContain("function ApprovedProjectChanges");
+    expect(source).toContain("<ApprovedProjectChanges token={token} />");
+    expect(routerSource).toContain("getApprovedProjectChanges");
+    expect(routerSource).toContain("const member = await verifyToken(input.token);");
+    expect(routerSource).toContain("projectChangeRequests.decisionStatus, 'approved'");
+    expect(routerSource).not.toContain("UPDATE financialData");
+  });
+
   it("serves Layla's permanent portrait through the project storage proxy", () => {
     expect(serverSource).toContain('import { registerStorageProxy } from "./storageProxy";');
     expect(serverSource.indexOf('registerStorageProxy(app);')).toBeLessThan(serverSource.indexOf('registerOAuthRoutes(app);'));

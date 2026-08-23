@@ -1636,6 +1636,43 @@ export const marketDecisionApprovals = mysqlTable("market_decision_approvals", {
 	index("market_decision_approvals_project").on(table.projectId, table.decidedAt),
 ]);
 
+// لقطة معتمدة للمراجع الحالية قبل بدء التنفيذ. لا تستبدل أي وثيقة أو قرار أو إعداد مالي.
+export const projectBaselines = mysqlTable("project_baselines", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	approvedByUserId: int("approved_by_user_id").notNull().references(() => users.id),
+	status: mysqlEnum("baseline_status", ["active", "superseded"]).default("active").notNull(),
+	sourceSnapshotJson: longtext("source_snapshot_json").notNull(),
+	notes: text(),
+	approvedAt: timestamp("approved_at", { mode: "string" }).defaultNow().notNull(),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+	index("pb_project").on(table.projectId, table.status),
+]);
+
+// طلب تغيير مستقل يشير إلى خط أساس معتمد؛ لا يحدّث الكلفة أو البرنامج أو التدفقات تلقائيًا.
+export const projectChangeRequests = mysqlTable("project_change_requests", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	baselineId: int("baseline_id").notNull().references(() => projectBaselines.id, { onDelete: "cascade" }),
+	createdByUserId: int("created_by_user_id").notNull().references(() => users.id),
+	title: varchar({ length: 500 }).notNull(),
+	reason: text().notNull(),
+	referenceUrl: varchar("reference_url", { length: 1000 }),
+	scopeImpact: text("scope_impact"),
+	scheduleImpact: text("schedule_impact"),
+	costImpact: text("cost_impact"),
+	cashFlowImpact: text("cash_flow_impact"),
+	decisionStatus: mysqlEnum("change_decision_status", ["draft", "submitted", "approved", "rejected"]).default("draft").notNull(),
+	decisionNotes: text("decision_notes"),
+	decidedAt: timestamp("decided_at", { mode: "string" }),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("pcr_project").on(table.projectId, table.decisionStatus),
+	index("pcr_baseline").on(table.baselineId),
+]);
+
 // ═══════════════════════════════════════════
 // Project Risk Scores (from Engine 9)
 // ═══════════════════════════════════════════

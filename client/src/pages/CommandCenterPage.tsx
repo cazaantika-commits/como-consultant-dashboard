@@ -4439,6 +4439,8 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
         </section>
 
+        <ApprovedProjectChanges token={token} />
+
         {/* Bento Grid */}
         {(() => {
           const handleBubbleClick = (type: string) => {
@@ -4755,6 +4757,20 @@ function DashboardHeader({ member, onLogout, unreadCount, onNotifications, onSal
         </div>
       </div>
     </header>
+  );
+}
+
+function ApprovedProjectChanges({ token }: { token: string }) {
+  const { data: changes = [], isLoading } = trpc.commandCenter.getApprovedProjectChanges.useQuery({ token }, { enabled: Boolean(token) });
+  if (isLoading || changes.length === 0) return null;
+  return (
+    <section className="mb-4 rounded-2xl border border-indigo-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-700"><ClipboardCheck className="h-4 w-4" /></span><div><h3 className="text-sm font-extrabold text-slate-900">تغييرات معتمدة</h3><p className="mt-0.5 text-xs text-slate-500">قرارات مرتبطة بخط أساس؛ لا تعني تحديثًا تلقائيًا للتكلفة أو التدفقات.</p></div></div>
+        <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-800">{changes.length} قرار معتمد</span>
+      </div>
+      <div className="mt-3 space-y-2">{changes.slice(0, 3).map((change: any) => <div key={change.id} className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3"><p className="text-sm font-bold text-slate-900">{change.title}</p>{change.decisionNotes && <p className="mt-1 text-xs leading-5 text-slate-600">{change.decisionNotes}</p>}<div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-slate-600">{change.scopeImpact && <span className="rounded bg-white px-2 py-1">أثر نطاق موثق</span>}{change.scheduleImpact && <span className="rounded bg-white px-2 py-1">أثر برنامج موثق</span>}{change.costImpact && <span className="rounded bg-white px-2 py-1">أثر كلفة موثق</span>}{change.cashFlowImpact && <span className="rounded bg-white px-2 py-1">أثر تدفقات موثق</span>}</div></div>)}</div>
+    </section>
   );
 }
 

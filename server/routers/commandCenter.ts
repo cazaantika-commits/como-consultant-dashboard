@@ -23,6 +23,7 @@ import {
   generalRequests,
   internalMessages,
   cpaProjects,
+  projectChangeRequests,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -2303,5 +2304,26 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         UPDATE cpa_true_cost_report_approval SET is_approved = 0, approved_at = NULL WHERE cpa_project_id = ${input.cpaProjectId}
       `);
       return { success: true };
+    }),
+  getApprovedProjectChanges: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
+      return db.select({
+        id: projectChangeRequests.id,
+        projectId: projectChangeRequests.projectId,
+        title: projectChangeRequests.title,
+        decisionNotes: projectChangeRequests.decisionNotes,
+        decidedAt: projectChangeRequests.decidedAt,
+        scopeImpact: projectChangeRequests.scopeImpact,
+        scheduleImpact: projectChangeRequests.scheduleImpact,
+        costImpact: projectChangeRequests.costImpact,
+        cashFlowImpact: projectChangeRequests.cashFlowImpact,
+      }).from(projectChangeRequests)
+        .where(eq(projectChangeRequests.decisionStatus, 'approved'))
+        .orderBy(desc(projectChangeRequests.decidedAt));
     }),
 });
