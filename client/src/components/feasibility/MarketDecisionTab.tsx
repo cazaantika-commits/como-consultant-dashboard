@@ -9,6 +9,7 @@ import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
 import MarketEvidencePanel from "./MarketEvidencePanel";
+import MarketSearchProfilePanel from "./MarketSearchProfilePanel";
 
 type StageRecord = {
   stageNumber: number;
@@ -207,10 +208,9 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
         </Card>
       </section>
 
-      <MarketEvidencePanel
-        projectId={projectId}
-        decisionSnapshot={{ product: decision.product, pricing: decision.pricing }}
-      />
+      <MarketSearchProfilePanel projectId={projectId} project={project} />
+
+      <MarketEvidencePanel projectId={projectId} decisionSnapshot={{ product: decision.product, pricing: decision.pricing }} />
 
       <Card className="border-teal-200 bg-teal-50/35 shadow-sm">
         <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">

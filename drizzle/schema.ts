@@ -1498,9 +1498,10 @@ export const marketReports = mysqlTable("market_reports", {
 // update pricing, product mix, revenue, or cash-flow values by itself.
 export const projectMarketEvidence = mysqlTable("project_market_evidence", {
 	id: int().autoincrement().notNull().primaryKey(),
-	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" }),
-	userId: int().notNull().references(() => users.id),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
 	evidenceType: mysqlEnum("evidence_type", ["comparable", "market_report", "transaction", "regulatory", "assumption", "other"]).notNull(),
+	transactionPurpose: mysqlEnum("transaction_purpose", ["sale", "rent"]).default("sale").notNull(),
 	sourceType: mysqlEnum("source_type", ["DLD", "market_report", "broker", "developer", "listing_portal", "manual", "other"]).notNull(),
 	sourceName: varchar("source_name", { length: 255 }).notNull(),
 	sourceUrl: text("source_url"),
@@ -1511,6 +1512,8 @@ export const projectMarketEvidence = mysqlTable("project_market_evidence", {
 	comparableName: varchar("comparable_name", { length: 255 }),
 	community: varchar({ length: 255 }),
 	assetClass: mysqlEnum("asset_class", ["residential", "retail", "office", "mixed_use", "land", "other"]).default("residential").notNull(),
+	productForm: mysqlEnum("product_form", ["apartment", "villa", "townhouse", "plot", "retail_unit", "office_unit", "mixed_use_unit", "other"]).default("other").notNull(),
+	developmentStatus: mysqlEnum("development_status", ["offplan", "ready", "any"]).default("any").notNull(),
 	unitType: varchar("unit_type", { length: 100 }),
 	unitAreaSqft: decimal("unit_area_sqft", { precision: 14, scale: 2 }),
 	pricePerSqft: decimal("price_per_sqft", { precision: 14, scale: 2 }),
@@ -1525,13 +1528,40 @@ export const projectMarketEvidence = mysqlTable("project_market_evidence", {
 	index("market_evidence_project_source_date").on(table.projectId, table.sourceDate),
 ]);
 
+// A project owns one explicit comparison-market profile. This profile is the
+// locked context for any evidence search; it must be defined before a record
+// can be verified for a market decision.
+export const projectMarketSearchProfiles = mysqlTable("project_market_search_profiles", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
+	transactionPurpose: mysqlEnum("transaction_purpose", ["sale", "rent"]).default("sale").notNull(),
+	evidenceMode: mysqlEnum("evidence_mode", ["active_listing", "closed_transaction", "new_project", "market_report", "mixed"]).default("closed_transaction").notNull(),
+	assetClass: mysqlEnum("asset_class", ["residential", "retail", "office", "mixed_use", "land", "other"]).notNull(),
+	productForm: mysqlEnum("product_form", ["apartment", "villa", "townhouse", "plot", "retail_unit", "office_unit", "mixed_use_unit", "other"]).notNull(),
+	unitTypesJson: text("unit_types_json"),
+	primaryCommunity: varchar("primary_community", { length: 255 }).notNull(),
+	alternativeCommunitiesJson: text("alternative_communities_json"),
+	developmentStatus: mysqlEnum("development_status", ["offplan", "ready", "any"]).default("any").notNull(),
+	minAreaSqft: decimal("min_area_sqft", { precision: 14, scale: 2 }),
+	maxAreaSqft: decimal("max_area_sqft", { precision: 14, scale: 2 }),
+	minPricePerSqft: decimal("min_price_per_sqft", { precision: 14, scale: 2 }),
+	maxPricePerSqft: decimal("max_price_per_sqft", { precision: 14, scale: 2 }),
+	transactionDateFrom: varchar("transaction_date_from", { length: 10 }),
+	transactionDateTo: varchar("transaction_date_to", { length: 10 }),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+	index("market_profile_project").on(table.projectId),
+]);
+
 // Approval records intentionally snapshot a reviewed decision and its evidence.
 // The next phase may hand off an approved record to pricing, but this table does
 // not write to any commercial or financial source of truth.
 export const marketDecisionApprovals = mysqlTable("market_decision_approvals", {
 	id: int().autoincrement().notNull().primaryKey(),
-	projectId: int().notNull().references(() => projects.id, { onDelete: "cascade" }),
-	userId: int().notNull().references(() => users.id),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
 	decisionStatus: mysqlEnum("decision_status", ["reviewed", "approved", "rejected"]).notNull(),
 	decisionSnapshotJson: longtext("decision_snapshot_json").notNull(),
 	evidenceSnapshotJson: longtext("evidence_snapshot_json").notNull(),

@@ -1438,3 +1438,6 @@
 - [x] Defer the owner-side operational readiness review at the user's request; retain it in the work history for a later dedicated review before consultant appointments or project starts
 - [x] Add a project-specific market evidence register with comparable records, source dates, freshness, and confidence grades
 - [x] Add an explicit decision review and approval record that remains separate from pricing until a later approved handoff
+- [x] Add a project comparison-market filter that locks asset, unit, geographic scope, project status, and transaction purpose before evidence search
+- [x] Exclude and explain incompatible comparables such as villas or land when the selected search is for apartment sales
+- [x] Review Property Finder, Bayut, DXB Interact, and Property Monitor filtering patterns before finalizing the investment-comparison filter design
