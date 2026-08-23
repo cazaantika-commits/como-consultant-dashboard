@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { marketDecisionApprovals, projectMarketEvidence, projectMarketSearchProfiles } from "../../drizzle/schema";
+import { competitionPricing, marketDecisionApprovals, marketPricingHandoffs, marketReports, projectMarketEvidence, projectMarketReportLinks, projectMarketSearchProfiles } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 
@@ -45,13 +45,83 @@ const profileInput = z.object({
   transactionDateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
 }).superRefine((value, ctx) => {
   if (value.minAreaSqft && value.maxAreaSqft && value.minAreaSqft > value.maxAreaSqft) ctx.addIssue({ code: "custom", message: "الحد الأدنى للمساحة أكبر من الحد الأعلى.", path: ["maxAreaSqft"] });
-  if (value.minPricePerSqft && value.maxPricePerSqft && value.minPricePerSqft > value.maxPricePerSqft) ctx.addIssue({ code: "custom", message: "الحد الأدنى للسعر أكبر من الحد الأعلى.", path: ["maxPricePerSqft"] });
+	if (value.minPricePerSqft && value.maxPricePerSqft && value.minPricePerSqft > value.maxPricePerSqft) ctx.addIssue({ code: "custom", message: "الحد الأدنى للسعر أكبر من الحد الأعلى.", path: ["maxPricePerSqft"] });
+});
+
+const dldTransactionInput = z.object({
+	transactionNumber: z.string().trim().min(1).max(120),
+	transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	community: z.string().trim().min(1).max(255),
+	projectName: z.string().trim().max(255).optional().or(z.literal("")),
+	masterProject: z.string().trim().max(255).optional().or(z.literal("")),
+	assetClass: z.enum(["residential", "retail", "office", "mixed_use", "land", "other"]),
+	productForm: z.enum(["apartment", "villa", "townhouse", "plot", "retail_unit", "office_unit", "mixed_use_unit", "other"]),
+	developmentStatus: z.enum(["offplan", "ready", "any"]),
+	unitType: z.string().trim().max(100).optional().or(z.literal("")),
+	unitAreaSqft: z.number().positive().optional(),
+	transactionValue: z.number().positive().optional(),
+	pricePerSqft: z.number().positive().optional(),
+});
+
+const dldImportInput = z.object({
+	projectId: z.number().int().positive(),
+	transactions: z.array(dldTransactionInput).min(1).max(2000),
 });
 
 const normalize = (value: string | null | undefined) => (value || "").trim().toLocaleLowerCase();
 const parseJsonList = (value: string | null | undefined): string[] => {
   try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []; } catch { return []; }
 };
+
+function toDldEvidence(projectId: number, transaction: z.infer<typeof dldTransactionInput>) {
+	return {
+		projectId,
+		transactionPurpose: "sale" as const,
+		sourceType: "DLD" as const,
+		sourceName: `DLD Transaction ${transaction.transactionNumber}`,
+		sourceUrl: "https://dubailand.gov.ae/en/open-data/real-estate-data/",
+		sourceDate: transaction.transactionDate,
+		confidenceGrade: "high" as const,
+		comparableName: transaction.projectName || transaction.masterProject || `معاملة DLD ${transaction.transactionNumber}`,
+		community: transaction.community,
+		assetClass: transaction.assetClass,
+		productForm: transaction.productForm,
+		developmentStatus: transaction.developmentStatus,
+		unitType: transaction.unitType || null,
+		unitAreaSqft: transaction.unitAreaSqft?.toString() ?? null,
+		pricePerSqft: transaction.pricePerSqft?.toString() ?? null,
+		transactionValue: transaction.transactionValue?.toString() ?? null,
+		paymentPlanSummary: null,
+		notes: `رقم معاملة DLD: ${transaction.transactionNumber}`,
+	};
+}
+
+export function buildPricingPatch(snapshot: Record<string, any>) {
+	const scenarios = snapshot?.pricing?.scenarios || snapshot?.scenarios || {};
+	const data: Record<string, any> = { isApproved: 1, approvedAt: new Date() };
+	const scenarioMap = [["base", "base"], ["conservative", "cons"], ["optimistic", "opt"]] as const;
+	const sections: Array<[string, Record<string, string>]> = [
+		["residential", { studio: "StudioPrice", oneBr: "1brPrice", twoBr: "2brPrice", threeBr: "3brPrice" }],
+		["retail", { small: "RetailSmallPrice", medium: "RetailMediumPrice", large: "RetailLargePrice" }],
+		["office", { small: "OfficeSmallPrice", medium: "OfficeMediumPrice", large: "OfficeLargePrice" }],
+	];
+	for (const [scenarioKey, targetPrefix] of scenarioMap) {
+		for (const [sectionKey, unitMap] of sections) {
+			const section = scenarios?.[scenarioKey]?.[sectionKey] || {};
+			for (const [sourceKey, targetSuffix] of Object.entries(unitMap)) {
+				const value = Number(section[sourceKey] || 0);
+				if (Number.isFinite(value) && value > 0) data[`${targetPrefix}${targetSuffix}`] = Math.round(value);
+			}
+		}
+	}
+	const plan = snapshot?.pricing?.paymentPlan || snapshot?.paymentPlan || {};
+	for (const [sourceKey, targetSuffix] of [["booking", "Booking"], ["construction", "Construction"], ["handover", "Handover"], ["deferred", "Deferred"]]) {
+		const value = Number(plan?.[sourceKey]?.pct || 0);
+		if (Number.isFinite(value) && value > 0) data[`payment${targetSuffix}Pct`] = value.toString();
+	}
+	if (!Object.keys(data).some((key) => key.endsWith("Price"))) throw new TRPCError({ code: "BAD_REQUEST", message: "لا تحتوي مسودة القرار المعتمدة على أسعار قابلة للتسليم إلى صفحة التسعير." });
+	return data;
+}
 
 export function getEvidenceMismatchReasons(profile: any, evidence: any): string[] {
   if (!profile) return ["لم تُحدد بطاقة فلترة السوق لهذا المشروع بعد."];
@@ -145,6 +215,90 @@ export const marketEvidenceRouter = router({
       };
     }),
 
+  previewDldImport: protectedProcedure
+    .input(dldImportInput)
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const profileRows = await db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1);
+      const profile = profileRows[0];
+      if (!profile) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد فلترة سوق المقارنة قبل معاينة ملف DLD." });
+      const rows = input.transactions.map((transaction) => {
+        const evidence = toDldEvidence(input.projectId, transaction);
+        const mismatchReasons = getEvidenceMismatchReasons(profile, evidence);
+        return { transaction, isCompatible: mismatchReasons.length === 0, mismatchReasons };
+      });
+      return { total: rows.length, compatible: rows.filter((row) => row.isCompatible).length, excluded: rows.filter((row) => !row.isCompatible).length, rows };
+    }),
+
+  importDldTransactions: protectedProcedure
+    .input(dldImportInput)
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const [profileRows, existingRows] = await Promise.all([
+        db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
+        db.select({ sourceName: projectMarketEvidence.sourceName }).from(projectMarketEvidence).where(eq(projectMarketEvidence.projectId, input.projectId)),
+      ]);
+      const profile = profileRows[0];
+      if (!profile) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد فلترة سوق المقارنة قبل إدراج ملف DLD." });
+      const existingNames = new Set(existingRows.map((row) => row.sourceName));
+      const records = input.transactions.map((transaction) => {
+        const evidence = toDldEvidence(input.projectId, transaction);
+        return { evidence, mismatchReasons: getEvidenceMismatchReasons(profile, evidence) };
+      }).filter(({ evidence }) => !existingNames.has(evidence.sourceName));
+      if (records.length) {
+        await db.insert(projectMarketEvidence).values(records.map(({ evidence, mismatchReasons }) => ({
+          ...evidence,
+          userId: ctx.user.id,
+          verificationStatus: mismatchReasons.length ? "excluded" as const : "draft" as const,
+        })));
+      }
+      return {
+        imported: records.filter(({ mismatchReasons }) => !mismatchReasons.length).length,
+        excluded: records.filter(({ mismatchReasons }) => mismatchReasons.length).length,
+        duplicates: input.transactions.length - records.length,
+      };
+    }),
+
+  getMarketReportLinks: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      return db.select({ link: projectMarketReportLinks, report: marketReports })
+        .from(projectMarketReportLinks)
+        .innerJoin(marketReports, eq(projectMarketReportLinks.reportId, marketReports.id))
+        .where(eq(projectMarketReportLinks.projectId, input.projectId))
+        .orderBy(desc(projectMarketReportLinks.createdAt));
+    }),
+
+  linkMarketReport: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), reportId: z.number().int().positive(), relevanceNote: z.string().trim().max(1000).optional().or(z.literal("")) }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const [profileRows, reportRows, existingRows] = await Promise.all([
+        db.select({ id: projectMarketSearchProfiles.id }).from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
+        db.select({ id: marketReports.id }).from(marketReports).where(eq(marketReports.id, input.reportId)).limit(1),
+        db.select({ id: projectMarketReportLinks.id }).from(projectMarketReportLinks).where(and(eq(projectMarketReportLinks.projectId, input.projectId), eq(projectMarketReportLinks.reportId, input.reportId))).limit(1),
+      ]);
+      if (!profileRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد فلترة سوق المقارنة قبل ربط تقرير." });
+      if (!reportRows[0]) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على تقرير السوق." });
+      if (existingRows[0]) return { id: existingRows[0].id, existing: true };
+      const result = await db.insert(projectMarketReportLinks).values({ projectId: input.projectId, reportId: input.reportId, userId: ctx.user.id, relevanceNote: input.relevanceNote || null });
+      return { id: result[0].insertId, existing: false };
+    }),
+
+  unlinkMarketReport: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), linkId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      await db.delete(projectMarketReportLinks).where(and(eq(projectMarketReportLinks.id, input.linkId), eq(projectMarketReportLinks.projectId, input.projectId)));
+      return { success: true };
+    }),
+
   addEvidence: protectedProcedure
     .input(evidenceInput)
     .mutation(async ({ ctx, input }) => {
@@ -206,6 +360,17 @@ export const marketEvidenceRouter = router({
       return { success: true };
     }),
 
+  getPricingHandoffStatus: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const result = await db.select().from(marketPricingHandoffs)
+        .where(eq(marketPricingHandoffs.projectId, input.projectId))
+        .orderBy(desc(marketPricingHandoffs.handedOffAt)).limit(1);
+      return result[0] || null;
+    }),
+
   recordDecision: protectedProcedure
     .input(z.object({
       projectId: z.number().int().positive(),
@@ -243,5 +408,32 @@ export const marketEvidenceRouter = router({
       });
 
       return { id: result[0].insertId };
+    }),
+
+  handoffApprovedPricing: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), approvalId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+      const approvalRows = await db.select().from(marketDecisionApprovals)
+        .where(and(
+          eq(marketDecisionApprovals.id, input.approvalId),
+          eq(marketDecisionApprovals.projectId, input.projectId),
+          eq(marketDecisionApprovals.decisionStatus, "approved"),
+        )).limit(1);
+      const approval = approvalRows[0];
+      if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر قرار سوق معتمدًا قبل التسليم إلى التسعير." });
+      const snapshot = JSON.parse(approval.decisionSnapshotJson || "{}");
+      const pricingPatch = buildPricingPatch(snapshot);
+      const existingRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId)).limit(1);
+      if (existingRows[0]) await db.update(competitionPricing).set(pricingPatch).where(eq(competitionPricing.id, existingRows[0].id));
+      else await db.insert(competitionPricing).values({ userId: ctx.user.id, projectId: input.projectId, ...pricingPatch });
+      const handoff = await db.insert(marketPricingHandoffs).values({
+        projectId: input.projectId,
+        approvalId: approval.id,
+        userId: ctx.user.id,
+        pricingSnapshotJson: JSON.stringify({ approvalId: approval.id, pricingPatch, sourceSnapshot: snapshot }),
+      });
+      return { id: handoff[0].insertId, fieldsUpdated: Object.keys(pricingPatch).filter((key) => key.endsWith("Price")) };
     }),
 });

@@ -1555,6 +1555,34 @@ export const projectMarketSearchProfiles = mysqlTable("project_market_search_pro
 	index("market_profile_project").on(table.projectId),
 ]);
 
+// Reports remain reusable in the library; this junction records why a report is
+// relevant to a specific project's locked market-comparison profile.
+export const projectMarketReportLinks = mysqlTable("project_market_report_links", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	reportId: int("report_id").notNull().references(() => marketReports.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
+	relevanceNote: text("relevance_note"),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+	index("market_report_link_project").on(table.projectId),
+	index("market_report_link_report").on(table.reportId),
+]);
+
+// An immutable audit row for an owner-approved market-decision handoff to the
+// pricing source. It never writes directly to cash-flow settings or schedules.
+export const marketPricingHandoffs = mysqlTable("market_pricing_handoffs", {
+	id: int().autoincrement().notNull().primaryKey(),
+	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+	approvalId: int("approval_id").notNull().references(() => marketDecisionApprovals.id, { onDelete: "cascade" }),
+	userId: int("user_id").notNull().references(() => users.id),
+	pricingSnapshotJson: longtext("pricing_snapshot_json").notNull(),
+	handedOffAt: timestamp("handed_off_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+	index("market_pricing_handoff_project").on(table.projectId),
+	index("market_pricing_handoff_approval").on(table.approvalId),
+]);
+
 // Approval records intentionally snapshot a reviewed decision and its evidence.
 // The next phase may hand off an approved record to pricing, but this table does
 // not write to any commercial or financial source of truth.

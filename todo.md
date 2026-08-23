@@ -1441,3 +1441,6 @@
 - [x] Add a project comparison-market filter that locks asset, unit, geographic scope, project status, and transaction purpose before evidence search
 - [x] Exclude and explain incompatible comparables such as villas or land when the selected search is for apartment sales
 - [x] Review Property Finder, Bayut, DXB Interact, and Property Monitor filtering patterns before finalizing the investment-comparison filter design
+- [x] Add a filtered bulk-import path for DLD comparable transactions without bypassing the project market profile
+- [x] Link uploaded market reports to the active project market profile and record their relevance to the decision
+- [x] Add an explicit approved-only handoff from the market decision to pricing, with no connection to cash flows

@@ -1,11 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getEvidenceMismatchReasons } from "./routers/marketEvidence";
+import { buildPricingPatch, getEvidenceMismatchReasons } from "./routers/marketEvidence";
 
 const routerSource = readFileSync("server/routers/marketEvidence.ts", "utf8");
 const panelSource = readFileSync("client/src/components/feasibility/MarketEvidencePanel.tsx", "utf8");
 const decisionSource = readFileSync("client/src/components/feasibility/MarketDecisionTab.tsx", "utf8");
 const profilePanelSource = readFileSync("client/src/components/feasibility/MarketSearchProfilePanel.tsx", "utf8");
+const dldImportSource = readFileSync("client/src/components/feasibility/DldCsvImportPanel.tsx", "utf8");
 
 describe("project market evidence register", () => {
   it("records evidence with source date, confidence, and a reviewable verification state", () => {
@@ -16,10 +17,11 @@ describe("project market evidence register", () => {
     expect(panelSource).toContain('يلزم توثيق دليل واحد على الأقل');
   });
 
-  it("requires verified evidence before approval and never writes to pricing or cash flows", () => {
+  it("requires verified evidence before approval; the approval record itself never writes to pricing or cash flows", () => {
     expect(routerSource).toContain('if (input.decisionStatus === "approved" && verifiedEvidence.length === 0)');
-    expect(routerSource).not.toContain('competitionPricing');
-    expect(routerSource).not.toContain('cashFlow');
+    const approvalBlock = routerSource.slice(routerSource.indexOf("recordDecision: protectedProcedure"), routerSource.indexOf("handoffApprovedPricing: protectedProcedure"));
+    expect(approvalBlock).not.toContain("competitionPricing");
+    expect(approvalBlock).not.toContain("cashFlow");
     expect(decisionSource).toContain('<MarketEvidencePanel');
   });
 
@@ -45,5 +47,27 @@ describe("project market evidence register", () => {
     expect(getEvidenceMismatchReasons(profile, apartment)).toEqual([]);
     expect(getEvidenceMismatchReasons(profile, villa)).toContain("شكل المنتج مختلف؛ لا يمكن مقارنة الشقق بالفلل أو الأراضي.");
     expect(getEvidenceMismatchReasons(profile, land)).toContain("فئة الأصل مختلفة عن السوق المطلوب.");
+  });
+
+  it("previews and imports DLD sale rows through the locked market profile instead of bypassing it", () => {
+    expect(routerSource).toContain("previewDldImport: protectedProcedure");
+    expect(routerSource).toContain("importDldTransactions: protectedProcedure");
+    expect(routerSource).toContain('transactionPurpose: "sale" as const');
+    expect(routerSource).toContain("verificationStatus: mismatchReasons.length ? \"excluded\"");
+    expect(dldImportSource).toContain('row["Transaction Number"]');
+    expect(dldImportSource).toContain('row["Property Type"]');
+    expect(dldImportSource).toContain("إدراج المعاملات المتوافقة");
+  });
+
+  it("maps only approved decision prices to competition pricing and never constructs a cash-flow update", () => {
+    const patch = buildPricingPatch({ pricing: { scenarios: {
+      base: { residential: { studio: 1450, oneBr: 1650 }, retail: {}, office: {} },
+      conservative: { residential: { studio: 1300 }, retail: {}, office: {} },
+      optimistic: { residential: { studio: 1600 }, retail: {}, office: {} },
+    }, paymentPlan: { booking: { pct: 20 }, construction: { pct: 50 }, handover: { pct: 30 } } } });
+    expect(patch).toMatchObject({ baseStudioPrice: 1450, base1brPrice: 1650, consStudioPrice: 1300, optStudioPrice: 1600, paymentBookingPct: "20", paymentConstructionPct: "50", paymentHandoverPct: "30", isApproved: 1 });
+    expect(Object.keys(patch).some((key) => key.toLowerCase().includes("cashflow"))).toBe(false);
+    expect(routerSource).toContain("handoffApprovedPricing: protectedProcedure");
+    expect(routerSource).toContain("marketPricingHandoffs");
   });
 });
