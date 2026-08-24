@@ -1508,6 +1508,7 @@
 - [x] Fix direct typed entry for the editable unit price-per-square-foot field in pricing so values can be replaced without arrow controls
 - [x] Show per-unit price alongside the existing total value for each unit type in the pricing view
 - [x] Increase contrast and visual hierarchy in Unit Distribution and Pricing while preserving light backgrounds and existing data
+- [x] Create a higher-contrast visual sample for text, numeric inputs, and table separators in Unit Distribution only before any wider rollout
 - [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
 - [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Separate work tasks, owner decisions, and meeting follow-ups with clear headings and visual dividers in the operational summary

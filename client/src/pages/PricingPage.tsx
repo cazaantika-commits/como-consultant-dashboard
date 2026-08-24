@@ -66,9 +66,9 @@ const AREA_MAP: Record<string, string> = {
 
 const fmt = (value: number) => formatFullNumber(value, "");
 const categoryMeta: Record<ParkingCategory, { label: string; tone: string; text: string }> = {
-	residential: { label: "سكني", tone: "bg-blue-100/80 border-blue-300", text: "text-blue-900" },
-	retail: { label: "تجزئة", tone: "bg-orange-100/80 border-orange-300", text: "text-orange-900" },
-	office: { label: "مكاتب", tone: "bg-teal-100/80 border-teal-300", text: "text-teal-900" },
+  residential: { label: "سكني", tone: "border-y-2 border-blue-400 bg-blue-100", text: "text-blue-950" },
+  retail: { label: "تجزئة", tone: "border-y-2 border-orange-400 bg-orange-100", text: "text-orange-950" },
+  office: { label: "مكاتب", tone: "border-y-2 border-teal-400 bg-teal-100", text: "text-teal-950" },
 };
 
 export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
@@ -184,20 +184,20 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
     const meta = categoryMeta[category];
     return <>
       <tr className={`border-t ${meta.tone}`}>
-        <td colSpan={3} className={`py-1 px-2 font-bold text-[11px] ${meta.text}`}>{meta.label}</td>
-        <td className="py-1 px-2 text-center text-[10px] text-slate-600">متاح: {fmt(summary.available)} | فرق: <span className={summary.diff < 0 ? "text-rose-600" : "text-emerald-700"}>{fmt(summary.diff)}</span></td>
-        <td className="py-1 px-2 text-center text-[10px] text-slate-600">{summary.parking === null ? "بانتظار الشرط" : summary.parking}</td>
+        <td colSpan={3} className={`px-2 py-1.5 text-[12px] font-extrabold ${meta.text}`}>{meta.label}</td>
+        <td className="px-2 py-1.5 text-center text-[11px] font-semibold text-slate-800">متاح: {fmt(summary.available)} | فرق: <span className={summary.diff < 0 ? "font-bold text-rose-700" : "font-bold text-emerald-800"}>{fmt(summary.diff)}</span></td>
+        <td className="px-2 py-1.5 text-center text-[11px] font-semibold text-slate-800">{summary.parking === null ? "بانتظار الشرط" : summary.parking}</td>
       </tr>
       {UNIT_TYPES.filter(unit => unit.category === category).map((unit, index) => {
         const count = counts[unit.key] || 0;
         const area = areas[unit.key] ?? unit.defaultArea;
         const parking = calculateUnitParking(category, area, count, parkingRules);
-        return <tr key={unit.key} className={index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
-          <td className="py-1 px-2 text-[11px] text-slate-700">{unit.label}</td>
-          <td className="py-1 px-2 text-center"><input type="number" min={0} value={count} onChange={event => updateCount(unit.key, parseInt(event.target.value) || 0)} className="w-14 h-6 text-[11px] text-center border border-slate-300 rounded bg-white focus:border-teal-500 focus:outline-none" /></td>
-          <td className="py-1 px-2 text-center"><input type="number" min={0} value={area} onChange={event => updateArea(unit.key, parseInt(event.target.value) || 0)} className="w-[72px] h-6 text-[11px] text-center border border-slate-300 rounded bg-white focus:border-teal-500 focus:outline-none" /></td>
-          <td className="py-1 px-2 text-center text-[11px] text-slate-600 tabular-nums">{count > 0 ? fmt(count * area) : "—"}</td>
-          <td className="py-1 px-2 text-center text-[11px] text-slate-600 tabular-nums">{count > 0 ? (parking === null ? "—" : parking) : "—"}</td>
+        return <tr key={unit.key} className={`border-b border-slate-200 ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+          <td className="px-2 py-1.5 text-[12px] font-semibold text-slate-900">{unit.label}</td>
+          <td className="px-2 py-1.5 text-center"><input type="number" min={0} value={count} onChange={event => updateCount(unit.key, parseInt(event.target.value) || 0)} className="h-7 w-14 rounded border border-slate-400 bg-white text-center text-[12px] font-bold text-slate-950 shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100" /></td>
+          <td className="px-2 py-1.5 text-center"><input type="number" min={0} value={area} onChange={event => updateArea(unit.key, parseInt(event.target.value) || 0)} className="h-7 w-[72px] rounded border border-slate-400 bg-white text-center text-[12px] font-bold text-slate-950 shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-100" /></td>
+          <td className="px-2 py-1.5 text-center text-[12px] font-semibold text-slate-800 tabular-nums">{count > 0 ? fmt(count * area) : "—"}</td>
+          <td className="px-2 py-1.5 text-center text-[12px] font-semibold text-slate-800 tabular-nums">{count > 0 ? (parking === null ? "—" : parking) : "—"}</td>
         </tr>;
       })}
     </>;
@@ -206,29 +206,29 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   const parkingReady = parkingSummary.totalRequired !== null;
   const parkingVarianceTone = parkingSummary.variance === null ? "text-slate-500" : parkingSummary.variance < 0 ? "text-rose-700" : "text-emerald-700";
 
-	return <div className="bg-slate-100 px-3 py-3" dir="rtl">
+	return <div className="bg-slate-200/70 px-3 py-3" dir="rtl">
     <div className="w-full max-w-5xl space-y-3">
       <div className="fs-card fs-card-teal flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
         {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}
         <Button size="sm" onClick={handleSave} disabled={!hasUnsavedChanges || isSaving} className="h-7 gap-1 bg-teal-600 px-3 text-[12px] text-white hover:bg-teal-700">
           {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} حفظ
         </Button>
-        <span className="text-[11px] text-slate-600">{totalUnits} وحدة</span>
-        <span className="text-[10px] text-amber-700">سعر القدم² يُحدد حصراً من صفحة المبيعات والتسويق</span>
+        <span className="text-[12px] font-bold text-slate-800">{totalUnits} وحدة</span>
+        <span className="text-[11px] font-semibold text-amber-800">سعر القدم² يُحدد حصراً من صفحة المبيعات والتسويق</span>
       </div>
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2.1fr)_minmax(245px,0.9fr)]">
-		<div className="overflow-hidden rounded-lg border-2 border-slate-300 bg-white shadow-sm">
-          <table className="w-full border-collapse text-[11px]">
-			<thead><tr className="border-b-2 border-slate-400 bg-slate-200">
-              <th className="px-2 py-1.5 text-right text-[11px] font-bold text-slate-800">النوع</th>
-              <th className="w-16 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">العدد</th>
-              <th className="w-20 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">المساحة</th>
-              <th className="px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">إجمالي المساحة</th>
-              <th className="w-24 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">مواقف مطلوبة</th>
+			<div className="overflow-hidden rounded-lg border-2 border-slate-400 bg-white shadow-md">
+	          <table className="w-full border-collapse text-[12px]">
+				<thead><tr className="border-b-2 border-slate-500 bg-slate-300">
+	              <th className="px-2 py-2 text-right text-[12px] font-extrabold text-slate-950">النوع</th>
+	              <th className="w-16 px-2 py-2 text-center text-[12px] font-extrabold text-slate-950">العدد</th>
+	              <th className="w-20 px-2 py-2 text-center text-[12px] font-extrabold text-slate-950">المساحة</th>
+	              <th className="px-2 py-2 text-center text-[12px] font-extrabold text-slate-950">إجمالي المساحة</th>
+	              <th className="w-24 px-2 py-2 text-center text-[12px] font-extrabold text-slate-950">مواقف مطلوبة</th>
             </tr></thead>
             <tbody>{renderCategory("residential")}{renderCategory("retail")}{renderCategory("office")}</tbody>
-            <tfoot><tr className="border-t-2 border-teal-300 bg-teal-50 text-[11px] font-bold text-teal-900">
+            <tfoot><tr className="border-t-2 border-teal-500 bg-teal-100 text-[12px] font-extrabold text-teal-950">
               <td className="px-2 py-1.5">الإجمالي</td><td className="px-2 py-1.5 text-center">{totalUnits}</td><td className="px-2 py-1.5 text-center">—</td><td className="px-2 py-1.5 text-center tabular-nums">{fmt(totalUsed)}</td><td className="px-2 py-1.5 text-center">{parkingReady ? parkingSummary.totalRequired : "—"}</td>
             </tr></tfoot>
           </table>
@@ -244,10 +244,10 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
 
           <div className="fs-card fs-card-violet rounded-lg p-3">
             <div className="mb-2 flex items-center gap-1.5"><Car className="h-4 w-4 text-indigo-700" /><h3 className="text-xs font-bold text-indigo-900">احتساب المواقف من الوثائق</h3></div>
-            {(projectQuery.data as any)?.parkingSourceReference && <p className="mb-2 text-[10px] text-indigo-700">المرجع: {(projectQuery.data as any).parkingSourceReference}</p>}
-            {(projectQuery.data as any)?.parkingRequirementsText && <p className="mb-2 rounded border border-indigo-100 bg-white/80 p-2 text-[10px] leading-relaxed text-slate-700">{(projectQuery.data as any).parkingRequirementsText}</p>}
-            {parkingSummary.ruleLines.length > 0 ? <div className="space-y-1">{parkingSummary.ruleLines.map(line => <p key={line} className="text-[10px] text-slate-700">• {line}</p>)}</div> : <div className="rounded border border-amber-200 bg-amber-50 p-2 text-[10px] leading-relaxed text-amber-800"><Info className="ml-1 inline h-3 w-3" />لا توجد قاعدة مواقف منظمة مستخرجة بعد. لن تُستخدم أي افتراضات حتى يضيف خازن الشرط من الوثائق.</div>}
-            <div className="mt-3 space-y-1 border-t border-indigo-200 pt-2 text-[10px]">
+            {(projectQuery.data as any)?.parkingSourceReference && <p className="mb-2 text-[11px] font-semibold text-indigo-800">المرجع: {(projectQuery.data as any).parkingSourceReference}</p>}
+            {(projectQuery.data as any)?.parkingRequirementsText && <p className="mb-2 rounded border border-indigo-300 bg-white/90 p-2 text-[11px] font-medium leading-relaxed text-slate-800">{(projectQuery.data as any).parkingRequirementsText}</p>}
+            {parkingSummary.ruleLines.length > 0 ? <div className="space-y-1">{parkingSummary.ruleLines.map(line => <p key={line} className="text-[11px] font-medium text-slate-800">• {line}</p>)}</div> : <div className="rounded border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium leading-relaxed text-amber-900"><Info className="ml-1 inline h-3 w-3" />لا توجد قاعدة مواقف منظمة مستخرجة بعد. لن تُستخدم أي افتراضات حتى يضيف خازن الشرط من الوثائق.</div>}
+            <div className="mt-3 space-y-1 border-t-2 border-indigo-300 pt-2 text-[11px]">
               <SummaryLine label="المطلوب" value={parkingReady ? String(parkingSummary.totalRequired) : "غير مكتمل"} />
               <SummaryLine label="المتاح في الوثائق" value={parkingSummary.available === null ? "غير مذكور" : String(parkingSummary.available)} />
               <SummaryLine label="الفائض / العجز" value={parkingSummary.variance === null ? "بانتظار البيانات" : String(parkingSummary.variance)} valueClass={parkingVarianceTone} />
@@ -267,9 +267,9 @@ function Metric({ label, value, tone }: { label: string; value: string; tone: "t
     emerald: "fs-card fs-card-emerald text-emerald-800",
     rose: "fs-card fs-card-rose text-rose-800",
   };
-  return <div className={`rounded-lg border p-2 text-center ${tones[tone]}`}><div className="text-[9px] opacity-75">{label}</div><div className="mt-0.5 text-[13px] font-bold tabular-nums">{value}</div></div>;
+  return <div className={`rounded-lg border p-2 text-center shadow-sm ${tones[tone]}`}><div className="text-[10px] font-semibold text-slate-700">{label}</div><div className="mt-0.5 text-[14px] font-extrabold tabular-nums">{value}</div></div>;
 }
 
 function SummaryLine({ label, value, valueClass = "text-slate-800" }: { label: string; value: string; valueClass?: string }) {
-  return <div className="flex items-center justify-between gap-2"><span className="text-slate-600">{label}</span><span className={`font-bold tabular-nums ${valueClass}`}>{value}</span></div>;
+  return <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-700">{label}</span><span className={`font-extrabold tabular-nums ${valueClass}`}>{value}</span></div>;
 }
