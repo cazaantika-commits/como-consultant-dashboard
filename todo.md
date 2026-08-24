@@ -1537,3 +1537,4 @@
 - [x] Enlarge Layla's visible advisor image and remove any Salwa identity mix from Command Center presentation
 - [x] Replace Layla's visible Command Center portrait with a professional non-hijab Eastern–Western portrait while preserving the visible name Layla and existing internal compatibility
 - [x] Increase Layla's desktop Command Center portrait display by approximately 50% while retaining the no-portrait mobile header rule
+- [x] Fix persistence of square-foot prices for newly added unit types when Wael approves a sales scenario, without overwriting existing pricing data

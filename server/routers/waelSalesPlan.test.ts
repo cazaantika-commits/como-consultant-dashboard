@@ -92,7 +92,13 @@ describe("waelSalesPlan.save", () => {
     const result = await createCaller().saveWorkspace({
       planId: 73,
       projectId: 2,
-      pricing: { residential1brPrice: 1700, villaPrice: 2400 },
+      pricing: {
+        studioPrice: 1450,
+        residential1brPrice: 1700,
+        residential2brMaidPrice: 1625,
+        residential3brMaidPrice: 1850,
+        villaPrice: 2400,
+      },
       marketingPct: 2,
       salesCommissionPct: 5,
       totalRevenue: 804_600_000,
@@ -109,6 +115,9 @@ describe("waelSalesPlan.save", () => {
     expect(result).toEqual({ id: 73, action: "updated" });
     expect(projectSet).toHaveBeenCalledWith(expect.objectContaining({
       residential1brPrice: 1700,
+      studioPrice: 1450,
+      residential2brMaidPrice: 1625,
+      residential3brMaidPrice: 1850,
       villaPrice: 2400,
       marketingPct: "2",
       salesCommissionPct: "5",

@@ -653,6 +653,13 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const handleSaveWorkspace = useCallback(async () => {
     if (!selectedProjectId) return;
     try {
+      // The project card remains the single source of truth for every unit's
+      // square-foot price. Keep this payload explicit so the approval action
+      // cannot leave a saved scenario behind while a newly entered price stays
+      // at zero in the project record.
+      const workspacePricing = Object.fromEntries(
+        UNIT_TYPES.map((unit) => [unit.dbPrice, Math.max(0, Number(unitData[unit.id]?.price ?? 0))]),
+      );
       let existingAbsorption: any = {};
       const existingPlan = plansQuery.data?.[0] as any;
       if (existingPlan?.salesAbsorptionJson) {
@@ -667,7 +674,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       const savedPlan = await saveWorkspace.mutateAsync({
         planId,
         projectId: selectedProjectId,
-        pricing: Object.fromEntries(UNIT_TYPES.map((unit) => [unit.dbPrice, unitData[unit.id]?.price || 0])),
+        pricing: workspacePricing,
         marketingPct,
         salesCommissionPct: commissionPct,
         totalRevenue,
@@ -709,14 +716,29 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         }),
       });
       setPlanId(savedPlan.id);
+      // saveWorkspace updates the project transactionally. Repeat the same
+      // typed project update as a confirmation step through the canonical
+      // project route; failures stay visible and preserve the unsaved state.
+      await updateProject.mutateAsync({
+        id: selectedProjectId,
+        ...workspacePricing,
+        salesCommissionPct: String(commissionPct),
+      } as any);
       setHasUnitChanges(false);
       setHasPlanChanges(false);
       setHasMarketingChanges(false);
       await Promise.all([plansQuery.refetch(), projectQuery.refetch()]);
-    } catch {
+    } catch (error) {
+      console.error("Wael workspace save failed:", error);
+      toast({
+        title: "لم يكتمل اعتماد الأسعار",
+        description: "بقيت تعديلات التسعير مفتوحة. يرجى المحاولة مجددًا قبل اعتبار السيناريو معتمدًا.",
+        variant: "destructive",
+      });
+      setHasUnitChanges(true);
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, paymentPlan, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, saveWorkspace, plansQuery, projectQuery, isBuildForSale]);
+  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, paymentPlan, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, saveWorkspace, updateProject, plansQuery, projectQuery, isBuildForSale]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
