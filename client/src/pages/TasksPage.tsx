@@ -109,6 +109,7 @@ export default function TasksPage() {
   const [filterPriority, setFilterPriority] = useState("");
   const [filterOwner, setFilterOwner] = useState("");
   const [filterSearch, setFilterSearch] = useState("");
+  const [legacyReviewOnly, setLegacyReviewOnly] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -169,8 +170,19 @@ export default function TasksPage() {
     },
   });
 
+  const legacyReviewCount = useMemo(() => allTasks.filter((task) => {
+    const createdAt = task.createdAt ? new Date(task.createdAt).getTime() : 0;
+    const reviewCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return ["new", "progress", "hold"].includes(task.status) && createdAt > 0 && createdAt < reviewCutoff && ["manual", "agent"].includes(task.source || "manual");
+  }).length, [allTasks]);
+
   const filteredTasks = useMemo(() => {
     return allTasks.filter((task) => {
+      if (legacyReviewOnly) {
+        const createdAt = task.createdAt ? new Date(task.createdAt).getTime() : 0;
+        const reviewCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        if (!(["new", "progress", "hold"].includes(task.status) && createdAt > 0 && createdAt < reviewCutoff && ["manual", "agent"].includes(task.source || "manual"))) return false;
+      }
       if (filterStatus && filterStatus !== "all" && task.status !== filterStatus) return false;
       if (filterProject && filterProject !== "all") {
         if (filterProject === "مشروع آخر") {
@@ -187,7 +199,7 @@ export default function TasksPage() {
       }
       return true;
     });
-  }, [allTasks, filterStatus, filterProject, filterPriority, filterOwner, filterSearch]);
+  }, [allTasks, filterStatus, filterProject, filterPriority, filterOwner, filterSearch, legacyReviewOnly]);
 
   const isOverdue = (task: { dueDate: string | null; status: string }) => {
     if (!task.dueDate) return false;
@@ -270,6 +282,7 @@ export default function TasksPage() {
     setFilterPriority("");
     setFilterOwner("");
     setFilterSearch("");
+    setLegacyReviewOnly(false);
   };
 
   const priorityBadge = (priority: string) => {
@@ -527,6 +540,19 @@ export default function TasksPage() {
                   مسح الفلاتر
                 </Button>
               </div>
+            </div>
+            <div className="mt-3 border-t border-slate-100 pt-3">
+              <Button
+                type="button"
+                size="sm"
+                variant={legacyReviewOnly ? "default" : "outline"}
+                onClick={() => setLegacyReviewOnly((value) => !value)}
+                className={legacyReviewOnly ? "bg-violet-700 hover:bg-violet-800" : "border-violet-200 text-violet-700 hover:bg-violet-50"}
+              >
+                <AlertTriangle className="ml-1 h-3.5 w-3.5" />
+                مراجعة البنود القديمة ({legacyReviewCount})
+              </Button>
+              <p className="mt-1 text-[11px] text-muted-foreground">يعرض المهام المفتوحة اليدوية أو المستخرجة من الاجتماعات، الأقدم من 30 يومًا، لاختيار الإلغاء أو التجديد دون حذف.</p>
             </div>
           </CardContent>
         </Card>

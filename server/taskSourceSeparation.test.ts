@@ -27,7 +27,9 @@ describe("task source separation and preservation", () => {
     expect(tasksPage).toContain("تجديد كمهمة جديدة");
     expect(tasksPage).toContain("مراجعة");
     expect(tasksPage).toContain("إلغاء");
-    expect(tasksPage).toContain("تجديد");
+    expect(tasksPage).toContain("إلغاء");
+    expect(tasksPage).toContain("مراجعة البنود القديمة");
+    expect(tasksPage).toContain("legacyReviewOnly");
     expect(tasksPage).not.toContain("title=\"حذف\"");
   });
 });

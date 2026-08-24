@@ -1505,13 +1505,14 @@
 - [ ] Verify the latest original offer for each consultant and exclude legacy financial values and JSON data from the new financial evaluation source
 - [ ] Await the owner's approved project scope and updated original consultant-offer files for each project before beginning offer review or financial comparison
 - [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
-- [ ] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
+- [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Separate work tasks, owner decisions, and meeting follow-ups with clear headings and visual dividers in the operational summary
 - [x] Add an owner-facing task review flow that supports cancellation, editing, and renewal of old tasks while retaining the original task and source history
 - [x] Replace the compressed mobile task table with accessible task review cards that expose edit, renew, and cancel actions without horizontal scrolling
 - [x] Move task source and review actions to the visible start of the desktop row so cancellation and renewal do not require horizontal scrolling
-- [ ] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
-- [ ] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
+- [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
+- [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Show the approved financial comparison in the committee decision context without changing technical scoring or committee authority
 - [x] Make the assistant-led human review of each consultant offer the required approval path; internal extraction may assist but must never approve, score, or populate final financial values by itself
 - [x] Remove automated offer-reading from the operational workflow so offer interpretation and final field entry are performed by the assistant after reviewing the original offer
+- [x] Add a dedicated legacy-review filter that isolates open manual and meeting-generated tasks older than the current operating cycle for owner action
