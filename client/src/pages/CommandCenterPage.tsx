@@ -4371,7 +4371,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <div className="absolute inset-y-0 right-0 w-1 bg-amber-500" />
           <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
-              <div className="h-28 w-24 overflow-hidden rounded-2xl bg-slate-100 ring-2 ring-amber-200 shadow-[0_8px_18px_rgba(15,23,42,0.12)] lg:h-32 lg:w-28">
+              <div className="h-[10.5rem] w-36 overflow-hidden rounded-2xl bg-slate-100 ring-2 ring-amber-200 shadow-[0_10px_22px_rgba(15,23,42,0.14)] lg:h-48 lg:w-[10.5rem]">
                 <img src={LAYLA_AVATAR_URL} alt="ليلى، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
               </div>
               <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">ليلى</span>
