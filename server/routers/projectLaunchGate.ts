@@ -261,7 +261,7 @@ export const projectLaunchGateRouter = router({
         }));
 
       const attentionTasks = taskRows
-        .filter((task) => task.status !== "done" && task.status !== "cancelled" && (task.priority === "high" || Boolean(task.dueDate && task.dueDate <= today)))
+        .filter((task) => ["new", "progress"].includes(task.status) && (task.priority === "high" || Boolean(task.dueDate && task.dueDate <= today)))
         .sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31"))
         .slice(0, 4)
         .map((task) => ({
@@ -271,8 +271,9 @@ export const projectLaunchGateRouter = router({
           href: "/tasks",
         }));
 
+      const recentMeetingCutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
       const preparingMeetings = meetingRows
-        .filter((meeting) => meeting.meetingStatus === "preparing" || meeting.meetingStatus === "in_progress")
+        .filter((meeting) => (meeting.meetingStatus === "preparing" || meeting.meetingStatus === "in_progress") && new Date(meeting.updatedAt || meeting.createdAt).getTime() >= recentMeetingCutoff)
         .slice(0, 3)
         .map((meeting) => ({
           kind: "meeting" as const,

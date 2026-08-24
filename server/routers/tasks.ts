@@ -106,14 +106,33 @@ export const tasksRouter = router({
     return { success: true };
   }),
 
-  delete: publicProcedure.input(z.number()).mutation(async ({ ctx, input }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+  renew: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const original = (await db.select().from(tasks).where(eq(tasks.id, input.id)).limit(1))[0];
+      if (!original) throw new Error("المهمة الأصلية غير موجودة");
+      if (original.status === "done" || original.status === "cancelled") throw new Error("لا يمكن تجديد مهمة مكتملة أو ملغاة مباشرة");
 
-    await db.delete(tasks).where(eq(tasks.id, input));
-    return { success: true };
-  }),
+      await db.update(tasks).set({ status: "cancelled", progress: 0 }).where(eq(tasks.id, input.id));
+      const result = await db.insert(tasks).values({
+        title: original.title,
+        description: `${original.description ? `${original.description}\n\n` : ""}تجديد يدوي من المهمة الأصلية #${original.id}.`,
+        project: original.project,
+        category: original.category,
+        owner: original.owner,
+        priority: original.priority,
+        status: "new",
+        progress: 0,
+        dueDate: null,
+        attachment: original.attachment,
+        source: "command",
+        sourceAgent: `تجديد من المهمة #${original.id}`,
+      });
+      return { id: result[0].insertId, originalId: original.id };
+    }),
 
   // Agent activity log - for the UI to show agent activity
   agentActivity: publicProcedure.query(async ({ ctx }) => {

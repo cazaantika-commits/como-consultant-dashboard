@@ -1499,9 +1499,19 @@
 - [x] Define one reviewed financial evidence path for quoted fees, individual scope gaps, and true cost before presenting it to the existing consultant evaluation
 - [x] Preserve the existing technical evaluation and committee methodology while supplying it with a reviewed project-specific financial comparison report only
 - [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design
-- [ ] Add owner review and correction controls for each extracted offer item before a reading becomes usable in financial comparison
+- [x] Add owner review and correction controls for each extracted offer item before a reading becomes usable in financial comparison
 - [x] Build a separate project-specific supervision scope and fee comparison using the same approved-review principle
 - [ ] Define and implement the approved financial comparison as the single source for financial evaluation while preserving legacy financial records as read-only history
+- [ ] Verify the latest original offer for each consultant and exclude legacy financial values and JSON data from the new financial evaluation source
+- [ ] Await the owner's approved project scope and updated original consultant-offer files for each project before beginning offer review or financial comparison
+- [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
+- [ ] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
+- [x] Separate work tasks, owner decisions, and meeting follow-ups with clear headings and visual dividers in the operational summary
+- [x] Add an owner-facing task review flow that supports cancellation, editing, and renewal of old tasks while retaining the original task and source history
+- [x] Replace the compressed mobile task table with accessible task review cards that expose edit, renew, and cancel actions without horizontal scrolling
+- [x] Move task source and review actions to the visible start of the desktop row so cancellation and renewal do not require horizontal scrolling
+- [ ] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
+- [ ] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Show the approved financial comparison in the committee decision context without changing technical scoring or committee authority
 - [x] Make the assistant-led human review of each consultant offer the required approval path; internal extraction may assist but must never approve, score, or populate final financial values by itself
 - [x] Remove automated offer-reading from the operational workflow so offer interpretation and final field entry are performed by the assistant after reviewing the original offer

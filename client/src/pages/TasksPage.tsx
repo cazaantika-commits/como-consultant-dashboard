@@ -27,7 +27,7 @@ import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
 import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
-import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
+import { default as RefreshCw } from "lucide-react/dist/esm/icons/refresh-cw.js";
 import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import { default as ListTodo } from "lucide-react/dist/esm/icons/list-todo.js";
 import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
@@ -161,11 +161,11 @@ export default function TasksPage() {
     },
   });
 
-  const deleteMutation = trpc.tasks.delete.useMutation({
+  const renewMutation = trpc.tasks.renew.useMutation({
     onSuccess: () => {
       utils.tasks.list.invalidate();
       utils.tasks.stats.invalidate();
-      toast.success("تم حذف المهمة");
+      toast.success("تم تجديد المهمة وحفظ الأصل كسجل ملغى");
     },
   });
 
@@ -252,9 +252,15 @@ export default function TasksPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("هل تريد حذف هذه المهمة؟")) {
-      deleteMutation.mutate(id);
+  const handleCancel = (task: any) => {
+    if (window.confirm(`هل تريد إلغاء المهمة «${task.title}»؟ ستبقى محفوظة في السجل ولن تُحذف.`)) {
+      updateMutation.mutate({ id: task.id, status: "cancelled", progress: 0 });
+    }
+  };
+
+  const handleRenew = (task: any) => {
+    if (window.confirm(`هل تريد تجديد المهمة «${task.title}»؟ سيُحفظ الأصل كسجل ملغى وتُنشأ مهمة جديدة قابلة للتعديل.`)) {
+      renewMutation.mutate({ id: task.id });
     }
   };
 
@@ -525,8 +531,47 @@ export default function TasksPage() {
           </CardContent>
         </Card>
 
-        {/* Tasks Table */}
-        <Card>
+        {/* Mobile task review cards */}
+        <div className="space-y-3 md:hidden">
+          {filteredTasks.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center text-sm text-muted-foreground">
+                <ListTodo className="mx-auto mb-2 h-9 w-9 opacity-30" />
+                لا توجد مهام مطابقة للمراجعة الحالية.
+              </CardContent>
+            </Card>
+          ) : filteredTasks.map((task) => (
+            <Card key={task.id} className={`border-slate-200 ${isOverdue(task) ? "border-rose-300 bg-rose-50/40" : "bg-white"}`}>
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className={`text-sm font-bold text-slate-900 ${task.status === "done" ? "line-through opacity-60" : ""}`}>{task.title}</p>
+                    {task.description && <p className="mt-1 line-clamp-2 text-xs text-slate-500">{task.description}</p>}
+                  </div>
+                  {priorityBadge(task.priority)}
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-[11px] text-slate-600">
+                  <div><span className="text-slate-400">المشروع: </span>{task.project || "عام"}</div>
+                  <div><span className="text-slate-400">المسؤول: </span>{task.owner || "غير محدد"}</div>
+                  <div className="flex items-center gap-1"><span className="text-slate-400">الحالة: </span>{statusBadge(task.status)}</div>
+                  <div><span className="text-slate-400">الموعد: </span>{task.dueDate || "غير محدد"}</div>
+                  <div className="col-span-2 flex items-center gap-1"><span className="text-slate-400">المصدر: </span>{sourceBadge(task.source, task.sourceAgent)}</div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => openEditTask(task)}><Pencil className="ml-1 h-3.5 w-3.5" />تعديل</Button>
+                  {task.status !== "done" && task.status !== "cancelled" && <>
+                    <Button variant="outline" size="sm" className="h-8 border-green-200 text-xs text-green-700" onClick={() => markDoneMutation.mutate(task.id)}><CheckCircle2 className="ml-1 h-3.5 w-3.5" />إنهاء</Button>
+                    <Button variant="outline" size="sm" className="h-8 border-violet-200 text-xs text-violet-700" onClick={() => handleRenew(task)}><RefreshCw className="ml-1 h-3.5 w-3.5" />تجديد</Button>
+                    <Button variant="outline" size="sm" className="h-8 border-rose-200 text-xs text-rose-700" onClick={() => handleCancel(task)}><XCircle className="ml-1 h-3.5 w-3.5" />إلغاء</Button>
+                  </>}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop task table */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -534,6 +579,8 @@ export default function TasksPage() {
                   <tr className="bg-slate-50 border-b">
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">#</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">عنوان المهمة</th>
+                    <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">المصدر</th>
+                    <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">مراجعة</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">المشروع</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">النوع</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">المسؤول</th>
@@ -541,8 +588,6 @@ export default function TasksPage() {
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">الأولوية</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">الحالة</th>
                     <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">التقدم</th>
-                    <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">المصدر</th>
-                    <th className="p-3 text-right font-medium text-slate-600 whitespace-nowrap">إجراءات</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -575,6 +620,18 @@ export default function TasksPage() {
                             </p>
                           )}
                         </td>
+                        <td className="p-3 whitespace-nowrap">{sourceBadge(task.source, task.sourceAgent)}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditTask(task)} title="تعديل"><Pencil className="w-3.5 h-3.5 text-blue-600" /></Button>
+                            {task.attachment && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(task.attachment!, "_blank")} title="فتح الملف"><ExternalLink className="w-3.5 h-3.5 text-slate-600" /></Button>}
+                            {task.status !== "done" && task.status !== "cancelled" && <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => markDoneMutation.mutate(task.id)} title="إنهاء"><CheckCircle2 className="w-3.5 h-3.5 text-green-600" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleRenew(task)} title="تجديد كمهمة جديدة"><RefreshCw className="w-3.5 h-3.5 text-violet-600" /></Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCancel(task)} title="إلغاء مع حفظ السجل"><XCircle className="w-3.5 h-3.5 text-red-500" /></Button>
+                            </>}
+                          </div>
+                        </td>
                         <td className="p-3 whitespace-nowrap">{task.project || "-"}</td>
                         <td className="p-3 whitespace-nowrap">{task.category || "-"}</td>
                         <td className="p-3 whitespace-nowrap">{task.owner || "-"}</td>
@@ -596,51 +653,6 @@ export default function TasksPage() {
                           <div className="flex items-center gap-2 min-w-[100px]">
                             <span className="text-xs w-8">{task.progress}%</span>
                             <Progress value={task.progress} className="h-1.5 flex-1" />
-                          </div>
-                        </td>
-                        <td className="p-3">{sourceBadge(task.source, task.sourceAgent)}</td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => openEditTask(task)}
-                              title="تعديل"
-                            >
-                              <Pencil className="w-3.5 h-3.5 text-blue-600" />
-                            </Button>
-                            {task.status !== "done" && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => markDoneMutation.mutate(task.id)}
-                                title="إنهاء"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                              </Button>
-                            )}
-                            {task.attachment && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => window.open(task.attachment!, "_blank")}
-                                title="فتح الملف"
-                              >
-                                <ExternalLink className="w-3.5 h-3.5 text-gray-600" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => handleDelete(task.id)}
-                              title="حذف"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                            </Button>
                           </div>
                         </td>
                       </tr>

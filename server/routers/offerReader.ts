@@ -69,4 +69,20 @@ export const offerReaderRouter = router({
       await db.execute(sql`UPDATE consultant_offer_readings SET status = 'REVIEWED', model_id = 'ASSISTANT_MANUAL_REVIEW', extraction_json = ${JSON.stringify(input.extraction)} WHERE id = ${input.readingId} AND status = 'DRAFT'`);
       return { success: true };
     }),
+
+  saveOwnerCorrection: protectedProcedure
+    .input(z.object({ readingId: z.number(), extraction: z.record(z.string(), z.any()) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB unavailable");
+      const rows = await qRows<any>(db, sql`SELECT * FROM consultant_offer_readings WHERE id = ${input.readingId} AND status = 'REVIEWED' LIMIT 1`);
+      const source = rows[0];
+      if (!source) throw new Error("لا توجد مراجعة مكتملة قابلة لتصحيح المالك");
+      const snapshot = JSON.parse(String(source.input_snapshot || "{}"));
+      const validIds = new Set((snapshot.requirements || []).map((item: any) => Number(item.id)));
+      const coverage = Array.isArray(input.extraction.coverage) ? input.extraction.coverage : [];
+      if (coverage.some((item: any) => !validIds.has(Number(item.requirement_id)))) throw new Error("يحتوي تصحيح المالك على بند خارج متطلبات المشروع المعتمدة");
+      await db.execute(sql`INSERT INTO consultant_offer_readings (project_consultant_id, project_requirement_set_id, source_proposal_id, status, model_id, input_snapshot, extraction_json) VALUES (${source.project_consultant_id}, ${source.project_requirement_set_id}, ${source.source_proposal_id}, 'REVIEWED', 'OWNER_CORRECTION', ${source.input_snapshot}, ${JSON.stringify(input.extraction)})`);
+      return { success: true };
+    }),
 });

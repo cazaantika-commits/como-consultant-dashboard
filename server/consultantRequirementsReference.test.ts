@@ -56,6 +56,8 @@ describe("consultant requirements reference safeguards", () => {
     expect(offerRouter).not.toContain("runDraft");
     expect(offerReviewScreen).toContain("بدء إدخال مراجعة المساعد");
     expect(offerReviewScreen).toContain("النظام لا يفسر العرض");
+    expect(offerRouter).toContain("saveOwnerCorrection");
+    expect(offerRouter).toContain("OWNER_CORRECTION");
   });
 
   it("calculates a reviewed offer comparison separately and preserves editable gap values outside CPA results", () => {
