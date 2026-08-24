@@ -15,6 +15,7 @@ import { formatFullNumber } from "@/lib/numberFormat";
 import {
   calculateParkingSummary,
   calculateUnitParking,
+  parseDocumentParkingRules,
   parseParkingRules,
   type ParkingCategory,
 } from "@/lib/parkingRules";
@@ -127,7 +128,10 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
     areaSqft: areas[unit.key] ?? unit.defaultArea,
     count: counts[unit.key] || 0,
   })), [areas, counts]);
-  const parkingRules = useMemo(() => parseParkingRules((projectQuery.data as any)?.parkingRulesJson), [projectQuery.data]);
+  const structuredParkingRules = useMemo(() => parseParkingRules((projectQuery.data as any)?.parkingRulesJson), [projectQuery.data]);
+  const documentParkingRules = useMemo(() => parseDocumentParkingRules((projectQuery.data as any)?.parkingRequirementsText), [projectQuery.data]);
+  const parkingRules = structuredParkingRules ?? documentParkingRules;
+  const parkingRuleSource = structuredParkingRules ? "قاعدة منظمة محفوظة للمشروع" : documentParkingRules ? "قاعدة محوّلة حرفيًا من النص المستخرج" : null;
   const parkingSummary = useMemo(() => calculateParkingSummary(
     allocationRows,
     parkingRules,
@@ -246,8 +250,14 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
             <div className="mb-2 flex items-center gap-1.5"><Car className="h-4 w-4 text-indigo-700" /><h3 className="text-xs font-bold text-indigo-900">احتساب المواقف من الوثائق</h3></div>
             {(projectQuery.data as any)?.parkingSourceReference && <p className="mb-2 text-[11px] font-semibold text-indigo-800">المرجع: {(projectQuery.data as any).parkingSourceReference}</p>}
             {(projectQuery.data as any)?.parkingRequirementsText && <p className="mb-2 rounded border border-indigo-300 bg-white/90 p-2 text-[11px] font-medium leading-relaxed text-slate-800">{(projectQuery.data as any).parkingRequirementsText}</p>}
+            {parkingRuleSource && <p className="mb-2 rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-900">{parkingRuleSource} — لا توجد أي قاعدة افتراضية.</p>}
             {parkingSummary.ruleLines.length > 0 ? <div className="space-y-1">{parkingSummary.ruleLines.map(line => <p key={line} className="text-[11px] font-medium text-slate-800">• {line}</p>)}</div> : <div className="rounded border border-amber-300 bg-amber-50 p-2 text-[11px] font-medium leading-relaxed text-amber-900"><Info className="ml-1 inline h-3 w-3" />لا توجد قاعدة مواقف منظمة مستخرجة بعد. لن تُستخدم أي افتراضات حتى يضيف خازن الشرط من الوثائق.</div>}
             <div className="mt-3 space-y-1 border-t-2 border-indigo-300 pt-2 text-[11px]">
+              {parkingReady && <>
+                <SummaryLine label="سكني بحسب الوحدات" value={String(parkingSummary.perCategory.residential ?? 0)} />
+                <SummaryLine label="تجزئة بحسب المساحة" value={String(parkingSummary.perCategory.retail ?? 0)} />
+                <SummaryLine label="المطلوب الأساسي" value={String(parkingSummary.baseRequired ?? 0)} />
+              </>}
               <SummaryLine label="المطلوب" value={parkingReady ? String(parkingSummary.totalRequired) : "غير مكتمل"} />
               <SummaryLine label="المتاح في الوثائق" value={parkingSummary.available === null ? "غير مذكور" : String(parkingSummary.available)} />
               <SummaryLine label="الفائض / العجز" value={parkingSummary.variance === null ? "بانتظار البيانات" : String(parkingSummary.variance)} valueClass={parkingVarianceTone} />

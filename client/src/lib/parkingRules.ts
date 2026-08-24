@@ -41,6 +41,57 @@ export function parseParkingRules(raw: unknown): ParkingRules | null {
   }
 }
 
+const numberWords: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+};
+
+const parsedNumber = (raw: string | undefined): number | null => {
+  if (!raw) return null;
+  const normalized = raw.trim().toLowerCase();
+  if (numberWords[normalized] !== undefined) return numberWords[normalized];
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+/**
+ * Converts only an explicitly written English parking condition from a source
+ * document into the same sqft-based rule shape used by allocation screens.
+ * Any missing component stays absent; callers never receive a guessed rule.
+ */
+export function parseDocumentParkingRules(raw: unknown): ParkingRules | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const text = raw.replace(/\s+/g, " ").toLowerCase();
+  const sqmToSqft = 10.76391;
+  const result: ParkingRules = {};
+
+  const residentialMatch = text.match(/(one|two|three|four|\d+)\s+bay(?:s)?\s+for\s+each\s+(?:apartment|unit)\s+less\s+than\s+or\s+equal\s+to\s+(\d+(?:\.\d+)?)\s*sq\.?m[^;]*?(one|two|three|four|\d+)\s+bay(?:s)?\s+for\s+each\s+(?:apartment|unit)\s+exceeding\s+\2\s*sq\.?m/i);
+  if (residentialMatch) {
+    const below = parsedNumber(residentialMatch[1]);
+    const thresholdSqm = Number(residentialMatch[2]);
+    const above = parsedNumber(residentialMatch[3]);
+    if (below !== null && above !== null && Number.isFinite(thresholdSqm) && thresholdSqm > 0) {
+      result.residential = {
+        thresholdSqft: thresholdSqm * sqmToSqft,
+        spacesAtOrBelow: below,
+        spacesAbove: above,
+      };
+    }
+  }
+
+  const retailMatch = text.match(/(?:for\s+)?retail,?\s+(?:one|1)\s+bay\s+for\s+each\s+(\d+(?:\.\d+)?)\s*sq\.?m\s+of\s+retail\s+net\s+area/i);
+  if (retailMatch) {
+    const sqmPerSpace = Number(retailMatch[1]);
+    if (Number.isFinite(sqmPerSpace) && sqmPerSpace > 0) {
+      result.retail = { sqftPerSpace: sqmPerSpace * sqmToSqft };
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : null;
+}
+
 export function calculateUnitParking(category: ParkingCategory, areaSqft: number, count: number, rules: ParkingRules | null): number | null {
   if (count === 0) return 0;
   if (!rules) return null;

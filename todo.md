@@ -1515,6 +1515,8 @@
 - [x] Replace scattered decorative color treatments in Financial Studies tables with restrained functional colors modeled on the approved portfolio-table reference
 - [x] Apply the user-provided screenshots as the direct visual reference for the named Financial Studies pages without changing financial data or logic
 - [x] Apply compact content-width columns, an upper colored return control, clear grid lines, and a distinguished total treatment to all four referenced Financial Studies screens
+- [x] Audit Khazen's extracted parking condition, source unit of area, and available-parking field before calculating or displaying required bays
+- [x] Link the documented parking rule to unit distribution and show a source-backed required-bay calculation without assumptions
 - [x] Remove duplicate internal return controls when financial reports are rendered as tabs inside the Financial Studies guide
 - [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
 - [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
@@ -1528,3 +1530,5 @@
 - [x] Make the assistant-led human review of each consultant offer the required approval path; internal extraction may assist but must never approve, score, or populate final financial values by itself
 - [x] Remove automated offer-reading from the operational workflow so offer interpretation and final field entry are performed by the assistant after reviewing the original offer
 - [x] Add a dedicated legacy-review filter that isolates open manual and meeting-generated tasks older than the current operating cycle for owner action
+- [x] Audit Khazen's extracted parking condition, source unit of area, and available-parking field before calculating or displaying required bays
+- [x] Link the documented parking rule to unit distribution and show a source-backed required-bay calculation without assumptions
