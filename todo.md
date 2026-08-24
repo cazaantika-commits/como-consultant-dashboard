@@ -1499,3 +1499,9 @@
 - [x] Define one reviewed financial evidence path for quoted fees, individual scope gaps, and true cost before presenting it to the existing consultant evaluation
 - [x] Preserve the existing technical evaluation and committee methodology while supplying it with a reviewed project-specific financial comparison report only
 - [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design
+- [ ] Add owner review and correction controls for each extracted offer item before a reading becomes usable in financial comparison
+- [x] Build a separate project-specific supervision scope and fee comparison using the same approved-review principle
+- [ ] Define and implement the approved financial comparison as the single source for financial evaluation while preserving legacy financial records as read-only history
+- [x] Show the approved financial comparison in the committee decision context without changing technical scoring or committee authority
+- [x] Make the assistant-led human review of each consultant offer the required approval path; internal extraction may assist but must never approve, score, or populate final financial values by itself
+- [x] Remove automated offer-reading from the operational workflow so offer interpretation and final field entry are performed by the assistant after reviewing the original offer

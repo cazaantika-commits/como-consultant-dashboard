@@ -3971,6 +3971,14 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
         <h2 className="text-lg font-bold text-slate-800">قرار اللجنة - {reportData?.project?.name}</h2>
       </div>
 
+      <div className="flex flex-col gap-3 rounded-xl border border-violet-200 bg-violet-50/70 p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-semibold text-violet-950">مرجع التقرير المالي المعتمد</p>
+          <p className="mt-1 text-sm leading-6 text-violet-900">راجع متطلبات المشروع، قراءة عروض المكاتب، وفجوات التصميم والإشراف قبل القرار. لا يختار التقرير مكتبًا ولا يغيّر التقييم الفني أو سلطة اللجنة.</p>
+        </div>
+        <a href="/consultant-proposals" className="inline-flex h-9 shrink-0 items-center justify-center rounded-md border border-violet-200 bg-white px-3 text-sm font-medium text-violet-800 hover:bg-violet-100">فتح تقرير المقارنة المالية</a>
+      </div>
+
       {!reportData?.isReady ? (
         <div className="bg-amber-50 rounded-xl border border-amber-200 p-6 text-center">
           <Lock className="w-10 h-10 text-amber-500 mx-auto mb-2" />

@@ -88,6 +88,45 @@ export const financialOfferComparisonRouter = router({
       return { requirementSet, requirements, consultants, readiness: { reviewed: consultants.filter((item: any) => item.reviewedReadingId).length, total: consultants.length } };
     }),
 
+  getSupervisionReport: protectedProcedure
+    .input(z.object({ cpaProjectId: z.number(), systemProjectId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { requirementSet: null, requirements: [], consultants: [] };
+      const sets = await qRows<any>(db, sql`SELECT * FROM project_consultant_requirement_sets WHERE project_id = ${input.systemProjectId} AND status = 'APPROVED' ORDER BY revision_no DESC LIMIT 1`);
+      const requirementSet = sets[0] ?? null;
+      if (!requirementSet) return { requirementSet: null, requirements: [], consultants: [] };
+      const requirements = await qRows<any>(db, sql`SELECT * FROM project_consultant_requirements WHERE requirement_set_id = ${requirementSet.id} AND is_required = 1 AND workstream = 'SUPERVISION' ORDER BY requirement_group, sort_order, id`);
+      const consultantRows = await qRows<any>(db, sql`
+        SELECT pc.id AS project_consultant_id, cm.trade_name, cm.legal_name,
+          (SELECT cor.id FROM consultant_offer_readings cor WHERE cor.project_consultant_id = pc.id AND cor.project_requirement_set_id = ${requirementSet.id} AND cor.status = 'REVIEWED' ORDER BY cor.id DESC LIMIT 1) AS reviewed_reading_id,
+          (SELECT cor.extraction_json FROM consultant_offer_readings cor WHERE cor.project_consultant_id = pc.id AND cor.project_requirement_set_id = ${requirementSet.id} AND cor.status = 'REVIEWED' ORDER BY cor.id DESC LIMIT 1) AS extraction_json
+        FROM cpa_project_consultants pc JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
+        WHERE pc.cpa_project_id = ${input.cpaProjectId} ORDER BY cm.trade_name, cm.legal_name
+      `);
+      const overrides = await qRows<any>(db, sql`SELECT * FROM consultant_offer_gap_overrides WHERE project_requirement_set_id = ${requirementSet.id}`);
+      const overrideMap = new Map(overrides.map((row: any) => [`${row.project_consultant_id}:${row.project_requirement_id}`, row]));
+      const consultants = consultantRows.map((consultant: any) => {
+        const extracted = parseExtraction(consultant.extraction_json);
+        const coverageMap = new Map((Array.isArray(extracted.coverage) ? extracted.coverage : []).map((item: Coverage) => [Number(item.requirement_id), item]));
+        const items = requirements.map((requirement: any) => {
+          const reading = coverageMap.get(Number(requirement.id));
+          const status = reading?.status ?? "NOT_REVIEWED";
+          const needsGap = status === "EXCLUDED" || status === "PARTIAL";
+          const override = overrideMap.get(`${consultant.project_consultant_id}:${requirement.id}`);
+          const rawGap = override?.gap_value_aed ?? (needsGap ? requirement.gap_value_aed : null);
+          const gapValue = rawGap === null || rawGap === undefined ? null : Number(rawGap);
+          return { requirementId: Number(requirement.id), status, evidence: reading?.evidence ?? "", gapValue, needsGap };
+        });
+        const submitted = Number(extracted.supervision_fee?.amount);
+        const quotedSupervisionFee = Number.isFinite(submitted) && submitted > 0 ? submitted : null;
+        const unresolvedGaps = items.filter((item) => item.needsGap && item.gapValue === null).length;
+        const gapTotal = items.reduce((sum, item) => sum + (item.needsGap && item.gapValue !== null ? item.gapValue : 0), 0);
+        return { id: Number(consultant.project_consultant_id), name: consultant.trade_name || consultant.legal_name || "استشاري", reviewedReadingId: consultant.reviewed_reading_id ? Number(consultant.reviewed_reading_id) : null, quotedSupervisionFee, gapTotal, unresolvedGaps, adjustedSupervisionFee: quotedSupervisionFee === null || unresolvedGaps > 0 ? null : quotedSupervisionFee + gapTotal, items };
+      });
+      return { requirementSet, requirements, consultants };
+    }),
+
   setGapOverride: protectedProcedure
     .input(z.object({ projectConsultantId: z.number(), projectRequirementSetId: z.number(), projectRequirementId: z.number(), gapValueAed: z.number().min(0).nullable(), note: z.string().trim().max(2000).nullable().optional() }))
     .mutation(async ({ input }) => {

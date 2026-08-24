@@ -10,6 +10,8 @@ const offerRouter = readFileSync(`${root}/server/routers/offerReader.ts`, "utf8"
 const comparisonRouter = readFileSync(`${root}/server/routers/financialOfferComparison.ts`, "utf8");
 const gapMigration = readFileSync(`${root}/drizzle/0068_consultant_offer_gap_overrides.sql`, "utf8");
 const component = readFileSync(`${root}/client/src/components/consultant/ConsultantRequirementsReference.tsx`, "utf8");
+const offerReviewScreen = readFileSync(`${root}/client/src/pages/OfferReaderScreen.tsx`, "utf8");
+const commandCenterScreen = readFileSync(`${root}/client/src/pages/CommandCenterPage.tsx`, "utf8");
 
 describe("consultant requirements reference safeguards", () => {
   it("creates an independent reference seeded from legacy records without deleting them", () => {
@@ -38,13 +40,22 @@ describe("consultant requirements reference safeguards", () => {
     expect(projectMigration).not.toMatch(/DELETE\s+FROM\s+cpa_/i);
   });
 
-  it("stores an AI offer reading only as a draft and never writes into legacy CPA evaluation results", () => {
+  it("stores an assistant-review request separately and never writes into legacy CPA evaluation results", () => {
     expect(readingMigration).toContain("consultant_offer_readings");
-    expect(offerRouter).toContain("runDraft");
+    expect(offerRouter).toContain("requestAssistantReview");
     expect(offerRouter).toContain("اعتمد متطلبات المشروع أولًا");
     expect(offerRouter).toContain("status = 'SUPERSEDED'");
     expect(offerRouter).not.toMatch(/INSERT\s+INTO\s+cpa_evaluation_results/i);
     expect(offerRouter).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
+  });
+
+  it("does not invoke an automated model to interpret consultant offers", () => {
+    expect(offerRouter).toContain("requestAssistantReview");
+    expect(offerRouter).toContain("saveAssistantReview");
+    expect(offerRouter).not.toContain("invokeLLM");
+    expect(offerRouter).not.toContain("runDraft");
+    expect(offerReviewScreen).toContain("بدء إدخال مراجعة المساعد");
+    expect(offerReviewScreen).toContain("النظام لا يفسر العرض");
   });
 
   it("calculates a reviewed offer comparison separately and preserves editable gap values outside CPA results", () => {
@@ -53,10 +64,14 @@ describe("consultant requirements reference safeguards", () => {
     expect(comparisonRouter).toContain("setGapOverride");
     expect(comparisonRouter).not.toMatch(/INSERT\s+INTO\s+cpa_evaluation_results/i);
     expect(comparisonRouter).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
+    expect(comparisonRouter).toContain("getSupervisionReport");
+    expect(comparisonRouter).toContain("workstream = 'SUPERVISION'");
   });
 
   it("exposes the financial comparison as read-only evidence without changing the technical evaluation methodology", () => {
     expect(comparisonRouter).toContain("getEvidenceStatus");
     expect(comparisonRouter).not.toMatch(/UPDATE\s+consultant_technical_evaluations/i);
+    expect(commandCenterScreen).toContain("مرجع التقرير المالي المعتمد");
+    expect(commandCenterScreen).toContain("لا يختار التقرير مكتبًا");
   });
 });
