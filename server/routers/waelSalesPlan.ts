@@ -5,9 +5,12 @@ import { waelSalesPlans, projects } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 
 const workspacePricingSchema = z.object({
-  residential1brPrice: z.number().int().min(0).optional(),
-  residential2brPrice: z.number().int().min(0).optional(),
-  residential3brPrice: z.number().int().min(0).optional(),
+	studioPrice: z.number().int().min(0).optional(),
+	residential1brPrice: z.number().int().min(0).optional(),
+	residential2brPrice: z.number().int().min(0).optional(),
+	residential2brMaidPrice: z.number().int().min(0).optional(),
+	residential3brPrice: z.number().int().min(0).optional(),
+	residential3brMaidPrice: z.number().int().min(0).optional(),
   villaPrice: z.number().int().min(0).optional(),
   townhousePrice: z.number().int().min(0).optional(),
   retailSmallPrice: z.number().int().min(0).optional(),

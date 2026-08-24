@@ -27,9 +27,12 @@ interface UnitType {
 }
 
 const UNIT_TYPES: UnitType[] = [
+	{ key: "studio", label: "استوديو", category: "residential", defaultArea: 0 },
   { key: "onebed", label: "غرفة وصالة", category: "residential", defaultArea: 750 },
   { key: "twobed", label: "غرفتين وصالة", category: "residential", defaultArea: 1300 },
+	{ key: "twobed_maid", label: "غرفتين وصالة مع غرفة خادمة", category: "residential", defaultArea: 0 },
   { key: "threebed", label: "ثلاث غرف وصالة", category: "residential", defaultArea: 1650 },
+	{ key: "threebed_maid", label: "ثلاث غرف وصالة مع غرفة خادمة", category: "residential", defaultArea: 0 },
   { key: "villa", label: "فيلا", category: "residential", defaultArea: 0 },
   { key: "townhouse", label: "تاون هاوس", category: "residential", defaultArea: 0 },
   { key: "retail_small", label: "محل صغير", category: "retail", defaultArea: 850 },
@@ -41,21 +44,21 @@ const UNIT_TYPES: UnitType[] = [
 ];
 
 const DEFAULT_AREAS: Record<string, number> = {
-  onebed: 750, twobed: 1300, threebed: 1650,
+	studio: 0, onebed: 750, twobed: 1300, twobed_maid: 0, threebed: 1650, threebed_maid: 0,
   villa: 0, townhouse: 0,
   retail_small: 850, retail_medium: 1200, retail_large: 1800,
   office_small: 1200, office_medium: 2000, office_large: 3500,
 };
 
 const COUNT_MAP: Record<string, string> = {
-  onebed: "residential1brCount", twobed: "residential2brCount", threebed: "residential3brCount",
+	studio: "studioCount", onebed: "residential1brCount", twobed: "residential2brCount", twobed_maid: "residential2brMaidCount", threebed: "residential3brCount", threebed_maid: "residential3brMaidCount",
   villa: "villaCount", townhouse: "townhouseCount",
   retail_small: "retailSmallCount", retail_medium: "retailMediumCount", retail_large: "retailLargeCount",
   office_small: "officeSmallCount", office_medium: "officeMediumCount", office_large: "officeLargeCount",
 };
 
 const AREA_MAP: Record<string, string> = {
-  onebed: "residential1brArea", twobed: "residential2brArea", threebed: "residential3brArea",
+	studio: "studioArea", onebed: "residential1brArea", twobed: "residential2brArea", twobed_maid: "residential2brMaidArea", threebed: "residential3brArea", threebed_maid: "residential3brMaidArea",
   villa: "villaArea", townhouse: "townhouseArea",
   retail_small: "retailSmallArea", retail_medium: "retailMediumArea", retail_large: "retailLargeArea",
   office_small: "officeSmallArea", office_medium: "officeMediumArea", office_large: "officeLargeArea",
@@ -63,9 +66,9 @@ const AREA_MAP: Record<string, string> = {
 
 const fmt = (value: number) => formatFullNumber(value, "");
 const categoryMeta: Record<ParkingCategory, { label: string; tone: string; text: string }> = {
-  residential: { label: "سكني", tone: "bg-blue-50/70 border-blue-200", text: "text-blue-700" },
-  retail: { label: "تجزئة", tone: "bg-orange-50/70 border-orange-200", text: "text-orange-700" },
-  office: { label: "مكاتب", tone: "bg-teal-50/70 border-teal-200", text: "text-teal-700" },
+	residential: { label: "سكني", tone: "bg-blue-100/80 border-blue-300", text: "text-blue-900" },
+	retail: { label: "تجزئة", tone: "bg-orange-100/80 border-orange-300", text: "text-orange-900" },
+	office: { label: "مكاتب", tone: "bg-teal-100/80 border-teal-300", text: "text-teal-900" },
 };
 
 export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
@@ -85,7 +88,7 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   }), [i]);
 
   const [counts, setCounts] = useState<Record<string, number>>({
-    onebed: 0, twobed: 0, threebed: 0, villa: 0, townhouse: 0,
+	studio: 0, onebed: 0, twobed: 0, twobed_maid: 0, threebed: 0, threebed_maid: 0, villa: 0, townhouse: 0,
     retail_small: 0, retail_medium: 0, retail_large: 0,
     office_small: 0, office_medium: 0, office_large: 0,
   });
@@ -203,7 +206,7 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
   const parkingReady = parkingSummary.totalRequired !== null;
   const parkingVarianceTone = parkingSummary.variance === null ? "text-slate-500" : parkingSummary.variance < 0 ? "text-rose-700" : "text-emerald-700";
 
-  return <div className="bg-slate-50 px-3 py-3" dir="rtl">
+	return <div className="bg-slate-100 px-3 py-3" dir="rtl">
     <div className="w-full max-w-5xl space-y-3">
       <div className="fs-card fs-card-teal flex flex-wrap items-center gap-2 rounded-lg px-3 py-2">
         {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} />}
@@ -215,9 +218,9 @@ export default function PricingPage({ embedded }: { embedded?: boolean } = {}) {
       </div>
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,2.1fr)_minmax(245px,0.9fr)]">
-        <div className="fs-card fs-card-blue overflow-hidden rounded-lg">
+		<div className="overflow-hidden rounded-lg border-2 border-slate-300 bg-white shadow-sm">
           <table className="w-full border-collapse text-[11px]">
-            <thead><tr className="border-b-2 border-slate-300 bg-slate-100">
+			<thead><tr className="border-b-2 border-slate-400 bg-slate-200">
               <th className="px-2 py-1.5 text-right text-[11px] font-bold text-slate-800">النوع</th>
               <th className="w-16 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">العدد</th>
               <th className="w-20 px-2 py-1.5 text-center text-[11px] font-bold text-slate-800">المساحة</th>

@@ -76,9 +76,12 @@ import {
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 const UNIT_TYPES = [
+	{ id: "studio", name: "استوديو", category: "residential", color: "#2563eb", dbCount: "studioCount", dbArea: "studioArea", dbPrice: "studioPrice" },
   { id: "residential1br", name: "غرفة وصالة", category: "residential", color: "#3b82f6", dbCount: "residential1brCount", dbArea: "residential1brArea", dbPrice: "residential1brPrice" },
   { id: "residential2br", name: "غرفتين وصالة", category: "residential", color: "#8b5cf6", dbCount: "residential2brCount", dbArea: "residential2brArea", dbPrice: "residential2brPrice" },
-  { id: "residential3br", name: "ثلاث غرف", category: "residential", color: "#d946ef", dbCount: "residential3brCount", dbArea: "residential3brArea", dbPrice: "residential3brPrice" },
+	{ id: "residential2brMaid", name: "غرفتين وصالة مع غرفة خادمة", category: "residential", color: "#7c3aed", dbCount: "residential2brMaidCount", dbArea: "residential2brMaidArea", dbPrice: "residential2brMaidPrice" },
+	{ id: "residential3br", name: "ثلاث غرف وصالة", category: "residential", color: "#d946ef", dbCount: "residential3brCount", dbArea: "residential3brArea", dbPrice: "residential3brPrice" },
+	{ id: "residential3brMaid", name: "ثلاث غرف وصالة مع غرفة خادمة", category: "residential", color: "#be185d", dbCount: "residential3brMaidCount", dbArea: "residential3brMaidArea", dbPrice: "residential3brMaidPrice" },
   { id: "villa", name: "فيلا", category: "residential", color: "#0f766e", dbCount: "villaCount", dbArea: "villaArea", dbPrice: "villaPrice" },
   { id: "townhouse", name: "تاون هاوس", category: "residential", color: "#0e7490", dbCount: "townhouseCount", dbArea: "townhouseArea", dbPrice: "townhousePrice" },
   { id: "retailSmall", name: "تجزئة صغير", category: "retail", color: "#f59e0b", dbCount: "retailSmallCount", dbArea: "retailSmallArea", dbPrice: "retailSmallPrice" },
@@ -153,6 +156,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
   // ─── State: Unit Pricing (from DB) ──────────────────────────────────────────
   const [unitData, setUnitData] = useState<Record<string, { count: number; area: number; price: number }>>({});
+	const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({});
   const [hasUnitChanges, setHasUnitChanges] = useState(false);
 
   // ─── State: Sales Plan ──────────────────────────────────────────────────────
@@ -220,6 +224,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         };
       });
       setUnitData(newData);
+		setPriceDrafts(Object.fromEntries(Object.entries(newData).map(([id, unit]) => [id, String(unit.price)])));
       setHasUnitChanges(false);
       if (p.preConMonths) setDesignMonths(Number(p.preConMonths));
       if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
@@ -729,7 +734,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   };
 
   const adjustAllPrices = (multiplier: number) => {
-    setUnitData((previous) => Object.fromEntries(Object.entries(previous).map(([id, unit]) => [id, { ...unit, price: Math.max(0, Math.round(unit.price * multiplier)) }] )));
+	setUnitData((previous) => {
+	  const next = Object.fromEntries(Object.entries(previous).map(([id, unit]) => [id, { ...unit, price: Math.max(0, Math.round(unit.price * multiplier)) }]));
+	  setPriceDrafts(Object.fromEntries(Object.entries(next).map(([id, unit]) => [id, String(unit.price)])));
+	  return next;
+	});
     setHasUnitChanges(true);
     setHasPlanChanges(true);
   };
@@ -917,10 +926,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                               <div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{unit.name}</p><p className="mt-0.5 text-[10px] font-bold text-slate-500">{fmtFull(unit.count)} وحدة · {fmtFull(unit.area)} قدم²</p></div>
                               <span className="shrink-0 text-[10px] font-black" style={{ color: unit.color }}>تسعير مباشر</span>
                             </div>
-                            <div className="mt-2 grid grid-cols-[1.25fr_.8fr] items-center gap-2">
-                              <label className="rounded-lg border bg-white px-2 py-1.5 shadow-sm" style={{ borderColor: `${unit.color}90` }}><span className="block text-[9px] font-bold" style={{ color: unit.color }}>سعر القدم² — قابل للتعديل</span><div className="mt-0.5 flex items-center gap-1"><input aria-label={`سعر ${unit.name}`} type="number" min={0} value={unit.price} onChange={(event) => { updateUnit(unit.id, "price", Number(event.target.value) || 0); setImpactFocus(`سعر ${unit.name}`); }} className="h-7 w-full min-w-0 border-0 bg-transparent px-1 text-center text-base font-black tabular-nums text-slate-900 outline-none" /><span className="text-[9px] font-black" style={{ color: unit.color }}>AED</span></div></label>
-                              <div className="rounded-lg border border-slate-200 bg-white/80 px-2 py-1.5 text-left"><p className="text-[8px] font-bold text-slate-500">إيراد النوع</p><p className="mt-0.5 text-xs font-black tabular-nums" style={{ color: unit.color }}>{fmt(unit.total)} <span className="text-[8px]">AED</span></p></div>
-                            </div>
+						    <div className="mt-2 grid gap-2 sm:grid-cols-[1.15fr_.78fr_.9fr]">
+						      <label className="rounded-lg border-2 bg-white px-2 py-1.5 shadow-sm" style={{ borderColor: `${unit.color}b3` }}><span className="block text-[9px] font-bold" style={{ color: unit.color }}>سعر القدم² — اكتب الرقم مباشرة</span><div className="mt-0.5 flex items-center gap-1"><input aria-label={`سعر ${unit.name}`} type="text" inputMode="numeric" value={priceDrafts[unit.id] ?? String(unit.price)} onFocus={(event) => event.currentTarget.select()} onChange={(event) => { const raw = event.target.value.replace(/[^0-9]/g, ""); setPriceDrafts((drafts) => ({ ...drafts, [unit.id]: raw })); updateUnit(unit.id, "price", raw === "" ? 0 : Number(raw)); setImpactFocus(`سعر ${unit.name}`); }} onBlur={() => setPriceDrafts((drafts) => ({ ...drafts, [unit.id]: String(unit.price) }))} className="h-8 w-full min-w-0 border-0 bg-transparent px-1 text-center text-base font-black tabular-nums text-slate-950 outline-none" /><span className="text-[9px] font-black" style={{ color: unit.color }}>AED</span></div></label>
+						      <div className="rounded-lg border border-sky-200 bg-sky-50/80 px-2 py-1.5 text-left"><p className="text-[8px] font-bold text-sky-700">سعر الوحدة الواحدة</p><p className="mt-0.5 text-xs font-black tabular-nums text-sky-950">{fmt(unit.area * unit.price)} <span className="text-[8px]">AED</span></p></div>
+						      <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1.5 text-left"><p className="text-[8px] font-bold text-emerald-700">إجمالي النوع</p><p className="mt-0.5 text-xs font-black tabular-nums text-emerald-950">{fmt(unit.total)} <span className="text-[8px]">AED</span></p></div>
+						    </div>
                           </div>
                         </div>
                       </article>

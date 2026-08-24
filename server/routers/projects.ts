@@ -112,10 +112,13 @@ const factSheetFields = {
   startDate: z.string().optional(),
   // سيناريو التمويل
   financingScenario: z.enum(["offplan_escrow", "offplan_construction", "no_offplan", "build_for_sale", "build_for_rent", "rental"]).optional(),
-  // Unit distribution - counts
-  residential1brCount: z.coerce.number().int().optional(),
-  residential2brCount: z.coerce.number().int().optional(),
-  residential3brCount: z.coerce.number().int().optional(),
+	// Unit distribution - counts
+	studioCount: z.coerce.number().int().optional(),
+	residential1brCount: z.coerce.number().int().optional(),
+	residential2brCount: z.coerce.number().int().optional(),
+	residential2brMaidCount: z.coerce.number().int().optional(),
+	residential3brCount: z.coerce.number().int().optional(),
+	residential3brMaidCount: z.coerce.number().int().optional(),
   villaCount: z.coerce.number().int().optional(),
   townhouseCount: z.coerce.number().int().optional(),
   retailSmallCount: z.coerce.number().int().optional(),
@@ -124,10 +127,13 @@ const factSheetFields = {
   officeSmallCount: z.coerce.number().int().optional(),
   officeMediumCount: z.coerce.number().int().optional(),
   officeLargeCount: z.coerce.number().int().optional(),
-  // Unit distribution - areas
-  residential1brArea: z.coerce.number().int().optional(),
-  residential2brArea: z.coerce.number().int().optional(),
-  residential3brArea: z.coerce.number().int().optional(),
+	// Unit distribution - areas
+	studioArea: z.coerce.number().int().optional(),
+	residential1brArea: z.coerce.number().int().optional(),
+	residential2brArea: z.coerce.number().int().optional(),
+	residential2brMaidArea: z.coerce.number().int().optional(),
+	residential3brArea: z.coerce.number().int().optional(),
+	residential3brMaidArea: z.coerce.number().int().optional(),
   villaArea: z.coerce.number().int().optional(),
   townhouseArea: z.coerce.number().int().optional(),
   retailSmallArea: z.coerce.number().int().optional(),
@@ -136,10 +142,13 @@ const factSheetFields = {
   officeSmallArea: z.coerce.number().int().optional(),
   officeMediumArea: z.coerce.number().int().optional(),
   officeLargeArea: z.coerce.number().int().optional(),
-  // Unit distribution - prices per sqft
-  residential1brPrice: z.coerce.number().int().optional(),
-  residential2brPrice: z.coerce.number().int().optional(),
-  residential3brPrice: z.coerce.number().int().optional(),
+	// Unit distribution - prices per sqft
+	studioPrice: z.coerce.number().int().optional(),
+	residential1brPrice: z.coerce.number().int().optional(),
+	residential2brPrice: z.coerce.number().int().optional(),
+	residential2brMaidPrice: z.coerce.number().int().optional(),
+	residential3brPrice: z.coerce.number().int().optional(),
+	residential3brMaidPrice: z.coerce.number().int().optional(),
   villaPrice: z.coerce.number().int().optional(),
   townhousePrice: z.coerce.number().int().optional(),
   retailSmallPrice: z.coerce.number().int().optional(),

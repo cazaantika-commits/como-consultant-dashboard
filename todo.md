@@ -1504,6 +1504,10 @@
 - [ ] Define and implement the approved financial comparison as the single source for financial evaluation while preserving legacy financial records as read-only history
 - [ ] Verify the latest original offer for each consultant and exclude legacy financial values and JSON data from the new financial evaluation source
 - [ ] Await the owner's approved project scope and updated original consultant-offer files for each project before beginning offer review or financial comparison
+- [x] Add Studio, two-bedroom-with-maid, and three-bedroom-with-maid unit types without changing existing unit records or calculations
+- [x] Fix direct typed entry for the editable unit price-per-square-foot field in pricing so values can be replaced without arrow controls
+- [x] Show per-unit price alongside the existing total value for each unit type in the pricing view
+- [x] Increase contrast and visual hierarchy in Unit Distribution and Pricing while preserving light backgrounds and existing data
 - [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
 - [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Separate work tasks, owner decisions, and meeting follow-ups with clear headings and visual dividers in the operational summary

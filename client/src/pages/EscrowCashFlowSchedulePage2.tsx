@@ -103,10 +103,10 @@ export default function EscrowCashFlowSchedulePage2() {
     const pf = calculateProjectFormulas(i, r);
     // === Read actual pricing data from project record (same as ProjectCard) ===
     const p = projectQuery.data as any;
-    const defAreas = { res1: 750, res2: 1300, res3: 1650, retS: 850, retM: 1200, retL: 1800, offS: 1200, offM: 2000, offL: 3500 };
-    const defPrices = { res1: 1550, res2: 1500, res3: 1450, retS: 3000, retM: 2500, retL: 2000, offS: 1900, offM: 1800, offL: 1700 };
-    const hasSavedCounts = p && [p.residential1brCount, p.residential2brCount, p.residential3brCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
-    let c1 = Number(p?.residential1brCount) || 0, c2 = Number(p?.residential2brCount) || 0, c3 = Number(p?.residential3brCount) || 0;
+	const defAreas = { studio: 0, res1: 750, res2: 1300, res2Maid: 0, res3: 1650, res3Maid: 0, retS: 850, retM: 1200, retL: 1800, offS: 1200, offM: 2000, offL: 3500 };
+	const defPrices = { studio: 0, res1: 1550, res2: 1500, res2Maid: 0, res3: 1450, res3Maid: 0, retS: 3000, retM: 2500, retL: 2000, offS: 1900, offM: 1800, offL: 1700 };
+	const hasSavedCounts = p && [p.studioCount, p.residential1brCount, p.residential2brCount, p.residential2brMaidCount, p.residential3brCount, p.residential3brMaidCount, p.retailSmallCount, p.retailMediumCount, p.retailLargeCount, p.officeSmallCount, p.officeMediumCount, p.officeLargeCount].some((v: any) => Number(v) > 0);
+	let cStudio = Number(p?.studioCount) || 0, c1 = Number(p?.residential1brCount) || 0, c2 = Number(p?.residential2brCount) || 0, c2Maid = Number(p?.residential2brMaidCount) || 0, c3 = Number(p?.residential3brCount) || 0, c3Maid = Number(p?.residential3brMaidCount) || 0;
     let cRS = Number(p?.retailSmallCount) || 0, cRM = Number(p?.retailMediumCount) || 0, cRL = Number(p?.retailLargeCount) || 0;
     let cOS = Number(p?.officeSmallCount) || 0, cOM = Number(p?.officeMediumCount) || 0, cOL = Number(p?.officeLargeCount) || 0;
     if (!hasSavedCounts) {
@@ -117,10 +117,13 @@ export default function EscrowCashFlowSchedulePage2() {
       if (sellRet > 0) { cRS = Math.round(sellRet * 0.4 / defAreas.retS); cRM = Math.round(sellRet * 0.4 / defAreas.retM); cRL = Math.round(sellRet * 0.2 / defAreas.retL); }
       if (sellOff > 0) { cOS = Math.round(sellOff * 0.4 / defAreas.offS); cOM = Math.round(sellOff * 0.4 / defAreas.offM); cOL = Math.round(sellOff * 0.2 / defAreas.offL); }
     }
-    const units = [
-      { name: "غرفة وصالة", category: "residential" as const, area: Number(p?.residential1brArea) || defAreas.res1, price: Number(p?.residential1brPrice) || defPrices.res1, count: c1 },
-      { name: "غرفتين وصالة", category: "residential" as const, area: Number(p?.residential2brArea) || defAreas.res2, price: Number(p?.residential2brPrice) || defPrices.res2, count: c2 },
-      { name: "ثلاث غرف وصالة", category: "residential" as const, area: Number(p?.residential3brArea) || defAreas.res3, price: Number(p?.residential3brPrice) || defPrices.res3, count: c3 },
+	const units = [
+	  { name: "استوديو", category: "residential" as const, area: Number(p?.studioArea) || defAreas.studio, price: Number(p?.studioPrice) || defPrices.studio, count: cStudio },
+	  { name: "غرفة وصالة", category: "residential" as const, area: Number(p?.residential1brArea) || defAreas.res1, price: Number(p?.residential1brPrice) || defPrices.res1, count: c1 },
+	  { name: "غرفتين وصالة", category: "residential" as const, area: Number(p?.residential2brArea) || defAreas.res2, price: Number(p?.residential2brPrice) || defPrices.res2, count: c2 },
+	  { name: "غرفتين وصالة مع غرفة خادمة", category: "residential" as const, area: Number(p?.residential2brMaidArea) || defAreas.res2Maid, price: Number(p?.residential2brMaidPrice) || defPrices.res2Maid, count: c2Maid },
+	  { name: "ثلاث غرف وصالة", category: "residential" as const, area: Number(p?.residential3brArea) || defAreas.res3, price: Number(p?.residential3brPrice) || defPrices.res3, count: c3 },
+	  { name: "ثلاث غرف وصالة مع غرفة خادمة", category: "residential" as const, area: Number(p?.residential3brMaidArea) || defAreas.res3Maid, price: Number(p?.residential3brMaidPrice) || defPrices.res3Maid, count: c3Maid },
       { name: "تجزئة / صغير", category: "retail" as const, area: Number(p?.retailSmallArea) || defAreas.retS, price: Number(p?.retailSmallPrice) || defPrices.retS, count: cRS },
       { name: "تجزئة / متوسط", category: "retail" as const, area: Number(p?.retailMediumArea) || defAreas.retM, price: Number(p?.retailMediumPrice) || defPrices.retM, count: cRM },
       { name: "تجزئة / كبير", category: "retail" as const, area: Number(p?.retailLargeArea) || defAreas.retL, price: Number(p?.retailLargePrice) || defPrices.retL, count: cRL },

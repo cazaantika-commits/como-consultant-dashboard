@@ -2387,7 +2387,7 @@ export const cashFlowSettingsRouter = router({
       const totalRevenue = costs?.totalRevenue || 0;
       const calculatedRevenue = costs?.calculatedRevenue || 0;
       const totalUnits = mo ? (() => {
-        const UNIT_KEYS = ["residentialStudioCount","residential1brCount","residential2brCount","residential3brCount","retailSmallCount","retailMediumCount","retailLargeCount","officeSmallCount","officeMediumCount","officeLargeCount"];
+        const UNIT_KEYS = ["residentialStudioCount", "studioCount", "residential1brCount", "residential2brCount", "residential2brMaidCount", "residential3brCount", "residential3brMaidCount", "retailSmallCount", "retailMediumCount", "retailLargeCount", "officeSmallCount", "officeMediumCount", "officeLargeCount"];
         return UNIT_KEYS.reduce((s, k) => s + (Number((mo as any)[k]) || 0), 0);
       })() : 0;
 
