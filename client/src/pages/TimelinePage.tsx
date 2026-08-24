@@ -191,7 +191,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
   return (
-    <div className="bg-gray-50 p-2" dir="rtl">
+    <div className="bg-slate-100 p-2" dir="rtl">
       <div className="max-w-full mx-auto space-y-2">
         {/* HEADER */}
         <div className="flex items-center justify-between flex-wrap gap-2">
@@ -224,8 +224,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
         {selectedProjectId && !projectQuery.isLoading && (
           <>
             {/* SECTION 1: PROJECT PHASES TIMELINE */}
-            <section className="fs-card fs-card-blue overflow-hidden">
-              <div className="px-3 py-2 border-b border-gray-100">
+            <section className="fs-card fs-card-blue overflow-hidden border-2 border-slate-300">
+              <div className="border-b-2 border-slate-300 px-3 py-2">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 text-blue-600" />
@@ -254,9 +254,9 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                       const MN=["\u064a\u0646\u0627","\u0641\u0628\u0631","\u0645\u0627\u0631","\u0623\u0628\u0631","\u0645\u0627\u064a","\u064a\u0648\u0646","\u064a\u0648\u0644","\u0623\u063a\u0633","\u0633\u0628\u062a","\u0623\u0643\u062a","\u0646\u0648\u0641","\u062f\u064a\u0633"];
                       let ml=""; if(projectStartDate){const pts=projectStartDate.split("-").map(Number);if(pts[0]&&pts[1])ml=MN[(pts[1]-1+i)%12];}
                       return (
-                        <div key={i} className="flex-1 text-center flex flex-col items-center leading-tight">
-                          <span className={`text-[7px] font-bold ${isDesign ? 'text-blue-600' : 'text-emerald-600'}`}>{ml || displayNum}</span>
-                          <span className="text-[6px] text-gray-400">{displayNum}</span>
+                        <div key={i} className="flex flex-1 flex-col items-center border-l border-slate-200 text-center leading-tight last:border-l-0">
+                          <span className={`text-[7px] font-extrabold ${isDesign ? 'text-blue-700' : 'text-emerald-700'}`}>{ml || displayNum}</span>
+                          <span className="text-[6px] font-semibold text-slate-500">{displayNum}</span>
                         </div>
                       );
                     })}
@@ -289,9 +289,9 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                           <Icon className="w-3 h-3" style={{ color: phase.color }} />
                           <span className="text-[10px] font-medium text-gray-700 truncate">{phase.name}</span>
                         </div>
-                        <div className="flex-1 h-5 bg-gray-100 rounded-full relative overflow-hidden" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + displayProjectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + displayProjectEnd + ' - 1px), rgba(0,0,0,0.04) calc(100% / ' + displayProjectEnd + '))' }}>
+                        <div className="relative h-6 flex-1 overflow-hidden rounded-md border border-slate-300 bg-slate-100" style={{ backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent calc(100% / ' + displayProjectEnd + ' - 1px), rgba(71,85,105,0.22) calc(100% / ' + displayProjectEnd + ' - 1px), rgba(71,85,105,0.22) calc(100% / ' + displayProjectEnd + '))' }}>
                           <div className="absolute h-full rounded-full transition-all" style={{ right: `${rightPct}%`, width: `${widthPct}%`, backgroundColor: phase.color, opacity: 0.8 }} />
-                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-medium text-gray-700">شهر {start} - {end}</span>
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-slate-800">شهر {start} - {end}</span>
                         </div>
                       </div>
                     );
@@ -330,8 +330,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
             </section>
 
             {/* SECTION 2: CONSULTANT DESIGN PHASES SCHEDULE */}
-            <section className="fs-card fs-card-violet overflow-hidden">
-              <div className="px-3 py-2 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+            <section className="fs-card fs-card-violet overflow-hidden border-2 border-slate-300">
+              <div className="flex items-center gap-2 border-b-2 border-slate-300 bg-blue-50 px-3 py-2">
                 <Palette className="w-3.5 h-3.5 text-blue-700" />
                 <h2 className="text-[11px] font-bold text-blue-800">مراحل التصميم واستحقاق الاستشاري</h2>
                 {designPaymentTotal !== 100 && (
@@ -343,22 +343,22 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                 <span className="text-[9px] text-gray-400">إجمالي: {totalDesignWeeks} أسبوع ≈ {totalDesignMonths} شهر</span>
               </div>
               <div className="p-3">
-                <div className="grid grid-cols-[28px_1fr_1fr_80px_80px] gap-2 mb-2 text-[10px] font-bold text-gray-500 border-b border-gray-100 pb-2">
-                  <span>#</span>
-                  <span>المرحلة</span>
-                  <span className="text-gray-400">English</span>
-                  <span className="text-center">أسابيع</span>
-                  <span className="text-center">%</span>
+                <div className="grid grid-cols-[36px_1fr_1fr_80px_80px] border border-slate-300 bg-slate-900 text-[10px] font-extrabold text-white">
+                  <span className="border-l border-slate-600 px-2 py-2">#</span>
+                  <span className="border-l border-slate-600 px-2 py-2">المرحلة</span>
+                  <span className="border-l border-slate-600 px-2 py-2">English</span>
+                  <span className="border-l border-slate-600 px-2 py-2 text-center">أسابيع</span>
+                  <span className="px-2 py-2 text-center">%</span>
                 </div>
                 {designPayments.map((phase, idx) => (
-                  <div key={phase.id} className="grid grid-cols-[28px_1fr_1fr_80px_80px] gap-2 items-center py-1.5 border-b border-gray-50">
-                    <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[9px] font-bold">
+                  <div key={phase.id} className="grid grid-cols-[36px_1fr_1fr_80px_80px] items-center border-x border-b border-slate-300 bg-white">
+                    <div className="flex min-h-9 items-center justify-center border-l border-slate-200"><div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[9px] font-extrabold text-blue-800">
                       {idx + 1}
-                    </div>
-                    <span className="text-[11px] font-medium text-gray-800">{phase.label}</span>
-                    <span className="text-[9px] text-gray-400">{phase.labelEn}</span>
-                    <span className="w-12 mx-auto text-center text-xs font-mono bg-gray-50 border border-gray-100 rounded px-1 py-0.5 text-gray-700">{phase.durationWeeks}</span>
-                    <span className="w-12 mx-auto text-center text-xs font-mono bg-gray-50 border border-gray-100 rounded px-1 py-0.5 text-gray-700">{phase.pct}%</span>
+                    </div></div>
+                    <span className="border-l border-slate-200 px-2 py-2 text-[11px] font-bold text-slate-900">{phase.label}</span>
+                    <span className="border-l border-slate-200 px-2 py-2 text-[9px] font-medium text-slate-600">{phase.labelEn}</span>
+                    <span className="border-l border-slate-200 px-2 py-2 text-center font-mono text-xs font-bold text-slate-800">{phase.durationWeeks}</span>
+                    <span className="px-2 py-2 text-center font-mono text-xs font-extrabold text-slate-900">{phase.pct}%</span>
                   </div>
                 ))}
                 {/* Visual bars */}

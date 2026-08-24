@@ -37,7 +37,7 @@ function formatDate(dateStr: string): string {
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
-export default function V2InvestorCashFlow() {
+export default function V2InvestorCashFlow({ embedded = false }: { embedded?: boolean }) {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
@@ -155,15 +155,15 @@ export default function V2InvestorCashFlow() {
   return (
     <div className="bg-gray-50" dir="rtl">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="sticky top-0 z-40 border-b-2 border-slate-300 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="max-w-full mx-auto px-5 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => navigate("/v2")} className="p-2 rounded-lg hover:bg-gray-100 transition">
-              <ArrowRight className="w-5 h-5 text-gray-600" />
-            </button>
+            {!embedded && <button onClick={() => navigate("/bateekha")} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
+              <ArrowRight className="w-4 h-4" />العودة إلى دليل الدراسات
+            </button>}
             <div className="min-w-0">
-              <h1 className="text-base font-bold text-gray-900">التدفقات النقدية للمستثمر</h1>
-              <p className="text-xs text-gray-500 truncate">{projectName}</p>
+              <h1 className="text-base font-extrabold text-slate-950">التدفقات النقدية للمستثمر</h1>
+              <p className="text-xs font-medium text-slate-600 truncate">{projectName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -278,24 +278,24 @@ export default function V2InvestorCashFlow() {
           </div>
         </div>
       </section>
-      <div className="investor-cashflow-table-wrap max-h-[70vh] overflow-auto">
-        <table className="investor-cashflow-table w-full text-xs border-collapse min-w-max">
+      <div className="investor-cashflow-table-wrap max-h-[70vh] overflow-auto border-y-2 border-slate-400 bg-white">
+        <table className="investor-cashflow-table w-max min-w-[860px] text-xs border-separate border-spacing-0">
           <thead className="sticky top-0 z-30 bg-white shadow-md">
             {/* Date row */}
             <tr>
-              <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px] text-[10px] text-gray-500">التاريخ</th>
+              <th className="sticky right-0 z-20 w-[190px] min-w-[190px] border-b-2 border-slate-400 bg-slate-200 px-3 py-2 text-right text-[11px] font-extrabold text-slate-900">التاريخ</th>
               {months.map((m, i) => (
-                <th key={i} className="min-w-[62px] border-s border-slate-300 bg-white px-1 py-1.5 text-center text-[10px] font-black leading-4 text-slate-800">
-                  {m.date && <><span className="block">{formatCashFlowMonthYear(m.date).month}</span><span className="block text-[9px] font-semibold text-slate-500">{formatCashFlowMonthYear(m.date).year}</span></>}
+                <th key={i} className="min-w-[54px] border-s border-b-2 border-slate-400 bg-slate-100 px-1 py-2 text-center text-[10px] font-extrabold leading-4 text-slate-950">
+                  {m.date && <><span className="block">{formatCashFlowMonthYear(m.date).month}</span><span className="block text-[9px] font-bold text-slate-600">{formatCashFlowMonthYear(m.date).year}</span></>}
                 </th>
               ))}
             </tr>
             {/* Phase band */}
             <tr>
-              <th className="sticky right-0 z-20 bg-gray-100 border-b border-gray-200 px-3 py-1.5 text-right w-[220px] min-w-[220px]"></th>
+              <th className="sticky right-0 z-20 w-[190px] min-w-[190px] border-b-2 border-slate-400 bg-slate-200 px-3 py-1.5 text-right"></th>
               {months.map((m, i) => (
-                <th key={i} className={`min-w-[62px] border-s border-slate-300 px-1.5 py-1.5 text-center ${phaseColors[m.phase]} font-black text-[10px] text-slate-900`}>
-                  <span className="block">{phaseNames[m.phase]}</span><span className="block text-[9px] opacity-70">شهر {m.label}</span>
+                <th key={i} className={`min-w-[54px] border-s border-b-2 border-slate-400 px-1 py-1.5 text-center ${phaseColors[m.phase]} font-extrabold text-[10px] text-slate-950`}>
+                  <span className="block">{phaseNames[m.phase]}</span><span className="block text-[9px] font-bold text-slate-700">شهر {m.label}</span>
                 </th>
               ))}
             </tr>
@@ -311,10 +311,10 @@ export default function V2InvestorCashFlow() {
                 </tr>
                 {paidRows.map((item, i) => (
                   <tr key={`paid-${i}`} className="border-b border-gray-100 bg-gray-50">
-                    <td className="sticky right-0 z-10 bg-gray-50 px-3 py-1 text-gray-700 font-semibold border-l border-gray-200 w-[220px] min-w-[220px]">
+                    <td className="sticky right-0 z-10 w-[190px] min-w-[190px] border-l border-slate-300 bg-gray-50 px-3 py-1.5 font-bold text-slate-800">
                       {item.label}
                     </td>
-                    <td className="px-1.5 py-1 text-center text-gray-600 font-medium" colSpan={totalMonths}>
+                    <td className="border-s border-slate-200 px-1.5 py-1.5 text-center font-semibold text-slate-700" colSpan={totalMonths}>
                       {fmt(item.paid)} (مدفوع)
                     </td>
                   </tr>
@@ -331,12 +331,12 @@ export default function V2InvestorCashFlow() {
             {debitRows.map((item, i) => {
               const values = getRowValues(item);
               return (
-                <tr key={`debit-${i}`} className={`border-b border-gray-100 hover:bg-red-50/30 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/60"}`}>
-                  <td className="sticky right-0 z-10 bg-inherit px-3 py-1 text-gray-800 font-semibold border-l border-gray-100 w-[220px] min-w-[220px]">
+                <tr key={`debit-${i}`} className={`border-b border-slate-200 hover:bg-red-50/30 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                  <td className="sticky right-0 z-10 w-[190px] min-w-[190px] border-l border-slate-300 bg-inherit px-3 py-1.5 font-bold text-slate-900">
                     {item.label}
                   </td>
                   {values.map((v, j) => (
-                    <td key={j} className={`px-1.5 py-1 text-center tabular-nums ${v > 0 ? "text-red-600 font-medium" : "text-gray-300"}`}>
+                    <td key={j} className={`border-s border-slate-200 px-1 py-1.5 text-center tabular-nums ${v > 0 ? "font-semibold text-red-700" : "text-slate-300"}`}>
                       {v > 0 ? fmt(v) : "-"}
                     </td>
                   ))}
@@ -345,11 +345,11 @@ export default function V2InvestorCashFlow() {
             })}
             {/* Total Debit */}
             <tr className="bg-red-100/70 font-bold border-y-2 border-red-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-              <td className="sticky right-0 z-20 bg-red-100 px-3 py-1.5 text-red-900 border-l border-red-300 w-[220px] min-w-[220px]">
+              <td className="sticky right-0 z-20 w-[190px] min-w-[190px] border-l border-red-400 bg-red-100 px-3 py-2 text-red-950">
                 إجمالي المصروفات
               </td>
               {debitTotals.map((v, i) => (
-                <td key={i} className="px-1.5 py-1 text-center tabular-nums text-red-700">
+                <td key={i} className="border-s border-red-200 px-1 py-2 text-center font-extrabold tabular-nums text-red-800">
                   {v > 0 ? fmt(v) : "-"}
                 </td>
               ))}
@@ -364,12 +364,12 @@ export default function V2InvestorCashFlow() {
             {creditRows.map((item, i) => {
               const values = getRowValues(item);
               return (
-                <tr key={`credit-${i}`} className={`border-b border-gray-100 hover:bg-green-50/30 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/60"}`}>
-                  <td className="sticky right-0 z-10 bg-inherit px-3 py-1 text-gray-800 font-semibold border-l border-gray-100 w-[220px] min-w-[220px]">
+                <tr key={`credit-${i}`} className={`border-b border-slate-200 hover:bg-green-50/30 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                  <td className="sticky right-0 z-10 w-[190px] min-w-[190px] border-l border-slate-300 bg-inherit px-3 py-1.5 font-bold text-slate-900">
                     {item.label}
                   </td>
                   {values.map((v, j) => (
-                    <td key={j} className={`px-1.5 py-1 text-center tabular-nums ${v > 0 ? "text-green-600 font-medium" : "text-gray-300"}`}>
+                    <td key={j} className={`border-s border-slate-200 px-1 py-1.5 text-center tabular-nums ${v > 0 ? "font-semibold text-emerald-700" : "text-slate-300"}`}>
                       {v > 0 ? fmt(v) : "-"}
                     </td>
                   ))}
@@ -378,11 +378,11 @@ export default function V2InvestorCashFlow() {
             })}
             {/* Total Credit */}
             <tr className="bg-green-100/70 font-bold border-y-2 border-green-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-              <td className="sticky right-0 z-20 bg-green-100 px-3 py-1.5 text-green-900 border-l border-green-300 w-[220px] min-w-[220px]">
+              <td className="sticky right-0 z-20 w-[190px] min-w-[190px] border-l border-emerald-400 bg-emerald-100 px-3 py-2 text-emerald-950">
                 إجمالي الإيرادات
               </td>
               {creditTotals.map((v, i) => (
-                <td key={i} className="px-1.5 py-1 text-center tabular-nums text-green-700">
+                <td key={i} className="border-s border-emerald-200 px-1 py-2 text-center font-extrabold tabular-nums text-emerald-800">
                   {v > 0 ? fmt(v) : "-"}
                 </td>
               ))}
@@ -390,11 +390,11 @@ export default function V2InvestorCashFlow() {
 
             {/* ─── صافي الشهر ─── */}
             <tr className="bg-cyan-100/80 font-bold border-y-2 border-cyan-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-              <td className="sticky right-0 z-20 bg-cyan-100 px-3 py-1.5 text-cyan-950 border-l border-cyan-400 w-[220px] min-w-[220px]">
+              <td className="sticky right-0 z-20 w-[190px] min-w-[190px] border-l border-cyan-500 bg-cyan-100 px-3 py-2 text-cyan-950">
                 صافي الشهر
               </td>
               {netFlow.map((v, i) => (
-                <td key={i} className={`px-1.5 py-1 text-center tabular-nums font-semibold ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
+                <td key={i} className={`border-s border-cyan-200 px-1 py-2 text-center tabular-nums font-extrabold ${v >= 0 ? "text-emerald-800" : "text-red-700"}`}>
                   {fmt(v)}
                 </td>
               ))}
@@ -402,11 +402,11 @@ export default function V2InvestorCashFlow() {
 
             {/* ─── التراكمي ─── */}
             <tr className="bg-violet-100/70 font-bold border-y-2 border-violet-300">
-              <td className="sticky right-0 z-20 bg-violet-100 px-3 py-1.5 text-violet-950 border-l border-violet-300 w-[220px] min-w-[220px]">
+              <td className="sticky right-0 z-20 w-[190px] min-w-[190px] border-l border-violet-400 bg-violet-100 px-3 py-2 text-violet-950">
                 التراكمي
               </td>
               {cumulative.map((v, i) => (
-                <td key={i} className={`px-1.5 py-1 text-center tabular-nums font-bold ${v >= 0 ? "text-green-700" : "text-red-600"}`}>
+                <td key={i} className={`border-s border-violet-200 px-1 py-2 text-center tabular-nums font-extrabold ${v >= 0 ? "text-emerald-800" : "text-red-700"}`}>
                   {fmt(v)}
                 </td>
               ))}

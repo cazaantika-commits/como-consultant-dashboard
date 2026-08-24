@@ -1509,6 +1509,13 @@
 - [x] Show per-unit price alongside the existing total value for each unit type in the pricing view
 - [x] Increase contrast and visual hierarchy in Unit Distribution and Pricing while preserving light backgrounds and existing data
 - [x] Create a higher-contrast visual sample for text, numeric inputs, and table separators in Unit Distribution only before any wider rollout
+- [x] Add a prominent colored "العودة إلى دليل الدراسات" control at the top of Financial Studies subpages
+- [x] Apply the approved high-contrast typography and compact professional grid system to Financial Studies tables without altering data or formulas
+- [x] Compact monthly and portfolio table columns to content width, add clear horizontal and vertical separators, and distinguish total columns and rows
+- [x] Replace scattered decorative color treatments in Financial Studies tables with restrained functional colors modeled on the approved portfolio-table reference
+- [x] Apply the user-provided screenshots as the direct visual reference for the named Financial Studies pages without changing financial data or logic
+- [x] Apply compact content-width columns, an upper colored return control, clear grid lines, and a distinguished total treatment to all four referenced Financial Studies screens
+- [x] Remove duplicate internal return controls when financial reports are rendered as tabs inside the Financial Studies guide
 - [x] Audit every current task source, status, owner, project link, and creation path before retiring or renewing any old task
 - [x] Classify stale and duplicate tasks into preserved history, renewed active work, or items requiring owner confirmation without deleting records
 - [x] Separate work tasks, owner decisions, and meeting follow-ups with clear headings and visual dividers in the operational summary

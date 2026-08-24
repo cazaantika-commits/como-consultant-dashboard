@@ -80,14 +80,14 @@ function TabContent({ tabId }: { tabId: TabId }) {
     case "sales": return <V2WaelSales embedded />;
     case "timeline": return <TimelinePage embedded />;
     case "settings": return <SettingsRulesPage embedded />;
-    case "cashflows": return <V2InvestorCashFlow />;
+    case "cashflows": return <V2InvestorCashFlow embedded />;
     case "escrow": return <V2EscrowCashFlow />;
     case "feasibility": return <V2Feasibility embedded />;
     case "mall": return <div className="flex flex-col items-center justify-center gap-2 py-12 text-center"><Building2 className="h-8 w-8 text-slate-300" /><p className="text-xs text-slate-500">المركز التجاري — قيد الإعداد</p></div>;
     case "portfolio": return <V2Portfolio />;
-    case "portfolio_monthly": return <V2PortfolioMonthly />;
+    case "portfolio_monthly": return <V2PortfolioMonthly embedded />;
     case "portfolio_escrow_liquidity": return <V2PortfolioEscrowLiquidity />;
-    case "capital_portfolio": return <V2CapitalPortfolio />;
+    case "capital_portfolio": return <V2CapitalPortfolio embedded />;
     default: return null;
   }
 }
@@ -164,7 +164,7 @@ export default function BateekhaPage() {
         </main>
       ) : (
         <div className="w-full">
-          <div className="border-b border-slate-200 bg-white px-4 py-2 sm:px-6"><div className="mx-auto flex max-w-[1500px] items-center gap-3"><button type="button" onClick={() => setActiveTab(null)} className="rounded-lg px-2 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900">العودة إلى دليل الدراسات</button><span className="h-4 w-px bg-slate-200" /><span className="text-xs font-bold text-slate-800">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-medium text-slate-500">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
+          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={() => setActiveTab(null)} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى دليل الدراسات</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
           <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} /></Suspense>
         </div>
       )}
