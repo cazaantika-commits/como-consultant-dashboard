@@ -8,6 +8,7 @@ import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-a
 import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
+import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import MarketEvidencePanel from "./MarketEvidencePanel";
 import MarketSearchProfilePanel from "./MarketSearchProfilePanel";
 
@@ -66,6 +67,8 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
   const projectQuery = trpc.projects.getById.useQuery(projectId || 0, { enabled: !!projectId });
   const stagesQuery = trpc.joelleEngine.getStages.useQuery(projectId || 0, { enabled: !!projectId });
   const marketProfileQuery = trpc.marketEvidence.getSearchProfile.useQuery({ projectId: projectId || 0 }, { enabled: !!projectId });
+  const marketEvidenceQuery = trpc.marketEvidence.getProjectEvidence.useQuery({ projectId: projectId || 0 }, { enabled: !!projectId });
+  const reportLinksQuery = trpc.marketEvidence.getMarketReportLinks.useQuery({ projectId: projectId || 0 }, { enabled: !!projectId });
 
   const decision = useMemo(() => {
     const stages = (stagesQuery.data || []) as StageRecord[];
@@ -107,6 +110,9 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
   const paymentPlan = decision.pricing.paymentPlan || {};
   const hasPaymentPlan = [paymentPlan.booking, paymentPlan.construction, paymentPlan.handover, paymentPlan.deferred]
     .some((item) => Number(item?.pct || 0) > 0);
+  const verifiedEvidence = (marketEvidenceQuery.data?.evidence || []).filter((item: any) => item.verificationStatus === "verified" && item.isCompatible);
+  const linkedReports = reportLinksQuery.data || [];
+  const latestApproval = (marketEvidenceQuery.data?.approvals || [])[0] as any;
 
   return (
     <div className="mx-auto max-w-7xl space-y-4" dir="rtl">
@@ -166,6 +172,31 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
             </dl>
           </CardContent>
         </Card>
+      </section>
+
+      <section className="rounded-2xl border border-violet-200 bg-violet-50/35 p-4 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-violet-100 pb-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold text-violet-700">مرجع القرار</p>
+            <h3 className="mt-1 text-sm font-bold text-slate-900">مراجع قرار السوق المرتبطة بالمشروع</h3>
+            <p className="mt-1 text-xs leading-5 text-slate-600">هذه قائمة قراءة مباشرة من الأدلة الموثقة والتقارير المرتبطة بالفلترة الحالية؛ لا تنشئ نسخة جديدة ولا تغيّر التسعير أو التدفقات.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="rounded-full bg-white px-2.5 py-1 font-bold text-emerald-800 ring-1 ring-emerald-200">{verifiedEvidence.length} دليل موثق</span>
+            <span className="rounded-full bg-white px-2.5 py-1 font-bold text-indigo-800 ring-1 ring-indigo-200">{linkedReports.length} تقرير مرتبط</span>
+            {latestApproval && <span className={`rounded-full px-2.5 py-1 font-bold ${latestApproval.decisionStatus === "approved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{latestApproval.decisionStatus === "approved" ? "قرار معتمد" : "قرار قيد المراجعة"}</span>}
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <div className="rounded-xl border border-white bg-white/80 p-3">
+            <p className="text-xs font-bold text-slate-800">الأدلة المتوافقة الموثقة</p>
+            {verifiedEvidence.length > 0 ? <div className="mt-2 space-y-2">{verifiedEvidence.slice(0, 3).map((item: any) => <div key={item.id} className="border-r-2 border-emerald-400 pr-2 text-xs"><p className="font-bold text-slate-800">{item.comparableName || item.sourceName}</p><p className="mt-0.5 text-slate-500">{item.sourceName} · {item.sourceDate || "دون تاريخ"} · ثقة {item.confidenceGrade === "high" ? "عالية" : item.confidenceGrade === "medium" ? "متوسطة" : "منخفضة"}</p></div>)}</div> : <p className="mt-2 text-xs text-slate-500">لا يوجد دليل موثق متوافق بعد.</p>}
+          </div>
+          <div className="rounded-xl border border-white bg-white/80 p-3">
+            <p className="text-xs font-bold text-slate-800">تقارير السوق المرتبطة</p>
+            {linkedReports.length > 0 ? <div className="mt-2 space-y-2">{linkedReports.slice(0, 3).map((item: any) => <div key={item.link.id} className="border-r-2 border-indigo-400 pr-2 text-xs"><a href={item.report.fileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-bold text-indigo-800 hover:underline">{item.report.reportTitle}<ExternalLink className="h-3 w-3" /></a><p className="mt-0.5 text-slate-500">{item.report.source} · {item.report.reportDate || "دون تاريخ"}{item.link.relevanceNote ? ` · ${item.link.relevanceNote}` : ""}</p></div>)}</div> : <p className="mt-2 text-xs text-slate-500">لا يوجد تقرير سوق مرتبط بهذه الفلترة بعد.</p>}
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1.35fr]">

@@ -44,6 +44,14 @@ type Participant = {
   agentColor: string | null;
 };
 
+const KNOWLEDGE_TYPE_LABELS: Record<string, string> = {
+  decision: "قرار مرجعي",
+  evaluation: "تقييم",
+  pattern: "نمط",
+  insight: "رؤية",
+  lesson: "درس مستفاد",
+};
+
 export default function MeetingRoomPage() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/meetings/:id");
@@ -99,6 +107,11 @@ export default function MeetingRoomPage() {
   const saveToKnowledge = trpc.meetings.saveToKnowledge.useMutation();
   const [isRetryingTasks, setIsRetryingTasks] = useState(false);
   const textToSpeech = trpc.agents.textToSpeech.useMutation();
+  const outputCounts = {
+    decisions: meeting?.decisionsJson?.length || 0,
+    tasks: meeting?.extractedTasksJson?.length || 0,
+    lessons: meeting?.knowledgeItemsJson?.length || 0,
+  };
 
   // Track if user has scrolled up manually
   useEffect(() => {
@@ -731,6 +744,13 @@ export default function MeetingRoomPage() {
                 </p>
               </div>
 
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div><p className="text-sm font-bold text-slate-800">تصنيف مخرجات الاجتماع</p><p className="mt-0.5 text-xs text-slate-500">تُقرأ هذه الفئات من محضر الاجتماع نفسه: قرار، مهمة تنفيذية، أو درس مستفاد. لا يُنشأ سجل مخرجات موازٍ.</p></div>
+                  <div className="flex flex-wrap gap-2 text-xs font-bold"><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">{outputCounts.decisions} قرار</span><span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-800">{outputCounts.tasks} مهمة</span><span className="rounded-full bg-violet-100 px-2.5 py-1 text-violet-800">{outputCounts.lessons} درس أو معرفة</span></div>
+                </div>
+              </div>
+
               {/* Decisions */}
               {meeting.decisionsJson?.length > 0 && (
                 <div>
@@ -830,12 +850,12 @@ export default function MeetingRoomPage() {
               {meeting.knowledgeItemsJson?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-bold text-stone-700 mb-2 flex items-center gap-2">
-                    🧠 المعرفة المؤسسية
+                    🧠 الدروس والمعرفة المستفادة
                   </h3>
                   <div className="space-y-2">
                     {meeting.knowledgeItemsJson.map((k: any, i: number) => (
                       <div key={i} className="p-2.5 rounded-lg bg-violet-50 border border-violet-100">
-                        <div className="text-sm font-medium text-stone-700">{k.title}</div>
+                        <div className="flex items-start justify-between gap-2"><div className="text-sm font-medium text-stone-700">{k.title}</div><span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-violet-100">{KNOWLEDGE_TYPE_LABELS[k.type] || "معرفة مستفادة"}</span></div>
                         <div className="text-xs text-stone-500 mt-1">{k.content}</div>
                       </div>
                     ))}

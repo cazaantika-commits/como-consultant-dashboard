@@ -1479,3 +1479,8 @@
 - [x] Audit the Tools and Reports section, its current content, sources, overlap, and gaps; provide development recommendations before making changes
 - [x] Reorganize the Tools and Reports section into Owner Operations, Project Intelligence, and System Services without removing any tool or route
 - [x] Add concise source and usage guidance to each layer without copying operational data into new stores
+- [x] Link each project's Market Decision to its existing approved market reports and knowledge evidence without duplicating files or source records
+- [x] Classify meeting outputs as decision, task, or lesson while preserving the original meeting record and existing linked task behavior
+- [x] Add a compact owner "Today / needs decision" summary using only source-backed task, meeting, launch, and approved-change data
+- [x] Add focused regression tests and verify the new owner workflow on desktop and mobile before delivery
+- [x] Fix Meeting Room source-query compatibility so an existing completed meeting and its classified outputs load without an endless spinner

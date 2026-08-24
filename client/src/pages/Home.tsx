@@ -297,6 +297,7 @@ export default function Home() {
   const { isOwner } = useOwner();
   // CC members see the full platform (read-only)
   const effectivelyAuthenticated = isAuthenticated || isCCAuth;
+  const ccToken = isCCAuth ? window.localStorage.getItem("cc_token") || undefined : undefined;
   const effectiveUser = user ?? (ccMember ? { name: ccMember.nameAr, role: ccMember.role } : null);
   const [, navigate] = useLocation();
   const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
@@ -337,8 +338,11 @@ export default function Home() {
   const { data: homepageProjects = [] } = trpc.projects.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
   const { data: homepageTaskStats } = trpc.tasks.stats.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
   const { data: homepageMeetings = [] } = trpc.meetings.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
+  const ownerSummaryQuery = trpc.projectLaunchGate.getOwnerSummary.useQuery({ ccToken }, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
+  const ownerSummary = ownerSummaryQuery.data ?? { today: [], decisions: [] };
+  const ownerSummaryError = ownerSummaryQuery.isError ? ownerSummaryQuery.error.message : null;
   const openTaskCount = (homepageTaskStats?.new ?? 0) + (homepageTaskStats?.progress ?? 0) + (homepageTaskStats?.hold ?? 0);
-  const preparingMeetingCount = homepageMeetings.filter((meeting: any) => meeting.status === "preparing").length;
+  const preparingMeetingCount = homepageMeetings.filter((meeting: any) => (meeting.meetingStatus || meeting.status) === "preparing").length;
 
   const coordinator = agentsList.find((a: any) => a.isCoordinator === 1);
   const teamAgents = agentsList.filter((a: any) => a.isCoordinator !== 1);
@@ -744,6 +748,25 @@ export default function Home() {
                     <p className="text-[10px] text-muted-foreground">تنبيهات تأخير</p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {effectivelyAuthenticated && (
+          <section className="pb-6" aria-label="ملخص المالك اليومي">
+            <div className="mb-3 flex items-end justify-between gap-3">
+              <div><p className="text-xs font-bold text-rose-700">قراءة تشغيلية من المصادر القائمة</p><h2 className="mt-1 text-lg font-bold text-foreground">اليوم / يحتاج قرارًا</h2></div>
+              <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-medium text-muted-foreground">لا توجد أرقام تقديرية أو سجلات جديدة</span>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50/35 p-4">
+                <div className="mb-3 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white"><AlertTriangle className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">يحتاج قرارًا</h3><p className="text-[10px] text-muted-foreground">خطوة المشروع التالية بحسب بوابة الانطلاق.</p></div></div>
+                <div className="space-y-2">{ownerSummary.decisions.length > 0 ? ownerSummary.decisions.map((item: any) => <button key={`${item.projectId}-${item.title}`} onClick={() => navigate(item.href)} className="w-full rounded-xl border border-white bg-white/90 p-3 text-right transition-colors hover:bg-rose-50"><p className="text-xs font-bold text-foreground">{item.projectName}: {item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.detail}</p></button>) : <p className="rounded-xl border border-dashed border-rose-200 bg-white/70 px-3 py-5 text-center text-xs text-muted-foreground">{ownerSummaryError ? `تعذر تحميل القرارات: ${ownerSummaryError}` : "لا توجد خطوة تأسيسية معلقة في المشاريع المسجلة."}</p>}</div>
+              </div>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50/35 p-4">
+                <div className="mb-3 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-600 text-white"><Activity className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">اليوم</h3><p className="text-[10px] text-muted-foreground">مهام متأخرة أو عالية الأولوية، اجتماعات جارية، وتغييرات معتمدة.</p></div></div>
+                <div className="space-y-2">{ownerSummary.today.length > 0 ? ownerSummary.today.map((item: any, index: number) => <button key={`${item.kind}-${item.projectId || "general"}-${index}`} onClick={() => navigate(item.href)} className="w-full rounded-xl border border-white bg-white/90 p-3 text-right transition-colors hover:bg-sky-50"><div className="flex items-start justify-between gap-2"><p className="text-xs font-bold text-foreground">{item.title}</p><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${item.kind === "task" ? "bg-rose-100 text-rose-800" : item.kind === "meeting" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{item.kind === "task" ? "مهمة" : item.kind === "meeting" ? "اجتماع" : "تغيير معتمد"}</span></div><p className="mt-1 text-[10px] text-muted-foreground">{item.detail}</p></button>) : <p className="rounded-xl border border-dashed border-sky-200 bg-white/70 px-3 py-5 text-center text-xs text-muted-foreground">{ownerSummaryError ? "راجع حالة مصدر الملخص أعلاه قبل الاعتماد على هذه الخانة." : "لا توجد متابعة عاجلة أو تغيير معتمد ظاهر الآن."}</p>}</div>
               </div>
             </div>
           </section>

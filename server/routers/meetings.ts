@@ -2,7 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { meetings, meetingParticipants, meetingFiles, meetingMessages, agents, knowledgeBase, chatHistory } from "../../drizzle/schema";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, like } from "drizzle-orm";
 import { storagePut } from "../storage";
 import { TRPCError } from "@trpc/server";
 import { handleAgentChat } from "../agentChat";
@@ -71,7 +71,7 @@ export const meetingsRouter = router({
         const participants = await db.select({
           id: meetingParticipants.id,
           agentId: meetingParticipants.agentId,
-          role: meetingParticipants.role,
+          role: meetingParticipants.participantRole,
           agentName: agents.name,
           agentNameEn: agents.nameEn,
           agentRole: agents.role,
@@ -116,7 +116,7 @@ export const meetingsRouter = router({
       const participants = await db.select({
         id: meetingParticipants.id,
         agentId: meetingParticipants.agentId,
-        role: meetingParticipants.role,
+        role: meetingParticipants.participantRole,
         agentName: agents.name,
         agentNameEn: agents.nameEn,
         agentRole: agents.role,
@@ -333,7 +333,12 @@ export const meetingsRouter = router({
       // === STEP 2: SAVE TO KNOWLEDGE BASE (independent) ===
       if (minutesGenerated && minutes?.knowledgeItems?.length > 0) {
         try {
-          for (const item of minutes.knowledgeItems) {
+          const existingRows = await db.select({ type: knowledgeBase.type, title: knowledgeBase.title, content: knowledgeBase.content })
+            .from(knowledgeBase)
+            .where(and(eq(knowledgeBase.sourceAgent, "meeting"), like(knowledgeBase.tags, `%"meeting-${meetingId}"%`)));
+          const existingKeys = new Set(existingRows.map((item) => `${item.type}::${item.title.trim()}::${item.content.trim()}`));
+          const newItems = minutes.knowledgeItems.filter((item: any) => !existingKeys.has(`${item.type}::${String(item.title || "").trim()}::${String(item.content || "").trim()}`));
+          for (const item of newItems) {
             const validTypes = ["decision", "evaluation", "pattern", "insight", "lesson"];
             const itemType = validTypes.includes(item.type) ? item.type : "insight";
             await db.insert(knowledgeBase).values({
@@ -346,7 +351,7 @@ export const meetingsRouter = router({
               tags: JSON.stringify([`meeting-${meetingId}`]),
             });
           }
-          console.log(`[Meeting] Knowledge items saved for meeting ${meetingId}`);
+          console.log(`[Meeting] ${newItems.length} new knowledge items saved for meeting ${meetingId}`);
         } catch (err) {
           console.error("[Meeting] Knowledge base save failed:", err);
         }
@@ -952,7 +957,13 @@ ${transcript}`
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
-      for (const item of input.items) {
+      const existingRows = await db.select({ type: knowledgeBase.type, title: knowledgeBase.title, content: knowledgeBase.content })
+        .from(knowledgeBase)
+        .where(and(eq(knowledgeBase.sourceAgent, "meeting"), like(knowledgeBase.tags, `%"meeting-${input.meetingId}"%`)));
+      const existingKeys = new Set(existingRows.map((item) => `${item.type}::${item.title.trim()}::${item.content.trim()}`));
+      const newItems = input.items.filter((item) => !existingKeys.has(`${item.type}::${item.title.trim()}::${item.content.trim()}`));
+
+      for (const item of newItems) {
         await db.insert(knowledgeBase).values({
           userId: ctx.user.id,
           type: item.type,
@@ -964,12 +975,7 @@ ${transcript}`
         });
       }
 
-      // Update meeting with saved knowledge items
-      await db.update(meetings).set({
-        knowledgeItemsJson: JSON.stringify(input.items),
-      }).where(eq(meetings.id, input.meetingId));
-
-      return { saved: input.items.length };
+      return { saved: newItems.length, alreadyLinked: input.items.length - newItems.length };
     }),
 
   // Extract text from uploaded file using LLM

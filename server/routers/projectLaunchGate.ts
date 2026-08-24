@@ -1,6 +1,8 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import {
+  commandCenterMembers,
   consultantProposals,
   lifecycleStages,
   marketDecisionApprovals,
@@ -9,9 +11,11 @@ import {
   projectMarketSearchProfiles,
   projectServiceInstances,
   projects,
+  meetings,
+  tasks,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
 type GateStatus = "complete" | "partial" | "missing";
 
@@ -188,5 +192,107 @@ export const projectLaunchGateRouter = router({
           activeContractCount: activeContractRows.length,
         }),
       };
+    }),
+
+  // Read-only owner digest. It composes existing task, meeting, launch, and
+  // approved-change records only; it creates no parallel workflow or source data.
+  getOwnerSummary: publicProcedure
+    .input(z.object({ ccToken: z.string().min(1).optional() }))
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("قاعدة البيانات غير متاحة");
+      if (!ctx.user) {
+        if (!input.ccToken) throw new TRPCError({ code: "UNAUTHORIZED", message: "يلزم تسجيل دخول معتمد لعرض ملخص المالك." });
+        const members = await db.select({ id: commandCenterMembers.id }).from(commandCenterMembers)
+          .where(and(eq(commandCenterMembers.accessToken, input.ccToken), eq(commandCenterMembers.isActive, 1))).limit(1);
+        if (!members[0]) throw new TRPCError({ code: "UNAUTHORIZED", message: "رمز مركز القيادة غير صالح." });
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      const [projectRows, profileRows, evidenceRows, approvedMarketRows, activeStageRows, plannedServiceRows, proposalRows, activeContractRows, taskRows, meetingRows] = await Promise.all([
+        db.select().from(projects),
+        db.select({ projectId: projectMarketSearchProfiles.projectId }).from(projectMarketSearchProfiles),
+        db.select({ projectId: projectMarketEvidence.projectId }).from(projectMarketEvidence).where(eq(projectMarketEvidence.verificationStatus, "verified")),
+        db.select({ projectId: marketDecisionApprovals.projectId }).from(marketDecisionApprovals).where(eq(marketDecisionApprovals.decisionStatus, "approved")),
+        db.select({ id: lifecycleStages.id }).from(lifecycleStages).where(eq(lifecycleStages.isActive, 1)),
+        db.select({ projectId: projectServiceInstances.projectId }).from(projectServiceInstances).where(isNotNull(projectServiceInstances.plannedDueDate)),
+        db.select({ projectId: consultantProposals.projectId }).from(consultantProposals),
+        db.select({ projectId: projectContracts.projectId }).from(projectContracts).where(eq(projectContracts.contractStatus, "active")),
+        db.select().from(tasks),
+        db.select().from(meetings),
+      ]);
+      const approvedChangesResult = await db.execute(sql`
+        SELECT id, project_id AS projectId, title, decision_notes AS decisionNotes, decided_at AS decidedAt
+        FROM project_change_requests
+        WHERE decision_status = 'approved'
+      `);
+      const approvedChangeRows = approvedChangesResult[0] as Array<{ id: number; projectId: number; title: string; decisionNotes: string | null; decidedAt: string | null }>;
+
+      const profileProjectIds = new Set(profileRows.map((row) => row.projectId));
+      const approvedMarketProjectIds = new Set(approvedMarketRows.map((row) => row.projectId));
+      const countByProject = (rows: Array<{ projectId: number }>) => rows.reduce((counts, row) => counts.set(row.projectId, (counts.get(row.projectId) || 0) + 1), new Map<number, number>());
+      const evidenceCounts = countByProject(evidenceRows);
+      const serviceCounts = countByProject(plannedServiceRows);
+      const proposalCounts = countByProject(proposalRows);
+      const contractCounts = countByProject(activeContractRows);
+      const projectNames = new Map(projectRows.map((project) => [project.id, project.name]));
+
+      const decisions = projectRows.map((project) => {
+        const gate = buildProjectLaunchGate({
+          project,
+          hasMarketProfile: profileProjectIds.has(project.id),
+          verifiedEvidenceCount: evidenceCounts.get(project.id) || 0,
+          hasApprovedMarketDecision: approvedMarketProjectIds.has(project.id),
+          activeLifecycleStages: activeStageRows.length,
+          plannedServices: serviceCounts.get(project.id) || 0,
+          proposalCount: proposalCounts.get(project.id) || 0,
+          activeContractCount: contractCounts.get(project.id) || 0,
+        });
+        return { projectId: project.id, projectName: project.name, ...gate };
+      }).filter((project) => project.gates.some((gate) => gate.status !== "complete"))
+        .slice(0, 4)
+        .map((project) => ({
+          kind: "launch" as const,
+          projectId: project.projectId,
+          projectName: project.projectName,
+          title: project.nextDecision,
+          detail: "المصدر: بوابة انطلاق المشروع من السجلات القائمة.",
+          href: project.nextActionHref,
+        }));
+
+      const attentionTasks = taskRows
+        .filter((task) => task.status !== "done" && task.status !== "cancelled" && (task.priority === "high" || Boolean(task.dueDate && task.dueDate <= today)))
+        .sort((a, b) => (a.dueDate || "9999-12-31").localeCompare(b.dueDate || "9999-12-31"))
+        .slice(0, 4)
+        .map((task) => ({
+          kind: "task" as const,
+          title: task.title,
+          detail: `${task.project} · ${task.dueDate && task.dueDate <= today ? "موعدها اليوم أو متأخر" : "أولوية عالية"}`,
+          href: "/tasks",
+        }));
+
+      const preparingMeetings = meetingRows
+        .filter((meeting) => meeting.meetingStatus === "preparing" || meeting.meetingStatus === "in_progress")
+        .slice(0, 3)
+        .map((meeting) => ({
+          kind: "meeting" as const,
+          title: meeting.title,
+          detail: meeting.meetingStatus === "in_progress" ? "اجتماع جارٍ؛ راجع مخرجاته عند الإقفال." : "اجتماع قيد التحضير.",
+          href: `/meetings/${meeting.id}`,
+        }));
+
+      const approvedChanges = approvedChangeRows
+        .sort((a, b) => String(b.decidedAt || "").localeCompare(String(a.decidedAt || "")))
+        .slice(0, 3)
+        .map((change) => ({
+          kind: "change" as const,
+          projectId: change.projectId,
+          projectName: projectNames.get(change.projectId) || "المشروع",
+          title: change.title,
+          detail: "تغيير معتمد للقراءة؛ لا يحدّث الكلفة أو البرنامج أو التدفقات تلقائيًا.",
+          href: "/project-reference",
+        }));
+
+      return { today: [...attentionTasks, ...preparingMeetings, ...approvedChanges].slice(0, 6), decisions };
     }),
 });
