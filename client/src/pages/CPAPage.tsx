@@ -15,6 +15,10 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
+import { ConsultantRequirementsReference } from "@/components/consultant/ConsultantRequirementsReference";
+import ProjectRequirementsScreen from "./ProjectRequirementsScreen";
+import OfferReaderScreen from "./OfferReaderScreen";
+import FinancialOfferComparisonContainer from "./FinancialOfferComparisonContainer";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -32,6 +36,7 @@ import { formatFullNumber } from "@/lib/numberFormat";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
 import { default as FileJson } from "lucide-react/dist/esm/icons/file-json.js";
+import { default as FileSearch } from "lucide-react/dist/esm/icons/file-search.js";
 import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
 import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
 import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
@@ -67,6 +72,9 @@ type Screen =
   | "supervision-review"
   | "results"
   | "truecost-report"
+  | "project-requirements"
+  | "offer-reader"
+  | "financial-comparison"
   | "settings";
 
 // ---- Helpers ---------------------------------------------------------------
@@ -496,6 +504,9 @@ function ProjectDetailScreen({
   onImportJson,
   onScopeReview,
   onSupervisionReview,
+  onProjectRequirements,
+  onOfferReader,
+  onFinancialComparison,
   onResults,
   onTrueCostReport,
 }: {
@@ -504,6 +515,9 @@ function ProjectDetailScreen({
   onImportJson: (pcId: number, consultantName: string) => void;
   onScopeReview: (pcId: number, consultantName: string) => void;
   onSupervisionReview: (pcId: number, consultantName: string) => void;
+  onProjectRequirements: () => void;
+  onOfferReader: (pcId: number, consultantName: string) => void;
+  onFinancialComparison: () => void;
   onResults: () => void;
   onTrueCostReport: () => void;
 }) {
@@ -584,6 +598,15 @@ function ProjectDetailScreen({
           <p className="text-sm text-muted-foreground">قطعة: {project.plot_number}</p>
         </div>
          <StatusBadge status={project.status ?? "ACTIVE"} />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onProjectRequirements}
+          className="text-violet-700 border-violet-200 hover:bg-violet-50 gap-1"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          متطلبات المشروع
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -893,9 +916,13 @@ Rules:
                       <p className="text-xs text-muted-foreground mt-0.5">{c.consultant_code}</p>
                     </div>
                     <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-                      <Button size="sm" variant="outline" onClick={() => onImportJson(c.id, c.trade_name || c.legal_name)}>
+                      <Button size="sm" variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onOfferReader(c.id, c.trade_name || c.legal_name)}>
+                        <FileSearch className="w-3.5 h-3.5 ml-1" />
+                        قراءة العرض
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-slate-500" onClick={() => onImportJson(c.id, c.trade_name || c.legal_name)}>
                         <FileJson className="w-3.5 h-3.5 ml-1" />
-                        JSON
+                        JSON السابق
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onScopeReview(c.id, c.trade_name || c.legal_name)}>
                         <Eye className="w-3.5 h-3.5 ml-1" />
@@ -958,6 +985,10 @@ Rules:
           <Button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white" onClick={onTrueCostReport}>
             <FileBarChart2 className="w-4 h-4 ml-2" />
             تقرير التكلفة الحقيقية
+          </Button>
+          <Button className="w-full bg-violet-700 hover:bg-violet-600 text-white" onClick={onFinancialComparison}>
+            <FileBarChart2 className="w-4 h-4 ml-2" />
+            تقرير مقارنة العروض
           </Button>
         </div>
       )}
@@ -2418,7 +2449,7 @@ function ResultsScreen({
 // ---- Screen 6: Settings ---------------------------------------------------
 
 function SettingsScreen({ onBack }: { onBack: () => void }) {
-  const [activeTab, setActiveTab] = useState("scope-matrix");
+  const [activeTab, setActiveTab] = useState("reference");
   const { toast } = useToast();
 
   const categoriesQuery = trpc.cpa.settings.getBuildingCategories.useQuery();
@@ -2489,7 +2520,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <Separator orientation="vertical" className="h-5" />
         <div className="flex-1">
           <h2 className="font-bold text-lg">إعدادات النظام</h2>
-          <p className="text-sm text-muted-foreground">إدارة فئات المباني، أدوار الإشراف، والاستشاريين</p>
+          <p className="text-sm text-muted-foreground">المرجع الموحد لبنود متطلبات الاستشاريين، مع إبقاء الإعدادات السابقة للرجوع إليها</p>
         </div>
         <Button
           size="sm"
@@ -2504,15 +2535,20 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-7 w-full">
-          <TabsTrigger value="scope-matrix" className="text-xs">مصفوفة النطاق</TabsTrigger>
-          <TabsTrigger value="ref-costs" className="text-xs">الأسعار المرجعية</TabsTrigger>
-          <TabsTrigger value="supervision-matrix" className="text-xs">مصفوفة الإشراف</TabsTrigger>
+        <TabsList className="grid grid-cols-4 gap-1 h-auto w-full md:grid-cols-8">
+          <TabsTrigger value="reference" className="text-xs">المرجع الموحد</TabsTrigger>
+          <TabsTrigger value="scope-matrix" className="text-xs">النطاق السابق</TabsTrigger>
+          <TabsTrigger value="ref-costs" className="text-xs">الأسعار السابقة</TabsTrigger>
+          <TabsTrigger value="supervision-matrix" className="text-xs">الإشراف السابق</TabsTrigger>
           <TabsTrigger value="categories" className="text-xs">فئات المباني</TabsTrigger>
           <TabsTrigger value="roles" className="text-xs">أدوار الإشراف</TabsTrigger>
           <TabsTrigger value="consultants" className="text-xs">الاستشاريون</TabsTrigger>
           <TabsTrigger value="scope" className="text-xs">بنود النطاق</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="reference" className="mt-4">
+          <ConsultantRequirementsReference />
+        </TabsContent>
 
         {/* Scope Category Matrix */}
         <TabsContent value="scope-matrix" className="mt-4">
@@ -2903,6 +2939,9 @@ export default function CPAPage() {
   function goSupervisionReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("supervision-review"); }
   function goResults() { setScreen("results"); }
   function goTrueCostReport() { setScreen("truecost-report"); }
+  function goProjectRequirements() { setScreen("project-requirements"); }
+  function goOfferReader(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("offer-reader"); }
+  function goFinancialComparison() { setScreen("financial-comparison"); }
   function goSettings() { setScreen("settings"); }
 
   return (
@@ -2920,7 +2959,7 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">الإعدادات</span>
             </>
           )}
-          {(screen === "project-detail" || screen === "import-json" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
+          {(screen === "project-detail" || screen === "project-requirements" || screen === "offer-reader" || screen === "financial-comparison" || screen === "import-json" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
             <>
               <span>/</span>
               <button onClick={() => { setScreen("project-detail"); }} className="hover:text-foreground transition-colors">
@@ -2958,6 +2997,24 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">تقرير التكلفة الحقيقية</span>
             </>
           )}
+          {screen === "project-requirements" && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-medium">متطلبات المشروع</span>
+            </>
+          )}
+          {screen === "offer-reader" && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-medium">قراءة العرض</span>
+            </>
+          )}
+          {screen === "financial-comparison" && (
+            <>
+              <span>/</span>
+              <span className="text-foreground font-medium">تقرير مقارنة العروض</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -2972,6 +3029,9 @@ export default function CPAPage() {
             onImportJson={goImportJson}
             onScopeReview={goScopeReview}
             onSupervisionReview={goSupervisionReview}
+            onProjectRequirements={goProjectRequirements}
+            onOfferReader={goOfferReader}
+            onFinancialComparison={goFinancialComparison}
             onResults={goResults}
             onTrueCostReport={goTrueCostReport}
           />
@@ -3011,6 +3071,15 @@ export default function CPAPage() {
             projectId={selectedProjectId}
             onBack={() => setScreen("project-detail")}
           />
+        )}
+        {screen === "project-requirements" && selectedProjectId && (
+          <ProjectRequirementsScreen projectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
+        )}
+        {screen === "offer-reader" && selectedProjectId && selectedPcId && (
+          <OfferReaderContainer cpaProjectId={selectedProjectId} projectConsultantId={selectedPcId} consultantName={selectedConsultantName} onBack={() => setScreen("project-detail")} />
+        )}
+        {screen === "financial-comparison" && selectedProjectId && (
+          <FinancialOfferComparisonContainer cpaProjectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
         )}
         {screen === "settings" && (
           <SettingsScreen onBack={goHome} />

@@ -58,6 +58,9 @@ import { projectLaunchGateRouter } from "./routers/projectLaunchGate";
 import { consultantAppointmentPackRouter } from "./routers/consultantAppointmentPack";
 import { consultantProcurementRouter } from "./routers/consultantProcurement";
 import { projectReferenceRouter } from "./routers/projectReference";
+import { consultantRequirementsRouter } from "./routers/consultantRequirements";
+import { offerReaderRouter } from "./routers/offerReader";
+import { financialOfferComparisonRouter } from "./routers/financialOfferComparison";
 import { adminProcedure } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -137,6 +140,9 @@ export const appRouter = router({
   projectReference: projectReferenceRouter,
   consultantAppointmentPack: consultantAppointmentPackRouter,
   consultantProcurement: consultantProcurementRouter,
+  consultantRequirements: consultantRequirementsRouter,
+  offerReader: offerReaderRouter,
+  financialOfferComparison: financialOfferComparisonRouter,
 
   // User Management (admin only)
   userManagement: router({

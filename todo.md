@@ -1484,3 +1484,18 @@
 - [x] Add a compact owner "Today / needs decision" summary using only source-backed task, meeting, launch, and approved-change data
 - [x] Add focused regression tests and verify the new owner workflow on desktop and mobile before delivery
 - [x] Fix Meeting Room source-query compatibility so an existing completed meeting and its classified outputs load without an endless spinner
+- [x] Audit consultant-office settings, offer JSON sources, and their active consumers before changing any configuration or workflow
+- [x] Produce a verified field-preservation map and identify safe configuration changes without deleting or migrating existing offer data
+- [x] Define a single project-specific requirements specification that can be customized and approved before any consultant offer comparison
+- [x] Preserve all category matrices and existing results as legacy references while decoupling new project requirements from global categories
+- [x] Design a draft-only internal offer reader that preserves each original offer and requires explicit approval before creating or updating comparison data
+- [x] Build a source-to-destination field map for every JSON field, manual override, and calculation result before replacing any JSON-based entry path
+- [x] Analyze and discuss the reference-file settings that must be fixed globally versus customized per project before any implementation
+- [x] Reframe the existing System Settings scope matrix as the source page for a unified consultant-requirements reference without altering its data during the discussion phase
+- [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design
+- [x] Map the financial offer analysis as one evidence input to the existing comprehensive consultant evaluation and committee decision, never as a parallel selection system
+- [x] Inspect the existing consultant-evaluation interface, scoring workflow, committee handoff, and Command Center display before proposing any financial-link changes
+- [x] Transform the existing scope settings into a flexible project requirements reference for financial offer comparisons without altering legacy data
+- [x] Define one reviewed financial evidence path for quoted fees, individual scope gaps, and true cost before presenting it to the existing consultant evaluation
+- [x] Preserve the existing technical evaluation and committee methodology while supplying it with a reviewed project-specific financial comparison report only
+- [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design

@@ -20,6 +20,20 @@ import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
 import { default as Settings2 } from "lucide-react/dist/esm/icons/settings-2.js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+function FinancialOfferEvidenceCard({ projectId }: { projectId: number }) {
+  const evidenceQuery = trpc.financialOfferComparison.getEvidenceStatus.useQuery({ systemProjectId: projectId }, { enabled: Boolean(projectId) });
+  const evidence = evidenceQuery.data;
+  if (evidenceQuery.isLoading) return <Card className="mb-6 border-violet-200 shadow-sm"><CardContent className="p-4 text-sm text-slate-500">جاري التحقق من دليل عروض الاستشاريين…</CardContent></Card>;
+  const message = !evidence?.linked
+    ? "لم يُربط هذا المشروع بعد بتحليل عروض الاستشاريين."
+    : !evidence.approved
+      ? "توجد صفحة تحليل مرتبطة، لكن متطلبات المشروع لم تُعتمد بعد."
+      : evidence.reviewed < evidence.total
+        ? `معيار المتطلبات معتمد (مراجعة ${evidence.revisionNo})، وتمت مراجعة ${evidence.reviewed} من ${evidence.total} عروض.`
+        : `معيار المتطلبات معتمد (مراجعة ${evidence.revisionNo})، وتمت مراجعة عروض المكاتب ${evidence.reviewed} من ${evidence.total}.`;
+  return <Card className="mb-6 border-violet-200 bg-violet-50/40 shadow-sm"><CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"><div><div className="flex items-center gap-2 font-bold text-violet-950"><DollarSign className="h-4 w-4 text-violet-700" />الدليل المالي من عروض الاستشاريين</div><p className="mt-1 text-sm leading-6 text-violet-900">{message}</p><p className="mt-1 text-xs text-violet-700">هذه حالة دليل قراءة ومقارنة فقط؛ لا تضيف نقاطًا ولا تغيّر الأوزان أو التوصية أو قرار اللجنة.</p></div><a href="/consultant-proposals" className="inline-flex h-9 items-center justify-center gap-1 rounded-md border border-violet-200 bg-white px-3 text-sm font-medium text-violet-800 hover:bg-violet-100"><ExternalLink className="h-4 w-4" />فتح تقرير المقارنة</a></CardContent></Card>;
+}
+
 // ===== Supervision Monthly Rate Dialog =====
 function SupervisionRateDialog({ open, onClose, fin, projectDurationMonths }: {
   open: boolean;
@@ -675,6 +689,8 @@ export default function ConsultantEvaluationPage() {
                 <BuaPriceFields project={selectedProject} updateProjectMutation={updateProjectMutation} />
               </CardContent>
             </Card>
+
+            <FinancialOfferEvidenceCard projectId={selectedProject.id} />
 
             {/* Consultants Management */}
             <Card className="mb-6 shadow-lg border-0">

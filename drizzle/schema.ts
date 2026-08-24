@@ -1,4 +1,4 @@
-import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, mysqlEnum, text, mediumtext, timestamp, index, foreignKey, bigint, decimal, longtext, tinyint } from "drizzle-orm/mysql-core"
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, int, varchar, mysqlEnum, text, mediumtext, timestamp, index, uniqueIndex, foreignKey, bigint, decimal, longtext, tinyint } from "drizzle-orm/mysql-core"
 import { sql } from "drizzle-orm"
 
 export const newsTicker = mysqlTable("news_ticker", {
@@ -2129,6 +2129,117 @@ export const cpaConsultantSupervisionTeam = mysqlTable("cpa_consultant_supervisi
 },
 (table) => [
   index("cpa_cst_pc_role").on(table.projectConsultantId, table.supervisionRoleId),
+]);
+
+// Independent COMO reference: this preserves legacy CPA matrices while providing
+// one flexible source that is later copied into a project-specific requirement set.
+export const consultantRequirementReferenceItems = mysqlTable("consultant_requirement_reference_items", {
+  id: int().autoincrement().notNull().primaryKey(),
+  sourceType: mysqlEnum("crr_source_type", ['LEGACY_SCOPE', 'LEGACY_SUPERVISION', 'CUSTOM']).notNull().default('CUSTOM'),
+  legacyScopeItemId: int(),
+  legacySupervisionRoleId: int(),
+  workstream: mysqlEnum("crr_workstream", ['DESIGN', 'ENGINEERING', 'SUPERVISION', 'GENERAL']).notNull().default('GENERAL'),
+  requirementGroup: varchar({ length: 200 }).notNull().default('متطلبات عامة'),
+  code: varchar({ length: 80 }),
+  label: varchar({ length: 300 }).notNull(),
+  description: text(),
+  defaultEnabled: tinyint().notNull().default(1),
+  defaultGapValueAed: decimal({ precision: 15, scale: 2 }),
+  pricingBasis: mysqlEnum("crr_pricing_basis", ['FIXED', 'MONTHLY', 'PERCENT_OF_FEE', 'MANUAL']).notNull().default('FIXED'),
+  defaultDurationMonths: int(),
+  defaultAllocationPct: decimal({ precision: 5, scale: 2 }),
+  sortOrder: int().notNull().default(0),
+  isActive: tinyint().notNull().default(1),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("crr_source_scope").on(table.legacyScopeItemId),
+  index("crr_source_supervision").on(table.legacySupervisionRoleId),
+  index("crr_workstream").on(table.workstream),
+  index("crr_active_sort").on(table.isActive, table.sortOrder),
+]);
+
+// Project-specific copies of the reference. Old revisions remain intact so a
+// later customization cannot change the basis of an earlier offer comparison.
+export const projectConsultantRequirementSets = mysqlTable("project_consultant_requirement_sets", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int().notNull(),
+  title: varchar({ length: 300 }).notNull().default('متطلبات الاستشاريين للمشروع'),
+  revisionNo: int().notNull().default(1),
+  status: mysqlEnum("pcrs_status", ['DRAFT', 'APPROVED', 'REPLACED']).notNull().default('DRAFT'),
+  notes: text(),
+  approvedAt: timestamp({ mode: 'string' }),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("pcrs_project_revision").on(table.projectId, table.revisionNo),
+  index("pcrs_project_status").on(table.projectId, table.status),
+]);
+
+export const projectConsultantRequirements = mysqlTable("project_consultant_requirements", {
+  id: int().autoincrement().notNull().primaryKey(),
+  requirementSetId: int().notNull(),
+  referenceItemId: int(),
+  sourceType: mysqlEnum("pcr_source_type", ['REFERENCE', 'CUSTOM']).notNull().default('REFERENCE'),
+  workstream: mysqlEnum("pcr_workstream", ['DESIGN', 'ENGINEERING', 'SUPERVISION', 'GENERAL']).notNull().default('GENERAL'),
+  requirementGroup: varchar({ length: 200 }).notNull().default('متطلبات عامة'),
+  code: varchar({ length: 80 }),
+  label: varchar({ length: 300 }).notNull(),
+  description: text(),
+  isRequired: tinyint().notNull().default(1),
+  gapValueAed: decimal({ precision: 15, scale: 2 }),
+  pricingBasis: mysqlEnum("pcr_pricing_basis", ['FIXED', 'MONTHLY', 'PERCENT_OF_FEE', 'MANUAL']).notNull().default('FIXED'),
+  durationMonths: int(),
+  allocationPct: decimal({ precision: 5, scale: 2 }),
+  sortOrder: int().notNull().default(0),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("pcr_set_sort").on(table.requirementSetId, table.sortOrder),
+  index("pcr_set_required").on(table.requirementSetId, table.isRequired),
+  index("pcr_reference").on(table.referenceItemId),
+]);
+
+// Draft-only output from the internal offer reader. It never overwrites the
+// original proposal or legacy JSON and is not an evaluation result.
+export const consultantOfferReadings = mysqlTable("consultant_offer_readings", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectConsultantId: int().notNull(),
+  projectRequirementSetId: int().notNull(),
+  sourceProposalId: int(),
+  status: mysqlEnum("cor_status", ['DRAFT', 'REVIEWED', 'SUPERSEDED', 'FAILED']).notNull().default('DRAFT'),
+  modelId: varchar({ length: 100 }),
+  inputSnapshot: longtext().notNull(),
+  extractionJson: longtext(),
+  errorMessage: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  index("cor_project_consultant").on(table.projectConsultantId, table.createdAt),
+  index("cor_requirement_set").on(table.projectRequirementSetId),
+  index("cor_source_proposal").on(table.sourceProposalId),
+  index("cor_status").on(table.status),
+]);
+
+// Owner-reviewed value adjustments for individual gaps. These remain separate
+// from both the source offer and legacy CPA evaluation results.
+export const consultantOfferGapOverrides = mysqlTable("consultant_offer_gap_overrides", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectConsultantId: int().notNull(),
+  projectRequirementSetId: int().notNull(),
+  projectRequirementId: int().notNull(),
+  gapValueAed: decimal({ precision: 15, scale: 2 }),
+  note: text(),
+  createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+  updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+  uniqueIndex("cogo_unique_item").on(table.projectConsultantId, table.projectRequirementSetId, table.projectRequirementId),
+  index("cogo_requirement_set").on(table.projectRequirementSetId),
 ]);
 
 // Table 13: cpa_evaluation_results
