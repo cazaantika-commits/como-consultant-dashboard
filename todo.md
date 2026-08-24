@@ -1477,3 +1477,5 @@
 - [x] Add change requests that reference an approved baseline and display approved changes in Command Center without altering financial values automatically
 - [x] Conduct a complete self-review of the document, baseline, change, and Command Center flow before delivery
 - [x] Audit the Tools and Reports section, its current content, sources, overlap, and gaps; provide development recommendations before making changes
+- [x] Reorganize the Tools and Reports section into Owner Operations, Project Intelligence, and System Services without removing any tool or route
+- [x] Add concise source and usage guidance to each layer without copying operational data into new stores

@@ -146,6 +146,8 @@ function QuickActionResult({
 
 /* -- Sortable Main Card (big cards) -- */
 type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string; badge?: number };
+type ToolLayerId = "owner" | "intelligence" | "services";
+type ToolNavItem = NavItem & { layer: ToolLayerId; ownerOnly?: boolean };
 
 function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
@@ -415,18 +417,18 @@ export default function Home() {
     { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)" },
   ];
 
-  const NAV_TOOLS = [
-    { id: "tool-tasks", label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)" },
-    { id: "tool-drive", label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)" },
-    { id: "tool-knowledge-base", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #6d28d9)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "tool-meetings", label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)" },
-    { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)" },
-    { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)" },
-    { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)" },
-    { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)" },
-    { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)" },
-    { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", ownerOnly: true },
-    { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", ownerOnly: true },
+  const NAV_TOOLS: ToolNavItem[] = [
+    { id: "tool-tasks", label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)", layer: "owner" },
+    { id: "tool-meetings", label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)", layer: "owner" },
+    { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)", layer: "owner" },
+    { id: "tool-knowledge-base", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #6d28d9)", shadow: "rgba(139, 92, 246, 0.25)", layer: "intelligence" },
+    { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)", layer: "intelligence" },
+    { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)", layer: "intelligence" },
+    { id: "tool-drive", label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)", layer: "services" },
+    { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", layer: "services" },
+    { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services" },
+    { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services", ownerOnly: true },
+    { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", layer: "services", ownerOnly: true },
   ];
 
   /* -- Sorted arrays based on saved order -- */
@@ -447,6 +449,38 @@ export default function Home() {
     NAV_TOOLS.forEach(item => { if (!toolsOrder.includes(item.id)) ordered.push(item); });
     return ordered;
   }, [toolsOrder]);
+
+  const visibleSortedTools = useMemo(
+    () => sortedTools.filter((item) => !item.ownerOnly || isOwner || isCCOwner),
+    [isCCOwner, isOwner, sortedTools]
+  );
+
+  const TOOL_LAYERS: Array<{ id: ToolLayerId; title: string; description: string; source: string; icon: any; tone: string }> = [
+    {
+      id: "owner",
+      title: "تشغيل المالك",
+      description: "أدوات العمل اليومي والقرارات والمتابعة داخل دورة المشروع.",
+      source: "مصادر حية: المهام، الاجتماعات، وعروض الاستشاريين.",
+      icon: Target,
+      tone: "from-emerald-500 to-teal-600",
+    },
+    {
+      id: "intelligence",
+      title: "استخبارات المشروع",
+      description: "أدلة السوق والمعرفة والدروس التي تدعم قرارك قبل التنفيذ.",
+      source: "مصادر مرجعية: تقارير السوق، المعرفة، وسجل الدقة.",
+      icon: BrainCircuit,
+      tone: "from-violet-500 to-purple-600",
+    },
+    {
+      id: "services",
+      title: "خدمات النظام",
+      description: "مصادر الملفات والمراقبة والإدارة التي تدعم العمل ولا تزاحم قراراتك اليومية.",
+      source: "مصادر خلفية: Google Drive، الوكلاء، والتكليفات والإدارة.",
+      icon: Shield,
+      tone: "from-sky-500 to-blue-600",
+    },
+  ];
 
   const handleMainDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -868,7 +902,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- TOOLS & REPORTS - White cards with colored top border -- */}
+        {/* -- TOOLS & REPORTS - Owner Operations, Intelligence, Services -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {effectivelyAuthenticated && (
           <section className="pb-8">
@@ -880,47 +914,70 @@ export default function Home() {
             </div>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleToolsDragEnd}>
-              <SortableContext items={sortedTools.map(i => i.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {sortedTools.map((item) => (
-                    <SortableToolCard key={item.id} item={item} onNavigate={navigate} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
+              <div className="space-y-5">
+                {TOOL_LAYERS.map((layer) => {
+                  const layerTools = visibleSortedTools.filter((item) => item.layer === layer.id);
+                  const LayerIcon = layer.icon;
+                  return (
+                    <div key={layer.id} className="rounded-2xl border border-border/55 bg-card/50 p-4 sm:p-5">
+                      <div className="mb-4 flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${layer.tone} shadow-sm`}>
+                          <LayerIcon className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-bold text-foreground">{layer.title}</h3>
+                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{layer.description}</p>
+                          <p className="mt-1 text-[10px] font-medium text-muted-foreground">{layer.source}</p>
+                        </div>
+                      </div>
 
-            {/* Records dropdown row */}
-            <div className="mt-4">
-              <div className="relative">
-                <button
-                  onClick={() => setOpenDropdown(openDropdown === "records" ? null : "records")}
-                  className="group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg overflow-hidden w-full"
-                >
-                  <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl bg-gradient-to-r from-sky-500 to-blue-600" />
-                  <div className="flex items-center gap-3 flex-row-reverse">
-                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm bg-gradient-to-br from-sky-500 to-blue-600" style={{ boxShadow: "0 4px 14px rgba(14, 165, 233, 0.25)" }}>
-                      <ClipboardList className="w-5 h-5 text-white" />
+                      <SortableContext items={layerTools.map((item) => item.id)} strategy={rectSortingStrategy}>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                          {layerTools.map((item) => (
+                            <SortableToolCard key={item.id} item={item} onNavigate={navigate} />
+                          ))}
+                        </div>
+                      </SortableContext>
+
+                      {layer.id === "services" && (
+                        <div className="mt-3 relative">
+                          <button
+                            onClick={() => setOpenDropdown(openDropdown === "records" ? null : "records")}
+                            className="group relative w-full overflow-hidden rounded-xl border border-border/50 bg-card p-3 text-right transition-all duration-200 hover:bg-card/90 hover:shadow-md"
+                          >
+                            <div className="absolute left-0 right-0 top-0 h-[3px] rounded-t-xl bg-gradient-to-r from-sky-500 to-blue-600" />
+                            <div className="flex flex-row-reverse items-center gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 shadow-sm" style={{ boxShadow: "0 4px 14px rgba(14, 165, 233, 0.25)" }}>
+                                <ClipboardList className="h-4 w-4 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <span className="block text-sm font-bold text-foreground">السجلات والأرشيف</span>
+                                <span className="block text-[10px] text-muted-foreground">سجلات مرجعية وإدارية لا تحتاج فتحها يوميًا.</span>
+                              </div>
+                              <ChevronLeft className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openDropdown === "records" ? "rotate-90" : ""}`} />
+                            </div>
+                          </button>
+                          {openDropdown === "records" && (
+                            <div className="mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-lg animate-in slide-in-from-top-1 duration-200">
+                              {NAV_RECORDS.map((item, j) => (
+                                <button
+                                  key={j}
+                                  onClick={() => { navigate(item.path); setOpenDropdown(null); }}
+                                  className="flex w-full items-center gap-2 border-b border-border/30 px-5 py-3 text-right text-sm font-medium text-foreground transition-colors last:border-b-0 hover:bg-muted/60"
+                                >
+                                  <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+                                  {item.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <span className="text-sm font-bold text-foreground flex-1">السجلات والأرشيف</span>
-                    <ChevronLeft className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${openDropdown === "records" ? "rotate-90" : ""}`} />
-                  </div>
-                </button>
-                {openDropdown === "records" && (
-                  <div className="mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden animate-in slide-in-from-top-1 duration-200">
-                    {NAV_RECORDS.map((item, j) => (
-                      <button
-                        key={j}
-                        onClick={() => { navigate(item.path); setOpenDropdown(null); }}
-                        className="w-full text-right px-5 py-3 hover:bg-muted/60 transition-colors text-sm font-medium text-foreground border-b border-border/30 last:border-b-0 flex items-center gap-2"
-                      >
-                        <div className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            </div>
+            </DndContext>
           </section>
         )}
 
