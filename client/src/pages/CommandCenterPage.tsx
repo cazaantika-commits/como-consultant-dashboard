@@ -116,7 +116,7 @@ import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
 import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
-const LAYLA_AVATAR_URL = "/manus-storage/layla-closeup-advisor_5627b39e.png";
+const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
@@ -4371,10 +4371,11 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <div className="absolute inset-y-0 right-0 w-1 bg-amber-500" />
           <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
-              <div className="h-20 w-[4.25rem] overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
-                <img src={LAYLA_AVATAR_URL} alt="ليلى، مستشارة مركز القيادة" className="h-full w-full object-cover object-top" />
+              <div className="h-28 w-24 overflow-hidden rounded-2xl bg-slate-100 ring-2 ring-amber-200 shadow-[0_8px_18px_rgba(15,23,42,0.12)] lg:h-32 lg:w-28">
+                <img src={LAYLA_AVATAR_URL} alt="ليلى، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
               </div>
-              <div className="absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+              <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">ليلى</span>
+              <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-500" />
             </div>
             <div className="flex-1 text-right">
               <div className="mb-1.5 flex flex-wrap items-center gap-2">

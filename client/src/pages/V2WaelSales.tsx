@@ -64,6 +64,7 @@ import {
   normalizeFlexiblePaymentPlan,
   paymentPlanTotalPercentage,
   type FlexiblePaymentPlan,
+  type PaymentPlanMilestone,
   type PaymentPlanStage,
 } from "@/lib/flexiblePaymentPlan";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
@@ -442,23 +443,50 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const monthlySiphon = salesMonths > 0 ? constructionCost / salesMonths : 0;
   const escrowData = useMemo(() => {
     if (isBuildForSale) return [];
-    let balance = escrowInitial;
-    // Each unit sold: buyer pays downPaymentPct immediately, duringConstructionPct spread over construction months
-    const monthlyInstallmentPerUnit = avgUnitPrice * (duringConstructionPct / 100) / (constructionMonths || 1);
-    // Track cumulative sold units for ongoing installments
-    let cumulativeSold = 0;
-    return salesDistribution.map((units, i) => {
-      // New sales this month: down payment goes to escrow
-      const downPaymentIncome = units * avgUnitPrice * (downPaymentPct / 100);
-      // Ongoing installments from all previously sold units
-      cumulativeSold += units;
-      const installmentIncome = cumulativeSold * monthlyInstallmentPerUnit;
-      const totalIncome = downPaymentIncome + installmentIncome;
-      const withdrawal = monthlySiphon;
-      balance = balance + totalIncome - withdrawal;
-      return { month: i + timeline.salesStart, units, income: totalIncome, downPayment: downPaymentIncome, installments: installmentIncome, withdrawal, balance, cumulativeSold };
+    const constructionEnd = timeline.constructionStart + constructionMonths - 1;
+    const horizon = Math.max(
+      timeline.projectEnd,
+      salesEndMonth,
+      constructionEnd + getPaymentPlanPostHandoverMonths(paymentPlan),
+    );
+    const escrowInflowByMonth = Array(horizon + 1).fill(0);
+    const bookingInflowByMonth = Array(horizon + 1).fill(0);
+    salesDistribution.forEach((units, index) => {
+      if (units <= 0) return;
+      const saleMonth = salesStartMonth + index;
+      const saleAmount = units * avgUnitPrice;
+      buildPaymentReceiptEvents({
+        plan: paymentPlan,
+        saleMonth,
+        constructionStartMonth: timeline.constructionStart,
+        constructionEndMonth: constructionEnd,
+      }).forEach((event) => {
+        if (event.recipient !== "escrow" || event.month > horizon) return;
+        const amount = saleAmount * (event.pct / 100);
+        escrowInflowByMonth[event.month] += amount;
+        if (event.stageId === "booking") bookingInflowByMonth[event.month] += amount;
+      });
     });
-  }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.salesStart, constructionCost, downPaymentPct, duringConstructionPct, constructionMonths]);
+    let balance = escrowInitial;
+    return Array.from({ length: horizon }, (_, index) => {
+      const month = index + 1;
+      const income = escrowInflowByMonth[month] || 0;
+      // Keep the approved project cost curve unchanged; only buyer inflows are
+      // now read from the same milestone engine used by cash-flow outputs.
+      const withdrawal = month >= salesStartMonth && month < salesStartMonth + salesMonths ? monthlySiphon : 0;
+      balance = balance + income - withdrawal;
+      return {
+        month,
+        units: salesDistribution[month - salesStartMonth] || 0,
+        income,
+        downPayment: bookingInflowByMonth[month] || 0,
+        installments: income - (bookingInflowByMonth[month] || 0),
+        withdrawal,
+        balance,
+        cumulativeSold: salesDistribution.slice(0, Math.max(0, month - salesStartMonth + 1)).reduce((sum, units) => sum + units, 0),
+      };
+    });
+  }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.constructionStart, timeline.projectEnd, constructionMonths, paymentPlan, salesStartMonth, salesEndMonth, salesMonths]);
   const visibleTimelinePhases = isBuildForSale
     ? PROJECT_PHASES.filter((phase) => ["design", "marketing", "sales", "construction"].includes(phase.id))
     : PROJECT_PHASES;
@@ -779,21 +807,25 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setImpactFocus("خطة التحصيل");
   };
 
-  const addPaymentStage = () => {
+  const addPaymentStage = (milestone: PaymentPlanMilestone = "construction") => {
+    const defaults: Record<PaymentPlanMilestone, Partial<PaymentPlanStage>> = {
+      booking: { label: "دفعة الحجز", trigger: "sale", recipient: "escrow", installmentCount: 1 },
+      contract: { label: "دفعة توقيع العقد", trigger: "months_after_sale", recipient: "escrow", offsetMonths: 1, installmentCount: 1 },
+      construction: { label: "دفعات أثناء الإنشاء", trigger: "construction_progress", recipient: "escrow", progressPct: 0, everyMonths: 3, untilHandover: true },
+      handover: { label: "دفعة التسليم", trigger: "handover", recipient: "escrow", installmentCount: 1 },
+      post_handover: { label: "دفعات ما بعد التسليم", trigger: "post_handover", recipient: "investor", offsetMonths: 1, everyMonths: 3, installmentCount: 8 },
+    };
     setPaymentPlan((current) => ({
       version: 2,
       stages: [...current.stages, {
-        id: `stage-${Date.now()}`,
-        label: "دفعة جديدة",
-        trigger: "months_after_sale",
+        id: `${milestone}-${Date.now()}`,
+        milestone,
         percentage: 0,
-        recipient: "escrow",
-        offsetMonths: 1,
-        installmentCount: 1,
+        ...defaults[milestone],
       }],
     }));
     setHasPlanChanges(true);
-    setImpactFocus("دفعة جديدة");
+    setImpactFocus(defaults[milestone].label || "خطة التحصيل");
   };
 
   const removePaymentStage = (stageId: string) => {
@@ -909,7 +941,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                 </section>
 
-                {!isBuildForSale && <FlexiblePaymentPlanEditor plan={paymentPlan} onStageChange={updatePaymentStage} onAddStage={addPaymentStage} onRemoveStage={removePaymentStage} />}
+                {!isBuildForSale && <FlexiblePaymentPlanEditor plan={paymentPlan} onStageChange={updatePaymentStage} onAddStage={addPaymentStage} onRemoveStage={removePaymentStage} salesStartMonth={salesStartMonth} constructionStartMonth={timeline.constructionStart} constructionEndMonth={timeline.constructionStart + constructionMonths - 1} />}
 
                 <section data-testid="pricing-source-panel" className="overflow-hidden rounded-[22px] border-2 border-amber-300 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <div className="flex flex-col gap-3 border-b-2 border-amber-200 bg-[linear-gradient(115deg,#fffbeb,#ffffff_55%,#ecfeff)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -963,7 +995,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4"><span><span className="block text-[11px] font-bold text-slate-500">تفاصيل قابلة للتوسيع عند الحاجة</span><span className="mt-0.5 block text-base font-black text-slate-900">{isBuildForSale ? "تفاصيل البيع المباشر" : "خطة التحصيل والتسويق"}</span></span><span className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 transition group-open:bg-teal-100 group-open:text-teal-900">فتح التفاصيل</span></summary>
                     <div className="space-y-5 border-t border-slate-100 p-5">
                       <div className="hidden" aria-hidden="true"><div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-black text-slate-900">أسعار الوحدات</h3><p className="text-xs font-bold text-emerald-700">إجمالي الإيراد {fmt(totalRevenue)} AED</p></div><div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">{activeUnitRevenues.map((unit) => <label key={unit.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><span className="flex items-center gap-2 text-xs font-bold text-slate-700"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: unit.color }} />{unit.name}<span className="mr-auto text-[10px] text-slate-400">{unit.count} وحدة</span></span><div className="mt-2 flex items-center gap-2"><input aria-label={`سعر ${unit.name}`} type="number" min={0} value={unit.price} onChange={(event) => { updateUnit(unit.id, "price", Number(event.target.value) || 0); setImpactFocus(`سعر ${unit.name}`); }} className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-center text-base font-black text-slate-900 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100" /><span className="text-[10px] font-bold text-slate-500">AED/قدم²</span></div><p className="mt-2 text-[11px] font-bold text-emerald-700">{fmt(unit.total)} AED</p></label>)}</div></div>
-                      {!isBuildForSale && <div className="grid gap-4 xl:grid-cols-2"><div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4"><h3 className="text-sm font-black text-indigo-950">تفصيل خطة التحصيل</h3><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4"><label className="text-[11px] font-bold text-slate-600">مقدم<input type="number" min={0} max={100} value={ppDownPct} onChange={(event) => { setPpDownPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("المقدم"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-300 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">دفعة ثانية<input type="number" min={0} max={100} value={ppSecondPct} onChange={(event) => { setPpSecondPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("الدفعة الثانية"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-300 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">كل قسط<input type="number" min={0} max={100} value={ppInstallmentPct} onChange={(event) => { setPpInstallmentPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("قسط الإنشاء"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-300 bg-white text-center text-base font-black text-indigo-800" /></label><label className="text-[11px] font-bold text-slate-600">التسليم<input type="number" min={0} max={100} value={ppHandoverPct} onChange={(event) => { setPpHandoverPct(Number(event.target.value) || 0); setHasPlanChanges(true); setImpactFocus("دفعة التسليم"); }} className="mt-1 h-10 w-full rounded-lg border border-indigo-300 bg-white text-center text-base font-black text-indigo-800" /></label></div><p className={`mt-3 text-xs font-bold ${ppTotal === 100 ? "text-emerald-700" : "text-red-700"}`}>الإجمالي {ppTotal}% · {ppTotal === 100 ? "خطة متوازنة" : "يرجى إكمال النسب إلى 100%"}</p></div><div className="rounded-2xl border border-pink-200 bg-pink-50/40 p-4"><div className="flex items-center justify-between"><div><h3 className="text-sm font-black text-pink-950">غلاف التسويق</h3><p className="mt-0.5 text-[10px] font-semibold text-pink-700">كل البنود الستة ظاهرة في التوزيع</p></div><span className="text-lg font-black text-pink-700">{marketingPct}%</span></div><Slider value={[marketingPct]} onValueChange={([value]) => { setMarketingPct(value); setHasMarketingChanges(true); setImpactFocus("ميزانية التسويق"); }} min={0} max={10} step={0.5} className="mt-4" /><p className="mt-3 text-xs font-bold text-pink-800">{fmt(marketingCost)} AED ميزانية متاحة</p><div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">{MARKETING_CHANNELS.map((channel) => { const allocation = channelPcts[channel.id] || 0; return <label key={channel.id} className="rounded-lg border border-pink-200 bg-white p-2 text-[11px] font-bold text-slate-700">{channel.name}<input type="number" min={0} max={100} value={allocation} onChange={(event) => { handleChannelSliderChange(channel.id, Number(event.target.value) || 0); setImpactFocus(`قناة ${channel.name}`); }} className="mt-1 h-8 w-full rounded border border-pink-300 text-center text-sm font-black text-pink-700" /></label>; })}</div><p className={`mt-3 text-[11px] font-bold ${totalChannelPct === 100 ? "text-emerald-700" : "text-red-700"}`}>توزيع القنوات: {totalChannelPct}% من 6 بنود</p></div></div>}
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-black text-slate-900">{isBuildForSale ? "قراءة البيع المباشر والأثر النقدي" : "قراءة التحصيل والأثر النقدي"}</p><p className="mt-1 text-xs text-slate-500">{isBuildForSale ? "تدخل حصيلة كل وحدة كاملة مباشرة للمستثمر في شهر بيعها بعد الإنجاز." : "هذه قراءة تفصيلية للمشروع؛ الأثر التنفيذي المختصر يبقى مثبتًا بجوار التقويم."}</p></div><Badge className={isBuildForSale ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-100" : hasDeficit ? "bg-red-100 text-red-700 hover:bg-red-100" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"}>{isBuildForSale ? "بيع مباشر بعد الإنجاز" : hasDeficit ? "مخاطرة إسكرو قائمة" : "سيولة الإسكرو مريحة"}</Badge></div><div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">{cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 8).map((row) => <div key={row.month} className="rounded-xl bg-white p-3 ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-500">شهر {row.month}</p><p className="mt-1 text-sm font-black text-blue-700">{fmt(row.cashInflow)}</p><p className="mt-1 text-[10px] text-slate-500">{isBuildForSale ? "استلام مباشر" : "تحصيل"} · بيع {fmt(row.salesThisMonth)}</p></div>)}</div></div>
                     </div>
                   </details>

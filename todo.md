@@ -1532,3 +1532,7 @@
 - [x] Add a dedicated legacy-review filter that isolates open manual and meeting-generated tasks older than the current operating cycle for owner action
 - [x] Audit Khazen's extracted parking condition, source unit of area, and available-parking field before calculating or displaying required bays
 - [x] Link the documented parking rule to unit distribution and show a source-backed required-bay calculation without assumptions
+- [x] Redesign payment plans around booking, contract, construction milestones, handover, and post-handover while respecting each project's actual duration
+- [x] Keep every payment-plan milestone linked to cash-flow timing and prevent construction installments from extending past handover
+- [x] Enlarge Layla's visible advisor image and remove any Salwa identity mix from Command Center presentation
+- [x] Replace Layla's visible Command Center portrait with a professional non-hijab Eastern–Western portrait while preserving the visible name Layla and existing internal compatibility
