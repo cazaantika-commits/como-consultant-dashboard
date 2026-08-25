@@ -64,7 +64,7 @@ import {
   paymentPlanTotalPercentage,
   type FlexiblePaymentPlan,
 } from "@/lib/flexiblePaymentPlan";
-import { buildPaymentCalendar, buyerDueCalendar } from "@/lib/paymentPlanCalendar";
+import { buildPaymentCalendar, buyerDueCalendar, expandPaymentCalendarEntries } from "@/lib/paymentPlanCalendar";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -381,7 +381,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     ? Math.max(timeline.projectEnd, buildForSaleMarketingEndMonth, salesEndMonth)
     : timeline.projectEnd;
   const paymentCalendarRows = useMemo(() => paymentPlan.calendarEntries?.length
-    ? buildPaymentCalendar(paymentPlan.calendarEntries, {
+    ? buildPaymentCalendar(expandPaymentCalendarEntries(paymentPlan.calendarEntries, {
         projectSalesStartMonth: salesStartMonth,
         constructionStartMonth: timeline.constructionStart,
         constructionEndMonth: timeline.constructionStart + constructionMonths - 1,

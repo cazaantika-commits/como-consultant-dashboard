@@ -1542,3 +1542,6 @@
 - [x] Support periodic buyer-payment series every chosen number of months within the same visual timeline, alongside progress-based payments, while stopping construction series at handover
 - [x] Create a dedicated buyer payment-plan page with numbered installments, real calendar dates, chronological rules, and late-buyer catch-up calculations before changing cash-flow behavior
 - [x] Allow Wael to manually override an individual installment's date, percentage, label, recipient, or order while preserving an auditable recalculated plan
+- [x] Prevent construction installments from appearing before booking or contract in the buyer payment calendar and late-buyer settlement view
+- [x] Normalize previously saved zero-progress construction calendar entries so they follow the contract instead of creating pre-booking collections
+- [x] Expand every periodic or construction payment series into individual numbered installment rows with an explicit percentage and due date

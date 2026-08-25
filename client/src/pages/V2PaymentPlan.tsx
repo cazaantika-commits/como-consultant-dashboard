@@ -18,6 +18,7 @@ import {
   buildPaymentCalendar,
   buyerDueCalendar,
   calendarEntriesFromPlan,
+  expandPaymentCalendarEntries,
   paymentCalendarTotal,
 } from "@/lib/paymentPlanCalendar";
 import { getProjectMarketingTiming } from "@/lib/projectTiming";
@@ -101,7 +102,12 @@ export default function V2PaymentPlan() {
     catch { parsed = cloneFlexiblePaymentPlan(); }
     setPlanId(saved.id);
     setPlan(parsed);
-    setEntries(calendarEntriesFromPlan(parsed));
+    setEntries(expandPaymentCalendarEntries(calendarEntriesFromPlan(parsed), {
+      projectSalesStartMonth: salesStartMonth,
+      constructionStartMonth: timing.constructionStartMonth,
+      constructionEndMonth,
+      projectStartDate,
+    }));
     setPurchaseMonth(Math.max(1, salesStartMonth));
   }, [plansQuery.data, salesStartMonth]);
 
@@ -110,7 +116,12 @@ export default function V2PaymentPlan() {
       const draft = cloneFlexiblePaymentPlan();
       setPlanId(undefined);
       setPlan(draft);
-      setEntries(calendarEntriesFromPlan(draft));
+      setEntries(expandPaymentCalendarEntries(calendarEntriesFromPlan(draft), {
+        projectSalesStartMonth: salesStartMonth,
+        constructionStartMonth: timing.constructionStartMonth,
+        constructionEndMonth,
+        projectStartDate,
+      }));
       setPurchaseMonth(Math.max(1, salesStartMonth));
     }
   }, [plansQuery.data, salesStartMonth]);

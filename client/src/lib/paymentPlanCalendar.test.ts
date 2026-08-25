@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildPaymentCalendar, buyerDueCalendar } from "./paymentPlanCalendar";
+import { buildPaymentCalendar, buyerDueCalendar, calendarEntriesFromPlan, expandPaymentCalendarEntries, normalizePaymentCalendarEntries } from "./paymentPlanCalendar";
+import { DEFAULT_FLEXIBLE_PAYMENT_PLAN } from "./flexiblePaymentPlan";
 
 describe("buyer payment calendar", () => {
   const context = {
@@ -38,5 +39,41 @@ describe("buyer payment calendar", () => {
     ], context);
 
     expect(rows[0]).toMatchObject({ month: 7, automatic: false });
+  });
+
+  it("never places the legacy zero-percent construction trigger before booking and contract", () => {
+    const entries = calendarEntriesFromPlan(DEFAULT_FLEXIBLE_PAYMENT_PLAN);
+    const rows = buildPaymentCalendar(entries, context);
+
+    expect(rows.map((row) => row.month)).toEqual([7, 8, 11, 27]);
+    expect(buyerDueCalendar(rows, 7).filter((row) => row.month === 7).reduce((sum, row) => sum + row.percentage, 0)).toBe(10);
+  });
+
+  it("migrates an already saved 0%-progress construction calendar row after the contract", () => {
+    const entries = normalizePaymentCalendarEntries([
+      { id: "booking", sequence: 1, label: "الحجز", percentage: 10, recipient: "escrow", timingRule: "booking" },
+      { id: "contract", sequence: 2, label: "العقد", percentage: 10, recipient: "escrow", timingRule: "after_previous", offsetMonths: 1 },
+      { id: "construction", sequence: 3, label: "الإنشاء", percentage: 40, recipient: "escrow", timingRule: "construction_progress", progressPct: 0 },
+      { id: "handover", sequence: 4, label: "التسليم", percentage: 40, recipient: "escrow", timingRule: "handover" },
+    ]);
+    const rows = buildPaymentCalendar(entries, context);
+
+    expect(entries[2]).toMatchObject({ timingRule: "after_previous", offsetMonths: 3 });
+    expect(rows.map((row) => row.month)).toEqual([7, 8, 11, 27]);
+  });
+
+  it("shows every construction installment as a separate numbered payment before handover", () => {
+    const projectContext = { ...context, constructionEndMonth: 23 };
+    const entries = expandPaymentCalendarEntries([
+      { id: "booking", sequence: 1, label: "الحجز", percentage: 10, recipient: "escrow", timingRule: "booking" },
+      { id: "contract", sequence: 2, label: "العقد", percentage: 10, recipient: "escrow", timingRule: "after_previous", offsetMonths: 1 },
+      { id: "construction", sequence: 3, label: "دفعات أثناء الإنشاء", percentage: 40, recipient: "escrow", timingRule: "construction_progress", progressPct: 0 },
+      { id: "handover", sequence: 4, label: "التسليم", percentage: 40, recipient: "escrow", timingRule: "handover" },
+    ], projectContext);
+    const rows = buildPaymentCalendar(entries, projectContext);
+
+    expect(entries.map((entry) => entry.label)).toEqual(["الحجز", "العقد", "قسط الإنشاء 1", "قسط الإنشاء 2", "قسط الإنشاء 3", "قسط الإنشاء 4", "التسليم"]);
+    expect(rows.map((row) => row.month)).toEqual([7, 8, 11, 14, 17, 20, 23]);
+    expect(rows.slice(2, 6).map((row) => row.percentage)).toEqual([10, 10, 10, 10]);
   });
 });
