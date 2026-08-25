@@ -115,6 +115,31 @@ export function getProjectMarketingTiming(project: any) {
 }
 
 /**
+ * The construction canvas stores each month's incremental completion share in
+ * constructionScheduleJson.monthlyProgress. Convert that approved plan into
+ * cumulative milestones with true project months for buyer-payment timing.
+ */
+export function getConstructionProgressMilestones(project: any) {
+  let monthlyProgress: number[] = [];
+  try {
+    const parsed = JSON.parse(project?.constructionScheduleJson || "{}");
+    monthlyProgress = Array.isArray(parsed?.monthlyProgress)
+      ? parsed.monthlyProgress.map((value: unknown) => Math.max(0, Number(value) || 0))
+      : [];
+  } catch {
+    monthlyProgress = [];
+  }
+  const timing = getProjectMarketingTiming(project);
+  let cumulative = 0;
+  return monthlyProgress
+    .map((increment, index) => {
+      cumulative = Math.min(100, cumulative + increment);
+      return { month: timing.constructionStartMonth + index, progressPct: Math.round(cumulative * 100) / 100 };
+    })
+    .filter((item) => item.progressPct > 0);
+}
+
+/**
  * RERA auditor and inspection reports are paid once every three construction
  * months. Their per-payment rates are saved in Settings and Rules, making the
  * same total available to Feasibility Study and Escrow Cash Flow.

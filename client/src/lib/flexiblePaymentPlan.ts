@@ -31,6 +31,8 @@ export interface PaymentCalendarEntry {
   label: string;
   percentage: number;
   recipient: PaymentRecipient;
+  /** Buyer-facing stage used to validate the payment sequence. */
+  milestone?: PaymentPlanMilestone;
   timingRule: PaymentCalendarTimingRule;
   offsetMonths?: number;
   progressPct?: number;

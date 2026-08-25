@@ -1545,3 +1545,12 @@
 - [x] Prevent construction installments from appearing before booking or contract in the buyer payment calendar and late-buyer settlement view
 - [x] Normalize previously saved zero-progress construction calendar entries so they follow the contract instead of creating pre-booking collections
 - [x] Expand every periodic or construction payment series into individual numbered installment rows with an explicit percentage and due date
+- [x] Simplify the buyer payment-plan page so Wael sees a readable numbered payment list before any technical timing controls
+- [x] Fix horizontal clipping of the buyer payment-plan page on mobile while keeping the payment list readable
+- [x] Replace technical payment-plan editing with a direct next-payment builder that generates realistic installment dates from sales start, construction duration, and handover constraints
+- [x] Rebuild the buyer payment table around a Create Next Payment action with direct edit/delete and guardrails against invalid booking, construction, handover, or post-handover sequencing
+- [x] Generate post-handover installments as individual dated rows every 4 or 6 months for a selected 24- or 48-month term
+- [x] Let each construction installment use either a fixed date or a completion percentage read from the approved construction plan
+- [x] Enforce that the final construction installment is no later than two calendar months before handover for every project duration
+- [x] Let Wael choose when the first construction installment starts after the contract, then distribute only within the available window before the handover buffer
+- [x] Keep payment-plan guardrails limited to chronology and feasibility; do not impose arbitrary timing rules that Wael did not choose
