@@ -81,6 +81,7 @@ import V2Portfolio from "./pages/V2Portfolio";
 import V2EscrowCashFlow from "./pages/V2EscrowCashFlow";
 import V2Feasibility from "./pages/V2Feasibility";
 import V2WaelSales from "./pages/V2WaelSales";
+import V2PaymentPlan from "./pages/V2PaymentPlan";
 import V2Timeline from "./pages/V2Timeline";
 import V2Hub from "./pages/V2Hub";
 import BateekhaPage from "./pages/BateekhaPage";
@@ -166,6 +167,7 @@ function Router() {
       <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />
       <Route path="/v2/feasibility" component={V2Feasibility} />
       <Route path="/v2/wael-sales" component={V2WaelSales} />
+      <Route path="/v2/payment-plan" component={V2PaymentPlan} />
       <Route path="/v2/timeline" component={V2Timeline} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />

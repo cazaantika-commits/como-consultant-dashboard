@@ -129,4 +129,44 @@ describe("waelSalesPlan.save", () => {
       resultsJson: "{\"actualCashInflow\":[2200000],\"actualCashInflowVersion\":2}",
     }));
   });
+
+  it("updates only the payment calendar JSON without replacing the approved scenario", async () => {
+    const where = vi.fn().mockResolvedValue(undefined);
+    const set = vi.fn().mockReturnValue({ where });
+    mockedGetDb.mockResolvedValue({
+      update: vi.fn().mockReturnValue({ set }),
+    } as any);
+
+    const result = await createCaller().savePaymentCalendar({
+      planId: 73,
+      projectId: 2,
+      paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
+    });
+
+    expect(result).toEqual({ id: 73, action: "updated" });
+    expect(set).toHaveBeenCalledWith({
+      paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
+    });
+    expect(where).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates a minimal draft when the project has no prior sales scenario", async () => {
+    const values = vi.fn().mockResolvedValue([{ insertId: 88 }]);
+    mockedGetDb.mockResolvedValue({
+      insert: vi.fn().mockReturnValue({ values }),
+    } as any);
+
+    const result = await createCaller().savePaymentCalendar({
+      projectId: 2,
+      paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
+    });
+
+    expect(result).toEqual({ id: 88, action: "created" });
+    expect(values).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: 2,
+      userId: 91,
+      name: "خطة سداد المشترين",
+      status: "draft",
+    }));
+  });
 });

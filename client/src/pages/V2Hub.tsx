@@ -49,6 +49,14 @@ const V2_PAGES = [
     iconBg: "bg-orange-100",
   },
   {
+    title: "خطة سداد المشترين",
+    description: "دفعات مرقمة وتواريخ فعلية وتعديل وائل اليدوي",
+    path: "/v2/payment-plan",
+    icon: Landmark,
+    color: "bg-violet-50 border-violet-200 text-violet-700",
+    iconBg: "bg-violet-100",
+  },
+  {
     title: "الجدول الزمني",
     description: "المراحل والمعالم الرئيسية",
     path: "/v2/timeline",

@@ -1538,3 +1538,7 @@
 - [x] Replace Layla's visible Command Center portrait with a professional non-hijab Eastern–Western portrait while preserving the visible name Layla and existing internal compatibility
 - [x] Increase Layla's desktop Command Center portrait display by approximately 50% while retaining the no-portrait mobile header rule
 - [x] Fix persistence of square-foot prices for newly added unit types when Wael approves a sales scenario, without overwriting existing pricing data
+- [x] Redesign the buyer payment-plan editor as a visual time-and-construction-progress sequence with ordered payments, subject to owner approval before changing financial behavior
+- [x] Support periodic buyer-payment series every chosen number of months within the same visual timeline, alongside progress-based payments, while stopping construction series at handover
+- [x] Create a dedicated buyer payment-plan page with numbered installments, real calendar dates, chronological rules, and late-buyer catch-up calculations before changing cash-flow behavior
+- [x] Allow Wael to manually override an individual installment's date, percentage, label, recipient, or order while preserving an auditable recalculated plan

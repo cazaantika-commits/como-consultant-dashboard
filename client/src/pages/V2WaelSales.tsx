@@ -5,7 +5,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
-import { FlexiblePaymentPlanEditor } from "@/components/FlexiblePaymentPlanEditor";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,9 +63,8 @@ import {
   normalizeFlexiblePaymentPlan,
   paymentPlanTotalPercentage,
   type FlexiblePaymentPlan,
-  type PaymentPlanMilestone,
-  type PaymentPlanStage,
 } from "@/lib/flexiblePaymentPlan";
+import { buildPaymentCalendar, buyerDueCalendar } from "@/lib/paymentPlanCalendar";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -382,6 +380,28 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const timelineDisplayEndMonth = isBuildForSale
     ? Math.max(timeline.projectEnd, buildForSaleMarketingEndMonth, salesEndMonth)
     : timeline.projectEnd;
+  const paymentCalendarRows = useMemo(() => paymentPlan.calendarEntries?.length
+    ? buildPaymentCalendar(paymentPlan.calendarEntries, {
+        projectSalesStartMonth: salesStartMonth,
+        constructionStartMonth: timeline.constructionStart,
+        constructionEndMonth: timeline.constructionStart + constructionMonths - 1,
+        projectStartDate,
+      })
+    : null, [paymentPlan.calendarEntries, salesStartMonth, timeline.constructionStart, constructionMonths, projectStartDate]);
+  const paymentEventsForSale = (saleMonth: number) => paymentCalendarRows
+    ? buyerDueCalendar(paymentCalendarRows, saleMonth).map((row) => ({
+        month: row.month,
+        pct: row.percentage,
+        recipient: row.recipient,
+        stageId: row.id,
+        stageLabel: row.label,
+      }))
+    : buildPaymentReceiptEvents({
+        plan: paymentPlan,
+        saleMonth,
+        constructionStartMonth: timeline.constructionStart,
+        constructionEndMonth: timeline.constructionStart + constructionMonths - 1,
+      });
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
   const offPlanUnits = isBuildForSale ? totalUnits : Math.round((totalUnits * offPlan) / 100);
@@ -455,12 +475,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (units <= 0) return;
       const saleMonth = salesStartMonth + index;
       const saleAmount = units * avgUnitPrice;
-      buildPaymentReceiptEvents({
-        plan: paymentPlan,
-        saleMonth,
-        constructionStartMonth: timeline.constructionStart,
-        constructionEndMonth: constructionEnd,
-      }).forEach((event) => {
+      paymentEventsForSale(saleMonth).forEach((event) => {
         if (event.recipient !== "escrow" || event.month > horizon) return;
         const amount = saleAmount * (event.pct / 100);
         escrowInflowByMonth[event.month] += amount;
@@ -486,7 +501,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         cumulativeSold: salesDistribution.slice(0, Math.max(0, month - salesStartMonth + 1)).reduce((sum, units) => sum + units, 0),
       };
     });
-  }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.constructionStart, timeline.projectEnd, constructionMonths, paymentPlan, salesStartMonth, salesEndMonth, salesMonths]);
+  }, [isBuildForSale, salesDistribution, escrowInitial, avgUnitPrice, monthlySiphon, timeline.constructionStart, timeline.projectEnd, constructionMonths, paymentPlan, paymentCalendarRows, salesStartMonth, salesEndMonth, salesMonths]);
   const visibleTimelinePhases = isBuildForSale
     ? PROJECT_PHASES.filter((phase) => ["design", "marketing", "sales", "construction"].includes(phase.id))
     : PROJECT_PHASES;
@@ -518,12 +533,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           grid[saleMonth][saleMonth] += saleAmount;
         }
       } else {
-        for (const event of buildPaymentReceiptEvents({
-          plan: paymentPlan,
-          saleMonth,
-          constructionStartMonth: timeline.constructionStart,
-          constructionEndMonth: constructionEnd,
-        })) {
+        for (const event of paymentEventsForSale(saleMonth)) {
           if (event.month >= cashPerMonth.length) continue;
           const amount = saleAmount * (event.pct / 100);
           cashPerMonth[event.month] += amount;
@@ -550,7 +560,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       actualEscrowCashInflow: Array.from({ length: cashFlowHorizon }, (_, i) => escrowCashPerMonth[i + 1] || 0),
       actualInvestorCashInflow: Array.from({ length: cashFlowHorizon }, (_, i) => investorCashPerMonth[i + 1] || 0),
     };
-  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, paymentPlan, isBuildForSale, salesStartMonth, salesEndMonth]);
+  }, [salesDistribution, avgUnitPrice, timeline, constructionMonths, paymentPlan, paymentCalendarRows, isBuildForSale, salesStartMonth, salesEndMonth]);
 
   // The live workspace uses the same cash-flow engine and account-balance
   // helper as the Escrow report. Therefore a saved scenario cannot show two
@@ -820,42 +830,6 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     setHasPlanChanges(true);
   };
 
-  const updatePaymentStage = (stageId: string, patch: Partial<PaymentPlanStage>) => {
-    setPaymentPlan((current) => ({
-      version: 2,
-      stages: current.stages.map((stage) => stage.id === stageId ? { ...stage, ...patch } : stage),
-    }));
-    setHasPlanChanges(true);
-    setImpactFocus("خطة التحصيل");
-  };
-
-  const addPaymentStage = (milestone: PaymentPlanMilestone = "construction") => {
-    const defaults: Record<PaymentPlanMilestone, Partial<PaymentPlanStage>> = {
-      booking: { label: "دفعة الحجز", trigger: "sale", recipient: "escrow", installmentCount: 1 },
-      contract: { label: "دفعة توقيع العقد", trigger: "months_after_sale", recipient: "escrow", offsetMonths: 1, installmentCount: 1 },
-      construction: { label: "دفعات أثناء الإنشاء", trigger: "construction_progress", recipient: "escrow", progressPct: 0, everyMonths: 3, untilHandover: true },
-      handover: { label: "دفعة التسليم", trigger: "handover", recipient: "escrow", installmentCount: 1 },
-      post_handover: { label: "دفعات ما بعد التسليم", trigger: "post_handover", recipient: "investor", offsetMonths: 1, everyMonths: 3, installmentCount: 8 },
-    };
-    setPaymentPlan((current) => ({
-      version: 2,
-      stages: [...current.stages, {
-        id: `${milestone}-${Date.now()}`,
-        milestone,
-        percentage: 0,
-        ...defaults[milestone],
-      }],
-    }));
-    setHasPlanChanges(true);
-    setImpactFocus(defaults[milestone].label || "خطة التحصيل");
-  };
-
-  const removePaymentStage = (stageId: string) => {
-    setPaymentPlan((current) => ({ version: 2, stages: current.stages.filter((stage) => stage.id !== stageId) }));
-    setHasPlanChanges(true);
-    setImpactFocus("خطة التحصيل");
-  };
-
   const hasScenarioChanges = hasUnitChanges || hasPlanChanges || hasMarketingChanges || hasBuildForSaleMarketingChanges;
   const firstCollection = cashInflowData.find((row) => row.cashInflow > 0);
   const visibleImpactMonths = cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 12);
@@ -963,7 +937,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                 </section>
 
-                {!isBuildForSale && <FlexiblePaymentPlanEditor plan={paymentPlan} onStageChange={updatePaymentStage} onAddStage={addPaymentStage} onRemoveStage={removePaymentStage} salesStartMonth={salesStartMonth} constructionStartMonth={timeline.constructionStart} constructionEndMonth={timeline.constructionStart + constructionMonths - 1} />}
+                {!isBuildForSale && <section className="flex flex-col gap-4 rounded-[22px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_58%,#ecfeff)] p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[11px] font-black text-indigo-700">خطة سداد المشترين</p><h2 className="mt-1 text-xl font-black text-slate-950">رتّب الدفعات بتواريخها الحقيقية في صفحة مستقلة</h2><p className="mt-1.5 max-w-3xl text-xs font-semibold leading-5 text-slate-700">تشاهد الدفعات المرقمة، والمواعيد الفعلية، وتعديل وائل اليدوي، وحالة المشتري الذي يدخل متأخرًا؛ ثم تعود هنا لاعتماد سيناريو المبيعات والتدفقات.</p></div><Button onClick={() => navigate("/v2/payment-plan")} className="shrink-0 bg-indigo-700 text-white hover:bg-indigo-600"><Calendar className="ml-1 h-4 w-4" />فتح صفحة خطة السداد</Button></section>}
 
                 <section data-testid="pricing-source-panel" className="overflow-hidden rounded-[22px] border-2 border-amber-300 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <div className="flex flex-col gap-3 border-b-2 border-amber-200 bg-[linear-gradient(115deg,#fffbeb,#ffffff_55%,#ecfeff)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

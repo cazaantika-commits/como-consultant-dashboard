@@ -185,6 +185,38 @@ export const waelSalesPlanRouter = router({
       return { id, action: input.planId ? "updated" as const : "created" as const };
     }),
 
+  savePaymentCalendar: protectedProcedure
+    .input(z.object({
+      planId: z.number().optional(),
+      projectId: z.number(),
+      paymentPlanJson: z.string().min(2),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new Error("DB not available");
+      if (!ctx.user) throw new Error("Unauthorized");
+
+      if (input.planId) {
+        await db.update(waelSalesPlans)
+          .set({ paymentPlanJson: input.paymentPlanJson })
+          .where(and(
+            eq(waelSalesPlans.id, input.planId),
+            eq(waelSalesPlans.projectId, input.projectId),
+            eq(waelSalesPlans.userId, ctx.user.id),
+          ));
+        return { id: input.planId, action: "updated" as const };
+      }
+
+      const result = await db.insert(waelSalesPlans).values({
+        projectId: input.projectId,
+        userId: ctx.user.id,
+        name: "خطة سداد المشترين",
+        status: "draft",
+        paymentPlanJson: input.paymentPlanJson,
+      });
+      return { id: Number((result as any)[0]?.insertId || 0), action: "created" as const };
+    }),
+
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {

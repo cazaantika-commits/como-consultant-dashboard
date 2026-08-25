@@ -8,6 +8,7 @@ export type PaymentStageTrigger =
   | "post_handover";
 
 export type PaymentPlanMilestone = "booking" | "contract" | "construction" | "handover" | "post_handover";
+export type PaymentCalendarTimingRule = "booking" | "after_previous" | "construction_progress" | "handover" | "post_handover" | "manual_date";
 
 export interface PaymentPlanStage {
   id: string;
@@ -23,9 +24,23 @@ export interface PaymentPlanStage {
   progressPct?: number;
 }
 
+/** A buyer-facing installment placed on the shared project calendar. */
+export interface PaymentCalendarEntry {
+  id: string;
+  sequence: number;
+  label: string;
+  percentage: number;
+  recipient: PaymentRecipient;
+  timingRule: PaymentCalendarTimingRule;
+  offsetMonths?: number;
+  progressPct?: number;
+  manualDate?: string;
+}
+
 export interface FlexiblePaymentPlan {
   version: 2;
   stages: PaymentPlanStage[];
+  calendarEntries?: PaymentCalendarEntry[];
 }
 
 export interface LegacyPaymentPlan {
@@ -83,7 +98,11 @@ export function createPaymentPlanStage(milestone: PaymentPlanMilestone, id = `${
 }
 
 export function cloneFlexiblePaymentPlan(plan: FlexiblePaymentPlan = DEFAULT_FLEXIBLE_PAYMENT_PLAN): FlexiblePaymentPlan {
-  return { version: 2, stages: plan.stages.map((stage) => ({ ...stage })) };
+  return {
+    version: 2,
+    stages: plan.stages.map((stage) => ({ ...stage })),
+    calendarEntries: plan.calendarEntries?.map((entry) => ({ ...entry })),
+  };
 }
 
 export function isFlexiblePaymentPlan(value: unknown): value is FlexiblePaymentPlan {
@@ -114,6 +133,21 @@ export function legacyPaymentPlanToFlexible(plan: Partial<LegacyPaymentPlan> | u
 
 export function normalizeFlexiblePaymentPlan(value: unknown): FlexiblePaymentPlan {
   if (isFlexiblePaymentPlan(value)) {
+    const calendarEntries = Array.isArray(value.calendarEntries)
+      ? value.calendarEntries.map((entry, index) => ({
+          id: entry.id || `calendar-${index + 1}`,
+          sequence: Math.max(1, Math.floor(Number(entry.sequence) || index + 1)),
+          label: entry.label || `دفعة ${index + 1}`,
+          percentage: Math.max(0, Number(entry.percentage) || 0),
+          recipient: entry.recipient === "investor" ? "investor" as const : "escrow" as const,
+          timingRule: ["booking", "after_previous", "construction_progress", "handover", "post_handover", "manual_date"].includes(entry.timingRule)
+            ? entry.timingRule
+            : "after_previous" as const,
+          offsetMonths: Math.max(0, Math.floor(Number(entry.offsetMonths) || 0)),
+          progressPct: Math.min(100, Math.max(0, Number(entry.progressPct) || 0)),
+          manualDate: typeof entry.manualDate === "string" ? entry.manualDate : undefined,
+        }))
+      : undefined;
     return {
       version: 2,
       stages: value.stages.map((stage, index) => {
@@ -133,6 +167,7 @@ export function normalizeFlexiblePaymentPlan(value: unknown): FlexiblePaymentPla
         const milestone = getPaymentPlanMilestone(normalized);
         return { ...normalized, milestone, untilHandover: milestone === "construction" ? true : normalized.untilHandover };
       }),
+      ...(calendarEntries?.length ? { calendarEntries } : {}),
     };
   }
   return legacyPaymentPlanToFlexible(value as Partial<LegacyPaymentPlan>);
