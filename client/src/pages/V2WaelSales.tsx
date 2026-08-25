@@ -386,7 +386,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         constructionStartMonth: timeline.constructionStart,
         constructionEndMonth: timeline.constructionStart + constructionMonths - 1,
         projectStartDate,
-      })
+      }))
     : null, [paymentPlan.calendarEntries, salesStartMonth, timeline.constructionStart, constructionMonths, projectStartDate]);
   const paymentEventsForSale = (saleMonth: number) => paymentCalendarRows
     ? buyerDueCalendar(paymentCalendarRows, saleMonth).map((row) => ({
