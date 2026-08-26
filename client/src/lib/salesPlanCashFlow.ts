@@ -1,11 +1,17 @@
 import type { SalesResult, Scenario } from "@/lib/investorCashFlowEngine";
-import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "@/lib/projectTiming";
+import { clampMarketingDistributionToStart, getProjectMarketingTiming } from "./projectTiming";
 import {
   buildPaymentReceiptEvents,
   cloneFlexiblePaymentPlan,
   getPaymentPlanPostHandoverMonths,
   normalizeFlexiblePaymentPlan,
-} from "@/lib/flexiblePaymentPlan";
+} from "./flexiblePaymentPlan";
+import {
+  buildPaymentCalendar,
+  buyerDueCalendar,
+  calendarEntriesFromPlan,
+  expandPaymentCalendarEntries,
+} from "./paymentPlanCalendar";
 
 export interface DefaultOffPlanSalesInput {
   totalRevenue: number;
@@ -31,6 +37,172 @@ export function buildMarketingMonthlyWeights(
   }
   const total = combined.reduce((sum, amount) => sum + amount, 0);
   return total > 0 ? combined.map((amount) => amount / total) : undefined;
+}
+
+const PROJECT_UNIT_COUNT_KEYS = [
+  "studioCount", "residential1brCount", "residential2brCount", "residential2brMaidCount",
+  "residential3brCount", "residential3brMaidCount", "villaCount", "townhouseCount",
+  "retailSmallCount", "retailMediumCount", "retailLargeCount",
+  "officeSmallCount", "officeMediumCount", "officeLargeCount",
+] as const;
+
+export function getSavedProjectUnitCount(project: any): number {
+  return PROJECT_UNIT_COUNT_KEYS.reduce((sum, key) => sum + Math.max(0, Number(project?.[key]) || 0), 0);
+}
+
+function distributeUnitsAcrossSalesWindow({
+  totalUnits,
+  months,
+  mode,
+  speed,
+  template,
+  manual,
+}: {
+  totalUnits: number;
+  months: number;
+  mode?: string;
+  speed?: number;
+  template?: string;
+  manual?: unknown[];
+}): number[] {
+  const safeMonths = Math.max(1, Math.floor(months));
+  const target = Math.max(0, Math.round(totalUnits));
+  if (mode === "manual" && Array.isArray(manual) && manual.length === safeMonths) {
+    const values = manual.map((value) => Math.max(0, Math.round(Number(value) || 0)));
+    const difference = target - values.reduce((sum, value) => sum + value, 0);
+    if (values.length > 0) values[Math.floor(values.length / 2)] = Math.max(0, values[Math.floor(values.length / 2)] + difference);
+    return values;
+  }
+
+  const safeSpeed = Math.min(100, Math.max(0, Number(speed) || 50));
+  let raw: number[];
+  if (template === "fast") raw = Array.from({ length: safeMonths }, (_, index) => Math.exp(-index / (safeMonths * 0.3)));
+  else if (template === "gradual") raw = Array.from({ length: safeMonths }, (_, index) => 1 + index * 0.5);
+  else if (template === "late") raw = Array.from({ length: safeMonths }, (_, index) => Math.exp(-(safeMonths - 1 - index) / (safeMonths * 0.3)));
+  else {
+    const midpoint = safeMonths * (1 - safeSpeed / 100) + (safeMonths / 2) * (safeSpeed / 100);
+    const sigma = safeMonths / (3 + (safeSpeed / 100) * 3);
+    raw = Array.from({ length: safeMonths }, (_, index) =>
+      Math.exp(-0.5 * Math.pow((index - midpoint + safeMonths / 2) / sigma, 2)),
+    );
+  }
+  const rawTotal = raw.reduce((sum, value) => sum + value, 0) || 1;
+  const distribution = raw.map((value) => Math.max(1, Math.round((value / rawTotal) * target)));
+  if (distribution.length > 0) {
+    distribution[Math.floor(distribution.length / 2)] += target - distribution.reduce((sum, value) => sum + value, 0);
+  }
+  return distribution.map((value) => Math.max(0, value));
+}
+
+export function rebuildOffPlanSalesResultsFromPaymentPlan({
+  project,
+  totalRevenue,
+  offplanPct,
+  salesAbsorptionJson,
+  paymentPlanJson,
+  existingResultsJson,
+}: {
+  project: any;
+  totalRevenue: number;
+  offplanPct: number;
+  salesAbsorptionJson?: string | null;
+  paymentPlanJson: string;
+  existingResultsJson?: string | null;
+}) {
+  let absorption: any = {};
+  let existingResults: any = {};
+  try { absorption = JSON.parse(salesAbsorptionJson || "{}"); } catch { absorption = {}; }
+  try { existingResults = JSON.parse(existingResultsJson || "{}"); } catch { existingResults = {}; }
+
+  const paymentPlan = normalizeFlexiblePaymentPlan(JSON.parse(paymentPlanJson));
+  const timing = getProjectMarketingTiming(project);
+  const totalUnits = getSavedProjectUnitCount(project);
+  const offPlanUnits = Math.min(totalUnits, Math.max(0, Math.round(totalUnits * Math.min(100, Math.max(0, offplanPct)) / 100)));
+  const salesMonths = Math.max(1, timing.projectEndMonth - timing.salesStartMonth + 1);
+  const salesDistribution = distributeUnitsAcrossSalesWindow({
+    totalUnits: offPlanUnits,
+    months: salesMonths,
+    mode: absorption.mode,
+    speed: absorption.speed,
+    template: absorption.template,
+    manual: absorption.manual,
+  });
+  const context = {
+    projectSalesStartMonth: timing.salesStartMonth,
+    constructionStartMonth: timing.constructionStartMonth,
+    constructionEndMonth: timing.projectEndMonth,
+    projectStartDate: project?.startDate,
+  };
+  const calendar = buildPaymentCalendar(
+    expandPaymentCalendarEntries(calendarEntriesFromPlan(paymentPlan), context),
+    context,
+  );
+  const finalCalendarMonth = calendar.reduce((maximum, row) => Math.max(maximum, row.month), timing.projectEndMonth);
+  const horizon = Math.max(timing.projectEndMonth + 13, finalCalendarMonth);
+  const cashByMonth = new Array(horizon + 1).fill(0);
+  const escrowByMonth = new Array(horizon + 1).fill(0);
+  const investorByMonth = new Array(horizon + 1).fill(0);
+  const bookingByMonth = new Array(horizon + 1).fill(0);
+  const averageUnitRevenue = totalUnits > 0 ? Math.max(0, totalRevenue) / totalUnits : 0;
+
+  salesDistribution.forEach((units, index) => {
+    const saleMonth = timing.salesStartMonth + index;
+    const saleRevenue = units * averageUnitRevenue;
+    buyerDueCalendar(calendar, saleMonth).forEach((event) => {
+      if (event.month > horizon) return;
+      const amount = saleRevenue * event.percentage / 100;
+      cashByMonth[event.month] += amount;
+      if (event.recipient === "investor") investorByMonth[event.month] += amount;
+      else {
+        escrowByMonth[event.month] += amount;
+        if (event.id === "booking") bookingByMonth[event.month] += amount;
+      }
+    });
+  });
+
+  const actualCashInflow = Array.from({ length: horizon }, (_, index) => cashByMonth[index + 1] || 0);
+  const actualEscrowCashInflow = Array.from({ length: horizon }, (_, index) => escrowByMonth[index + 1] || 0);
+  const actualInvestorCashInflow = Array.from({ length: horizon }, (_, index) => investorByMonth[index + 1] || 0);
+  const escrowData = salesDistribution.map((units, index) => {
+    const month = timing.salesStartMonth + index;
+    const income = actualEscrowCashInflow[month - 1] || 0;
+    const downPayment = bookingByMonth[month] || 0;
+    return {
+      month,
+      units,
+      income,
+      downPayment,
+      installments: income - downPayment,
+      withdrawal: 0,
+      balance: 0,
+      cumulativeSold: salesDistribution.slice(0, index + 1).reduce((sum, value) => sum + value, 0),
+    };
+  });
+
+  return {
+    paymentPlan,
+    salesAbsorptionJson: JSON.stringify({
+      ...absorption,
+      manual: absorption.mode === "manual" ? salesDistribution : (Array.isArray(absorption.manual) ? absorption.manual.slice(0, salesMonths) : []),
+      paymentPlanVersion: 2,
+      paymentPlan,
+    }),
+    resultsJson: JSON.stringify({
+      ...existingResults,
+      escrowData,
+      salesDistribution,
+      actualCashInflow,
+      actualEscrowCashInflow,
+      actualInvestorCashInflow,
+      actualCashInflowVersion: 2,
+    }),
+    salesDistribution,
+    actualCashInflow,
+    actualEscrowCashInflow,
+    actualInvestorCashInflow,
+    salesStartMonth: timing.salesStartMonth,
+    projectEndMonth: timing.projectEndMonth,
+  };
 }
 
 /**

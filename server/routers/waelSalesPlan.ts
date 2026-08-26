@@ -3,6 +3,10 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { waelSalesPlans, projects } from "../../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
+import {
+  getSavedProjectUnitCount,
+  rebuildOffPlanSalesResultsFromPaymentPlan,
+} from "../../client/src/lib/salesPlanCashFlow";
 
 const workspacePricingSchema = z.object({
 	studioPrice: z.number().int().min(0).optional(),
@@ -197,14 +201,49 @@ export const waelSalesPlanRouter = router({
       if (!ctx.user) throw new Error("Unauthorized");
 
       if (input.planId) {
+        const [currentPlan] = await db.select().from(waelSalesPlans).where(and(
+          eq(waelSalesPlans.id, input.planId),
+          eq(waelSalesPlans.projectId, input.projectId),
+          eq(waelSalesPlans.userId, ctx.user.id),
+        )).limit(1);
+        const [project] = await db.select().from(projects).where(and(
+          eq(projects.id, input.projectId),
+          eq(projects.userId, ctx.user.id),
+        )).limit(1);
+        if (!currentPlan || !project) throw new Error("Payment plan or project not found");
+
+        const isOffPlan = ["offplan_escrow", "offplan_construction"].includes(String(project.financingScenario || ""));
+        const canRebuild = isOffPlan
+          && getSavedProjectUnitCount(project) > 0
+          && Number(currentPlan.totalRevenue) > 0;
+        const rebuilt = canRebuild
+          ? rebuildOffPlanSalesResultsFromPaymentPlan({
+              project,
+              totalRevenue: Number(currentPlan.totalRevenue),
+              offplanPct: Number(currentPlan.offplanPct ?? 80),
+              salesAbsorptionJson: currentPlan.salesAbsorptionJson,
+              paymentPlanJson: input.paymentPlanJson,
+              existingResultsJson: currentPlan.resultsJson,
+            })
+          : null;
         await db.update(waelSalesPlans)
-          .set({ paymentPlanJson: input.paymentPlanJson })
+          .set({
+            paymentPlanJson: input.paymentPlanJson,
+            salesAbsorptionJson: rebuilt?.salesAbsorptionJson ?? currentPlan.salesAbsorptionJson,
+            resultsJson: rebuilt?.resultsJson ?? null,
+            status: "draft",
+          })
           .where(and(
             eq(waelSalesPlans.id, input.planId),
             eq(waelSalesPlans.projectId, input.projectId),
             eq(waelSalesPlans.userId, ctx.user.id),
           ));
-        return { id: input.planId, action: "updated" as const };
+        return {
+          id: input.planId,
+          action: "updated" as const,
+          resultsRebuilt: Boolean(rebuilt),
+          requiresApproval: true,
+        };
       }
 
       const result = await db.insert(waelSalesPlans).values({
@@ -214,7 +253,12 @@ export const waelSalesPlanRouter = router({
         status: "draft",
         paymentPlanJson: input.paymentPlanJson,
       });
-      return { id: Number((result as any)[0]?.insertId || 0), action: "created" as const };
+      return {
+        id: Number((result as any)[0]?.insertId || 0),
+        action: "created" as const,
+        resultsRebuilt: false,
+        requiresApproval: true,
+      };
     }),
 
   delete: protectedProcedure

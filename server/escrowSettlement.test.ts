@@ -107,7 +107,7 @@ describe("calculateEscrowSettlement", () => {
     expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(0);
   });
 
-  it("includes escrow instalments received after the first closure in the month-thirteen transfer", () => {
+  it("does not hide invalid post-closure receipts inside a balancing month-thirteen transfer", () => {
     const baseline = [0, 500, 700, 730, 740];
     const result = calculateEscrowSettlement({
       cumulativeWithoutLiquidation: baseline,
@@ -118,8 +118,8 @@ describe("calculateEscrowSettlement", () => {
 
     expect(result.retainedSalesAmount).toBe(42);
     expect(result.firstLiquidation).toBe(658);
-    expect(result.finalLiquidation).toBe(82);
-    expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(0);
+    expect(result.finalLiquidation).toBe(42);
+    expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(40);
   });
 
   it("does not classify buyer collections held in escrow as direct investor revenue before settlement", () => {

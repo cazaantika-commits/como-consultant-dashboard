@@ -232,7 +232,10 @@ export default function V2PaymentPlan() {
       setPlan(updated);
       setPlanId(result.id);
       await plansQuery.refetch();
-      toast({ title: "تم حفظ الدفعات", description: "تظهر هذه الصفوف نفسها في تحصيلات المبيعات والضمان عند اعتماد السيناريو." });
+      toast({
+        title: result.resultsRebuilt ? "تم حفظ الدفعات وإعادة بناء التحصيلات" : "تم حفظ الدفعات",
+        description: "راجع النتائج في مساحة وائل ثم أعد اعتماد السيناريو؛ لن تستخدم التقارير نتائج التحصيل القديمة.",
+      });
     } catch (error: any) {
       toast({ title: "تعذر الحفظ", description: error?.message || "أعد المحاولة.", variant: "destructive" });
     }

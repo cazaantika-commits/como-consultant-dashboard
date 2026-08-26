@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../db";
 import { waelSalesPlanRouter } from "./waelSalesPlan";
+import { getSavedProjectUnitCount, rebuildOffPlanSalesResultsFromPaymentPlan } from "../../client/src/lib/salesPlanCashFlow";
 
 vi.mock("../db", () => ({ getDb: vi.fn() }));
+vi.mock("../../client/src/lib/salesPlanCashFlow", () => ({
+  getSavedProjectUnitCount: vi.fn(() => 83),
+  rebuildOffPlanSalesResultsFromPaymentPlan: vi.fn(() => ({
+    salesAbsorptionJson: "rebuilt-absorption",
+    resultsJson: "rebuilt-results",
+  })),
+}));
 
 const mockedGetDb = vi.mocked(getDb);
+const mockedRebuild = vi.mocked(rebuildOffPlanSalesResultsFromPaymentPlan);
 
 function createCaller() {
   return waelSalesPlanRouter.createCaller({
@@ -130,10 +139,22 @@ describe("waelSalesPlan.save", () => {
     }));
   });
 
-  it("updates only the payment calendar JSON without replacing the approved scenario", async () => {
+  it("rebuilds receipt results and returns the scenario to draft when the payment calendar changes", async () => {
+    const selections = [
+      [{ id: 73, projectId: 2, userId: 91, totalRevenue: 152_377_100, offplanPct: 100, salesAbsorptionJson: "{}", resultsJson: "stale" }],
+      [{ id: 2, userId: 91, financingScenario: "offplan_escrow" }],
+    ];
+    const select = vi.fn().mockImplementation(() => ({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(selections.shift() || []),
+        }),
+      }),
+    }));
     const where = vi.fn().mockResolvedValue(undefined);
     const set = vi.fn().mockReturnValue({ where });
     mockedGetDb.mockResolvedValue({
+      select,
       update: vi.fn().mockReturnValue({ set }),
     } as any);
 
@@ -143,10 +164,15 @@ describe("waelSalesPlan.save", () => {
       paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
     });
 
-    expect(result).toEqual({ id: 73, action: "updated" });
+    expect(result).toEqual({ id: 73, action: "updated", resultsRebuilt: true, requiresApproval: true });
     expect(set).toHaveBeenCalledWith({
       paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
+      salesAbsorptionJson: "rebuilt-absorption",
+      resultsJson: "rebuilt-results",
+      status: "draft",
     });
+    expect(mockedRebuild).toHaveBeenCalledTimes(1);
+    expect(getSavedProjectUnitCount).toHaveBeenCalledTimes(1);
     expect(where).toHaveBeenCalledTimes(1);
   });
 
@@ -161,7 +187,7 @@ describe("waelSalesPlan.save", () => {
       paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
     });
 
-    expect(result).toEqual({ id: 88, action: "created" });
+    expect(result).toEqual({ id: 88, action: "created", resultsRebuilt: false, requiresApproval: true });
     expect(values).toHaveBeenCalledWith(expect.objectContaining({
       projectId: 2,
       userId: 91,
