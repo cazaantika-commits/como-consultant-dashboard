@@ -1559,3 +1559,36 @@
 - [x] Include investor payments made before the visible monthly schedule in the investor cash-flow net and cumulative result, not only in the settlement allocation
 - [x] Add a dedicated "المدفوع مسبقًا" column before the first calendar month and include its total in the final monthly net and cumulative rows
 - [x] Give the dedicated "المدفوع مسبقًا" column a distinct restrained color to separate it from calendar months
+- [x] Apply the owner-approved standard buyer payment plan to every off-plan project using the existing payment-plan structure and preserve an audit trail
+- [ ] Audit the three consolidated portfolio reports for source linkage, arithmetic consistency, and meeting-readiness before the Sheikh Issa meeting
+- [ ] Redesign the Capital & Return Portfolio report around investor cash paid, cash returned, capital-recovery month, and profit after recovery while excluding build-for-rent projects
+- [ ] Audit the current Capital & Return Portfolio report for scope, source linkage, arithmetic totals, and sign consistency before redesigning it
+- [ ] Reconcile and explain the difference between future investor funding and net remaining capital in the current Capital Portfolio report
+- [ ] Replace parallel capital measures in the Capital Portfolio with one calendar-aligned net-investor-cash metric after owner approval
+- [ ] Match the displayed remaining-capital total to the exact report query and project set before presenting it as meeting-ready
+- [x] Trace one off-plan project from investor payments and returns through to the displayed Capital Portfolio totals before generalizing findings
+- [x] Audit the investor cash-flow report for Majan Mixed Use only, read-only, before any report or data change
+- [ ] Define remaining investor funding as the scheduled personal funding required until the first investor cash recovery begins, subject to owner approval before any report change
+- [x] Ensure the Investor Portfolio aggregates only off-plan and build-for-sale investor cash-flow reports, excluding build-for-rent projects
+- [ ] Preserve the current Capital Portfolio visual layout, labels, columns, order, and colors unless the owner explicitly approves a specific visual change
+- [ ] Add a profit column after revenue and total cost in the Capital Portfolio, calculated as revenue minus cost with a total-row value
+- [ ] Decide whether the current Capital Portfolio should remain a funding-only view and whether a separate investor cash-cycle report should show credits and cash profit, without changing either report until owner approval
+- [ ] Keep the current Capital Portfolio as a funding-distribution view without credit columns, and reserve credits for the separate Investor Cash Flow portfolio report
+- [x] Build the separate Investor Cash Flow portfolio as a faithful monthly aggregation of each eligible project's investor debit, credit, and cumulative balance lines
+- [x] Audit each off-plan and build-for-sale investor cash-flow report before aggregation; exclude all build-for-rent projects
+- [x] Display investor-portfolio monetary amounts as rounded full values without K or M abbreviations
+- [ ] Complete owner review of the current Investor Portfolio before discussing or building any additional report
+- [ ] Distinguish the purposes of Project Aggregation and Investor Portfolio while leaving the vertical report unchanged during the current discussion
+- [ ] Wait for the owner to define the existing report identities before making further report assumptions or changes
+- [x] Restore the Investor Portfolio to one final net cash-flow row per eligible project, excluding build-for-rent and postponing the second portfolio type
+- [x] Develop the shown Capital Portfolio by replacing monthly cells with final investor cash-flow values for eligible projects while preserving its current layout, labels, columns, order, and colors
+- [x] Show the accounting sign for final monthly investor cash-flow values in the shown Capital Portfolio and its exports without changing the protected column labels or structure
+- [x] Rename the final Capital Portfolio column to الأرباح and calculate it as the signed sum of every monthly final investor cash-flow cell for each project and for the total row
+- [ ] Compare the Capital Portfolio profit column with the feasibility-study profit definition and correct it only if the two approved definitions differ
+- [x] Include investor payments made before the visible monthly sequence when aggregating Capital Portfolio profit, then expose any reconciliation difference against feasibility without copying feasibility values
+- [ ] Investigate the source of the actual per-project reconciliation differences now exposed between complete investor cash flows and feasibility-study investor profit, without overwriting either value
+- [x] Set the off-plan investor cash-flow Como share to exactly 15% of final project profit and keep payment timing as a distribution of that fixed total only
+- [x] Distribute the fixed Como profit share back-to-back with the two escrow releases, without deducting from investor capital or changing the fixed total
+- [x] Calculate Como's first settlement share only from realised profit after investor capital recovery, then calculate its final share from the net second release after remaining obligations
+- [x] Base the first Como profit-share payment only on the actual first escrow transfer, excluding direct sales receipts that arrive in later investor months
+- [x] Verify that Capital Portfolio only copies the final monthly investor-flow row after each project calculation and does not recompute any profit-share amount

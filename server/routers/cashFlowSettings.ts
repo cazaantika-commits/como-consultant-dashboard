@@ -38,6 +38,7 @@ import {
   computeInvestorCashFlow,
   type Scenario as FinancialStudiesScenario,
 } from "../../client/src/lib/investorCashFlowEngine";
+import { calculateProjectCosts as calculateFinancialStudiesProjectCosts } from "../../client/src/lib/projectCostsCalc";
 import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
 import { buildInvestorMonthlyFundingTrace, buildInvestorMonthlyTrace } from "../../client/src/lib/financialTraceBreakdown";
@@ -2526,7 +2527,9 @@ export const cashFlowSettingsRouter = router({
       if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
     }
 
-    return allProjects.map((project) => {
+    return allProjects
+      .filter((project) => isCapitalPortfolioEligibleScenario(project.financingScenario || "offplan_escrow"))
+      .map((project) => {
       const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
       const salesResult = buildSalesResultFromSavedPlan(
         newestPlanByProject.get(project.id),
@@ -2534,7 +2537,8 @@ export const cashFlowSettingsRouter = router({
         scenario,
       );
       const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
-      const monthlyNet = calculateInvestorMonthlyNet(cashFlow, salesResult).netFlow;
+      const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
+      const monthlyNet = investorNet.netFlow;
       const monthlyTrace = buildInvestorMonthlyTrace(cashFlow, salesResult);
 
       return {
@@ -2543,6 +2547,8 @@ export const cashFlowSettingsRouter = router({
         financingScenario: scenario,
         startDate: cashFlow.startDate,
         monthDates: cashFlow.monthDates.slice(0, monthlyNet.length),
+        monthlyDebit: investorNet.debitTotals,
+        monthlyCredit: investorNet.creditTotals,
         monthlyNet,
         monthlyTrace,
       };
@@ -2686,6 +2692,15 @@ export const cashFlowSettingsRouter = router({
           .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
           .reduce((sum, row) => sum + row.totalCost, 0);
         const totalRevenue = cashFlow.totalRevenue;
+        const feasibilityCosts = calculateFinancialStudiesProjectCosts(project);
+        const feasibilityTotalRevenue = feasibilityCosts?.totalRevenue || 0;
+        const feasibilityTotalCosts = scenario === "build_for_sale"
+          ? cashFlow.rows
+            .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
+            .reduce((sum, row) => sum + row.totalCost, 0)
+          : feasibilityCosts?.totalCosts || 0;
+        const feasibilityProjectProfit = feasibilityTotalRevenue - feasibilityTotalCosts;
+        const feasibilityInvestorProfit = feasibilityProjectProfit - (feasibilityProjectProfit > 0 ? feasibilityProjectProfit * 0.15 : 0);
         const monthlyFunding = calculateInvestorMonthlyFundingRequirements(cashFlow);
         const monthlyFundingTrace = buildInvestorMonthlyFundingTrace(cashFlow);
         const costLineItems = cashFlow.rows
@@ -2704,6 +2719,8 @@ export const cashFlowSettingsRouter = router({
           totalRevenue,
           totalCosts,
           grossProfitBeforeDeveloperShare: totalRevenue - totalCosts,
+          feasibilityProjectProfit,
+          feasibilityInvestorProfit,
           requiredCapital: capital.requiredCapital,
           paidCapital: capital.paidCapital,
           remainingCapital: capital.remainingCapital,

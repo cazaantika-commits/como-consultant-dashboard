@@ -6,6 +6,10 @@ export type PortfolioProjectMonthlyNet = {
   financingScenario: string;
   startDate: string;
   monthDates: string[];
+  /** Monthly amounts paid out by the investor, always non-negative. */
+  monthlyDebit?: number[];
+  /** Monthly amounts returned to the investor, always non-negative. */
+  monthlyCredit?: number[];
   monthlyNet: number[];
   monthlyTrace?: FinancialTraceBreakdown[];
 };
@@ -15,13 +19,18 @@ export type CalendarAlignedRow = {
   name: string;
   financingScenario: string;
   values: number[];
+  debitValues: number[];
+  creditValues: number[];
   monthlyTrace?: FinancialTraceBreakdown[];
 };
 
 export type CalendarAlignedPortfolio = {
   monthDates: string[];
   rows: CalendarAlignedRow[];
+  debitTotals: number[];
+  creditTotals: number[];
   totals: number[];
+  cumulativeTotals: number[];
 };
 
 export type PortfolioPeriod = {
@@ -33,7 +42,10 @@ export type PortfolioPeriod = {
 export type GroupedCalendarPortfolio = {
   periods: PortfolioPeriod[];
   rows: CalendarAlignedRow[];
+  debitTotals: number[];
+  creditTotals: number[];
   totals: number[];
+  cumulativeTotals: number[];
 };
 
 /**
@@ -46,7 +58,11 @@ export function alignPortfolioMonthlyNetFlows(
   projects: PortfolioProjectMonthlyNet[],
 ): CalendarAlignedPortfolio {
   const activeMonthDates = projects.flatMap((project) =>
-    project.monthDates.filter((date, index) => Math.abs(Number(project.monthlyNet[index]) || 0) > 0.000001),
+    project.monthDates.filter((date, index) =>
+      Math.abs(Number(project.monthlyNet[index]) || 0) > 0.000001
+      || Math.abs(Number(project.monthlyDebit?.[index]) || 0) > 0.000001
+      || Math.abs(Number(project.monthlyCredit?.[index]) || 0) > 0.000001,
+    ),
   );
   const firstActiveMonth = [...activeMonthDates].sort()[0];
   const lastActiveMonth = [...activeMonthDates].sort().at(-1);
@@ -61,27 +77,40 @@ export function alignPortfolioMonthlyNetFlows(
 
   const rows = projects.map((project) => {
     const monthlyByDate = new Map<string, number>();
+    const debitByDate = new Map<string, number>();
+    const creditByDate = new Map<string, number>();
     const traceByDate = new Map<string, FinancialTraceBreakdown>();
     project.monthDates.forEach((date, index) => {
       monthlyByDate.set(date, Number(project.monthlyNet[index]) || 0);
       const trace = project.monthlyTrace?.[index];
       if (trace) traceByDate.set(date, trace);
+      debitByDate.set(date, Number(project.monthlyDebit?.[index] ?? trace?.expenseTotal ?? Math.max(-(Number(project.monthlyNet[index]) || 0), 0)) || 0);
+      creditByDate.set(date, Number(project.monthlyCredit?.[index] ?? trace?.receiptTotal ?? Math.max(Number(project.monthlyNet[index]) || 0, 0)) || 0);
     });
     return {
       projectId: project.projectId,
       name: project.name || `مشروع ${project.projectId}`,
       financingScenario: project.financingScenario,
       values: monthDates.map((date) => monthlyByDate.get(date) || 0),
+      debitValues: monthDates.map((date) => debitByDate.get(date) || 0),
+      creditValues: monthDates.map((date) => creditByDate.get(date) || 0),
       monthlyTrace: project.monthlyTrace ? monthDates.map((date) => traceByDate.get(date) || {
         expenses: [], receipts: [], expenseTotal: 0, receiptTotal: 0, net: 0,
       }) : undefined,
     };
   });
+  const totals = monthDates.map((_, monthIndex) => rows.reduce((sum, row) => sum + (row.values[monthIndex] || 0), 0));
 
   return {
     monthDates,
     rows,
-    totals: monthDates.map((_, monthIndex) => rows.reduce((sum, row) => sum + (row.values[monthIndex] || 0), 0)),
+    debitTotals: monthDates.map((_, monthIndex) => rows.reduce((sum, row) => sum + (row.debitValues[monthIndex] || 0), 0)),
+    creditTotals: monthDates.map((_, monthIndex) => rows.reduce((sum, row) => sum + (row.creditValues[monthIndex] || 0), 0)),
+    totals,
+    cumulativeTotals: totals.reduce<number[]>((all, value) => {
+      all.push((all[all.length - 1] || 0) + value);
+      return all;
+    }, []),
   };
 }
 
@@ -105,6 +134,8 @@ export function groupCalendarAlignedPortfolio(
     rows: portfolio.rows.map((row, rowIndex) => ({
       ...row,
       values: periods.map((period) => period.values[rowIndex] || 0),
+      debitValues: periods.map((_, periodIndex) => row.debitValues.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize).reduce((sum, value) => sum + value, 0)),
+      creditValues: periods.map((_, periodIndex) => row.creditValues.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize).reduce((sum, value) => sum + value, 0)),
       monthlyTrace: row.monthlyTrace ? periods.map((_, periodIndex) => {
         const details = row.monthlyTrace?.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize) || [];
         const merge = (kind: "expenses" | "receipts") => {
@@ -119,6 +150,9 @@ export function groupCalendarAlignedPortfolio(
         return { expenses, receipts, expenseTotal, receiptTotal, net: receiptTotal - expenseTotal };
       }) : undefined,
     })),
+    debitTotals: periods.map((_, periodIndex) => portfolio.debitTotals.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize).reduce((sum, value) => sum + value, 0)),
+    creditTotals: periods.map((_, periodIndex) => portfolio.creditTotals.slice(periodIndex * groupSize, (periodIndex + 1) * groupSize).reduce((sum, value) => sum + value, 0)),
     totals: periods.map((period) => period.values.reduce((sum, value) => sum + value, 0)),
+    cumulativeTotals: periods.map((period) => portfolio.cumulativeTotals[Math.min(portfolio.cumulativeTotals.length - 1, portfolio.monthDates.indexOf(period.endDate))] || 0),
   };
 }

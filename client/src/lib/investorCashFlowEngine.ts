@@ -88,6 +88,37 @@ export const DEFAULT_TIMING_RULES: TimingRules = {
   communityFeeFrequency: 6,
 };
 
+export interface DeveloperProfitAllocation {
+  total: number;
+  firstSettlementPayment: number;
+  finalSettlementPayment: number;
+}
+
+/**
+ * COMO's share is fixed by the final project profit. At the first release, the
+ * investor recovers capital first; only the realised surplus is shared. The
+ * remaining fixed share is paid with the final release after remaining obligations.
+ */
+export function allocateDeveloperProfitShare(
+  projectProfit: number,
+  developerSharePct: number,
+  firstSettlementCash: number,
+  investorCapitalToRecover: number,
+): DeveloperProfitAllocation {
+  const totalProjectProfit = Math.max(0, projectProfit);
+  const total = totalProjectProfit * Math.max(0, developerSharePct) / 100;
+  const firstRealisedProfit = Math.min(
+    totalProjectProfit,
+    Math.max(0, firstSettlementCash - Math.max(0, investorCapitalToRecover)),
+  );
+  const firstSettlementPayment = firstRealisedProfit * Math.max(0, developerSharePct) / 100;
+  return {
+    total,
+    firstSettlementPayment,
+    finalSettlementPayment: total - firstSettlementPayment,
+  };
+}
+
 export interface SalesResult {
   escrowData: Array<{
     month: number;

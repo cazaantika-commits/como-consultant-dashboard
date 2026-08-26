@@ -1,0 +1,741 @@
+{
+  "projectIds": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "audits": [
+    {
+      "projectId": 2,
+      "projectName": "مجان متعدد الاستخدامات (G+4P+25)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 128100000,
+        "remaining": 178345416.81300023,
+        "required": 306445416.8130002,
+        "peakMonth": "2029-10"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 230141081.0553122,
+        "creditTotal": 462459845.1767463,
+        "netTotal": 232318764.12143412,
+        "firstCreditMonth": "2030-01",
+        "lastDebitMonth": "2030-11",
+        "arithmeticDelta": 0,
+        "debitRowsDelta": 2.682209014892578e-7,
+        "creditRowsDelta": 1.1920928955078125e-7
+      },
+      "debitRows": [
+        {
+          "label": "أتعاب التصاميم",
+          "total": 4760000.028,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-04"
+        },
+        {
+          "label": "فحص التربة",
+          "total": 65000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "المسح الطبوغرافي",
+          "total": 18000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "رسوم المساح (DWG)",
+          "total": 12000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم المجتمع",
+          "total": 819269.8849999998,
+          "firstMonth": "2026-10",
+          "lastMonth": "2029-10"
+        },
+        {
+          "label": "رسوم الجهات الحكومية (10%)",
+          "total": 650000,
+          "firstMonth": "2026-12",
+          "lastMonth": "2026-12"
+        },
+        {
+          "label": "رسوم الفرز",
+          "total": 18726168.799999997,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم NOC المطور",
+          "total": 10000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل المشروع — ريرا",
+          "total": 150000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+          "total": 108680,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "حساب الضمان (رسوم فتح)",
+          "total": 180000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "رسوم البنك",
+          "total": 28000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2029-10"
+        },
+        {
+          "label": "التسويق",
+          "total": 14514920,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-04"
+        },
+        {
+          "label": "أتعاب المطور",
+          "total": 36303377.50000001,
+          "firstMonth": "2026-10",
+          "lastMonth": "2029-10"
+        },
+        {
+          "label": "دفعة مقدمة المقاول (10%)",
+          "total": 34000000.2,
+          "firstMonth": "2027-05",
+          "lastMonth": "2027-05"
+        },
+        {
+          "label": "إيداع حساب الضمان (20%)",
+          "total": 68000000.4,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "ريتنشن أخيرة المقاول (5%)",
+          "total": 17000000.1,
+          "firstMonth": "2030-11",
+          "lastMonth": "2030-11"
+        },
+        {
+          "label": "عمولة مبيعات مباشرة بعد الإنجاز",
+          "total": 7260675.499999999,
+          "firstMonth": "2030-02",
+          "lastMonth": "2030-07"
+        },
+        {
+          "label": "حصة المطور من الأرباح (15%)",
+          "total": 27534988.6423119,
+          "firstMonth": "2030-01",
+          "lastMonth": "2030-11"
+        }
+      ],
+      "creditRows": [
+        {
+          "label": "مبيعات مباشرة بعد الإنجاز (20%)",
+          "total": 145213510,
+          "firstMonth": "2030-02",
+          "lastMonth": "2030-07"
+        },
+        {
+          "label": "تصفية حساب الضمان (دفعة 1)",
+          "total": 288238373.25090885,
+          "firstMonth": "2030-01",
+          "lastMonth": "2030-01"
+        },
+        {
+          "label": "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+          "total": 29007961.925837338,
+          "firstMonth": "2030-11",
+          "lastMonth": "2030-11"
+        }
+      ]
+    },
+    {
+      "projectId": 3,
+      "projectName": "مبنى الجداف السكني (G+7)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 16275000,
+        "remaining": 22582206.150000006,
+        "required": 38857206.150000006,
+        "peakMonth": "2028-10"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 27404347.110000007,
+        "creditTotal": 51849600,
+        "netTotal": 24445252.889999997,
+        "firstCreditMonth": "2029-01",
+        "lastDebitMonth": "2029-11",
+        "arithmeticDelta": 3.725290298461914e-9,
+        "debitRowsDelta": 7.450580596923828e-9,
+        "creditRowsDelta": 0
+      },
+      "debitRows": [
+        {
+          "label": "أتعاب التصاميم",
+          "total": 705600,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-04"
+        },
+        {
+          "label": "فحص التربة",
+          "total": 25000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "المسح الطبوغرافي",
+          "total": 5600,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "رسوم المساح (DWG)",
+          "total": 12000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم المجتمع",
+          "total": 63212.55,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-10"
+        },
+        {
+          "label": "رسوم الجهات الحكومية (10%)",
+          "total": 100000,
+          "firstMonth": "2026-12",
+          "lastMonth": "2026-12"
+        },
+        {
+          "label": "رسوم الفرز",
+          "total": 2022801.6,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم NOC المطور",
+          "total": 10000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل المشروع — ريرا",
+          "total": 150000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+          "total": 24960,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "حساب الضمان (رسوم فتح)",
+          "total": 140000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "رسوم البنك",
+          "total": 20000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-10"
+        },
+        {
+          "label": "التسويق",
+          "total": 1735152,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "أتعاب المطور",
+          "total": 4337880,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-10"
+        },
+        {
+          "label": "دفعة مقدمة المقاول (10%)",
+          "total": 4410000,
+          "firstMonth": "2027-05",
+          "lastMonth": "2027-05"
+        },
+        {
+          "label": "إيداع حساب الضمان (20%)",
+          "total": 8820000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "ريتنشن أخيرة المقاول (5%)",
+          "total": 2205000,
+          "firstMonth": "2029-11",
+          "lastMonth": "2029-11"
+        },
+        {
+          "label": "حصة المطور من الأرباح (15%)",
+          "total": 2617140.9599999995,
+          "firstMonth": "2029-01",
+          "lastMonth": "2029-11"
+        }
+      ],
+      "creditRows": [
+        {
+          "label": "تصفية حساب الضمان (دفعة 1)",
+          "total": 47511720,
+          "firstMonth": "2029-01",
+          "lastMonth": "2029-01"
+        },
+        {
+          "label": "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+          "total": 4337880,
+          "firstMonth": "2029-11",
+          "lastMonth": "2029-11"
+        }
+      ]
+    },
+    {
+      "projectId": 4,
+      "projectName": "ند الشبا — قطعة 1 (6185392)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 18900000,
+        "remaining": 22672741.989999983,
+        "required": 41572741.98999998,
+        "peakMonth": "2028-08"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 27066521.259999987,
+        "creditTotal": 51517180.80000001,
+        "netTotal": 24450659.540000025,
+        "firstCreditMonth": "2028-11",
+        "lastDebitMonth": "2029-09",
+        "arithmeticDelta": 0,
+        "debitRowsDelta": -1.4901161193847656e-8,
+        "creditRowsDelta": 0
+      },
+      "debitRows": [
+        {
+          "label": "أتعاب التصاميم",
+          "total": 668561.4,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "فحص التربة",
+          "total": 16000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "المسح الطبوغرافي",
+          "total": 5400,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "رسوم المساح (DWG)",
+          "total": 12000,
+          "firstMonth": "2027-01",
+          "lastMonth": "2027-01"
+        },
+        {
+          "label": "رسوم المجتمع",
+          "total": 50826.99,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-04"
+        },
+        {
+          "label": "رسوم الجهات الحكومية (10%)",
+          "total": 100000,
+          "firstMonth": "2026-12",
+          "lastMonth": "2026-12"
+        },
+        {
+          "label": "رسوم الفرز",
+          "total": 2033079.5999999999,
+          "firstMonth": "2027-01",
+          "lastMonth": "2027-01"
+        },
+        {
+          "label": "رسوم NOC المطور",
+          "total": 10000,
+          "firstMonth": "2027-01",
+          "lastMonth": "2027-01"
+        },
+        {
+          "label": "تسجيل المشروع — ريرا",
+          "total": 150000,
+          "firstMonth": "2027-01",
+          "lastMonth": "2027-01"
+        },
+        {
+          "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+          "total": 23920,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "حساب الضمان (رسوم فتح)",
+          "total": 140000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم البنك",
+          "total": 19799.999999999996,
+          "firstMonth": "2027-02",
+          "lastMonth": "2028-08"
+        },
+        {
+          "label": "التسويق",
+          "total": 1734836.0000000002,
+          "firstMonth": "2027-02",
+          "lastMonth": "2028-01"
+        },
+        {
+          "label": "أتعاب المطور",
+          "total": 4337089.999999998,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-08"
+        },
+        {
+          "label": "دفعة مقدمة المقاول (10%)",
+          "total": 4457076,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "إيداع حساب الضمان (20%)",
+          "total": 8914152,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "ريتنشن أخيرة المقاول (5%)",
+          "total": 2228538,
+          "firstMonth": "2029-09",
+          "lastMonth": "2029-09"
+        },
+        {
+          "label": "حصة المطور من الأرباح (15%)",
+          "total": 2165241.270000004,
+          "firstMonth": "2028-11",
+          "lastMonth": "2029-09"
+        }
+      ],
+      "creditRows": [
+        {
+          "label": "تصفية حساب الضمان (دفعة 1)",
+          "total": 47180090.80000001,
+          "firstMonth": "2028-11",
+          "lastMonth": "2028-11"
+        },
+        {
+          "label": "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+          "total": 4337090,
+          "firstMonth": "2029-09",
+          "lastMonth": "2029-09"
+        }
+      ]
+    },
+    {
+      "projectId": 5,
+      "projectName": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 14542500,
+        "remaining": 40872931.6125,
+        "required": 55415431.6125,
+        "peakMonth": "2028-11"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 51136250.23249999,
+        "creditTotal": 88223605.00000003,
+        "netTotal": 37087354.76750004,
+        "firstCreditMonth": "2029-02",
+        "lastDebitMonth": "2029-12",
+        "arithmeticDelta": 0,
+        "debitRowsDelta": -7.450580596923828e-9,
+        "creditRowsDelta": 0
+      },
+      "debitRows": [
+        {
+          "label": "أتعاب التصاميم",
+          "total": 1312000,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "فحص التربة",
+          "total": 35000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "المسح الطبوغرافي",
+          "total": 8000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "رسوم المساح (DWG)",
+          "total": 12000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم المجتمع",
+          "total": 112617.41249999999,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-10"
+        },
+        {
+          "label": "رسوم الجهات الحكومية (10%)",
+          "total": 160000,
+          "firstMonth": "2026-12",
+          "lastMonth": "2026-12"
+        },
+        {
+          "label": "رسوم الفرز",
+          "total": 3603757.1999999997,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "رسوم NOC المطور",
+          "total": 10000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل المشروع — ريرا",
+          "total": 150000,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+          "total": 43160,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "حساب الضمان (رسوم فتح)",
+          "total": 140000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "رسوم البنك",
+          "total": 20000.000000000007,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-11"
+        },
+        {
+          "label": "التسويق",
+          "total": 3047542.0000000005,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "أتعاب المطور",
+          "total": 7618855.000000005,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-11"
+        },
+        {
+          "label": "دفعة مقدمة المقاول (10%)",
+          "total": 8200000,
+          "firstMonth": "2027-04",
+          "lastMonth": "2027-04"
+        },
+        {
+          "label": "إيداع حساب الضمان (20%)",
+          "total": 16400000,
+          "firstMonth": "2027-03",
+          "lastMonth": "2027-03"
+        },
+        {
+          "label": "ريتنشن أخيرة المقاول (5%)",
+          "total": 4100000,
+          "firstMonth": "2029-12",
+          "lastMonth": "2029-12"
+        },
+        {
+          "label": "حصة المطور من الأرباح (15%)",
+          "total": 6163318.61999999,
+          "firstMonth": "2029-02",
+          "lastMonth": "2029-12"
+        }
+      ],
+      "creditRows": [
+        {
+          "label": "تصفية حساب الضمان (دفعة 1)",
+          "total": 76933012.65060242,
+          "firstMonth": "2029-02",
+          "lastMonth": "2029-02"
+        },
+        {
+          "label": "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+          "total": 11290592.349397615,
+          "firstMonth": "2029-12",
+          "lastMonth": "2029-12"
+        }
+      ]
+    },
+    {
+      "projectId": 6,
+      "projectName": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "scenario": "build_for_sale",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 6533100,
+        "remaining": 16886210.473554857,
+        "required": 23419310.473554857,
+        "peakMonth": "2028-03"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 20021241.7175,
+        "creditTotal": 22540000,
+        "netTotal": 2518758.282499997,
+        "firstCreditMonth": "2028-04",
+        "lastDebitMonth": "2029-04",
+        "arithmeticDelta": -1.862645149230957e-9,
+        "debitRowsDelta": 0,
+        "creditRowsDelta": 0
+      },
+      "debitRows": [
+        {
+          "label": "أتعاب التصاميم",
+          "total": 239941.425,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-01"
+        },
+        {
+          "label": "فحص التربة",
+          "total": 12000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "المسح الطبوغرافي",
+          "total": 8000,
+          "firstMonth": "2026-11",
+          "lastMonth": "2026-11"
+        },
+        {
+          "label": "رسوم المساح (As-Built)",
+          "total": 12000,
+          "firstMonth": "2028-02",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "رسوم المجتمع",
+          "total": 14587.7925,
+          "firstMonth": "2026-10",
+          "lastMonth": "2027-10"
+        },
+        {
+          "label": "رسوم الجهات الحكومية",
+          "total": 600000,
+          "firstMonth": "2026-12",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "رسوم الفرز",
+          "total": 778015.6,
+          "firstMonth": "2028-02",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "رسوم NOC المطور",
+          "total": 10000,
+          "firstMonth": "2028-02",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+          "total": 2080,
+          "firstMonth": "2028-02",
+          "lastMonth": "2028-02"
+        },
+        {
+          "label": "عمولة المبيعات (بعد تحصيل كامل قيمة الوحدة)",
+          "total": 1127000,
+          "firstMonth": "2028-04",
+          "lastMonth": "2028-06"
+        },
+        {
+          "label": "التسويق",
+          "total": 225400,
+          "firstMonth": "2028-02",
+          "lastMonth": "2028-04"
+        },
+        {
+          "label": "أتعاب المطور",
+          "total": 676200,
+          "firstMonth": "2026-10",
+          "lastMonth": "2028-03"
+        },
+        {
+          "label": "دفعة مقدمة المقاول (10%)",
+          "total": 1599609.5,
+          "firstMonth": "2027-02",
+          "lastMonth": "2027-02"
+        },
+        {
+          "label": "مستخلصات المقاول (80% — بعد شهر من الإنجاز)",
+          "total": 12796876.000000002,
+          "firstMonth": "2027-03",
+          "lastMonth": "2028-04"
+        },
+        {
+          "label": "ريتنشن المقاول الأولى (5%)",
+          "total": 799804.75,
+          "firstMonth": "2028-05",
+          "lastMonth": "2028-05"
+        },
+        {
+          "label": "ريتنشن أخيرة المقاول (5%)",
+          "total": 799804.75,
+          "firstMonth": "2029-04",
+          "lastMonth": "2029-04"
+        },
+        {
+          "label": "أتعاب الإشراف",
+          "total": 319921.89999999997,
+          "firstMonth": "2027-02",
+          "lastMonth": "2028-03"
+        }
+      ],
+      "creditRows": [
+        {
+          "label": "إيرادات المبيعات",
+          "total": 22540000,
+          "firstMonth": "2028-04",
+          "lastMonth": "2028-06"
+        }
+      ]
+    }
+  ]
+}
