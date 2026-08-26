@@ -1578,3 +1578,4 @@
 - [x] Restore the Investor Portfolio to one final net cash-flow row per eligible project, excluding build-for-rent and postponing the second portfolio type
 - [x] Develop the shown Capital Portfolio by replacing monthly cells with final investor cash-flow values for eligible projects while preserving its current layout, labels, columns, order, and colors
 - [x] Show the accounting sign for final monthly investor cash-flow values in the shown Capital Portfolio and its exports without changing the protected column labels or structure
+- [x] Rename the final Capital Portfolio column to الأرباح and calculate it as the signed sum of every monthly final investor cash-flow cell for each project and for the total row

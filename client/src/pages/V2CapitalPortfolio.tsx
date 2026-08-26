@@ -55,6 +55,10 @@ export function formatCashFlowAmount(value: number): string {
   return `${value > 0 ? "+" : "−"}${formatFullNumber(Math.abs(value), "0")}`;
 }
 
+export function calculateFinalCashFlowProfit(monthlyValues: number[]): number {
+  return monthlyValues.reduce((sum, value) => sum + value, 0);
+}
+
 function formatMonth(date: string): string {
   const [year, month] = date.split("-").map(Number);
   return `${MONTH_NAMES[month - 1]} ${year}`;
@@ -106,13 +110,13 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
     : [...current, projectId]);
 
   const exportTable = () => {
-    const headers = ["المشروع", "الخيار", "إجمالي الإيرادات", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)), "إجمالي التمويل المطلوب"];
+    const headers = ["المشروع", "الخيار", "إجمالي الإيرادات", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)), "الأرباح"];
     const detailRows = selectedProjects.map((project) => {
       const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId);
       const finalCashFlow = flowRow?.values || new Array(groupedPortfolio.periods.length).fill(0);
-      return [project.name || "", scenarioLabel(project.financingScenario), formatAmount(project.totalRevenue), formatAmount(project.totalCosts), formatAmount(project.requiredCapital), formatAmount(project.paidCapital), formatAmount(project.remainingCapital), ...finalCashFlow.map((value) => value === 0 ? "—" : formatCashFlowAmount(value)), formatCashFlowAmount(finalCashFlow.reduce((sum, value) => sum + value, 0))];
+      return [project.name || "", scenarioLabel(project.financingScenario), formatAmount(project.totalRevenue), formatAmount(project.totalCosts), formatAmount(project.requiredCapital), formatAmount(project.paidCapital), formatAmount(project.remainingCapital), ...finalCashFlow.map((value) => value === 0 ? "—" : formatCashFlowAmount(value)), formatCashFlowAmount(calculateFinalCashFlowProfit(finalCashFlow))];
     });
-    const totalRow = ["الإجمالي", "", formatAmount(totals.revenue), formatAmount(totals.cost), formatAmount(totals.capital), formatAmount(totals.paid), formatAmount(totals.remaining), ...groupedPortfolio.totals.map((value) => value === 0 ? "—" : formatCashFlowAmount(value)), formatCashFlowAmount(groupedPortfolio.totals.reduce((sum, value) => sum + value, 0))];
+    const totalRow = ["الإجمالي", "", formatAmount(totals.revenue), formatAmount(totals.cost), formatAmount(totals.capital), formatAmount(totals.paid), formatAmount(totals.remaining), ...groupedPortfolio.totals.map((value) => value === 0 ? "—" : formatCashFlowAmount(value)), formatCashFlowAmount(calculateFinalCashFlowProfit(groupedPortfolio.totals))];
     const cell = (value: string, header = false) => `<${header ? "th" : "td"}>${value}</${header ? "th" : "td"}>`;
     return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير محفظة رأس المال</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#0f172a}.header{background:#0f172a;color:#fff;padding:16px 20px;border-radius:8px}.header p{color:#cbd5e1;font-size:12px}.summary{background:#f8fafc;border:2px solid #0f172a;border-radius:8px;padding:16px;margin:16px 0}.cards{display:flex;gap:10px}.card{flex:1;background:#fff;border-right:4px solid #0ea5e9;padding:10px;border-radius:4px}.card b{display:block;font-size:16px;margin-top:4px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#0f172a;color:#fff;padding:7px 4px;border:1px solid #334155}td{padding:6px 4px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.total td{background:#1e293b!important;color:#fff;font-weight:700}@media print{body{padding:8px}}</style></head><body><div class="header"><h1>تقرير محفظة رأس المال</h1><p>من مخرجات الدراسات والتخطيط المالي · التجميع: ${PERIOD_OPTIONS.find((item) => item.value === groupSize)?.label}</p></div><div class="summary"><h2>الملخص الإحصائي</h2><div class="cards"><div class="card">إجمالي الإيرادات<b>${formatAmount(totals.revenue)}</b></div><div class="card">إجمالي التكلفة<b>${formatAmount(totals.cost)}</b></div><div class="card">الأرباح قبل حصة المطور<b>${formatAmount(totals.profit)}</b></div><div class="card">رأس المال<b>${formatAmount(totals.capital)}</b><small>مدفوع ${formatAmount(totals.paid)} · متبقٍ ${formatAmount(totals.remaining)}</small></div></div></div><table><thead><tr>${headers.map((value) => cell(value, true)).join("")}</tr></thead><tbody>${detailRows.map((row) => `<tr>${row.map((value) => cell(value)).join("")}</tr>`).join("")}<tr class="total">${totalRow.map((value) => cell(value)).join("")}</tr></tbody></table></body></html>`;
   };
@@ -183,13 +187,13 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
                 <th className="min-w-[78px] border-l border-slate-600 px-2 py-2.5 font-extrabold">المدفوع</th>
                 <th className="min-w-[78px] border-l border-slate-600 px-2 py-2.5 font-extrabold">المتبقي</th>
                 {groupedPortfolio.periods.map((period) => <th key={period.startDate} className="min-w-[84px] border-l border-slate-600 px-2 py-2.5 font-extrabold">{formatPeriod(period.startDate, period.endDate)}</th>)}
-                <th className="min-w-[96px] border-r-2 border-slate-400 bg-slate-800 px-2 py-2.5 font-extrabold">إجمالي التمويل المطلوب</th>
+                <th className="min-w-[96px] border-r-2 border-slate-400 bg-slate-800 px-2 py-2.5 font-extrabold">الأرباح</th>
               </tr></thead>
               <tbody>
                 {selectedProjects.map((project, index) => {
                   const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId);
                   const finalCashFlow = flowRow?.values || new Array(groupedPortfolio.periods.length).fill(0);
-                  const cashFlowTotal = finalCashFlow.reduce((sum, value) => sum + value, 0);
+                  const profit = calculateFinalCashFlowProfit(finalCashFlow);
                   return <tr key={project.projectId} className="border-b border-slate-300 even:bg-slate-50">
                     <td className="sticky right-0 z-10 border-l border-slate-300 bg-inherit px-3 py-2 text-right font-extrabold text-slate-900"><span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{project.name}</span></td>
                     <td className="border-l border-slate-200 px-2 py-2 text-center font-bold text-slate-700">{scenarioLabel(project.financingScenario)}</td>
@@ -199,7 +203,7 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
                     <td className="border-l border-slate-200 px-2 py-2 text-center font-bold text-emerald-700">{formatAmount(project.paidCapital)}</td>
                     <td className="border-l border-slate-200 px-2 py-2 text-center font-bold text-rose-700">{formatAmount(project.remainingCapital)}</td>
                     {finalCashFlow.map((value, monthIndex) => { const detail = flowRow?.monthlyTrace?.[monthIndex]; const tone = value < -0.000001 ? "bg-rose-50 text-rose-700" : value > 0.000001 ? "bg-emerald-50 text-emerald-700" : "text-slate-300"; return <td key={monthIndex} className={`border-l border-slate-200 px-2 py-2 text-center font-bold ${tone}`}>{Math.abs(value) > 0.000001 ? <FinancialSourceValue testId={`capital-trace-final-flow-${project.projectId}-${monthIndex}`} trace={{ report: "محفظة رأس المال", project: project.name || "مشروع", row: "صافي تدفقات المستثمر", period: formatPeriod(groupedPortfolio.periods[monthIndex].startDate, groupedPortfolio.periods[monthIndex].endDate), rule: "السطر النهائي من تقرير تدفقات المستثمر للمشروع: الكريديت ناقص الديبت في الفترة نفسها.", value, expenses: detail?.expenses, receipts: detail?.receipts }}>{formatCashFlowAmount(value)}</FinancialSourceValue> : "—"}</td>; })}
-                    <td className="border-r-2 border-slate-400 bg-slate-100 px-2 py-2 text-center font-extrabold text-slate-950">{formatCashFlowAmount(cashFlowTotal)}</td>
+                    <td className="border-r-2 border-slate-400 bg-slate-100 px-2 py-2 text-center font-extrabold text-slate-950">{formatCashFlowAmount(profit)}</td>
                   </tr>;
                 })}
                 <tr className="bg-slate-800 text-white">
@@ -210,7 +214,7 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
                   <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold text-emerald-300">{formatAmount(totals.paid)}</td>
                   <td className="border-l border-slate-700 px-2 py-2 text-center font-extrabold text-rose-300">{formatAmount(totals.remaining)}</td>
                   {groupedPortfolio.totals.map((value, index) => <td key={index} className={`border-l border-slate-700 px-2 py-2 text-center font-extrabold ${value < -0.000001 ? "text-rose-300" : value > 0.000001 ? "text-emerald-300" : "text-slate-500"}`}>{Math.abs(value) > 0.000001 ? formatCashFlowAmount(value) : "—"}</td>)}
-                  <td className="border-r-2 border-slate-400 bg-slate-700 px-2 py-2.5 text-center font-extrabold">{formatCashFlowAmount(groupedPortfolio.totals.reduce((sum, value) => sum + value, 0))}</td>
+                  <td className="border-r-2 border-slate-400 bg-slate-700 px-2 py-2.5 text-center font-extrabold">{formatCashFlowAmount(calculateFinalCashFlowProfit(groupedPortfolio.totals))}</td>
                 </tr>
               </tbody>
             </table>
