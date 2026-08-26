@@ -5,6 +5,8 @@ export type InvestorMonthlyNetResult = {
   debitRows: CostRow[];
   creditRows: CostRow[];
   paidRows: CostRow[];
+  /** Amount already paid before the monthly schedule, carried as opening investor capital. */
+  paidBeforeSchedule: number;
   debitTotals: number[];
   creditTotals: number[];
   /** Exact signed final row: positive means investor receipt; negative means investor funding required. */
@@ -84,13 +86,16 @@ export function calculateInvestorMonthlyNet(
     ...settlementCredits,
   ];
   const paidRows = cashFlow.rows.filter((row) => row.paid > 0 && !row.isRevenue);
-  const debitTotals = Array.from({ length: totalMonths }, (_, index) => debitRows.reduce((sum, row) => sum + (getRowValues(row)[index] || 0), 0));
+  const paidBeforeSchedule = paidRows.reduce((sum, row) => sum + row.paid, 0);
+  const debitTotals = Array.from({ length: totalMonths }, (_, index) =>
+    debitRows.reduce((sum, row) => sum + (getRowValues(row)[index] || 0), 0),
+  );
   const creditTotals = Array.from({ length: totalMonths }, (_, index) => creditRows.reduce((sum, row) => sum + (getRowValues(row)[index] || 0), 0));
   const netFlow = debitTotals.map((debit, index) => creditTotals[index] - debit);
   const cumulative = netFlow.reduce<number[]>((all, value) => {
-    all.push((all[all.length - 1] || 0) + value);
+    all.push((all[all.length - 1] ?? -paidBeforeSchedule) + value);
     return all;
   }, []);
 
-  return { debitRows, creditRows, paidRows, debitTotals, creditTotals, netFlow, cumulative };
+  return { debitRows, creditRows, paidRows, paidBeforeSchedule, debitTotals, creditTotals, netFlow, cumulative };
 }

@@ -1,10 +1,45 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("reimburses the investor before splitting each escrow-release surplus with COMO", () => {
+    const allocation = calculateEscrowProfitAllocation(
+      47_180_091,
+      41_572_742,
+      2_108_552,
+      15,
+    );
+
+    expect(allocation.firstSettlementProfit).toBe(5_607_349);
+    expect(allocation.firstDeveloperShare).toBe(841_102.35);
+    expect(allocation.finalSettlementProfit).toBe(2_108_552);
+    expect(allocation.finalDeveloperShare).toBe(316_282.8);
+    expect(allocation.totalDeveloperShare).toBe(1_157_385.15);
+  });
+
+  it("uses the actual paid and scheduled investor capital before the first COMO payment", () => {
+    const result = computeInvestorCashFlow({
+      financingScenario: "offplan_escrow",
+      preConMonths: 5,
+      constructionMonths: 18,
+      landCost: 18_000_000,
+      landRegistrationFee: 720_000,
+      landBrokerFee: 180_000,
+      constructionCost: 44_570_760,
+      developerFeePct: 15,
+    } as any, "offplan_escrow");
+    const capital = calculateInvestorCapitalSummary(result).requiredCapital;
+    const firstSettlement = result.rows.find((row) => row.label === "تصفية حساب الضمان (دفعة 1)")!;
+    const finalSettlement = result.rows.find((row) => row.label.includes("تصفية حساب الضمان (دفعة 2"))!;
+    const como = result.rows.find((row) => row.label === "حصة المطور من الأرباح (15%)")!;
+
+    expect(como.postConstructionMonths[2]).toBe(Math.max(0, firstSettlement.totalCost - capital) * 0.15);
+    expect(como.postConstructionMonths[12]).toBe(finalSettlement.totalCost * 0.15);
+  });
+
   it("identifies the first and deepest genuine liquidity deficit from the shared monthly escrow balance", () => {
     expect(summarizeEscrowLiquidity([0, 20, -10, -35, -5])).toEqual({
       hasDeficit: true,

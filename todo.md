@@ -1554,3 +1554,8 @@
 - [x] Enforce that the final construction installment is no later than two calendar months before handover for every project duration
 - [x] Let Wael choose when the first construction installment starts after the contract, then distribute only within the available window before the handover buffer
 - [x] Keep payment-plan guardrails limited to chronology and feasibility; do not impose arbitrary timing rules that Wael did not choose
+- [x] Review and explain investor, escrow, and Como cash movements for Nad Al Sheba plot 1 from August 2028 for six months without changing any data
+- [x] Apply Como's 15% only to the first escrow-transfer surplus after all actual investor spending is recovered, then to the final escrow surplus after contractor retention
+- [x] Include investor payments made before the visible monthly schedule in the investor cash-flow net and cumulative result, not only in the settlement allocation
+- [x] Add a dedicated "المدفوع مسبقًا" column before the first calendar month and include its total in the final monthly net and cumulative rows
+- [x] Give the dedicated "المدفوع مسبقًا" column a distinct restrained color to separate it from calendar months

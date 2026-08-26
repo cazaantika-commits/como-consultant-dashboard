@@ -151,6 +151,39 @@ export interface InvestorCapitalSummary {
   totalProjectSpend: number;
 }
 
+export interface EscrowProfitAllocation {
+  firstSettlementProfit: number;
+  finalSettlementProfit: number;
+  firstDeveloperShare: number;
+  finalDeveloperShare: number;
+  totalDeveloperShare: number;
+}
+
+/**
+ * The first escrow release reimburses the investor's actual paid capital first.
+ * Only the excess is realised profit. The final release is already net of the
+ * contractor's retention, so it is realised profit in full.
+ */
+export function calculateEscrowProfitAllocation(
+  firstEscrowTransfer: number,
+  investorSpentBeforeFirstSettlement: number,
+  finalEscrowTransfer: number,
+  developerSharePct: number,
+): EscrowProfitAllocation {
+  const rate = Math.max(0, developerSharePct) / 100;
+  const firstSettlementProfit = Math.max(0, firstEscrowTransfer - investorSpentBeforeFirstSettlement);
+  const finalSettlementProfit = Math.max(0, finalEscrowTransfer);
+  const firstDeveloperShare = firstSettlementProfit * rate;
+  const finalDeveloperShare = finalSettlementProfit * rate;
+  return {
+    firstSettlementProfit,
+    finalSettlementProfit,
+    firstDeveloperShare,
+    finalDeveloperShare,
+    totalDeveloperShare: firstDeveloperShare + finalDeveloperShare,
+  };
+}
+
 /**
  * Returns the monthly investor funding requirements used by the capital view.
  * Revenue and Como's post-sale profit allocation are intentionally excluded.
@@ -1627,43 +1660,42 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     }
   }
 
-  // ─── حصة المطور من الأرباح (15%) ───
+  // ─── حصة المطور من فائض إقفالي الضمان (15%) ───
   if (!isScenario3 && !isScenario4 && !isBuildForSale) {
-    // رأس مال المستثمر = كل ما دفعه (مصاريف المستثمر + وديعة الضمان)
-    const investorCapital = costs.totalInvestor;
-    
-    // الدفعة 1: الشهر 3 بعد الإنجاز
-    // المستثمر يستلم: إيرادات مباشرة (20%) + تصفية الإسكرو
-    const totalReceivedByLiq1 = directRevenue + escrowLiquidation;
-    const surplus1 = Math.max(0, totalReceivedByLiq1 - investorCapital);
-    const devProfitShare1 = surplus1 * (tr.developerFeePct / 100);
-    const devProfitRetention1 = devProfitShare1 * (tr.developerFeeRetentionPct / 100);
-    const devProfitPaid1 = devProfitShare1 - devProfitRetention1;
-    
-    // الدفعة 2: الشهر 13 بعد الإنجاز
-    // المبلغ المحتجز يدخل — يُخصم منه retention المقاول — الباقي ربح
-    const surplus2 = Math.max(0, month13ToInvestor);
-    const devProfitShare2 = surplus2 * (tr.developerFeePct / 100);
-    // يُضاف المحتجز من الدفعة الأولى
-    const devProfitMonth13 = devProfitShare2 + devProfitRetention1;
+    const firstSettlementIndex = designDuration + constructionDuration + 2;
+    const investorSpentBeforeFirstSettlement = rows
+      .filter((row) => !row.isRevenue && !row.isProfitAllocation && row.funder === "investor")
+      .reduce((sum, row) => {
+        const values = [...row.designMonths, ...row.constructionMonths, ...row.postConstructionMonths];
+        const paidBeforeSchedule = row.paid > 0 ? row.paid : 0;
+        const scheduledSpend = row.paid > 0 && row.unpaid === 0
+          ? 0
+          : values.slice(0, firstSettlementIndex + 1).reduce((total, value) => total + (value || 0), 0);
+        return sum + paidBeforeSchedule + scheduledSpend;
+      }, 0);
+    const allocation = calculateEscrowProfitAllocation(
+      escrowLiquidation,
+      investorSpentBeforeFirstSettlement,
+      month13ToInvestor,
+      tr.developerFeePct,
+    );
     
     const devProfitPost = emptyPost();
-    // تُصرف في نفس شهر التصفية
-    devProfitPost[2] = devProfitPaid1; // شهر 3
-    devProfitPost[12] = devProfitMonth13; // شهر 13
+    devProfitPost[2] = allocation.firstDeveloperShare;
+    devProfitPost[12] = allocation.finalDeveloperShare;
     
-    const totalDevProfit = devProfitPaid1 + devProfitMonth13;
     rows.push({
       label: "حصة المطور من الأرباح (15%)",
-      totalCost: totalDevProfit,
-      investorAmount: totalDevProfit,
+      totalCost: allocation.totalDeveloperShare,
+      investorAmount: allocation.totalDeveloperShare,
       paid: 0,
-      unpaid: totalDevProfit,
+      unpaid: allocation.totalDeveloperShare,
       funder: "investor",
       section: "المبيعات والتسويق",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
       postConstructionMonths: devProfitPost,
+      isProfitAllocation: true,
     });
   } else if (isScenario3 || isBuildForSale) {
     // Build-for-sale: Como's 15% share is due only once all sales receipts are in.
