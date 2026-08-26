@@ -1,0 +1,553 @@
+{
+  "project": {
+    "id": 2,
+    "name": "مجان متعدد الاستخدامات (G+4P+25)",
+    "scenario": "offplan_escrow",
+    "startDate": "2026-10",
+    "months": 50
+  },
+  "capital": {
+    "paidCapital": 128100000,
+    "remainingCapital": 178345416.81300023,
+    "requiredCapital": 306445416.8130002,
+    "peakDate": "2029-10"
+  },
+  "totals": {
+    "futureInvestorDebits": 230141081.0553122,
+    "investorCredits": 462459845.1767463,
+    "netInvestorCashFlow": 232318764.12143412
+  },
+  "paidRows": [
+    {
+      "label": "سعر الأرض",
+      "funder": "investor",
+      "total": 0,
+      "paid": 122000000,
+      "unpaid": 0
+    },
+    {
+      "label": "رسوم تسجيل الأرض",
+      "funder": "investor",
+      "total": 0,
+      "paid": 4880000,
+      "unpaid": 0
+    },
+    {
+      "label": "عمولة وسيط الأرض",
+      "funder": "investor",
+      "total": 0,
+      "paid": 1220000,
+      "unpaid": 0
+    }
+  ],
+  "futureDebitRows": [
+    {
+      "label": "أتعاب التصاميم",
+      "funder": "investor",
+      "total": 4760000.028,
+      "paid": 0,
+      "unpaid": 4760000.028
+    },
+    {
+      "label": "فحص التربة",
+      "funder": "investor",
+      "total": 65000,
+      "paid": 0,
+      "unpaid": 65000
+    },
+    {
+      "label": "المسح الطبوغرافي",
+      "funder": "investor",
+      "total": 18000,
+      "paid": 0,
+      "unpaid": 18000
+    },
+    {
+      "label": "رسوم المساح (DWG)",
+      "funder": "investor",
+      "total": 12000,
+      "paid": 0,
+      "unpaid": 12000
+    },
+    {
+      "label": "رسوم المجتمع",
+      "funder": "investor",
+      "total": 819269.8849999998,
+      "paid": 0,
+      "unpaid": 819269.8849999998
+    },
+    {
+      "label": "رسوم الجهات الحكومية (10%)",
+      "funder": "investor",
+      "total": 650000,
+      "paid": 0,
+      "unpaid": 650000
+    },
+    {
+      "label": "رسوم الفرز",
+      "funder": "investor",
+      "total": 18726168.799999997,
+      "paid": 0,
+      "unpaid": 18726168.799999997
+    },
+    {
+      "label": "رسوم NOC المطور",
+      "funder": "investor",
+      "total": 10000,
+      "paid": 0,
+      "unpaid": 10000
+    },
+    {
+      "label": "تسجيل المشروع — ريرا",
+      "funder": "investor",
+      "total": 150000,
+      "paid": 0,
+      "unpaid": 150000
+    },
+    {
+      "label": "تسجيل الوحدات — دائرة الأراضي والأملاك",
+      "funder": "investor",
+      "total": 108680,
+      "paid": 0,
+      "unpaid": 108680
+    },
+    {
+      "label": "حساب الضمان (رسوم فتح)",
+      "funder": "investor",
+      "total": 180000,
+      "paid": 0,
+      "unpaid": 180000
+    },
+    {
+      "label": "رسوم البنك",
+      "funder": "investor",
+      "total": 28000,
+      "paid": 0,
+      "unpaid": 28000
+    },
+    {
+      "label": "التسويق",
+      "funder": "investor",
+      "total": 14514920,
+      "paid": 0,
+      "unpaid": 14514920
+    },
+    {
+      "label": "أتعاب المطور",
+      "funder": "investor",
+      "total": 36303377.50000001,
+      "paid": 0,
+      "unpaid": 36303377.5
+    },
+    {
+      "label": "دفعة مقدمة المقاول (10%)",
+      "funder": "investor",
+      "total": 34000000.2,
+      "paid": 0,
+      "unpaid": 34000000.2
+    },
+    {
+      "label": "إيداع حساب الضمان (20%)",
+      "funder": "investor",
+      "total": 68000000.4,
+      "paid": 0,
+      "unpaid": 68000000.4
+    },
+    {
+      "label": "ريتنشن أخيرة المقاول (5%)",
+      "funder": "investor",
+      "total": 17000000.1,
+      "paid": 0,
+      "unpaid": 17000000.1
+    },
+    {
+      "label": "عمولة مبيعات مباشرة بعد الإنجاز",
+      "funder": "investor",
+      "total": 7260675.499999999,
+      "paid": 0,
+      "unpaid": 7260675.5
+    },
+    {
+      "label": "حصة المطور من الأرباح (15%)",
+      "funder": "investor",
+      "total": 27534988.6423119,
+      "paid": 0,
+      "unpaid": 27534988.6423119
+    }
+  ],
+  "creditRows": [
+    {
+      "label": "مبيعات مباشرة بعد الإنجاز (20%)",
+      "funder": "investor",
+      "total": 145213510,
+      "paid": 0,
+      "unpaid": 145213510
+    },
+    {
+      "label": "تصفية حساب الضمان (دفعة 1)",
+      "funder": "investor",
+      "total": 288238373.25090885,
+      "paid": 0,
+      "unpaid": 288238373.25090885
+    },
+    {
+      "label": "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+      "funder": "investor",
+      "total": 29007961.925837338,
+      "paid": 0,
+      "unpaid": 29007961.925837338
+    }
+  ],
+  "timeline": [
+    {
+      "date": "2026-10",
+      "investorDebit": 2845422.2731322143,
+      "investorCredit": 0,
+      "net": -2845422.2731322143,
+      "cumulativeBeforePaid": -2845422.2731322143
+    },
+    {
+      "date": "2026-11",
+      "investorDebit": 3088653.7197632142,
+      "investorCredit": 0,
+      "net": -3088653.7197632142,
+      "cumulativeBeforePaid": -5934075.992895428
+    },
+    {
+      "date": "2026-12",
+      "investorDebit": 3636415.3863167143,
+      "investorCredit": 0,
+      "net": -3636415.3863167143,
+      "cumulativeBeforePaid": -9570491.379212143
+    },
+    {
+      "date": "2027-01",
+      "investorDebit": 2828542.0520547144,
+      "investorCredit": 0,
+      "net": -2828542.0520547144,
+      "cumulativeBeforePaid": -12399033.431266857
+    },
+    {
+      "date": "2027-02",
+      "investorDebit": 21586092.51789421,
+      "investorCredit": 0,
+      "net": -21586092.51789421,
+      "cumulativeBeforePaid": -33985125.94916107
+    },
+    {
+      "date": "2027-03",
+      "investorDebit": 72291529.11952522,
+      "investorCredit": 0,
+      "net": -72291529.11952522,
+      "cumulativeBeforePaid": -106276655.06868629
+    },
+    {
+      "date": "2027-04",
+      "investorDebit": 3233932.2693137135,
+      "investorCredit": 0,
+      "net": -3233932.2693137135,
+      "cumulativeBeforePaid": -109510587.338
+    },
+    {
+      "date": "2027-05",
+      "investorDebit": 35763722.75,
+      "investorCredit": 0,
+      "net": -35763722.75,
+      "cumulativeBeforePaid": -145274310.088
+    },
+    {
+      "date": "2027-06",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -147038032.638
+    },
+    {
+      "date": "2027-07",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -148801755.18800002
+    },
+    {
+      "date": "2027-08",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -150565477.73800004
+    },
+    {
+      "date": "2027-09",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -152329200.28800005
+    },
+    {
+      "date": "2027-10",
+      "investorDebit": 1880761.105,
+      "investorCredit": 0,
+      "net": -1880761.105,
+      "cumulativeBeforePaid": -154209961.39300004
+    },
+    {
+      "date": "2027-11",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -155973683.94300005
+    },
+    {
+      "date": "2027-12",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -157737406.49300006
+    },
+    {
+      "date": "2028-01",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -159501129.04300007
+    },
+    {
+      "date": "2028-02",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -161264851.59300008
+    },
+    {
+      "date": "2028-03",
+      "investorDebit": 1763722.55,
+      "investorCredit": 0,
+      "net": -1763722.55,
+      "cumulativeBeforePaid": -163028574.1430001
+    },
+    {
+      "date": "2028-04",
+      "investorDebit": 1880761.105,
+      "investorCredit": 0,
+      "net": -1880761.105,
+      "cumulativeBeforePaid": -164909335.2480001
+    },
+    {
+      "date": "2028-05",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -165636277.7980001
+    },
+    {
+      "date": "2028-06",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -166363220.3480001
+    },
+    {
+      "date": "2028-07",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -167090162.89800012
+    },
+    {
+      "date": "2028-08",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -167817105.44800013
+    },
+    {
+      "date": "2028-09",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -168544047.99800014
+    },
+    {
+      "date": "2028-10",
+      "investorDebit": 843981.105,
+      "investorCredit": 0,
+      "net": -843981.105,
+      "cumulativeBeforePaid": -169388029.10300013
+    },
+    {
+      "date": "2028-11",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -170114971.65300015
+    },
+    {
+      "date": "2028-12",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -170841914.20300016
+    },
+    {
+      "date": "2029-01",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -171568856.75300017
+    },
+    {
+      "date": "2029-02",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -172295799.30300018
+    },
+    {
+      "date": "2029-03",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -173022741.8530002
+    },
+    {
+      "date": "2029-04",
+      "investorDebit": 843981.105,
+      "investorCredit": 0,
+      "net": -843981.105,
+      "cumulativeBeforePaid": -173866722.95800018
+    },
+    {
+      "date": "2029-05",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -174593665.5080002
+    },
+    {
+      "date": "2029-06",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -175320608.0580002
+    },
+    {
+      "date": "2029-07",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -176047550.60800022
+    },
+    {
+      "date": "2029-08",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -176774493.15800023
+    },
+    {
+      "date": "2029-09",
+      "investorDebit": 726942.55,
+      "investorCredit": 0,
+      "net": -726942.55,
+      "cumulativeBeforePaid": -177501435.70800024
+    },
+    {
+      "date": "2029-10",
+      "investorDebit": 843981.105,
+      "investorCredit": 0,
+      "net": -843981.105,
+      "cumulativeBeforePaid": -178345416.81300023
+    },
+    {
+      "date": "2029-11",
+      "investorDebit": 0,
+      "investorCredit": 0,
+      "net": 0,
+      "cumulativeBeforePaid": -178345416.81300023
+    },
+    {
+      "date": "2029-12",
+      "investorDebit": 0,
+      "investorCredit": 0,
+      "net": 0,
+      "cumulativeBeforePaid": -178345416.81300023
+    },
+    {
+      "date": "2030-01",
+      "investorDebit": 21873725.21317086,
+      "investorCredit": 288238373.25090885,
+      "net": 266364648.037738,
+      "cumulativeBeforePaid": 88019231.22473776
+    },
+    {
+      "date": "2030-02",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 111011370.3080711
+    },
+    {
+      "date": "2030-03",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 134003509.39140445
+    },
+    {
+      "date": "2030-04",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 156995648.4747378
+    },
+    {
+      "date": "2030-05",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 179987787.55807114
+    },
+    {
+      "date": "2030-06",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 202979926.64140448
+    },
+    {
+      "date": "2030-07",
+      "investorDebit": 1210112.5833333333,
+      "investorCredit": 24202251.666666668,
+      "net": 22992139.083333336,
+      "cumulativeBeforePaid": 225972065.72473782
+    },
+    {
+      "date": "2030-08",
+      "investorDebit": 0,
+      "investorCredit": 0,
+      "net": 0,
+      "cumulativeBeforePaid": 225972065.72473782
+    },
+    {
+      "date": "2030-09",
+      "investorDebit": 0,
+      "investorCredit": 0,
+      "net": 0,
+      "cumulativeBeforePaid": 225972065.72473782
+    },
+    {
+      "date": "2030-10",
+      "investorDebit": 0,
+      "investorCredit": 0,
+      "net": 0,
+      "cumulativeBeforePaid": 225972065.72473782
+    },
+    {
+      "date": "2030-11",
+      "investorDebit": 22661263.529141042,
+      "investorCredit": 29007961.925837338,
+      "net": 6346698.396696296,
+      "cumulativeBeforePaid": 232318764.12143412
+    }
+  ]
+}

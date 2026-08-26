@@ -1,0 +1,111 @@
+{
+  "projectIds": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "audits": [
+    {
+      "projectId": 2,
+      "projectName": "مجان متعدد الاستخدامات (G+4P+25)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 128100000,
+        "remaining": 178345416.81300023,
+        "required": 306445416.8130002,
+        "peakMonth": "2029-10"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 230141081.0553122,
+        "creditTotal": 462459845.1767463,
+        "netTotal": 232318764.12143412,
+        "firstCreditMonth": "2030-01",
+        "lastDebitMonth": "2030-11",
+        "arithmeticDelta": 0
+      }
+    },
+    {
+      "projectId": 3,
+      "projectName": "مبنى الجداف السكني (G+7)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 16275000,
+        "remaining": 22582206.150000006,
+        "required": 38857206.150000006,
+        "peakMonth": "2028-10"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 27404347.110000007,
+        "creditTotal": 51849600,
+        "netTotal": 24445252.889999997,
+        "firstCreditMonth": "2029-01",
+        "lastDebitMonth": "2029-11",
+        "arithmeticDelta": 3.725290298461914e-9
+      }
+    },
+    {
+      "projectId": 4,
+      "projectName": "ند الشبا — قطعة 1 (6185392)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 18900000,
+        "remaining": 22672741.989999983,
+        "required": 41572741.98999998,
+        "peakMonth": "2028-08"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 27066521.259999987,
+        "creditTotal": 51517180.80000001,
+        "netTotal": 24450659.540000025,
+        "firstCreditMonth": "2028-11",
+        "lastDebitMonth": "2029-09",
+        "arithmeticDelta": 0
+      }
+    },
+    {
+      "projectId": 5,
+      "projectName": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "scenario": "offplan_escrow",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 14542500,
+        "remaining": 40872931.6125,
+        "required": 55415431.6125,
+        "peakMonth": "2028-11"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 51136250.23249999,
+        "creditTotal": 88223605.00000003,
+        "netTotal": 37087354.76750004,
+        "firstCreditMonth": "2029-02",
+        "lastDebitMonth": "2029-12",
+        "arithmeticDelta": 0
+      }
+    },
+    {
+      "projectId": 6,
+      "projectName": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "scenario": "build_for_sale",
+      "status": "calculation_matched",
+      "capital": {
+        "paid": 6533100,
+        "remaining": 16886210.473554857,
+        "required": 23419310.473554857,
+        "peakMonth": "2028-03"
+      },
+      "investorFlow": {
+        "futureDebitTotal": 20021241.7175,
+        "creditTotal": 22540000,
+        "netTotal": 2518758.282499997,
+        "firstCreditMonth": "2028-04",
+        "lastDebitMonth": "2029-04",
+        "arithmeticDelta": -1.862645149230957e-9
+      }
+    }
+  ]
+}

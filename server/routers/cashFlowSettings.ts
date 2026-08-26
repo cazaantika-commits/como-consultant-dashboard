@@ -2526,7 +2526,9 @@ export const cashFlowSettingsRouter = router({
       if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
     }
 
-    return allProjects.map((project) => {
+    return allProjects
+      .filter((project) => isCapitalPortfolioEligibleScenario(project.financingScenario || "offplan_escrow"))
+      .map((project) => {
       const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
       const salesResult = buildSalesResultFromSavedPlan(
         newestPlanByProject.get(project.id),
@@ -2534,7 +2536,8 @@ export const cashFlowSettingsRouter = router({
         scenario,
       );
       const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
-      const monthlyNet = calculateInvestorMonthlyNet(cashFlow, salesResult).netFlow;
+      const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
+      const monthlyNet = investorNet.netFlow;
       const monthlyTrace = buildInvestorMonthlyTrace(cashFlow, salesResult);
 
       return {
@@ -2543,6 +2546,8 @@ export const cashFlowSettingsRouter = router({
         financingScenario: scenario,
         startDate: cashFlow.startDate,
         monthDates: cashFlow.monthDates.slice(0, monthlyNet.length),
+        monthlyDebit: investorNet.debitTotals,
+        monthlyCredit: investorNet.creditTotals,
         monthlyNet,
         monthlyTrace,
       };

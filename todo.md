@@ -1554,3 +1554,21 @@
 - [x] Enforce that the final construction installment is no later than two calendar months before handover for every project duration
 - [x] Let Wael choose when the first construction installment starts after the contract, then distribute only within the available window before the handover buffer
 - [x] Keep payment-plan guardrails limited to chronology and feasibility; do not impose arbitrary timing rules that Wael did not choose
+- [x] Apply the owner-approved standard buyer payment plan to every off-plan project using the existing payment-plan structure and preserve an audit trail
+- [ ] Audit the three consolidated portfolio reports for source linkage, arithmetic consistency, and meeting-readiness before the Sheikh Issa meeting
+- [ ] Redesign the Capital & Return Portfolio report around investor cash paid, cash returned, capital-recovery month, and profit after recovery while excluding build-for-rent projects
+- [ ] Audit the current Capital & Return Portfolio report for scope, source linkage, arithmetic totals, and sign consistency before redesigning it
+- [ ] Reconcile and explain the difference between future investor funding and net remaining capital in the current Capital Portfolio report
+- [ ] Replace parallel capital measures in the Capital Portfolio with one calendar-aligned net-investor-cash metric after owner approval
+- [ ] Match the displayed remaining-capital total to the exact report query and project set before presenting it as meeting-ready
+- [x] Trace one off-plan project from investor payments and returns through to the displayed Capital Portfolio totals before generalizing findings
+- [x] Audit the investor cash-flow report for Majan Mixed Use only, read-only, before any report or data change
+- [ ] Define remaining investor funding as the scheduled personal funding required until the first investor cash recovery begins, subject to owner approval before any report change
+- [x] Ensure the Investor Portfolio aggregates only off-plan and build-for-sale investor cash-flow reports, excluding build-for-rent projects
+- [ ] Preserve the current Capital Portfolio visual layout, labels, columns, order, and colors unless the owner explicitly approves a specific visual change
+- [ ] Add a profit column after revenue and total cost in the Capital Portfolio, calculated as revenue minus cost with a total-row value
+- [ ] Decide whether the current Capital Portfolio should remain a funding-only view and whether a separate investor cash-cycle report should show credits and cash profit, without changing either report until owner approval
+- [ ] Keep the current Capital Portfolio as a funding-distribution view without credit columns, and reserve credits for the separate Investor Cash Flow portfolio report
+- [x] Build the separate Investor Cash Flow portfolio as a faithful monthly aggregation of each eligible project's investor debit, credit, and cumulative balance lines
+- [x] Audit each off-plan and build-for-sale investor cash-flow report before aggregation; exclude all build-for-rent projects
+- [x] Display investor-portfolio monetary amounts as rounded full values without K or M abbreviations

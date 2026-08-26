@@ -1,0 +1,1215 @@
+{
+  "generatedAt": "2026-08-26T06:49:47.078Z",
+  "summary": {
+    "investorNetPortfolio": {
+      "projectCount": 6,
+      "totalNet": -126513526.14106596
+    },
+    "capitalPortfolio": {
+      "projectCount": 5,
+      "totalRevenue": 1074484050,
+      "totalCosts": 937319058.9153119,
+      "grossProfitBeforeDeveloperShare": 137164991.08468807,
+      "totalRequiredCapital": 465710107.03905505,
+      "totalPaidCapital": 184350600,
+      "totalRemainingCapital": 281359507.03905505,
+      "totalFutureFundingSchedule": 355769441.3753121,
+      "requiredCapitalIdentityDifference": 0,
+      "sumOfIndividualCapitalPeaks": 465710107.03905505,
+      "calendarAlignedNetCapitalPeak": 446726850.5292867,
+      "calendarAlignedNetCapitalPeakDate": "2028-03"
+    },
+    "escrowLiquidityPortfolio": {
+      "projectCount": 4,
+      "projectsWithSavedPlan": 4,
+      "paymentPlansAt100": 4,
+      "deficitProjects": [
+        "ند الشبا — قطعة 1 (6185392)"
+      ]
+    }
+  },
+  "projects": [
+    {
+      "projectId": 1,
+      "name": "مركز مجان التجاري (G+4)",
+      "scenario": "build_for_rent",
+      "startDate": "2026-09",
+      "hasSavedPlan": false,
+      "paymentTotal": 0,
+      "paymentRows": 0,
+      "paymentLabels": [],
+      "investorNetTotal": -447334315.7425001,
+      "investorNetMonths": 50,
+      "investorNetByMonth": [
+        {
+          "date": "2026-09",
+          "value": -2215342.070357143
+        },
+        {
+          "date": "2026-10",
+          "value": -2845875.8928571427
+        },
+        {
+          "date": "2026-11",
+          "value": -3374864.6428571427
+        },
+        {
+          "date": "2026-12",
+          "value": -2279349.6428571427
+        },
+        {
+          "date": "2027-01",
+          "value": -2016133.3928571423
+        },
+        {
+          "date": "2027-02",
+          "value": -2535140.8928571437
+        },
+        {
+          "date": "2027-03",
+          "value": -1000240.8203571427
+        },
+        {
+          "date": "2027-04",
+          "value": -40926078.0331782
+        },
+        {
+          "date": "2027-05",
+          "value": -3986344.759300546
+        },
+        {
+          "date": "2027-06",
+          "value": -4692027.361632619
+        },
+        {
+          "date": "2027-07",
+          "value": -5509454.510439664
+        },
+        {
+          "date": "2027-08",
+          "value": -6445636.976449438
+        },
+        {
+          "date": "2027-09",
+          "value": -7626692.874973796
+        },
+        {
+          "date": "2027-10",
+          "value": -8678294.68961261
+        },
+        {
+          "date": "2027-11",
+          "value": -9957976.619211644
+        },
+        {
+          "date": "2027-12",
+          "value": -11318038.935330115
+        },
+        {
+          "date": "2028-01",
+          "value": -12721135.7785601
+        },
+        {
+          "date": "2028-02",
+          "value": -14116272.170313245
+        },
+        {
+          "date": "2028-03",
+          "value": -15563720.384939777
+        },
+        {
+          "date": "2028-04",
+          "value": -16621611.075012734
+        },
+        {
+          "date": "2028-05",
+          "value": -17587222.293038864
+        },
+        {
+          "date": "2028-06",
+          "value": -18270741.38897515
+        },
+        {
+          "date": "2028-07",
+          "value": -18621654.49163227
+        },
+        {
+          "date": "2028-08",
+          "value": -18612881.66406584
+        },
+        {
+          "date": "2028-09",
+          "value": -18368573.582199473
+        },
+        {
+          "date": "2028-10",
+          "value": -17546635.072296698
+        },
+        {
+          "date": "2028-11",
+          "value": -16568951.365891332
+        },
+        {
+          "date": "2028-12",
+          "value": -15378929.727550304
+        },
+        {
+          "date": "2029-01",
+          "value": -14049827.32158844
+        },
+        {
+          "date": "2029-02",
+          "value": -12652841.068903673
+        },
+        {
+          "date": "2029-03",
+          "value": -14974141.001587864
+        },
+        {
+          "date": "2029-04",
+          "value": -9893667.303349772
+        },
+        {
+          "date": "2029-05",
+          "value": -8618533.48696562
+        },
+        {
+          "date": "2029-06",
+          "value": -11048896.784710916
+        },
+        {
+          "date": "2029-07",
+          "value": -6397150.919592688
+        },
+        {
+          "date": "2029-08",
+          "value": -5491826.4214906925
+        },
+        {
+          "date": "2029-09",
+          "value": -4778488.99757784
+        },
+        {
+          "date": "2029-10",
+          "value": -3543121.3271280983
+        },
+        {
+          "date": "2029-11",
+          "value": -20250000
+        },
+        {
+          "date": "2029-12",
+          "value": 0
+        },
+        {
+          "date": "2030-01",
+          "value": 0
+        },
+        {
+          "date": "2030-02",
+          "value": 0
+        },
+        {
+          "date": "2030-03",
+          "value": 0
+        },
+        {
+          "date": "2030-04",
+          "value": 0
+        },
+        {
+          "date": "2030-05",
+          "value": 0
+        },
+        {
+          "date": "2030-06",
+          "value": 0
+        },
+        {
+          "date": "2030-07",
+          "value": 0
+        },
+        {
+          "date": "2030-08",
+          "value": 0
+        },
+        {
+          "date": "2030-09",
+          "value": 0
+        },
+        {
+          "date": "2030-10",
+          "value": -20250000
+        }
+      ],
+      "fundingTotal": 447334315.7425001,
+      "fundingMonths": 50,
+      "requiredCapital": 512434315.7425001,
+      "paidCapital": 65100000,
+      "remainingCapital": 447334315.7425001,
+      "capitalPeakDate": "2030-10",
+      "debitToCapitalPeak": 447334315.7425001,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 0,
+      "creditAfterCapitalPeak": 0,
+      "totalRevenue": 763900000,
+      "totalCosts": 512434315.7425,
+      "escrowMinimumBalance": null,
+      "escrowFirstDeficit": null,
+      "escrowMonths": 0
+    },
+    {
+      "projectId": 2,
+      "name": "مجان متعدد الاستخدامات (G+4P+25)",
+      "scenario": "offplan_escrow",
+      "startDate": "2026-10",
+      "hasSavedPlan": true,
+      "paymentTotal": 100,
+      "paymentRows": 7,
+      "paymentLabels": [
+        "دفعة الحجز",
+        "دفعة توقيع العقد",
+        "قسط الإنشاء 1",
+        "قسط الإنشاء 2",
+        "قسط الإنشاء 3",
+        "قسط الإنشاء 4",
+        "دفعة التسليم"
+      ],
+      "investorNetTotal": 232318764.12143412,
+      "investorNetMonths": 50,
+      "investorNetByMonth": [
+        {
+          "date": "2026-10",
+          "value": -2845422.2731322143
+        },
+        {
+          "date": "2026-11",
+          "value": -3088653.7197632142
+        },
+        {
+          "date": "2026-12",
+          "value": -3636415.3863167143
+        },
+        {
+          "date": "2027-01",
+          "value": -2828542.0520547144
+        },
+        {
+          "date": "2027-02",
+          "value": -21586092.51789421
+        },
+        {
+          "date": "2027-03",
+          "value": -72291529.11952522
+        },
+        {
+          "date": "2027-04",
+          "value": -3233932.2693137135
+        },
+        {
+          "date": "2027-05",
+          "value": -35763722.75
+        },
+        {
+          "date": "2027-06",
+          "value": -1763722.55
+        },
+        {
+          "date": "2027-07",
+          "value": -1763722.55
+        },
+        {
+          "date": "2027-08",
+          "value": -1763722.55
+        },
+        {
+          "date": "2027-09",
+          "value": -1763722.55
+        },
+        {
+          "date": "2027-10",
+          "value": -1880761.105
+        },
+        {
+          "date": "2027-11",
+          "value": -1763722.55
+        },
+        {
+          "date": "2027-12",
+          "value": -1763722.55
+        },
+        {
+          "date": "2028-01",
+          "value": -1763722.55
+        },
+        {
+          "date": "2028-02",
+          "value": -1763722.55
+        },
+        {
+          "date": "2028-03",
+          "value": -1763722.55
+        },
+        {
+          "date": "2028-04",
+          "value": -1880761.105
+        },
+        {
+          "date": "2028-05",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-06",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-07",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-08",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-09",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-10",
+          "value": -843981.105
+        },
+        {
+          "date": "2028-11",
+          "value": -726942.55
+        },
+        {
+          "date": "2028-12",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-01",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-02",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-03",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-04",
+          "value": -843981.105
+        },
+        {
+          "date": "2029-05",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-06",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-07",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-08",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-09",
+          "value": -726942.55
+        },
+        {
+          "date": "2029-10",
+          "value": -843981.105
+        },
+        {
+          "date": "2029-11",
+          "value": 0
+        },
+        {
+          "date": "2029-12",
+          "value": 0
+        },
+        {
+          "date": "2030-01",
+          "value": 266364648.037738
+        },
+        {
+          "date": "2030-02",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-03",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-04",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-05",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-06",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-07",
+          "value": 22992139.083333336
+        },
+        {
+          "date": "2030-08",
+          "value": 0
+        },
+        {
+          "date": "2030-09",
+          "value": 0
+        },
+        {
+          "date": "2030-10",
+          "value": 0
+        },
+        {
+          "date": "2030-11",
+          "value": 6346698.396696296
+        }
+      ],
+      "fundingTotal": 230141081.0553122,
+      "fundingMonths": 50,
+      "requiredCapital": 306445416.8130002,
+      "paidCapital": 128100000,
+      "remainingCapital": 178345416.81300023,
+      "capitalPeakDate": "2029-10",
+      "debitToCapitalPeak": 178345416.81300023,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 51795664.242311895,
+      "creditAfterCapitalPeak": 462459845.1767463,
+      "totalRevenue": 726067550,
+      "totalCosts": 621153984.395312,
+      "escrowMinimumBalance": 0,
+      "escrowFirstDeficit": 0,
+      "escrowMonths": 50
+    },
+    {
+      "projectId": 3,
+      "name": "مبنى الجداف السكني (G+7)",
+      "scenario": "offplan_escrow",
+      "startDate": "2026-10",
+      "hasSavedPlan": true,
+      "paymentTotal": 100,
+      "paymentRows": 7,
+      "paymentLabels": [
+        "دفعة الحجز",
+        "دفعة توقيع العقد",
+        "قسط الإنشاء 1",
+        "قسط الإنشاء 2",
+        "قسط الإنشاء 3",
+        "قسط الإنشاء 4",
+        "دفعة التسليم"
+      ],
+      "investorNetTotal": 24445252.889999997,
+      "investorNetMonths": 38,
+      "investorNetByMonth": [
+        {
+          "date": "2026-10",
+          "value": -357453.1671428571
+        },
+        {
+          "date": "2026-11",
+          "value": -416511.85714285716
+        },
+        {
+          "date": "2026-12",
+          "value": -483060.0571428571
+        },
+        {
+          "date": "2027-01",
+          "value": -359657.6571428571
+        },
+        {
+          "date": "2027-02",
+          "value": -2533614.657142857
+        },
+        {
+          "date": "2027-03",
+          "value": -9510470.257142857
+        },
+        {
+          "date": "2027-04",
+          "value": -406822.96714285715
+        },
+        {
+          "date": "2027-05",
+          "value": -4700192
+        },
+        {
+          "date": "2027-06",
+          "value": -290192
+        },
+        {
+          "date": "2027-07",
+          "value": -290192
+        },
+        {
+          "date": "2027-08",
+          "value": -290192
+        },
+        {
+          "date": "2027-09",
+          "value": -290192
+        },
+        {
+          "date": "2027-10",
+          "value": -302834.51
+        },
+        {
+          "date": "2027-11",
+          "value": -290192
+        },
+        {
+          "date": "2027-12",
+          "value": -290192
+        },
+        {
+          "date": "2028-01",
+          "value": -290192
+        },
+        {
+          "date": "2028-02",
+          "value": -290192
+        },
+        {
+          "date": "2028-03",
+          "value": -145596
+        },
+        {
+          "date": "2028-04",
+          "value": -158238.51
+        },
+        {
+          "date": "2028-05",
+          "value": -145596
+        },
+        {
+          "date": "2028-06",
+          "value": -145596
+        },
+        {
+          "date": "2028-07",
+          "value": -145596
+        },
+        {
+          "date": "2028-08",
+          "value": -145596
+        },
+        {
+          "date": "2028-09",
+          "value": -145596
+        },
+        {
+          "date": "2028-10",
+          "value": -158238.51
+        },
+        {
+          "date": "2028-11",
+          "value": 0
+        },
+        {
+          "date": "2028-12",
+          "value": 0
+        },
+        {
+          "date": "2029-01",
+          "value": 45559092.384
+        },
+        {
+          "date": "2029-02",
+          "value": 0
+        },
+        {
+          "date": "2029-03",
+          "value": 0
+        },
+        {
+          "date": "2029-04",
+          "value": 0
+        },
+        {
+          "date": "2029-05",
+          "value": 0
+        },
+        {
+          "date": "2029-06",
+          "value": 0
+        },
+        {
+          "date": "2029-07",
+          "value": 0
+        },
+        {
+          "date": "2029-08",
+          "value": 0
+        },
+        {
+          "date": "2029-09",
+          "value": 0
+        },
+        {
+          "date": "2029-10",
+          "value": 0
+        },
+        {
+          "date": "2029-11",
+          "value": 1468366.656
+        }
+      ],
+      "fundingTotal": 27404347.110000007,
+      "fundingMonths": 38,
+      "requiredCapital": 38857206.150000006,
+      "paidCapital": 16275000,
+      "remainingCapital": 22582206.150000006,
+      "capitalPeakDate": "2028-10",
+      "debitToCapitalPeak": 22582206.150000006,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 4822140.959999999,
+      "creditAfterCapitalPeak": 51849600,
+      "totalRevenue": 86757600,
+      "totalCosts": 78587347.11,
+      "escrowMinimumBalance": 0,
+      "escrowFirstDeficit": 0,
+      "escrowMonths": 38
+    },
+    {
+      "projectId": 4,
+      "name": "ند الشبا — قطعة 1 (6185392)",
+      "scenario": "offplan_escrow",
+      "startDate": "2026-10",
+      "hasSavedPlan": true,
+      "paymentTotal": 100,
+      "paymentRows": 7,
+      "paymentLabels": [
+        "دفعة الحجز",
+        "دفعة توقيع العقد",
+        "قسط الإنشاء 1",
+        "قسط الإنشاء 2",
+        "قسط الإنشاء 3",
+        "قسط الإنشاء 4",
+        "دفعة التسليم"
+      ],
+      "investorNetTotal": 24450659.540000025,
+      "investorNetMonths": 36,
+      "investorNetByMonth": [
+        {
+          "date": "2026-10",
+          "value": -508094.57830000005
+        },
+        {
+          "date": "2026-11",
+          "value": -556734.37445
+        },
+        {
+          "date": "2026-12",
+          "value": -578005.2344
+        },
+        {
+          "date": "2027-01",
+          "value": -2643806.85215
+        },
+        {
+          "date": "2027-02",
+          "value": -9679626.480129825
+        },
+        {
+          "date": "2027-03",
+          "value": -4747257.438596491
+        },
+        {
+          "date": "2027-04",
+          "value": -302888.1860964912
+        },
+        {
+          "date": "2027-05",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-06",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-07",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-08",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-09",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-10",
+          "value": -302888.1860964912
+        },
+        {
+          "date": "2027-11",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2027-12",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2028-01",
+          "value": -290181.43859649124
+        },
+        {
+          "date": "2028-02",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-03",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-04",
+          "value": -158318.51942982455
+        },
+        {
+          "date": "2028-05",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-06",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-07",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-08",
+          "value": -145611.77192982455
+        },
+        {
+          "date": "2028-09",
+          "value": 0
+        },
+        {
+          "date": "2028-10",
+          "value": 0
+        },
+        {
+          "date": "2028-11",
+          "value": 45608476.10050001
+        },
+        {
+          "date": "2028-12",
+          "value": 0
+        },
+        {
+          "date": "2029-01",
+          "value": 0
+        },
+        {
+          "date": "2029-02",
+          "value": 0
+        },
+        {
+          "date": "2029-03",
+          "value": 0
+        },
+        {
+          "date": "2029-04",
+          "value": 0
+        },
+        {
+          "date": "2029-05",
+          "value": 0
+        },
+        {
+          "date": "2029-06",
+          "value": 0
+        },
+        {
+          "date": "2029-07",
+          "value": 0
+        },
+        {
+          "date": "2029-08",
+          "value": 0
+        },
+        {
+          "date": "2029-09",
+          "value": 1514925.4294999992
+        }
+      ],
+      "fundingTotal": 27066521.259999987,
+      "fundingMonths": 36,
+      "requiredCapital": 41572741.98999998,
+      "paidCapital": 18900000,
+      "remainingCapital": 22672741.989999983,
+      "capitalPeakDate": "2028-08",
+      "debitToCapitalPeak": 22672741.989999983,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 4393779.270000004,
+      "creditAfterCapitalPeak": 51517180.80000001,
+      "totalRevenue": 86741800,
+      "totalCosts": 81191140.46000001,
+      "escrowMinimumBalance": -842204.676942663,
+      "escrowFirstDeficit": -751383.910902349,
+      "escrowMonths": 36
+    },
+    {
+      "projectId": 5,
+      "name": "ند الشبا — قطعة 2 المدمجة (6182776)",
+      "scenario": "offplan_escrow",
+      "startDate": "2026-10",
+      "hasSavedPlan": true,
+      "paymentTotal": 100,
+      "paymentRows": 7,
+      "paymentLabels": [
+        "دفعة الحجز",
+        "دفعة توقيع العقد",
+        "قسط الإنشاء 1",
+        "قسط الإنشاء 2",
+        "قسط الإنشاء 3",
+        "قسط الإنشاء 4",
+        "دفعة التسليم"
+      ],
+      "investorNetTotal": 37087354.76750004,
+      "investorNetMonths": 39,
+      "investorNetByMonth": [
+        {
+          "date": "2026-10",
+          "value": -759883.1491666667
+        },
+        {
+          "date": "2026-11",
+          "value": -823983.6666666667
+        },
+        {
+          "date": "2026-12",
+          "value": -1017407.6666666667
+        },
+        {
+          "date": "2027-01",
+          "value": -660935.6666666667
+        },
+        {
+          "date": "2027-02",
+          "value": -4567728.866666666
+        },
+        {
+          "date": "2027-03",
+          "value": -17368957.88095238
+        },
+        {
+          "date": "2027-04",
+          "value": -8706003.346785715
+        },
+        {
+          "date": "2027-05",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-06",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-07",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-08",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-09",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-10",
+          "value": -506003.34678571427
+        },
+        {
+          "date": "2027-11",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2027-12",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2028-01",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2028-02",
+          "value": -483479.8642857143
+        },
+        {
+          "date": "2028-03",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-04",
+          "value": -252041.51345238095
+        },
+        {
+          "date": "2028-05",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-06",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-07",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-08",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-09",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-10",
+          "value": -252041.51345238095
+        },
+        {
+          "date": "2028-11",
+          "value": -229518.03095238094
+        },
+        {
+          "date": "2028-12",
+          "value": 0
+        },
+        {
+          "date": "2029-01",
+          "value": 0
+        },
+        {
+          "date": "2029-02",
+          "value": 72142845.83610243
+        },
+        {
+          "date": "2029-03",
+          "value": 0
+        },
+        {
+          "date": "2029-04",
+          "value": 0
+        },
+        {
+          "date": "2029-05",
+          "value": 0
+        },
+        {
+          "date": "2029-06",
+          "value": 0
+        },
+        {
+          "date": "2029-07",
+          "value": 0
+        },
+        {
+          "date": "2029-08",
+          "value": 0
+        },
+        {
+          "date": "2029-09",
+          "value": 0
+        },
+        {
+          "date": "2029-10",
+          "value": 0
+        },
+        {
+          "date": "2029-11",
+          "value": 0
+        },
+        {
+          "date": "2029-12",
+          "value": 5817440.543897617
+        }
+      ],
+      "fundingTotal": 51136250.23249999,
+      "fundingMonths": 39,
+      "requiredCapital": 55415431.6125,
+      "paidCapital": 14542500,
+      "remainingCapital": 40872931.6125,
+      "capitalPeakDate": "2028-11",
+      "debitToCapitalPeak": 40872931.6125,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 10263318.61999999,
+      "creditAfterCapitalPeak": 88223605.00000003,
+      "totalRevenue": 152377100,
+      "totalCosts": 129832245.23249999,
+      "escrowMinimumBalance": -2.60770320892334e-8,
+      "escrowFirstDeficit": 0,
+      "escrowMonths": 39
+    },
+    {
+      "projectId": 6,
+      "name": "ند الشبا — قطعة 3 الفلل (6180578)",
+      "scenario": "build_for_sale",
+      "startDate": "2026-10",
+      "hasSavedPlan": true,
+      "paymentTotal": 0,
+      "paymentRows": 0,
+      "paymentLabels": [],
+      "investorNetTotal": 2518758.282499997,
+      "investorNetMonths": 31,
+      "investorNetByMonth": [
+        {
+          "date": "2026-10",
+          "value": -130475.68885
+        },
+        {
+          "date": "2026-11",
+          "value": -142953.74055625
+        },
+        {
+          "date": "2026-12",
+          "value": -160359.25636875
+        },
+        {
+          "date": "2027-01",
+          "value": -116415.336725
+        },
+        {
+          "date": "2027-02",
+          "value": -1640141.7102652953
+        },
+        {
+          "date": "2027-03",
+          "value": -377505.80730923807
+        },
+        {
+          "date": "2027-04",
+          "value": -534585.396555408
+        },
+        {
+          "date": "2027-05",
+          "value": -727887.4007708173
+        },
+        {
+          "date": "2027-06",
+          "value": -965361.7508944046
+        },
+        {
+          "date": "2027-07",
+          "value": -1216541.4798091897
+        },
+        {
+          "date": "2027-08",
+          "value": -1434242.0237927393
+        },
+        {
+          "date": "2027-09",
+          "value": -1561505.615055479
+        },
+        {
+          "date": "2027-10",
+          "value": -1563186.6227739092
+        },
+        {
+          "date": "2027-11",
+          "value": -1425697.460156124
+        },
+        {
+          "date": "2027-12",
+          "value": -1475033.0870776456
+        },
+        {
+          "date": "2028-01",
+          "value": -953433.1087367323
+        },
+        {
+          "date": "2028-02",
+          "value": -1864523.5763621195
+        },
+        {
+          "date": "2028-03",
+          "value": -596361.4114957514
+        },
+        {
+          "date": "2028-04",
+          "value": 4944828.256054854
+        },
+        {
+          "date": "2028-05",
+          "value": 9906695.25
+        },
+        {
+          "date": "2028-06",
+          "value": 5353250
+        },
+        {
+          "date": "2028-07",
+          "value": 0
+        },
+        {
+          "date": "2028-08",
+          "value": 0
+        },
+        {
+          "date": "2028-09",
+          "value": 0
+        },
+        {
+          "date": "2028-10",
+          "value": 0
+        },
+        {
+          "date": "2028-11",
+          "value": 0
+        },
+        {
+          "date": "2028-12",
+          "value": 0
+        },
+        {
+          "date": "2029-01",
+          "value": 0
+        },
+        {
+          "date": "2029-02",
+          "value": 0
+        },
+        {
+          "date": "2029-03",
+          "value": 0
+        },
+        {
+          "date": "2029-04",
+          "value": -799804.75
+        }
+      ],
+      "fundingTotal": 20021241.7175,
+      "fundingMonths": 31,
+      "requiredCapital": 23419310.473554857,
+      "paidCapital": 6533100,
+      "remainingCapital": 16886210.473554857,
+      "capitalPeakDate": "2028-03",
+      "debitToCapitalPeak": 16886210.473554857,
+      "creditToCapitalPeak": 0,
+      "debitAfterCapitalPeak": 3135031.243945146,
+      "creditAfterCapitalPeak": 22540000,
+      "totalRevenue": 22540000,
+      "totalCosts": 26554341.717499997,
+      "escrowMinimumBalance": null,
+      "escrowFirstDeficit": null,
+      "escrowMonths": 0
+    }
+  ]
+}
