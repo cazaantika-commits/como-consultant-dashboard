@@ -1603,3 +1603,5 @@
 - [x] Compare Majan investor capital and final investor profit between Investor Cash Flow and Feasibility Study, reporting exact differences without changing either report
 - [x] Clarify Investor Cash Flow summary cards: show peak required capital, paid capital, remaining funding, lifetime investor debits, investor receipts, final profit, and feasibility reconciliation without changing formulas
 - [x] Audit capital and investor-profit reconciliation for all remaining off-plan and build-for-sale projects, excluding the build-for-rent commercial center, and correct only proven errors
+- [ ] Audit Nad Al Sheba Plot 2 saved payment plan inputs, generated installment dates, stages, and recipients, then report whether the plan needs resetting before changing any data
+- [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
