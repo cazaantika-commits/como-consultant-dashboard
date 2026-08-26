@@ -48,6 +48,23 @@ const sources = allProjects
   });
 
 const portfolio = alignPortfolioMonthlyNetFlows(sources);
+const transposedMatrix = portfolio.monthDates.map((date, monthIndex) => ({
+  date,
+  values: sources.map((source) => portfolio.rows.find((row) => row.projectId === source.projectId)?.values[monthIndex] || 0),
+  total: portfolio.totals[monthIndex] || 0,
+}));
+const transposedCellChecks = transposedMatrix.flatMap((period, monthIndex) => period.values.map((value, projectIndex) => {
+  const projectId = sources[projectIndex].projectId;
+  const standardValue = portfolio.rows.find((row) => row.projectId === projectId)?.values[monthIndex] || 0;
+  return {
+    date: period.date,
+    projectId,
+    standardValue,
+    transposedValue: value,
+    difference: value - standardValue,
+  };
+}));
+const maxTransposedCellDifference = transposedCellChecks.reduce((max, item) => Math.max(max, Math.abs(item.difference)), 0);
 const projectChecks = sources.map((source) => {
   const row = portfolio.rows.find((candidate) => candidate.projectId === source.projectId);
   const sourceByDate = new Map(source.monthDates.map((date, index) => [date, source.monthlyNet[index] || 0]));
@@ -112,14 +129,23 @@ const result = {
     summedProjectProfit,
     profitDifference: portfolioGrandProfit - summedProjectProfit,
   },
+  transposedView: {
+    projectOrder: sources.map((source) => ({ projectId: source.projectId, name: source.name })),
+    monthCount: transposedMatrix.length,
+    checkedCellCount: transposedCellChecks.length,
+    maxCellDifference: maxTransposedCellDifference,
+    differingCells: transposedCellChecks.filter((item) => Math.abs(item.difference) >= FILS),
+  },
   acceptance: {
     everyProjectRowCopiesInvestorNet: projectChecks.every((project) => project.passes),
     everyMonthTotalEqualsSumOfRows: maxTotalDifference < FILS,
     grandProfitEqualsSumOfProjectProfits: Math.abs(portfolioGrandProfit - summedProjectProfit) < FILS,
+    transposedViewEqualsStandardCellByCell: maxTransposedCellDifference < FILS,
   },
 };
 
 console.log(JSON.stringify(result, null, 2));
 process.exit(result.acceptance.everyProjectRowCopiesInvestorNet
   && result.acceptance.everyMonthTotalEqualsSumOfRows
-  && result.acceptance.grandProfitEqualsSumOfProjectProfits ? 0 : 1);
+  && result.acceptance.grandProfitEqualsSumOfProjectProfits
+  && result.acceptance.transposedViewEqualsStandardCellByCell ? 0 : 1);

@@ -1609,4 +1609,8 @@
 - [x] Verify every Capital Portfolio project row is an exact calendar-aligned copy of that project's final Investor Cash Flow row, and that portfolio totals equal the sum of rows, without changing the report
 - [x] Change the Capital Portfolio summary profit card to investor net profit and add profit-on-cost and profit-on-required-capital percentages inside the existing card dimensions
 - [x] Add a compact transposed Capital Portfolio view that copies current monthly values directly, uses shortened project columns, and highlights the final total column without changing formulas or the original view
+- [x] Reproduce and fix the visible value differences between standard and transposed Capital Portfolio views, proving exact cell-by-cell equality without changing source calculations
+- [x] Replace the transposed Capital Portfolio with a literal transpose of the complete original table matrix, including only original cells and no derived totals or new numbers
+- [x] Preserve full unabridged number formatting in every transposed Capital Portfolio cell; never use K, M, or compact notation
+- [x] Keep transposed project columns tightly aligned and make the final total column wider, visually elevated, and clearly distinguished
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

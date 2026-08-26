@@ -88,14 +88,9 @@ export function compactCapitalProjectName(name: string | null): string {
   return value.replace(/\([^)]*\)/g, "").trim().slice(0, 18);
 }
 
-export function transposePortfolioMonthlyValues(
-  projectIds: number[],
-  rows: Array<{ projectId: number; values: number[] }>,
-  periodCount: number,
-): number[][] {
-  return Array.from({ length: periodCount }, (_, periodIndex) => projectIds.map((projectId) => (
-    rows.find((row) => row.projectId === projectId)?.values[periodIndex] || 0
-  )));
+export function transposeLiteralMatrix<T>(matrix: T[][]): T[][] {
+  const columnCount = matrix[0]?.length || 0;
+  return Array.from({ length: columnCount }, (_, columnIndex) => matrix.map((row) => row[columnIndex]));
 }
 
 function formatMonth(date: string): string {
@@ -152,11 +147,46 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
   const investorProfitSummary = calculateCompleteInvestorCashFlowProfit(totals.paid, groupedPortfolio.totals);
   const investorProfitOnCost = calculateProfitPercentage(investorProfitSummary, totals.cost);
   const investorProfitOnCapital = calculateProfitPercentage(investorProfitSummary, totals.capital);
-  const transposedMonthlyValues = useMemo(() => transposePortfolioMonthlyValues(
-    selectedProjects.map((project) => project.projectId),
-    groupedPortfolio.rows,
-    groupedPortfolio.periods.length,
-  ), [selectedProjects, groupedPortfolio.rows, groupedPortfolio.periods.length]);
+  const projectDisplayRows = useMemo(() => selectedProjects.map((project) => {
+    const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId);
+    const finalCashFlow = flowRow?.values || new Array(groupedPortfolio.periods.length).fill(0);
+    const profit = calculateCompleteInvestorCashFlowProfit(project.paidCapital, finalCashFlow);
+    const reconciliationDifference = calculateProfitReconciliationDifference(profit, project.feasibilityInvestorProfit);
+    return { project, finalCashFlow, profit, reconciliationDifference };
+  }), [selectedProjects, groupedPortfolio.rows, groupedPortfolio.periods.length]);
+  const totalReconciliationDifference = calculateProfitReconciliationDifference(investorProfitSummary, totals.feasibilityInvestorProfit);
+  const originalColumnLabels = useMemo(() => [
+    "الخيار", "إجمالي الإيرادات", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", "مدفوع سابقًا",
+    ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)),
+    "الأرباح", "فرق مقابل دراسة الجدوى",
+  ], [groupedPortfolio.periods]);
+  const originalFormattedMatrix = useMemo(() => [
+    ...projectDisplayRows.map(({ project, finalCashFlow, profit, reconciliationDifference }) => [
+      scenarioLabel(project.financingScenario),
+      formatAmount(project.totalRevenue),
+      formatAmount(project.totalCosts),
+      formatAmount(project.requiredCapital),
+      formatAmount(project.paidCapital),
+      formatAmount(project.remainingCapital),
+      project.paidCapital === 0 ? "—" : formatCashFlowAmount(-project.paidCapital),
+      ...finalCashFlow.map((value) => Math.abs(value) > 0.000001 ? formatCashFlowAmount(value) : "—"),
+      formatCashFlowAmount(profit),
+      Math.abs(reconciliationDifference) <= 0.5 ? "0" : formatCashFlowAmount(reconciliationDifference),
+    ]),
+    [
+      "",
+      formatAmount(totals.revenue),
+      formatAmount(totals.cost),
+      formatAmount(totals.capital),
+      formatAmount(totals.paid),
+      formatAmount(totals.remaining),
+      totals.paid === 0 ? "—" : formatCashFlowAmount(-totals.paid),
+      ...groupedPortfolio.totals.map((value) => Math.abs(value) > 0.000001 ? formatCashFlowAmount(value) : "—"),
+      formatCashFlowAmount(investorProfitSummary),
+      Math.abs(totalReconciliationDifference) <= 0.5 ? "0" : formatCashFlowAmount(totalReconciliationDifference),
+    ],
+  ], [projectDisplayRows, groupedPortfolio.totals, totals, investorProfitSummary, totalReconciliationDifference]);
+  const literalTransposedMatrix = useMemo(() => transposeLiteralMatrix(originalFormattedMatrix), [originalFormattedMatrix]);
 
   const toggleProject = (projectId: number) => setSelected((current) => current.includes(projectId)
     ? current.filter((id) => id !== projectId)
@@ -165,20 +195,7 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
   const exportTable = () => {
     if (viewMode === "transposed") {
       const headers = ["البند / الشهر", ...selectedProjects.map((project) => compactCapitalProjectName(project.name)), "الإجمالي"];
-      const rows: string[][] = [
-        ["إجمالي الإيرادات", ...selectedProjects.map((project) => formatAmount(project.totalRevenue)), formatAmount(totals.revenue)],
-        ["التكلفة الكلية", ...selectedProjects.map((project) => formatAmount(project.totalCosts)), formatAmount(totals.cost)],
-        ["رأس المال", ...selectedProjects.map((project) => formatAmount(project.requiredCapital)), formatAmount(totals.capital)],
-        ["المدفوع", ...selectedProjects.map((project) => formatAmount(project.paidCapital)), formatAmount(totals.paid)],
-        ["المتبقي", ...selectedProjects.map((project) => formatAmount(project.remainingCapital)), formatAmount(totals.remaining)],
-        ["مدفوع سابقًا", ...selectedProjects.map((project) => formatCashFlowAmount(-project.paidCapital)), formatCashFlowAmount(-totals.paid)],
-        ...groupedPortfolio.periods.map((period, periodIndex) => [
-          formatPeriod(period.startDate, period.endDate),
-          ...transposedMonthlyValues[periodIndex].map((value) => Math.abs(value) > 0.000001 ? formatCashFlowAmount(value) : "—"),
-          Math.abs(groupedPortfolio.totals[periodIndex]) > 0.000001 ? formatCashFlowAmount(groupedPortfolio.totals[periodIndex]) : "—",
-        ]),
-        ["الأرباح", ...selectedProjects.map((project) => { const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId); return formatCashFlowAmount(calculateCompleteInvestorCashFlowProfit(project.paidCapital, flowRow?.values || [])); }), formatCashFlowAmount(investorProfitSummary)],
-      ];
+      const rows = originalColumnLabels.map((label, index) => [label, ...(literalTransposedMatrix[index] || [])]);
       const cell = (value: string, header = false, total = false) => `<${header ? "th" : "td"}${total ? ' class="total-column"' : ""}>${value}</${header ? "th" : "td"}>`;
       return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>محفظة رأس المال — العرض المعكوس</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#0f172a}.header{background:#0f172a;color:#fff;padding:14px 18px;border-radius:8px;max-width:980px;margin:auto}.table-wrap{width:max-content;max-width:980px;margin:16px auto;overflow:auto}table{border-collapse:collapse;font-size:10px;width:auto}th{background:#0f172a;color:#fff;padding:7px 10px;border:1px solid #334155;white-space:nowrap}td{padding:6px 10px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.total-column{background:#fef3c7!important;color:#0f172a!important;font-weight:700;border-right:2px solid #f59e0b!important}</style></head><body><div class="header"><h1>محفظة رأس المال — العرض المعكوس</h1><p>نسخة من التدفقات الحالية · التجميع: ${PERIOD_OPTIONS.find((item) => item.value === groupSize)?.label}</p></div><div class="table-wrap"><table><thead><tr>${headers.map((value, index) => cell(value, true, index === headers.length - 1)).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((value, index) => cell(value, false, index === row.length - 1)).join("")}</tr>`).join("")}</tbody></table></div></body></html>`;
     }
@@ -316,32 +333,19 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
               <table className="w-max border-separate border-spacing-0 text-[11px]" data-testid="capital-portfolio-transposed">
                 <thead><tr className="bg-slate-900 text-white">
                   <th className="min-w-[122px] border-l border-slate-600 px-3 py-2.5 text-right font-extrabold">البند / الشهر</th>
-                  {selectedProjects.map((project, index) => <th key={project.projectId} className="min-w-[112px] border-l border-slate-600 px-2 py-2.5 font-extrabold"><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{compactCapitalProjectName(project.name)}</span></th>)}
-                  <th className="min-w-[122px] border-r-2 border-amber-400 bg-amber-500 px-3 py-2.5 font-extrabold text-slate-950">الإجمالي</th>
+                  {selectedProjects.map((project, index) => <th key={project.projectId} className="min-w-[108px] border-l border-slate-600 px-2 py-2.5 font-extrabold"><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{compactCapitalProjectName(project.name)}</span></th>)}
+                  <th className="relative -translate-y-0.5 min-w-[148px] border-x-2 border-t-2 border-amber-400 bg-amber-500 px-3 py-3 font-extrabold text-slate-950 shadow-sm">الإجمالي</th>
                 </tr></thead>
                 <tbody>
-                  {[
-                    { label: "إجمالي الإيرادات", values: selectedProjects.map((project) => project.totalRevenue), total: totals.revenue, mode: "amount" },
-                    { label: "التكلفة الكلية", values: selectedProjects.map((project) => project.totalCosts), total: totals.cost, mode: "amount" },
-                    { label: "رأس المال", values: selectedProjects.map((project) => project.requiredCapital), total: totals.capital, mode: "amount" },
-                    { label: "المدفوع", values: selectedProjects.map((project) => project.paidCapital), total: totals.paid, mode: "amount" },
-                    { label: "المتبقي", values: selectedProjects.map((project) => project.remainingCapital), total: totals.remaining, mode: "amount" },
-                    { label: "مدفوع سابقًا", values: selectedProjects.map((project) => -project.paidCapital), total: -totals.paid, mode: "flow" },
-                  ].map((item) => <tr key={item.label} className="even:bg-slate-50">
-                    <td className="border-b border-l border-slate-200 bg-slate-100 px-3 py-2 text-right font-extrabold text-slate-800">{item.label}</td>
-                    {item.values.map((value, index) => <td key={selectedProjects[index]?.projectId} className="border-b border-l border-slate-200 px-2 py-2 text-center font-bold text-slate-800">{item.mode === "flow" ? formatCashFlowAmount(value) : formatAmount(value)}</td>)}
-                    <td className="border-b border-r-2 border-amber-300 bg-amber-50 px-3 py-2 text-center font-extrabold text-slate-950">{item.mode === "flow" ? formatCashFlowAmount(item.total) : formatAmount(item.total)}</td>
-                  </tr>)}
-                  {groupedPortfolio.periods.map((period, periodIndex) => <tr key={period.startDate} className="even:bg-slate-50">
-                    <td className="border-b border-l border-slate-200 bg-slate-100 px-3 py-2 text-right font-extrabold text-slate-800">{formatPeriod(period.startDate, period.endDate)}</td>
-                    {transposedMonthlyValues[periodIndex].map((value, projectIndex) => <td key={selectedProjects[projectIndex]?.projectId} className={`border-b border-l border-slate-200 px-2 py-2 text-center font-bold ${value < -0.000001 ? "bg-rose-50 text-rose-700" : value > 0.000001 ? "bg-emerald-50 text-emerald-700" : "text-slate-300"}`}>{Math.abs(value) > 0.000001 ? formatCashFlowAmount(value) : "—"}</td>)}
-                    <td className={`border-b border-r-2 border-amber-300 bg-amber-50 px-3 py-2 text-center font-extrabold ${groupedPortfolio.totals[periodIndex] < -0.000001 ? "text-rose-700" : groupedPortfolio.totals[periodIndex] > 0.000001 ? "text-emerald-700" : "text-slate-400"}`}>{Math.abs(groupedPortfolio.totals[periodIndex]) > 0.000001 ? formatCashFlowAmount(groupedPortfolio.totals[periodIndex]) : "—"}</td>
-                  </tr>)}
-                  <tr className="bg-slate-800 text-white">
-                    <td className="border-l border-slate-600 px-3 py-2.5 text-right font-extrabold">الأرباح</td>
-                    {selectedProjects.map((project) => { const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId); return <td key={project.projectId} className="border-l border-slate-600 px-2 py-2.5 text-center font-extrabold">{formatCashFlowAmount(calculateCompleteInvestorCashFlowProfit(project.paidCapital, flowRow?.values || []))}</td>; })}
-                    <td className="border-r-2 border-amber-400 bg-amber-500 px-3 py-2.5 text-center font-extrabold text-slate-950">{formatCashFlowAmount(investorProfitSummary)}</td>
-                  </tr>
+                  {originalColumnLabels.map((label, rowIndex) => {
+                    const rowValues = literalTransposedMatrix[rowIndex] || [];
+                    const isLastRow = rowIndex === originalColumnLabels.length - 1;
+                    return <tr key={label} className={isLastRow ? "bg-slate-800 text-white" : "even:bg-slate-50"}>
+                      <td className={`border-b border-l px-3 py-2 text-right font-extrabold ${isLastRow ? "border-slate-600 bg-slate-800 text-white" : "border-slate-200 bg-slate-100 text-slate-800"}`}>{label}</td>
+                      {rowValues.slice(0, -1).map((display, projectIndex) => <td key={`${label}-${selectedProjects[projectIndex]?.projectId}`} className={`border-b border-l px-2 py-2 text-center font-bold tabular-nums ${isLastRow ? "border-slate-600 text-white" : "border-slate-200 text-slate-800"}`}>{display || "—"}</td>)}
+                      <td className={`relative -translate-y-0.5 min-w-[148px] border-x-2 border-b border-amber-400 px-3 py-2.5 text-center font-extrabold tabular-nums shadow-sm ${isLastRow ? "bg-amber-500 text-slate-950" : "bg-amber-50 text-slate-950"}`}>{rowValues.at(-1) || "—"}</td>
+                    </tr>;
+                  })}
                 </tbody>
               </table>
             </div>
