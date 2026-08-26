@@ -197,6 +197,13 @@ export interface DirectSaleProfitAllocation {
   totalInvestorProfit: number;
 }
 
+export interface OffPlanInvestorProfitAllocation {
+  firstDeveloperShare: number;
+  directSaleDeveloperShares: number[];
+  finalDeveloperShare: number;
+  totalDeveloperShare: number;
+}
+
 /**
  * The first escrow release reimburses the investor's actual paid capital first.
  * Only the excess is realised profit. The final release is already net of the
@@ -254,6 +261,39 @@ export function calculateDirectSaleProfitAllocation(
     investorProfitShares,
     totalDeveloperShare: developerShares.reduce((sum, value) => sum + value, 0),
     totalInvestorProfit: investorProfitShares.reduce((sum, value) => sum + value, 0),
+  };
+}
+
+/**
+ * Off-plan investor waterfall: the first escrow release first repays investor
+ * capital, then direct post-completion sales continue that recovery, and the
+ * final escrow release distributes its net surplus after contractor retention.
+ */
+export function calculateOffPlanInvestorProfitAllocation(
+  firstEscrowTransfer: number,
+  investorSpentBeforeFirstSettlement: number,
+  directSaleReceipts: number[],
+  directSaleBrokerCommissions: number[],
+  finalEscrowNetRelease: number,
+  developerSharePct: number,
+): OffPlanInvestorProfitAllocation {
+  const rate = Math.max(0, developerSharePct) / 100;
+  const firstSurplus = Math.max(0, firstEscrowTransfer - investorSpentBeforeFirstSettlement);
+  const firstDeveloperShare = firstSurplus * rate;
+  const unrecoveredCapitalAfterFirstRelease = Math.max(0, investorSpentBeforeFirstSettlement - firstEscrowTransfer);
+  const directAllocation = calculateDirectSaleProfitAllocation(
+    directSaleReceipts,
+    directSaleBrokerCommissions,
+    unrecoveredCapitalAfterFirstRelease,
+    developerSharePct,
+  );
+  const finalDeveloperShare = Math.max(0, finalEscrowNetRelease) * rate;
+
+  return {
+    firstDeveloperShare,
+    directSaleDeveloperShares: directAllocation.developerShares,
+    finalDeveloperShare,
+    totalDeveloperShare: firstDeveloperShare + directAllocation.totalDeveloperShare + finalDeveloperShare,
   };
 }
 
@@ -1746,15 +1786,30 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
           : values.slice(0, firstSettlementIndex + 1).reduce((total, value) => total + (value || 0), 0);
         return sum + paidBeforeSchedule + scheduledSpend;
       }, 0);
-    const allocation = calculateEscrowProfitAllocation(
+    const directSalesRevenueRow = rows.find((row) => row.label.includes("مبيعات مباشرة بعد الإنجاز"));
+    const directSalesCommissionRow = rows.find((row) => row.label.includes("عمولة") && row.label.includes("مبيعات مباشرة"));
+    // Each direct-sale commission is settled from the matching sale receipt,
+    // not treated as capital already paid before the first escrow release.
+    const futureDirectSalesCommission = (directSalesCommissionRow?.postConstructionMonths || [])
+      .reduce((sum, value) => sum + (value || 0), 0);
+    const capitalRecoveredBeforeDirectSales = Math.max(
+      0,
+      investorSpentBeforeFirstSettlement - futureDirectSalesCommission,
+    );
+    const allocation = calculateOffPlanInvestorProfitAllocation(
       escrowLiquidation,
-      investorSpentBeforeFirstSettlement,
+      capitalRecoveredBeforeDirectSales,
+      directSalesRevenueRow?.postConstructionMonths || emptyPost(),
+      directSalesCommissionRow?.postConstructionMonths || emptyPost(),
       month13ToInvestor,
       tr.developerFeePct,
     );
     
     const devProfitPost = emptyPost();
     devProfitPost[2] = allocation.firstDeveloperShare;
+    allocation.directSaleDeveloperShares.forEach((share, index) => {
+      devProfitPost[index] += share || 0;
+    });
     devProfitPost[12] = allocation.finalDeveloperShare;
     
     rows.push({

@@ -1592,6 +1592,10 @@
 - [x] Calculate Como's first settlement share only from realised profit after investor capital recovery, then calculate its final share from the net second release after remaining obligations
 - [x] Base the first Como profit-share payment only on the actual first escrow transfer, excluding direct sales receipts that arrive in later investor months
 - [x] Verify that Capital Portfolio only copies the final monthly investor-flow row after each project calculation and does not recompute any profit-share amount
+- [ ] Reconcile the Majan profit difference between the Capital Portfolio and feasibility study from source movements only, before any formula change
+- [ ] Apply the 15% COMO share to Majan direct-sale surplus after investor capital recovery and confirm its investor-flow final total matches feasibility
+- [ ] Identify and correct the specific 585,115 AED Majan source-movement difference after the COMO distribution is reconciled
+- [x] Fix V2WaelSales crash when constructionEndMonth is unavailable and verify /bateekha loads safely
 - [x] Apply to Nad Al Sheba plot 3 villas: settle each sale's broker commission, recover all investor spending including contractor retention, then split only the surplus 15% to COMO and 85% to the investor
 - [x] Verify Nad Al Sheba plot 3 villas investor cash flow against its feasibility study without changing off-plan projects or the Capital Portfolio
 - [x] Apply to Nad Al Sheba plot 3 villas: settle each sale's broker commission, recover all investor spending including contractor retention, then split only the surplus 15% to COMO and 85% to the investor
