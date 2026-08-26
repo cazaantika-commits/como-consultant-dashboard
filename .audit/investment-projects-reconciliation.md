@@ -22,11 +22,14 @@ The audit compares the final signed Investor Cash Flow result with the investor-
 | Investor profit reconciles to Feasibility Study | Passed for all five projects |
 | COMO share reconciles to 15% of realised project profit | Passed for all five projects |
 | Escrow closes to zero | Passed for all four off-plan projects |
-| Buyer instalments received after first escrow closure remain in escrow and transfer at month 13 | Passed |
+| Saved buyer receipts match the current Payment Plan calendar | Passed for Al Jaddaf, Nad Al Sheba Plot 1, and rebuilt Plot 2 |
+| Off-plan buyer receipts stop no later than handover for the audited 100% off-plan plans | Passed |
 | Build-for-sale project is tested without escrow | Passed |
 
 ## Correction Applied
 
-Nad Al Sheba Plot 2 received buyer instalments in escrow after the first closure. The previous month-13 transfer released only the fixed 5% retained-sales amount and left AED 3,671,737.349 in escrow. The shared settlement now transfers the greater of the protected 5% retention or the complete actual balance remaining at month 13. Contractor final retention remains a separate investor debit and is not deducted from the escrow transfer.
+Nad Al Sheba Plot 2 did not have a legitimate post-closure receipt schedule. Its saved `results_json` was older than its current Payment Plan calendar. The save path now rebuilds buyer receipts from the current calendar and project timing, invalidates stale arrays, and returns the scenario to draft for Wael review. Plot 2 was rebuilt as 83 units across the 19-month sales window ending at handover, with zero escrow receipts after handover. The month-13 transfer is again limited to the full 5% retained-sales amount; any other balance remains visible as a source mismatch rather than being hidden by a balancing transfer.
+
+Al Jaddaf and Nad Al Sheba Plot 1 were re-audited after this architecture change. Their saved receipt totals already match the current calendar exactly, neither contains a post-handover escrow receipt, and neither requires regeneration. The Plot 3 villas project is build-for-sale and therefore has no Payment Plan-to-escrow dependency.
 
 For the build-for-sale villas, the audit comparison now uses the same cost basis as the Feasibility Study: Investor Cash Flow cost rows for `build_for_sale`, rather than the off-plan project-cost basis. No production financial formula was changed for the villas.

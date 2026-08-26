@@ -1605,4 +1605,5 @@
 - [x] Audit capital and investor-profit reconciliation for all remaining off-plan and build-for-sale projects, excluding the build-for-rent commercial center, and correct only proven errors
 - [x] Audit Nad Al Sheba Plot 2 saved payment plan inputs, generated installment dates, stages, and recipients, then report whether the plan needs resetting before changing any data
 - [x] Rebuild and invalidate saved sales receipt results whenever the Payment Plan calendar changes, keep 100% off-plan sales within handover, and re-reconcile Nad Al Sheba Plot 2 without balance sweeps
+- [x] Re-audit Al Jaddaf, Nad Al Sheba Plot 1, and Plot 3 Villas against current Payment Plan sources; rebuild only stale results and reconcile capital and investor profit to feasibility
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
