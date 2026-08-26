@@ -1600,3 +1600,5 @@
 - [x] Rebuild and correct Majan Investor Cash Flow from original saved movements without feasibility plugs, then prove the visible rows reconcile to the fils
 - [x] Fix V2WaelSales constructionEndMonth crash when payment-calendar context is temporarily unavailable, without changing financial values
 - [x] Fix Command Center approved-change query failure against project_change_requests without altering stored change-request data
+- [x] Compare Majan investor capital and final investor profit between Investor Cash Flow and Feasibility Study, reporting exact differences without changing either report
+- [x] Clarify Investor Cash Flow summary cards: show peak required capital, paid capital, remaining funding, lifetime investor debits, investor receipts, final profit, and feasibility reconciliation without changing formulas

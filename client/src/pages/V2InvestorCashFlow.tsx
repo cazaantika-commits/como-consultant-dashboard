@@ -11,12 +11,14 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import {
+  calculateInvestorCapitalSummary,
   computeInvestorCashFlow,
   type Scenario,
   type CostRow,
 } from "@/lib/investorCashFlowEngine";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
+import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 
@@ -96,6 +98,21 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const totalDebit = paidBeforeSchedule + debitTotals.reduce((s, v) => s + v, 0);
   const totalCredit = creditTotals.reduce((s, v) => s + v, 0);
   const profit = totalCredit - totalDebit;
+  const capital = useMemo(() => calculateInvestorCapitalSummary(data), [data]);
+  const feasibilityInvestorProfit = useMemo<number | null>(() => {
+    const costs = calculateProjectCosts(projectQuery.data);
+    if (!costs) return null;
+    const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent"
+      ? data.rows
+        .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
+        .reduce((sum, row) => sum + row.totalCost, 0)
+      : costs.totalCosts;
+    const projectProfit = costs.totalRevenue - feasibilityTotalCosts;
+    const comoShare = projectProfit > 0 ? projectProfit * 0.15 : 0;
+    return projectProfit - comoShare;
+  }, [data.rows, projectQuery.data, scenario]);
+  const feasibilityDifference = feasibilityInvestorProfit === null ? null : profit - feasibilityInvestorProfit;
+  const reconcilesWithFeasibility = feasibilityDifference !== null && Math.abs(feasibilityDifference) < 0.001;
   const matrixStart = formatDate(monthDates[0] || "");
   const matrixEnd = formatDate(monthDates[totalMonths - 1] || "");
   const matrixSummary = {
@@ -132,14 +149,6 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
     { value: 0, index: -1 },
   );
   const firstReceiptIndex = creditTotals.findIndex((value) => value > 0);
-  const largestReceipt = creditTotals.reduce(
-    (current, value, index) => value > current.value ? { value, index } : current,
-    { value: 0, index: -1 },
-  );
-  const largestFundingMonth = debitTotals.reduce(
-    (current, value, index) => value > current.value ? { value, index } : current,
-    { value: 0, index: -1 },
-  );
   const pulseScale = Math.max(...netFlow.map((value) => Math.abs(value)), 1);
 
   // ─── Loading state ─────────────────────────────────────────────────────
@@ -156,7 +165,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
     <div className="bg-gray-50" dir="rtl">
       {/* Header */}
       <div className="sticky top-0 z-40 border-b-2 border-slate-300 bg-white/95 shadow-sm backdrop-blur-sm">
-        <div className="max-w-full mx-auto px-5 py-3 flex items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-full flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-5 lg:flex-nowrap lg:gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {!embedded && <button onClick={() => navigate("/bateekha")} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
               <ArrowRight className="w-4 h-4" />العودة إلى دليل الدراسات
@@ -167,10 +176,11 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex items-center gap-3 text-xs">
-              <span className="text-red-600 font-semibold">مطلوب من المستثمر: {fmt(totalDebit)}</span>
+            <div className="hidden items-center gap-3 text-xs 2xl:flex">
+              <span className="text-amber-700 font-semibold">رأس المال عند الذروة: {fmt(capital.requiredCapital)}</span>
+              <span className="text-red-600 font-semibold">إجمالي المدفوعات: {fmt(totalDebit)}</span>
               <span className="text-green-600 font-semibold">مستلم للمستثمر: {fmt(totalCredit)}</span>
-              <span className="text-blue-700 font-bold">الصافي: {fmt(profit)}</span>
+              <span className="text-blue-700 font-bold">الربح: {fmt(profit)}</span>
             </div>
             <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold">
               <Download className="w-3.5 h-3.5" /> تصدير
@@ -220,26 +230,42 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
               <div className="fs-pill fs-pill-blue">{totalMonths} شهرًا ماليًا</div>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <div className="fs-card fs-card-amber p-3">
+                <p className="text-xs font-semibold text-amber-700">رأس المال المطلوب عند الذروة</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-amber-950">{fmt(capital.requiredCapital)}</p>
+                <p className="mt-1 text-[11px] text-amber-700">أقصى سيولة مطلوبة قبل استرداد الأموال</p>
+              </div>
+              <div className="fs-card p-3">
+                <p className="text-xs font-semibold text-slate-700">مدفوع سابقًا</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-slate-950">{fmt(capital.paidCapital)}</p>
+                <p className="mt-1 text-[11px] text-slate-600">ضمن رأس المال المطلوب</p>
+              </div>
+              <div className="fs-card fs-card-blue p-3">
+                <p className="text-xs font-semibold text-blue-700">المتبقي للتمويل</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-blue-950">{fmt(capital.remainingCapital)}</p>
+                <p className="mt-1 text-[11px] text-blue-700">حتى الوصول إلى ذروة السيولة</p>
+              </div>
               <div className="fs-card fs-card-rose p-3">
-                <p className="text-xs font-semibold text-rose-700">إجمالي المطلوب من المستثمر</p>
+                <p className="text-xs font-semibold text-rose-700">إجمالي مدفوعات المستثمر طوال المشروع</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{fmt(totalDebit)}</p>
-                <p className="mt-1 text-[11px] text-rose-700">أكبر دفعة: {fmt(largestFundingMonth.value)} · {monthCaption(largestFundingMonth.index)}</p>
+                <p className="mt-1 text-[11px] text-rose-700">ليست رأس المال؛ تشمل مدفوعات بعد بدء الاسترداد</p>
               </div>
               <div className="fs-card fs-card-emerald p-3">
-                <p className="text-xs font-semibold text-emerald-700">إجمالي المستلم للمستثمر</p>
+                <p className="text-xs font-semibold text-emerald-700">إجمالي ما يستلمه المستثمر</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{fmt(totalCredit)}</p>
                 <p className="mt-1 text-[11px] text-emerald-700">أول استلام: {firstReceiptIndex >= 0 ? monthCaption(firstReceiptIndex) : "—"}</p>
               </div>
-              <div className="fs-card fs-card-violet p-3">
-                <p className="text-xs font-semibold text-violet-700">أكبر تدفق عائد</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-violet-950">{fmt(largestReceipt.value)}</p>
-                <p className="mt-1 text-[11px] text-violet-700">{largestReceipt.index >= 0 ? monthCaption(largestReceipt.index) : "لا يوجد استلام بعد"}</p>
-              </div>
               <div className="fs-card fs-card-cyan p-3">
-                <p className="text-xs font-semibold text-cyan-700">صافي الربحية المتوقع</p>
+                <p className="text-xs font-semibold text-cyan-700">صافي ربح المستثمر</p>
                 <p className="mt-2 text-2xl font-bold tabular-nums text-cyan-950">{fmt(profit)}</p>
-                <p className="mt-1 flex items-center gap-1 text-[11px] text-cyan-700"><TrendingUp className="h-3 w-3" /> إيرادات ناقص مصروفات المستثمر</p>
+                <p className={`mt-1 text-[11px] font-bold ${feasibilityDifference === null ? "text-slate-500" : reconcilesWithFeasibility ? "text-emerald-700" : "text-rose-700"}`}>
+                  {feasibilityDifference === null
+                    ? "اختر مشروعًا لإجراء المطابقة"
+                    : reconcilesWithFeasibility
+                      ? "مطابق لدراسة الجدوى — الفرق 0 فلس"
+                      : `فرق عن دراسة الجدوى: ${fmt(feasibilityDifference)}`}
+                </p>
               </div>
             </div>
 

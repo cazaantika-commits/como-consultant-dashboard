@@ -60,4 +60,21 @@ describe("Investor Cash Flow readability layout", () => {
     expect(source).toContain("أعلى ضغط تمويلي");
     expect(source).toContain("نبض الضغط والعودة الشهري");
   });
+
+  it("separates peak capital from lifetime investor payments and exposes feasibility reconciliation", () => {
+    expect(source).toContain("calculateInvestorCapitalSummary(data)");
+    expect(source).toContain("رأس المال المطلوب عند الذروة");
+    expect(source).toContain("مدفوع سابقًا");
+    expect(source).toContain("المتبقي للتمويل");
+    expect(source).toContain("إجمالي مدفوعات المستثمر طوال المشروع");
+    expect(source).toContain("إجمالي ما يستلمه المستثمر");
+    expect(source).toContain("صافي ربح المستثمر");
+    expect(source).toContain("مطابق لدراسة الجدوى — الفرق 0 فلس");
+    expect(source).not.toContain("إجمالي المطلوب من المستثمر");
+  });
+
+  it("keeps the dense header totals off small screens where the decision cards already show them", () => {
+    expect(source).toContain('className="hidden items-center gap-3 text-xs 2xl:flex"');
+    expect(source).toContain("flex-wrap items-center justify-between");
+  });
 });
