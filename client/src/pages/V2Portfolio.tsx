@@ -139,7 +139,7 @@ export default function V2Portfolio({ embedded = false, onBack }: { embedded?: b
         <div className="max-w-[1800px] mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={() => onBack ? onBack() : navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition" aria-label={embedded ? "العودة إلى التقارير التنفيذية" : "العودة"}><ArrowRight className="w-4 h-4 text-gray-600" /></button>
-            <div><h1 className="text-xs font-bold text-gray-900">المحفظة الاستثمارية</h1><p className="text-xs text-gray-500">تجميع مطابق لتدفقات المستثمر: ديبت، كريديت، صافي ورصيد تراكمي — {selectedProjects.length} مشاريع</p><p className="mt-0.5 text-[9px]"><span className="text-red-600">الأحمر: صرف المستثمر</span><span className="mx-1 text-gray-300">|</span><span className="text-teal-700">الأخضر: كريديت عائد للمستثمر</span></p></div>
+            <div><h1 className="text-xs font-bold text-gray-900">المحفظة الاستثمارية</h1><p className="text-xs text-gray-500">تجميع السطر النهائي من تدفقات المستثمر — {selectedProjects.length} مشاريع مؤهلة</p><p className="mt-0.5 text-[9px]"><span className="text-red-600">الأحمر: صافي تمويل مطلوب</span><span className="mx-1 text-gray-300">|</span><span className="text-teal-700">الأخضر: صافي عائد للمستثمر</span></p></div>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-lg border border-gray-200 bg-white p-0.5">
@@ -219,24 +219,25 @@ export default function V2Portfolio({ embedded = false, onBack }: { embedded?: b
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="sticky right-0 z-20 bg-gray-50 px-3 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[160px] text-xs">المشروع</th>
-                    <th className="sticky right-[160px] z-20 bg-gray-50 px-2 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[105px] text-xs">السطر</th>
+                    <th className="sticky right-[160px] z-20 bg-gray-50 px-2 py-1.5 text-right font-bold text-gray-700 border-b border-l border-gray-200 min-w-[105px] text-xs">السطر النهائي</th>
                     {groupedPortfolio.periods.map((period) => <th key={period.startDate} className="px-2 py-1.5 text-center border-b border-gray-200 font-medium text-gray-600 whitespace-nowrap">{formatPeriod(period.startDate, period.endDate)}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {groupedPortfolio.rows.map((project, index) => (
                     <Fragment key={project.projectId}>
-                      <tr className="border-b border-rose-50 bg-rose-50/20">
-                        <td rowSpan={3} className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right border-l border-gray-100 whitespace-nowrap"><div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} /><span className="font-medium text-gray-800">{project.name}</span></div></td>
+                      <tr className="hidden">
+                        <td rowSpan={1} className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right border-l border-gray-100 whitespace-nowrap"><div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} /><span className="font-medium text-gray-800">{project.name}</span></div></td>
                         <td className="sticky right-[160px] z-10 bg-rose-50/95 px-2 py-[5px] text-right border-l border-rose-100 font-bold text-rose-700">ديبت المستثمر</td>
                         {project.debitValues.map((value, valueIndex) => <td key={valueIndex} className="px-1.5 py-[5px] text-center tabular-nums text-rose-700">{value > 0.000001 ? formatAmount(value) : "—"}</td>)}
                       </tr>
-                      <tr className="border-b border-emerald-50 bg-emerald-50/20">
+                      <tr className="hidden">
                         <td className="sticky right-[160px] z-10 bg-emerald-50/95 px-2 py-[5px] text-right border-l border-emerald-100 font-bold text-emerald-700">كريديت المستثمر</td>
                         {project.creditValues.map((value, valueIndex) => <td key={valueIndex} className="px-1.5 py-[5px] text-center tabular-nums text-emerald-700">{value > 0.000001 ? formatAmount(value) : "—"}</td>)}
                       </tr>
                       <tr className="border-b-2 border-slate-200 hover:bg-gray-50/50">
-                        <td className="sticky right-[160px] z-10 bg-white px-2 py-[5px] text-right border-l border-gray-100 font-bold text-slate-700">صافي الشهر</td>
+                        <td className="sticky right-0 z-10 bg-white px-3 py-[5px] text-right border-l border-gray-100 whitespace-nowrap"><div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} /><span className="font-medium text-gray-800">{project.name}</span></div></td>
+                        <td className="sticky right-[160px] z-10 bg-white px-2 py-[5px] text-right border-l border-gray-100 font-bold text-slate-700">صافي تدفقات المستثمر</td>
                         {project.values.map((value, valueIndex) => {
                           const kind = cellKind(value);
                           const period = groupedPortfolio.periods[valueIndex];
@@ -246,9 +247,9 @@ export default function V2Portfolio({ embedded = false, onBack }: { embedded?: b
                       </tr>
                     </Fragment>
                   ))}
-                  <tr className="bg-rose-50 font-bold border-t-2 border-rose-200"><td colSpan={2} className="sticky right-0 z-10 bg-rose-50 px-3 py-1.5 text-right text-rose-800 border-l border-rose-200">إجمالي ديبت المستثمر</td>{groupedPortfolio.debitTotals.map((value, index) => <td key={index} className="px-1.5 py-1.5 text-center tabular-nums text-rose-700">{value > 0.000001 ? formatAmount(value) : "—"}</td>)}</tr>
-                  <tr className="bg-emerald-50 font-bold border-b border-emerald-200"><td colSpan={2} className="sticky right-0 z-10 bg-emerald-50 px-3 py-1.5 text-right text-emerald-800 border-l border-emerald-200">إجمالي كريديت المستثمر</td>{groupedPortfolio.creditTotals.map((value, index) => <td key={index} className="px-1.5 py-1.5 text-center tabular-nums text-emerald-700">{value > 0.000001 ? formatAmount(value) : "—"}</td>)}</tr>
-                  <tr className="bg-teal-50 font-bold border-b border-teal-200"><td colSpan={2} className="sticky right-0 z-10 bg-teal-50 px-3 py-1.5 text-right text-teal-800 border-l border-teal-200">صافي الشهر المجمّع</td>{groupedPortfolio.totals.map((value, index) => { const kind = cellKind(value); const period = groupedPortfolio.periods[index]; const detail = combineFinancialTraceBreakdowns(groupedPortfolio.rows.map((row) => row.monthlyTrace?.[index])); return <td key={index} className={`px-1.5 py-1.5 text-center tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-teal-700" : "text-gray-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-trace-total-${index}`} trace={{ report: "تجميع تدفقات المستثمر", project: "جميع المشاريع المختارة", row: "صافي الشهر المجمّع", period: formatPeriod(period.startDate, period.endDate), rule: "مجموع الكريديت ناقص مجموع ديبت المستثمر للمشاريع المختارة في الفترة نفسها.", value, expenses: detail.expenses, receipts: detail.receipts, contributors: groupedPortfolio.rows.map((row) => ({ name: row.name, value: row.values[index] || 0 })) }}>{formatAmount(value)}</FinancialSourceValue>}</td>; })}</tr>
+                  <tr className="hidden"><td colSpan={2}>إجمالي ديبت المستثمر</td>{groupedPortfolio.debitTotals.map((value, index) => <td key={index}>{value}</td>)}</tr>
+                  <tr className="hidden"><td colSpan={2}>إجمالي كريديت المستثمر</td>{groupedPortfolio.creditTotals.map((value, index) => <td key={index}>{value}</td>)}</tr>
+                  <tr className="bg-teal-50 font-bold border-b border-teal-200"><td colSpan={2} className="sticky right-0 z-10 bg-teal-50 px-3 py-1.5 text-right text-teal-800 border-l border-teal-200">إجمالي تدفقات المستثمر</td>{groupedPortfolio.totals.map((value, index) => { const kind = cellKind(value); const period = groupedPortfolio.periods[index]; const detail = combineFinancialTraceBreakdowns(groupedPortfolio.rows.map((row) => row.monthlyTrace?.[index])); return <td key={index} className={`px-1.5 py-1.5 text-center tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-teal-700" : "text-gray-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`portfolio-trace-total-${index}`} trace={{ report: "تجميع تدفقات المستثمر", project: "جميع المشاريع المختارة", row: "إجمالي تدفقات المستثمر", period: formatPeriod(period.startDate, period.endDate), rule: "مجموع السطر النهائي لتدفقات المستثمر للمشاريع المختارة في الفترة نفسها.", value, expenses: detail.expenses, receipts: detail.receipts, contributors: groupedPortfolio.rows.map((row) => ({ name: row.name, value: row.values[index] || 0 })) }}>{formatAmount(value)}</FinancialSourceValue>}</td>; })}</tr>
                   <tr className="bg-slate-900 font-bold text-white"><td colSpan={2} className="sticky right-0 z-10 bg-slate-900 px-3 py-1.5 text-right border-l border-slate-700">الرصيد التراكمي للمحفظة</td>{groupedPortfolio.cumulativeTotals.map((value, index) => <td key={index} className={`px-1.5 py-1.5 text-center tabular-nums ${value < -0.000001 ? "text-rose-300" : value > 0.000001 ? "text-emerald-300" : "text-slate-400"}`}>{value === 0 ? "—" : formatAmount(value)}</td>)}</tr>
                 </tbody>
               </table>

@@ -1572,3 +1572,7 @@
 - [x] Build the separate Investor Cash Flow portfolio as a faithful monthly aggregation of each eligible project's investor debit, credit, and cumulative balance lines
 - [x] Audit each off-plan and build-for-sale investor cash-flow report before aggregation; exclude all build-for-rent projects
 - [x] Display investor-portfolio monetary amounts as rounded full values without K or M abbreviations
+- [ ] Complete owner review of the current Investor Portfolio before discussing or building any additional report
+- [ ] Distinguish the purposes of Project Aggregation and Investor Portfolio while leaving the vertical report unchanged during the current discussion
+- [ ] Wait for the owner to define the existing report identities before making further report assumptions or changes
+- [x] Restore the Investor Portfolio to one final net cash-flow row per eligible project, excluding build-for-rent and postponing the second portfolio type
