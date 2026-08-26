@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("pays broker commission, then restores capital before splitting direct villa-sale profit", () => {
+    const allocation = calculateDirectSaleProfitAllocation([10_000_000, 10_000_000], [500_000, 500_000], 17_000_000, 15);
+
+    expect(allocation.developerShares).toEqual([0, 300_000]);
+    expect(allocation.investorProfitShares).toEqual([0, 1_700_000]);
+    expect(allocation.totalDeveloperShare).toBe(300_000);
+    expect(allocation.totalInvestorProfit).toBe(1_700_000);
+  });
+
   it("reimburses the investor before splitting each escrow-release surplus with COMO", () => {
     const allocation = calculateEscrowProfitAllocation(
       47_180_091,

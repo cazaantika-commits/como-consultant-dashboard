@@ -190,6 +190,13 @@ export interface EscrowProfitAllocation {
   totalDeveloperShare: number;
 }
 
+export interface DirectSaleProfitAllocation {
+  developerShares: number[];
+  investorProfitShares: number[];
+  totalDeveloperShare: number;
+  totalInvestorProfit: number;
+}
+
 /**
  * The first escrow release reimburses the investor's actual paid capital first.
  * Only the excess is realised profit. The final release is already net of the
@@ -212,6 +219,41 @@ export function calculateEscrowProfitAllocation(
     firstDeveloperShare,
     finalDeveloperShare,
     totalDeveloperShare: firstDeveloperShare + finalDeveloperShare,
+  };
+}
+
+/**
+ * Each direct villa-sale receipt pays its broker commission first. The net
+ * receipt restores investor spending before any surplus is split 15% to COMO
+ * and 85% to the investor.
+ */
+export function calculateDirectSaleProfitAllocation(
+  saleReceipts: number[],
+  brokerCommissions: number[],
+  committedInvestorSpend: number,
+  developerSharePct: number,
+): DirectSaleProfitAllocation {
+  const rate = Math.max(0, developerSharePct) / 100;
+  let unrecoveredCapital = Math.max(0, committedInvestorSpend);
+  const developerShares: number[] = [];
+  const investorProfitShares: number[] = [];
+  const totalMonths = Math.max(saleReceipts.length, brokerCommissions.length);
+
+  for (let month = 0; month < totalMonths; month++) {
+    const netReceipt = Math.max(0, saleReceipts[month] || 0) - Math.max(0, brokerCommissions[month] || 0);
+    const capitalRecovery = Math.min(Math.max(0, netReceipt), unrecoveredCapital);
+    unrecoveredCapital -= capitalRecovery;
+    const realisedProfit = Math.max(0, netReceipt - capitalRecovery);
+    const developerShare = realisedProfit * rate;
+    developerShares.push(developerShare);
+    investorProfitShares.push(realisedProfit - developerShare);
+  }
+
+  return {
+    developerShares,
+    investorProfitShares,
+    totalDeveloperShare: developerShares.reduce((sum, value) => sum + value, 0),
+    totalInvestorProfit: investorProfitShares.reduce((sum, value) => sum + value, 0),
   };
 }
 
@@ -1729,29 +1771,34 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       isProfitAllocation: true,
     });
   } else if (isScenario3 || isBuildForSale) {
-    // Build-for-sale: Como's 15% share is due only once all sales receipts are in.
-    const costsBeforeProfitShare = rows
-      .filter(row => !row.isRevenue && !row.isTransfer)
-      .reduce((sum, row) => sum + row.totalCost, 0);
-    const comoProfitShare = Math.max(0, totalRevenue - costsBeforeProfitShare) * (tr.developerFeePct / 100);
-    const devProfitPost = emptyPost();
+    // Direct sale receipts pay broker commission first, then restore the
+    // investor's spending. Only the remaining surplus is profit.
     const salesRevenueRow = rows.find(row => row.label === "إيرادات المبيعات");
-    const lastSaleMonth = salesRevenueRow
-      ? salesRevenueRow.postConstructionMonths.reduce((last, amount, index) => amount > 0 ? index : last, 0)
-      : 0;
-    devProfitPost[lastSaleMonth] = comoProfitShare;
+    const salesCommissionRow = rows.find(row => row.label.includes("عمولة") && row.label.includes("مبيعات"));
+    // All project costs borne by the investor, including the contractor's
+    // scheduled final retention, must be reserved before a direct sale creates
+    // distributable profit. Broker commission is removed from each receipt.
+    const committedInvestorSpend = rows
+      .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation && row.funder === "investor" && row !== salesCommissionRow)
+      .reduce((sum, row) => sum + row.totalCost, 0);
+    const allocation = calculateDirectSaleProfitAllocation(
+      salesRevenueRow?.postConstructionMonths || emptyPost(),
+      salesCommissionRow?.postConstructionMonths || emptyPost(),
+      committedInvestorSpend,
+      tr.developerFeePct,
+    );
     rows.push({
-      label: "حصة كومو من الأرباح (15% بعد اكتمال المبيعات)",
-      totalCost: comoProfitShare,
-      investorAmount: comoProfitShare,
+      label: "حصة كومو من الأرباح (15% من فائض البيع بعد عمولة الوسيط)",
+      totalCost: allocation.totalDeveloperShare,
+      investorAmount: allocation.totalDeveloperShare,
       paid: 0,
-      unpaid: comoProfitShare,
+      unpaid: allocation.totalDeveloperShare,
       funder: "investor",
       section: "أتعاب المطور",
       designMonths: emptyDesign(),
       constructionMonths: emptyConstruction(),
-      postConstructionMonths: devProfitPost,
-      isProfitAllocation: isBuildForSale,
+      postConstructionMonths: allocation.developerShares,
+      isProfitAllocation: true,
     });
   }
 
