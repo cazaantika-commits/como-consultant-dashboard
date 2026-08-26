@@ -107,6 +107,21 @@ describe("calculateEscrowSettlement", () => {
     expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(0);
   });
 
+  it("includes escrow instalments received after the first closure in the month-thirteen transfer", () => {
+    const baseline = [0, 500, 700, 730, 740];
+    const result = calculateEscrowSettlement({
+      cumulativeWithoutLiquidation: baseline,
+      firstLiquidationIndex: 2,
+      finalLiquidationIndex: 4,
+      actualSalesCashInflow: [800, 0, 0, 30, 10],
+    });
+
+    expect(result.retainedSalesAmount).toBe(42);
+    expect(result.firstLiquidation).toBe(658);
+    expect(result.finalLiquidation).toBe(82);
+    expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(0);
+  });
+
   it("does not classify buyer collections held in escrow as direct investor revenue before settlement", () => {
     const result = computeInvestorCashFlow(null, "offplan_escrow", undefined, {
       escrowData: [{ month: 1, units: 1, income: 100, downPayment: 10, installments: 90, withdrawal: 0, balance: 0, cumulativeSold: 1 }],

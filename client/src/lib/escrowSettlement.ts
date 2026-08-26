@@ -74,9 +74,11 @@ export function summarizeEscrowLiquidity(cumulative: number[]): EscrowLiquidityA
 /**
  * Settles an off-plan escrow account under the approved cash-motion rule.
  * The first closure sends every available dirham except the 5% buyer-sales
- * retention to the investor. The month-13 closure sends that full retained
- * buyer-sales amount to the investor. Contractor final retention is an
- * investor-account debit and is deliberately never netted from this transfer.
+ * retention to the investor. The month-13 closure sends the complete actual
+ * balance then available in escrow: the retained amount plus any buyer
+ * instalments that entered escrow after the first closure. Contractor final
+ * retention is an investor-account debit and is deliberately never netted
+ * from this transfer.
  */
 export function calculateEscrowSettlement({
   cumulativeWithoutLiquidation,
@@ -85,9 +87,14 @@ export function calculateEscrowSettlement({
   actualSalesCashInflow,
 }: EscrowSettlementInput): EscrowSettlementResult {
   const balanceAtFirstLiquidation = cumulativeWithoutLiquidation[firstLiquidationIndex] || 0;
+  const balanceAtFinalLiquidation = cumulativeWithoutLiquidation[finalLiquidationIndex] || 0;
   const retainedSalesAmount = actualSalesCashInflow.reduce((sum, value) => sum + value, 0) * 0.05;
   const firstLiquidation = Math.max(0, balanceAtFirstLiquidation - retainedSalesAmount);
-  const finalLiquidation = Math.max(0, retainedSalesAmount);
+  const finalLiquidation = Math.max(
+    0,
+    retainedSalesAmount,
+    balanceAtFinalLiquidation - firstLiquidation,
+  );
 
   return { firstLiquidation, finalLiquidation, retainedSalesAmount };
 }

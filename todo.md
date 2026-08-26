@@ -1602,3 +1602,4 @@
 - [x] Fix Command Center approved-change query failure against project_change_requests without altering stored change-request data
 - [x] Compare Majan investor capital and final investor profit between Investor Cash Flow and Feasibility Study, reporting exact differences without changing either report
 - [x] Clarify Investor Cash Flow summary cards: show peak required capital, paid capital, remaining funding, lifetime investor debits, investor receipts, final profit, and feasibility reconciliation without changing formulas
+- [x] Audit capital and investor-profit reconciliation for all remaining off-plan and build-for-sale projects, excluding the build-for-rent commercial center, and correct only proven errors

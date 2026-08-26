@@ -35,8 +35,6 @@ const directReceipts = rowByLabel("تحصيلات مبيعات مباشرة");
 const directCommission = rowByLabel("عمولة مبيعات مباشرة");
 const como = rowByLabel("حصة كومو من الأرباح");
 const investorFinal = -investorNet.paidBeforeSchedule + investorNet.netFlow.reduce((sum, value) => sum + value, 0);
-const projectProfit = feasibility.totalRevenue - feasibility.totalCosts;
-const feasibilityInvestorProfit = projectProfit - Math.max(0, projectProfit * 0.15);
 const planEscrow = (salesResult?.actualEscrowCashInflow || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
 const planInvestor = (salesResult?.actualInvestorCashInflow || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
 const salesDistributionUnits = (salesResult?.salesDistribution || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
@@ -70,6 +68,11 @@ const cashFlowCostRows = cashFlow.rows
   .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
   .map((row) => ({ label: row.label, funder: row.funder, total: row.totalCost }));
 const cashFlowTotalCosts = cashFlowCostRows.reduce((sum, row) => sum + row.total, 0);
+const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent"
+  ? cashFlowTotalCosts
+  : feasibility.totalCosts;
+const projectProfit = feasibility.totalRevenue - feasibilityTotalCosts;
+const feasibilityInvestorProfit = projectProfit - Math.max(0, projectProfit * 0.15);
 
 console.log(JSON.stringify({
   project: { id: project.id, name: project.name, scenario },
@@ -118,14 +121,14 @@ console.log(JSON.stringify({
   },
   feasibility: {
     totalRevenue: feasibility.totalRevenue,
-    totalCosts: feasibility.totalCosts,
+    totalCosts: feasibilityTotalCosts,
     projectProfit,
     investorProfit: feasibilityInvestorProfit,
   },
   costAudit: {
     cashFlowTotalCosts,
-    feasibilityTotalCosts: feasibility.totalCosts,
-    difference: cashFlowTotalCosts - feasibility.totalCosts,
+    feasibilityTotalCosts,
+    difference: cashFlowTotalCosts - feasibilityTotalCosts,
     cashFlowCostRows,
   },
   reconciliation: {
