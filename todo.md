@@ -1613,4 +1613,6 @@
 - [x] Replace the transposed Capital Portfolio with a literal transpose of the complete original table matrix, including only original cells and no derived totals or new numbers
 - [x] Preserve full unabridged number formatting in every transposed Capital Portfolio cell; never use K, M, or compact notation
 - [x] Keep transposed project columns tightly aligned and make the final total column wider, visually elevated, and clearly distinguished
+- [x] Align the compact transposed Capital Portfolio table to the right edge of its container without changing values or column dimensions
+- [x] Match the transposed Capital Portfolio styling to the original table's navy header, borders, row heights, project dots, and signed-flow colors while retaining a distinct total column
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
