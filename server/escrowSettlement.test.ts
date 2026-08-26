@@ -1,10 +1,43 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { allocateDeveloperProfitShare, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
+  it("fixes COMO's share at the final project profit and only distributes it with the two investor releases", () => {
+    const firstProfitRelease = allocateDeveloperProfitShare(100_000_000, 15, 500_000_000, 400_000_000);
+    expect(firstProfitRelease).toEqual({
+      total: 15_000_000,
+      firstSettlementPayment: 15_000_000,
+      finalSettlementPayment: 0,
+    });
+
+    const splitProfitRelease = allocateDeveloperProfitShare(100_000_000, 15, 460_000_000, 400_000_000);
+    expect(splitProfitRelease.total).toBe(15_000_000);
+    expect(splitProfitRelease.firstSettlementPayment).toBe(9_000_000);
+    expect(splitProfitRelease.finalSettlementPayment).toBe(6_000_000);
+  });
+
+  it("uses the fixed project-profit share in the off-plan investor cash flow", () => {
+    const project = {
+      preConMonths: 4,
+      constructionMonths: 12,
+      manualBuaSqft: 10_000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 20,
+      residential1brArea: 750,
+      residential1brPrice: 2_000,
+    };
+    const result = computeInvestorCashFlow(project, "offplan_escrow");
+    const comoAllocation = result.rows.find((row) => row.label.includes("حصة المطور من الأرباح"))!;
+    const scheduledAllocation = comoAllocation.postConstructionMonths[2] + comoAllocation.postConstructionMonths[12];
+
+    expect(comoAllocation.isProfitAllocation).toBe(true);
+    expect(comoAllocation.totalCost).toBe((result.totalRevenue - result.grandTotalCost) * 0.15);
+    expect(scheduledAllocation).toBe(comoAllocation.totalCost);
+  });
+
   it("identifies the first and deepest genuine liquidity deficit from the shared monthly escrow balance", () => {
     expect(summarizeEscrowLiquidity([0, 20, -10, -35, -5])).toEqual({
       hasDeficit: true,
