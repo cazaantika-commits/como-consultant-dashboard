@@ -1596,3 +1596,4 @@
 - [x] Verify Nad Al Sheba plot 3 villas investor cash flow against its feasibility study without changing off-plan projects or the Capital Portfolio
 - [x] Apply to Nad Al Sheba plot 3 villas: settle each sale's broker commission, recover all investor spending including contractor retention, then split only the surplus 15% to COMO and 85% to the investor
 - [x] Verify Nad Al Sheba plot 3 villas investor cash flow against its feasibility study without changing off-plan projects or the Capital Portfolio
+- [x] Correct Majan escrow transfer and investor-flow movements under the agreed rule, then audit every off-plan project to exact feasibility reconciliation

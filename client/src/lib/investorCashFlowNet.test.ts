@@ -53,4 +53,24 @@ describe("investor monthly net", () => {
     expect(result.netFlow).toEqual([100]);
     expect(result.cumulative).toEqual([-18_899_900]);
   });
+
+  it("uses the displayed first and final escrow-transfer rows as the exact net and cumulative credits", () => {
+    const post = (index: number, value: number) => Array.from({ length: 13 }, (_, month) => month === index ? value : 0);
+    const result = calculateInvestorMonthlyNet({
+      ...fixture([
+        row({ label: "مصروف مستثمر", totalCost: 40, unpaid: 40, designMonths: [], postConstructionMonths: post(12, 40) }),
+        row({ label: "تصفية حساب الضمان (دفعة 1)", isRevenue: true, totalCost: 100, designMonths: [], postConstructionMonths: post(2, 100) }),
+        row({ label: "تصفية حساب الضمان (دفعة 2 - احتجاز المبيعات بالكامل)", isRevenue: true, totalCost: 60, designMonths: [], postConstructionMonths: post(12, 60) }),
+      ]),
+      designDuration: 0,
+      constructionDuration: 0,
+      postDuration: 13,
+      monthDates: Array.from({ length: 13 }, (_, month) => `2028-${String(month + 1).padStart(2, "0")}`),
+    });
+
+    expect(result.creditTotals[2]).toBe(100);
+    expect(result.creditTotals[12]).toBe(60);
+    expect(result.netFlow[12]).toBe(20);
+    expect(result.cumulative[12]).toBe(120);
+  });
 });

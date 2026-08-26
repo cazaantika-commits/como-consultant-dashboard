@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, calculateSequentialInvestorProfitAllocation, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
@@ -29,24 +29,20 @@ describe("calculateEscrowSettlement", () => {
     expect(allocation.totalDeveloperShare).toBe(1_157_385.15);
   });
 
-  it("uses the actual paid and scheduled investor capital before the first COMO payment", () => {
-    const result = computeInvestorCashFlow({
-      financingScenario: "offplan_escrow",
-      preConMonths: 5,
-      constructionMonths: 18,
-      landCost: 18_000_000,
-      landRegistrationFee: 720_000,
-      landBrokerFee: 180_000,
-      constructionCost: 44_570_760,
-      developerFeePct: 15,
-    } as any, "offplan_escrow");
-    const capital = calculateInvestorCapitalSummary(result).requiredCapital;
-    const firstSettlement = result.rows.find((row) => row.label === "تصفية حساب الضمان (دفعة 1)")!;
-    const finalSettlement = result.rows.find((row) => row.label.includes("تصفية حساب الضمان (دفعة 2"))!;
-    const como = result.rows.find((row) => row.label === "حصة المطور من الأرباح (15%)")!;
+  it("transfers the full final buyer-sales retention and pays contractor retention separately before splitting its surplus", () => {
+    const allocation = calculateSequentialInvestorProfitAllocation({
+      investorDebits: [400, 0, 50],
+      investorReceipts: [500, 0, 100],
+      paidCapital: 0,
+      developerSharePct: 15,
+    });
 
-    expect(como.postConstructionMonths[2]).toBe(Math.max(0, firstSettlement.totalCost - capital) * 0.15);
-    expect(como.postConstructionMonths[12]).toBe(finalSettlement.totalCost * 0.15);
+    // The last 100 is the full escrow retention transfer; the 50 contractor
+    // final retention is an investor debit in that same later month.
+    expect(allocation.recoveredCapital).toEqual([400, 0, 50]);
+    expect(allocation.realisedProfit).toEqual([100, 0, 50]);
+    expect(allocation.developerShares).toEqual([15, 0, 7.5]);
+    expect(allocation.endingUnrecoveredCapital).toBe(0);
   });
 
   it("identifies the first and deepest genuine liquidity deficit from the shared monthly escrow balance", () => {
@@ -76,6 +72,8 @@ describe("calculateEscrowSettlement", () => {
     const rows = [
       { label: "إيداع حساب الضمان (20%)", funder: "investor", isTransfer: true, designMonths: [100], constructionMonths: [0], postConstructionMonths: Array(13).fill(0) },
       { label: "مصروف إسكرو", funder: "escrow", designMonths: [10], constructionMonths: [20], postConstructionMonths: Array(13).fill(0) },
+      { label: "تصفية حساب الضمان (دفعة 1)", funder: "investor", isRevenue: true, designMonths: [0], constructionMonths: [0], postConstructionMonths: Array.from({ length: 13 }, (_, index) => index === 2 ? 117.5 : 0) },
+      { label: "تصفية حساب الضمان (دفعة 2 - احتجاز المبيعات بالكامل)", funder: "investor", isRevenue: true, designMonths: [0], constructionMonths: [0], postConstructionMonths: Array.from({ length: 13 }, (_, index) => index === 12 ? 2.5 : 0) },
     ];
     const balance = calculateEscrowMonthlyBalance({
       rows,
@@ -94,8 +92,8 @@ describe("calculateEscrowSettlement", () => {
     expect(balance.cumulativeWithoutLiquidation.slice(0, 2)).toEqual([90, 120]);
     expect(balance.cumulative[balance.cumulative.length - 1]).toBe(0);
   });
-  it("retains five percent of buyer collections, covers later obligations, and closes at zero in month thirteen", () => {
-    const baseline = [0, 500, 700, 685, 670];
+  it("holds only five percent of buyer collections and transfers that full amount in month thirteen", () => {
+    const baseline = [0, 500, 700, 700, 700];
     const result = calculateEscrowSettlement({
       cumulativeWithoutLiquidation: baseline,
       firstLiquidationIndex: 2,
@@ -105,7 +103,7 @@ describe("calculateEscrowSettlement", () => {
 
     expect(result.retainedSalesAmount).toBe(40);
     expect(result.firstLiquidation).toBe(660);
-    expect(result.finalLiquidation).toBe(10);
+    expect(result.finalLiquidation).toBe(40);
     expect(baseline[4] - result.firstLiquidation - result.finalLiquidation).toBe(0);
   });
 
@@ -135,6 +133,20 @@ describe("calculateEscrowSettlement", () => {
     expect(directSalesCommission?.postConstructionMonths.slice(3, 9)).toEqual(
       Array(6).fill((directSalesCommission?.totalCost || 0) / 6)
     );
+  });
+
+  it("uses one direct-receipt row when the saved plan already provides an investor channel", () => {
+    const result = computeInvestorCashFlow(null, "offplan_escrow", undefined, {
+      escrowData: [{ month: 1, units: 1, income: 100, downPayment: 10, installments: 90, withdrawal: 0, balance: 0, cumulativeSold: 1 }],
+      salesDistribution: [1],
+      actualEscrowCashInflow: [100],
+      actualInvestorCashInflow: [0, 0, 0, 0, 75],
+      offplanPct: 80,
+    });
+
+    const directRows = result.rows.filter((row) => row.isRevenue && row.label.includes("تحصيلات مبيعات مباشرة"));
+    expect(directRows).toHaveLength(1);
+    expect(directRows[0].totalCost).toBeGreaterThanOrEqual(75);
   });
 
   it("uses each project’s configured direct-sale start month and equal installment count", () => {
@@ -208,7 +220,7 @@ describe("calculateEscrowSettlement", () => {
     // installment takes receipts past the 20% trigger. The commission is not
     // payable before that actual receipt month.
     expect(paymentMonths).toHaveLength(1);
-    expect(paymentMonths[0].month).toBe(13);
+    expect(paymentMonths[0].month).toBe(11);
     expect(paymentMonths[0].amount).toBe(commission!.totalCost);
   });
 

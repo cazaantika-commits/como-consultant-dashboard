@@ -72,10 +72,11 @@ export function summarizeEscrowLiquidity(cumulative: number[]): EscrowLiquidityA
 }
 
 /**
- * Settles the escrow account in two stages. The month-three transfer leaves
- * five percent of actual buyer collections, as well as any amount needed for
- * obligations falling due before month thirteen. The final transfer drains the
- * remaining balance at month thirteen.
+ * Settles an off-plan escrow account under the approved cash-motion rule.
+ * The first closure sends every available dirham except the 5% buyer-sales
+ * retention to the investor. The month-13 closure sends that full retained
+ * buyer-sales amount to the investor. Contractor final retention is an
+ * investor-account debit and is deliberately never netted from this transfer.
  */
 export function calculateEscrowSettlement({
   cumulativeWithoutLiquidation,
@@ -84,21 +85,9 @@ export function calculateEscrowSettlement({
   actualSalesCashInflow,
 }: EscrowSettlementInput): EscrowSettlementResult {
   const balanceAtFirstLiquidation = cumulativeWithoutLiquidation[firstLiquidationIndex] || 0;
-  const lastRelevantIndex = Math.min(finalLiquidationIndex, cumulativeWithoutLiquidation.length - 1);
-  const balancesUntilFinalSettlement = cumulativeWithoutLiquidation.slice(firstLiquidationIndex, lastRelevantIndex + 1);
-  const minimumBalanceBeforeFinalSettlement = balancesUntilFinalSettlement.length > 0
-    ? Math.min(...balancesUntilFinalSettlement)
-    : 0;
-
-  const reserveForPostCompletionObligations = Math.max(
-    0,
-    balanceAtFirstLiquidation - minimumBalanceBeforeFinalSettlement,
-  );
   const retainedSalesAmount = actualSalesCashInflow.reduce((sum, value) => sum + value, 0) * 0.05;
-  const reserveAtFirstLiquidation = Math.max(retainedSalesAmount, reserveForPostCompletionObligations);
-  const firstLiquidation = Math.max(0, balanceAtFirstLiquidation - reserveAtFirstLiquidation);
-  const balanceAtFinalSettlement = cumulativeWithoutLiquidation[finalLiquidationIndex] || 0;
-  const finalLiquidation = Math.max(0, balanceAtFinalSettlement - firstLiquidation);
+  const firstLiquidation = Math.max(0, balanceAtFirstLiquidation - retainedSalesAmount);
+  const finalLiquidation = Math.max(0, retainedSalesAmount);
 
   return { firstLiquidation, finalLiquidation, retainedSalesAmount };
 }
@@ -128,11 +117,14 @@ export function calculateEscrowMonthlyBalance({
   }
 
   const salesIncomeValues = new Array(totalMonths).fill(0);
-  const escrowReceipts = salesResult?.actualEscrowCashInflow?.length
+  const rawEscrowReceipts = salesResult?.actualEscrowCashInflow?.length
     ? salesResult.actualEscrowCashInflow
     : salesResult?.actualCashInflow;
-  if (escrowReceipts?.length) {
-    escrowReceipts.slice(0, totalMonths).forEach((value, index) => { salesIncomeValues[index] = value || 0; });
+  const postStartIndex = designDuration + constructionDuration;
+  if (rawEscrowReceipts?.length) {
+    rawEscrowReceipts.slice(0, totalMonths).forEach((value, index) => {
+      salesIncomeValues[index] = index < postStartIndex ? value || 0 : 0;
+    });
   } else {
     for (const entry of salesResult?.escrowData || []) {
       const index = entry.month - 1;
@@ -150,15 +142,13 @@ export function calculateEscrowMonthlyBalance({
     return all;
   }, []);
 
-  const postStartIndex = designDuration + constructionDuration;
   const firstLiquidationIndex = postStartIndex + 2;
   const finalLiquidationIndex = postStartIndex + 12;
-  const { firstLiquidation, finalLiquidation } = calculateEscrowSettlement({
-    cumulativeWithoutLiquidation,
-    firstLiquidationIndex,
-    finalLiquidationIndex,
-    actualSalesCashInflow: salesIncomeValues,
-  });
+  const settlementRows = rows.filter((row) => row.isRevenue && row.label.includes("تصفية حساب الضمان"));
+  const firstSettlementRow = settlementRows.find((row) => row.label.includes("دفعة 1"));
+  const finalSettlementRow = settlementRows.find((row) => row.label.includes("دفعة 2"));
+  const firstLiquidation = firstSettlementRow ? (valuesForRow(firstSettlementRow)[firstLiquidationIndex] || 0) : 0;
+  const finalLiquidation = finalSettlementRow ? (valuesForRow(finalSettlementRow)[finalLiquidationIndex] || 0) : 0;
   const outflowTotals = regularOutflowTotals.map((outflow, index) =>
     outflow + (index === firstLiquidationIndex ? firstLiquidation : 0) + (index === finalLiquidationIndex ? finalLiquidation : 0),
   );
