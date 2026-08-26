@@ -39,6 +39,33 @@ const projectProfit = feasibility.totalRevenue - feasibility.totalCosts;
 const feasibilityInvestorProfit = projectProfit - Math.max(0, projectProfit * 0.15);
 const planEscrow = (salesResult?.actualEscrowCashInflow || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
 const planInvestor = (salesResult?.actualInvestorCashInflow || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
+const salesDistributionUnits = (salesResult?.salesDistribution || []).reduce((sum, value) => sum + Math.max(0, value || 0), 0);
+const totalProjectUnits = [
+  "studioCount", "residential1brCount", "residential2brCount", "residential2brMaidCount",
+  "residential3brCount", "residential3brMaidCount", "villaCount", "townhouseCount",
+  "retailSmallCount", "retailMediumCount", "retailLargeCount",
+  "officeSmallCount", "officeMediumCount", "officeLargeCount",
+].reduce((sum, key) => sum + Math.max(0, Number(project[key]) || 0), 0);
+const unsoldUnits = Math.max(0, totalProjectUnits - salesDistributionUnits);
+const traceableDirectRevenue = totalProjectUnits > 0 ? feasibility.totalRevenue * (unsoldUnits / totalProjectUnits) : 0;
+let savedMarketingTotal = 0;
+try {
+  const absorption = JSON.parse(plan?.salesAbsorptionJson || "{}");
+  for (const channel of Object.values(absorption.marketingDistribution || {})) {
+    if (!Array.isArray(channel)) continue;
+    savedMarketingTotal += channel.reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0);
+  }
+} catch { /* reported as zero */ }
+const constructionEndIndex = cashFlow.designDuration + cashFlow.constructionDuration;
+const escrowReceiptsBeforeCompletion = (salesResult?.actualEscrowCashInflow || [])
+  .slice(0, constructionEndIndex)
+  .reduce((sum, value) => sum + Math.max(0, value || 0), 0);
+const escrowReceiptsAfterCompletion = (salesResult?.actualEscrowCashInflow || [])
+  .slice(constructionEndIndex)
+  .reduce((sum, value) => sum + Math.max(0, value || 0), 0);
+const sourceRevenueTotal = planEscrow + planInvestor + traceableDirectRevenue;
+const sourceRevenueDifference = sourceRevenueTotal - feasibility.totalRevenue;
+const filsTolerance = 0.001;
 const cashFlowCostRows = cashFlow.rows
   .filter((row) => !row.isRevenue && !row.isTransfer && !row.isProfitAllocation)
   .map((row) => ({ label: row.label, funder: row.funder, total: row.totalCost }));
@@ -46,7 +73,25 @@ const cashFlowTotalCosts = cashFlowCostRows.reduce((sum, row) => sum + row.total
 
 console.log(JSON.stringify({
   project: { id: project.id, name: project.name, scenario },
-  plan: { id: plan?.id || null, escrowReceipts: planEscrow, investorReceipts: planInvestor },
+  plan: {
+    id: plan?.id || null,
+    escrowReceipts: planEscrow,
+    investorReceipts: planInvestor,
+    escrowReceiptsBeforeCompletion,
+    escrowReceiptsAfterCompletion,
+    paymentRecipients: (salesResult?.paymentPlan?.stages || []).map((stage) => ({
+      id: stage.id,
+      trigger: stage.trigger,
+      recipient: stage.recipient,
+      percentage: stage.percentage,
+    })),
+    projectUnits: totalProjectUnits,
+    offplanUnits: salesDistributionUnits,
+    unsoldPostCompletionUnits: unsoldUnits,
+    traceableDirectRevenue,
+    savedMarketingTotal,
+    feasibilityMarketingTotal: feasibility.marketingCost,
+  },
   diagnostics: {
     hasEscrowData: Boolean(salesResult?.escrowData?.length),
     escrowReceiptMonths: salesResult?.actualEscrowCashInflow?.length || 0,
@@ -87,6 +132,16 @@ console.log(JSON.stringify({
     investorDifference: investorFinal - feasibilityInvestorProfit,
     comoDifference: valueAt(como) - Math.max(0, projectProfit * 0.15),
     escrowEndingBalance: escrowBalance.cumulative[escrowBalance.cumulative.length - 1],
+    sourceRevenueDifference,
+    acceptance: {
+      sourceRevenueReconciles: Math.abs(sourceRevenueDifference) < filsTolerance,
+      investorProfitReconciles: Math.abs(investorFinal - feasibilityInvestorProfit) < filsTolerance,
+      comoShareReconciles: Math.abs(valueAt(como) - Math.max(0, projectProfit * 0.15)) < filsTolerance,
+      escrowClosesToZero: Math.abs(escrowBalance.cumulative[escrowBalance.cumulative.length - 1]) < filsTolerance,
+      lateEscrowReceiptPreserved: escrowReceiptsAfterCompletion > 0
+        ? Math.abs(escrowBalance.salesIncomeValues.slice(constructionEndIndex).reduce((sum, value) => sum + value, 0) - escrowReceiptsAfterCompletion) < filsTolerance
+        : true,
+    },
   },
 }, null, 2));
 process.exit(0);

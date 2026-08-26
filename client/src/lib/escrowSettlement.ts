@@ -120,10 +120,9 @@ export function calculateEscrowMonthlyBalance({
   const rawEscrowReceipts = salesResult?.actualEscrowCashInflow?.length
     ? salesResult.actualEscrowCashInflow
     : salesResult?.actualCashInflow;
-  const postStartIndex = designDuration + constructionDuration;
   if (rawEscrowReceipts?.length) {
     rawEscrowReceipts.slice(0, totalMonths).forEach((value, index) => {
-      salesIncomeValues[index] = index < postStartIndex ? value || 0 : 0;
+      salesIncomeValues[index] = value || 0;
     });
   } else {
     for (const entry of salesResult?.escrowData || []) {
@@ -142,6 +141,7 @@ export function calculateEscrowMonthlyBalance({
     return all;
   }, []);
 
+  const postStartIndex = designDuration + constructionDuration;
   const firstLiquidationIndex = postStartIndex + 2;
   const finalLiquidationIndex = postStartIndex + 12;
   const settlementRows = rows.filter((row) => row.isRevenue && row.label.includes("تصفية حساب الضمان"));

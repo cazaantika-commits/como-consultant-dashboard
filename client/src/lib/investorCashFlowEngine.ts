@@ -131,7 +131,7 @@ export interface SalesResult {
     cumulativeSold: number;
   }>;
   salesDistribution: number[];
-  marketingMonthlyAmounts?: number[]; // Monthly marketing amounts from marketing page (indexed from project month 1)
+  marketingMonthlyWeights?: number[]; // Timing weights from Marketing page; Project Card remains the budget source
   ppDownPct?: number; // Down payment percentage from payment plan
   paymentPlan?: FlexiblePaymentPlan; // Exact staged buyer payment schedule saved from Sales Plan
   actualCashInflow?: number[]; // Actual monthly cash inflow from payment plan (indexed from project month 1)
@@ -308,6 +308,40 @@ export function calculateSequentialInvestorProfitAllocation({
     realisedProfit,
     recoveredCapital,
     endingUnrecoveredCapital: unrecoveredCapital,
+  };
+}
+
+export function calculateOffplanSalesChannels({
+  totalRevenue,
+  totalUnits,
+  salesDistribution,
+  offplanPct,
+}: {
+  totalRevenue: number;
+  totalUnits: number;
+  salesDistribution: number[];
+  offplanPct?: number;
+}) {
+  const soldUnits = salesDistribution.reduce((sum, units) => sum + Math.max(0, Number(units) || 0), 0);
+  if (totalUnits > 0) {
+    const boundedSoldUnits = Math.min(totalUnits, soldUnits);
+    const unsoldUnits = Math.max(0, totalUnits - boundedSoldUnits);
+    return {
+      soldUnits: boundedSoldUnits,
+      unsoldUnits,
+      soldOffplanRevenue: totalRevenue * (boundedSoldUnits / totalUnits),
+      unsoldDirectRevenue: totalRevenue * (unsoldUnits / totalUnits),
+      source: "units" as const,
+    };
+  }
+
+  const soldShare = Math.max(0, Math.min(1, Number(offplanPct ?? 80) / 100));
+  return {
+    soldUnits: 0,
+    unsoldUnits: 0,
+    soldOffplanRevenue: totalRevenue * soldShare,
+    unsoldDirectRevenue: totalRevenue * (1 - soldShare),
+    source: "offplan_pct" as const,
   };
 }
 
@@ -671,8 +705,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         constructionMonths: i.constructionMonths,
         projectEndMonth: phaseTiming.projectEndMonth,
       }),
-      // Preserve marketing data from an existing marketing-only payload.
-      marketingMonthlyAmounts: salesResult?.marketingMonthlyAmounts,
+      // Preserve marketing timing weights from an existing marketing-only payload.
+      marketingMonthlyWeights: salesResult?.marketingMonthlyWeights,
     };
   }
 
@@ -1182,26 +1216,6 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       commConst[commMonth] = commTotal;
     }
 
-    if (salesResult && salesResult.escrowData.length > 0 && commTotal > 0) {
-      // Saved unit batches can contain rounded unit quantities. Keep the
-      // receipt-trigger timing from those batches, but scale their commission
-      // to the actual escrow-sale channel. This avoids treating a rounded
-      // configured off-plan percentage as more sold value than the saved plan.
-      const actualEscrowReceipts = (salesResult.actualEscrowCashInflow?.length
-        ? salesResult.actualEscrowCashInflow
-        : salesResult.actualCashInflow || salesResult.escrowData.map((entry) => entry.income))
-        .reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
-      const fallbackOffplanShare = Math.max(0, Math.min(1, Number(salesResult.offplanPct ?? 80) / 100));
-      const targetOffplanCommission = actualEscrowReceipts > 0
-        ? actualEscrowReceipts * r.salesCommission
-        : costs.salesCommission * fallbackOffplanShare;
-      const scale = targetOffplanCommission / commTotal;
-      [commDesign, commConst, commPost].forEach((months) => {
-        for (let index = 0; index < months.length; index++) months[index] *= scale;
-      });
-      commTotal = targetOffplanCommission;
-    }
-
     if (commTotal > 0) {
       rows.push({
         label: "عمولة المبيعات",
@@ -1259,16 +1273,14 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
           marketingPost[projectConstructionMonth - constructionDuration] += monthlyAmount;
         }
       }
-    } else if (salesResult?.marketingMonthlyAmounts && salesResult.marketingMonthlyAmounts.length > 0) {
-      // The marketing page provides timing. Its values are normalized to the
-      // project marketing budget so Investor Cash Flow and Feasibility retain
-      // the same total cost even if saved monthly entries contain rounding.
-      const amounts = salesResult.marketingMonthlyAmounts;
-      const savedTotal = amounts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
-      const scale = savedTotal > 0 ? costs.marketing / savedTotal : 0;
-      for (let m = 0; m < amounts.length; m++) {
-        if (amounts[m] && amounts[m] > 0) {
-          const amount = amounts[m] * scale;
+    } else if (salesResult?.marketingMonthlyWeights && salesResult.marketingMonthlyWeights.length > 0) {
+      // The Project Card owns the marketing budget. The Sales workspace owns
+      // only its monthly timing weights, so no report total is used as a plug.
+      const weights = salesResult.marketingMonthlyWeights;
+      const totalWeight = weights.reduce((sum, weight) => sum + Math.max(0, weight || 0), 0);
+      for (let m = 0; m < weights.length; m++) {
+        if (weights[m] && weights[m] > 0 && totalWeight > 0) {
+          const amount = costs.marketing * (weights[m] / totalWeight);
           if (m < designDuration) {
             marketingDesign[m] = amount;
           } else if (m - designDuration < constructionDuration) {
@@ -1578,47 +1590,31 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       // Buyer payments for units sold during construction go to escrow. The remaining
       // unsold share is sold after completion and is a direct investor credit, spread
       // over the project-specific post-completion receipt schedule.
-      const rawEscrowBuyerReceipts = salesResult.actualEscrowCashInflow?.length
+      const escrowBuyerReceipts = (salesResult.actualEscrowCashInflow?.length
         ? salesResult.actualEscrowCashInflow
-        : (salesResult.actualCashInflow || salesResult.escrowData.map((entry) => entry.income));
-      const postStartIndex = designDuration + constructionDuration;
-      // A receipt that reaches the saved plan after construction is not an
-      // escrow receipt under the agreed rule. It is credited directly to the
-      // investor, while its original pre-completion sale commission stays paid
-      // once from the escrow schedule rather than being charged a second time.
-      const escrowBuyerReceipts = rawEscrowBuyerReceipts.map((amount, index) =>
-        index < postStartIndex ? Math.max(0, amount || 0) : 0,
-      );
-      const postCompletionEscrowReceipts = rawEscrowBuyerReceipts.map((amount, index) =>
-        index >= postStartIndex ? Math.max(0, amount || 0) : 0,
-      );
-      const totalRecordedBuyerReceipts = rawEscrowBuyerReceipts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
+        : (salesResult.actualCashInflow || salesResult.escrowData.map((entry) => entry.income)))
+        .map((amount) => Math.max(0, amount || 0));
       const totalSalesIncome = escrowBuyerReceipts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
       const explicitInvestorReceipts = salesResult.actualInvestorCashInflow || [];
-      const explicitInvestorTotal = explicitInvestorReceipts.reduce((sum, amount) => sum + Math.max(0, amount || 0), 0);
-      const directBuyerReceipts = Array.from(
-        { length: Math.max(explicitInvestorReceipts.length, postCompletionEscrowReceipts.length) },
-        (_, index) => Math.max(0, explicitInvestorReceipts[index] || 0) + Math.max(0, postCompletionEscrowReceipts[index] || 0),
-      );
       const totalProjectMonths = designDuration + constructionDuration + postDuration;
       const directReceiptsByMonth = new Array(totalProjectMonths).fill(0);
       const directCommissionReceiptsByMonth = new Array(totalProjectMonths).fill(0);
-      directBuyerReceipts.slice(0, totalProjectMonths).forEach((amount, index) => {
+      explicitInvestorReceipts.slice(0, totalProjectMonths).forEach((amount, index) => {
         directReceiptsByMonth[index] = Math.max(0, amount || 0);
       });
-      explicitInvestorReceipts.slice(0, totalProjectMonths).forEach((amount, index) => {
-        directCommissionReceiptsByMonth[index] = Math.max(0, amount || 0);
-      });
 
-      // The saved buyer plan may cover only units sold before completion. The
-      // residual of total project revenue is therefore the direct-sale value
-      // of unsold post-completion units. It remains an additional channel even
-      // when a later receipt of an already-sold unit was reclassified above.
-      const unallocatedDirectSalesRevenue = Math.max(0, totalRevenue - totalRecordedBuyerReceipts - explicitInvestorTotal);
-      if (unallocatedDirectSalesRevenue > 0) {
+      // Unsold units are the only source of post-completion direct-sale revenue.
+      // This is an inventory schedule, not a revenue-minus-receipts balancing plug.
+      const salesChannels = calculateOffplanSalesChannels({
+        totalRevenue,
+        totalUnits,
+        salesDistribution: salesResult.salesDistribution,
+        offplanPct: salesResult.offplanPct,
+      });
+      if (salesChannels.unsoldDirectRevenue > 0) {
         const directSalesStartMonth = Math.max(1, Math.min(postDuration, salesResult.directSalesStartMonth ?? 4));
         const directSalesInstallmentCount = Math.max(1, Math.min(postDuration - directSalesStartMonth + 1, salesResult.directSalesInstallmentCount ?? 6));
-        const directRevenuePerMonth = unallocatedDirectSalesRevenue / directSalesInstallmentCount;
+        const directRevenuePerMonth = salesChannels.unsoldDirectRevenue / directSalesInstallmentCount;
         for (let idx = directSalesStartMonth - 1; idx < directSalesStartMonth - 1 + directSalesInstallmentCount; idx++) {
           const month = designDuration + constructionDuration + idx;
           directReceiptsByMonth[month] += directRevenuePerMonth;
@@ -1758,12 +1754,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       });
 
       // ─── تصفية حساب الضمان (دفعة 2: شهر 13 بعد الإنجاز) ───
-      const constructionRetention = constructionCost * 0.05;
-      month13ToInvestor = revenueRetention - constructionRetention;
+      month13ToInvestor = revenueRetention;
       const escrowRetPost = emptyPost();
       escrowRetPost[12] = month13ToInvestor; // شهر 13 (index 12)
       rows.push({
-        label: "تصفية حساب الضمان (دفعة 2 - صافي الاحتجاز)",
+        label: "تصفية حساب الضمان (دفعة 2 - احتجاز المبيعات بالكامل)",
         totalCost: month13ToInvestor,
         investorAmount: month13ToInvestor,
         paid: 0,

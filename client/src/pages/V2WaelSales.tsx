@@ -55,6 +55,7 @@ import {
 } from "@/lib/projectData";
 import { buildPricingUnits, computeInvestorCashFlow, type SalesResult, type Scenario } from "@/lib/investorCashFlowEngine";
 import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
+import { buildMarketingMonthlyWeights } from "@/lib/salesPlanCashFlow";
 import {
   buildPaymentReceiptEvents,
   cloneFlexiblePaymentPlan,
@@ -581,11 +582,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       actualCashInflow,
       actualEscrowCashInflow,
       actualInvestorCashInflow,
+      marketingMonthlyWeights: buildMarketingMonthlyWeights(marketingDistribution, timeline.marketingStart),
       offplanPct: offPlan,
       ppDownPct,
       paymentPlan,
     };
-  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, offPlan, ppDownPct, paymentPlan]);
+  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, marketingDistribution, timeline.marketingStart, offPlan, ppDownPct, paymentPlan]);
   const liveCashFlow = useMemo(
     () => computeInvestorCashFlow(liveProjectData, scenario, undefined, liveSalesResult),
     [liveProjectData, scenario, liveSalesResult],

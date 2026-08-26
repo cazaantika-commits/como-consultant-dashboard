@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, calculateSequentialInvestorProfitAllocation, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, calculateOffplanSalesChannels, calculateSequentialInvestorProfitAllocation, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
-import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
+import { buildDefaultOffPlanSalesResult, buildMarketingMonthlyWeights, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
 describe("calculateEscrowSettlement", () => {
   it("pays broker commission, then restores capital before splitting direct villa-sale profit", () => {
@@ -133,6 +133,62 @@ describe("calculateEscrowSettlement", () => {
     expect(directSalesCommission?.postConstructionMonths.slice(3, 9)).toEqual(
       Array(6).fill((directSalesCommission?.totalCost || 0) / 6)
     );
+  });
+
+  it("keeps a saved escrow-channel receipt in escrow even when it arrives after construction", () => {
+    const result = computeInvestorCashFlow({
+      preConMonths: 1,
+      constructionMonths: 1,
+      residential1brCount: 5,
+      residential1brArea: 1000,
+      residential1brPrice: 1000,
+      manualBuaSqft: 1000,
+      estimatedConstructionPricePerSqft: 400,
+      salesCommissionPct: 5,
+      marketingPct: 2,
+    }, "offplan_escrow", undefined, {
+      escrowData: [{ month: 1, units: 4, income: 400, downPayment: 0, installments: 400, withdrawal: 0, balance: 0, cumulativeSold: 4 }],
+      salesDistribution: [4],
+      actualCashInflow: [0, 0, 400],
+      actualEscrowCashInflow: [0, 0, 400],
+      actualInvestorCashInflow: [0, 0, 0],
+      offplanPct: 80,
+    });
+
+    const directSalesRow = result.rows.find((row) => row.label === "تحصيلات مبيعات مباشرة بعد الإنجاز");
+    const finalEscrowRelease = result.rows.find((row) => row.label.includes("تصفية حساب الضمان") && row.label.includes("دفعة 2"));
+    const balance = calculateEscrowMonthlyBalance({
+      rows: result.rows,
+      designDuration: result.designDuration,
+      constructionDuration: result.constructionDuration,
+      postDuration: result.postDuration,
+      salesResult: result.usedSalesResult,
+    });
+
+    expect(directSalesRow?.totalCost).toBeCloseTo(result.totalRevenue / 5, 6);
+    expect(finalEscrowRelease?.totalCost).toBeCloseTo(20, 8);
+    expect(balance.salesIncomeValues[2]).toBe(400);
+  });
+
+  it("derives post-completion direct sales from unsold units rather than a receipt-balancing residual", () => {
+    const channels = calculateOffplanSalesChannels({
+      totalRevenue: 726_067_550,
+      totalUnits: 209,
+      salesDistribution: [40, 42, 43, 42],
+      offplanPct: 80,
+    });
+
+    expect(channels.source).toBe("units");
+    expect(channels.soldUnits).toBe(167);
+    expect(channels.unsoldUnits).toBe(42);
+    expect(channels.unsoldDirectRevenue).toBeCloseTo(145_908_311.4832536, 6);
+  });
+
+  it("uses saved marketing entries only as timing weights against the Project Card budget", () => {
+    const weights = buildMarketingMonthlyWeights({ digital: [100, 0], outdoor: [0, 300] }, 2)!;
+    expect(weights.reduce((sum, value) => sum + value, 0)).toBeCloseTo(1, 12);
+    expect(weights[1]).toBeCloseTo(0.25, 12);
+    expect(weights[2]).toBeCloseTo(0.75, 12);
   });
 
   it("uses one direct-receipt row when the saved plan already provides an investor channel", () => {

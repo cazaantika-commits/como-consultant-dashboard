@@ -16,6 +16,23 @@ export interface DefaultOffPlanSalesInput {
   projectEndMonth: number;
 }
 
+export function buildMarketingMonthlyWeights(
+  distribution: Record<string, number[]> | undefined,
+  startMonth: number,
+): number[] | undefined {
+  const channels = Object.values(distribution || {}).filter(Array.isArray) as number[][];
+  if (channels.length === 0) return undefined;
+  const maxLength = Math.max(...channels.map((channel) => channel.length));
+  const combined = new Array(Math.max(0, startMonth - 1) + maxLength).fill(0);
+  for (const channel of channels) {
+    for (let month = 0; month < channel.length; month++) {
+      combined[Math.max(0, startMonth - 1) + month] += Math.max(0, Number(channel[month]) || 0);
+    }
+  }
+  const total = combined.reduce((sum, amount) => sum + amount, 0);
+  return total > 0 ? combined.map((amount) => amount / total) : undefined;
+}
+
 /**
  * The first view of an Off-Plan project has no saved Wael plan yet. This
  * default mirrors the interactive Sales workspace so the Escrow report starts
@@ -101,7 +118,7 @@ export function buildSalesResultFromSavedPlan(
 ): SalesResult | undefined {
   if (!plan) return undefined;
 
-  let marketingMonthlyAmounts: number[] | undefined;
+  let marketingMonthlyWeights: number[] | undefined;
   if (plan.salesAbsorptionJson) {
     try {
       const absorption = JSON.parse(plan.salesAbsorptionJson);
@@ -114,16 +131,7 @@ export function buildSalesResultFromSavedPlan(
           savedStart,
           minimumMarketingStart,
         );
-        const channels = Object.values(distribution) as number[][];
-        if (channels.length > 0) {
-          const maxLen = Math.max(...channels.map((channel) => channel.length));
-          marketingMonthlyAmounts = new Array(actualStart - 1 + maxLen).fill(0);
-          for (const channel of channels) {
-            for (let month = 0; month < channel.length; month++) {
-              marketingMonthlyAmounts[actualStart - 1 + month] += channel[month] || 0;
-            }
-          }
-        }
+        marketingMonthlyWeights = buildMarketingMonthlyWeights(distribution, actualStart);
       }
     } catch {
       // A missing or malformed legacy marketing payload falls back to engine defaults.
@@ -220,7 +228,7 @@ export function buildSalesResultFromSavedPlan(
         return {
           escrowData: Array.isArray(parsed.escrowData) ? parsed.escrowData : [],
           salesDistribution: Array.isArray(parsed.salesDistribution) ? parsed.salesDistribution : [],
-          marketingMonthlyAmounts,
+          marketingMonthlyWeights,
           ppDownPct,
           paymentPlan,
           actualCashInflow,
@@ -237,8 +245,8 @@ export function buildSalesResultFromSavedPlan(
     }
   }
 
-  if (marketingMonthlyAmounts && marketingMonthlyAmounts.length > 0) {
-    return { escrowData: [], salesDistribution: [], marketingMonthlyAmounts, ppDownPct, buildForSaleMonthlyUnits };
+  if (marketingMonthlyWeights && marketingMonthlyWeights.length > 0) {
+    return { escrowData: [], salesDistribution: [], marketingMonthlyWeights, ppDownPct, buildForSaleMonthlyUnits };
   }
 
   return undefined;
