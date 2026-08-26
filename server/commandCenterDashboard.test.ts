@@ -5,6 +5,7 @@ const source = readFileSync("client/src/pages/CommandCenterPage.tsx", "utf8");
 const routerSource = readFileSync("server/routers/commandCenter.ts", "utf8");
 const serverSource = readFileSync("server/_core/index.ts", "utf8");
 const storageProxySource = readFileSync("server/_core/storageProxy.ts", "utf8");
+const schemaSource = readFileSync("drizzle/schema.ts", "utf8");
 
 describe("Command Center dashboard card registry", () => {
   it("does not render stale tile indexes beyond the current nine-card BUBBLES registry", () => {
@@ -75,6 +76,8 @@ describe("Command Center dashboard card registry", () => {
     expect(routerSource).toContain("getApprovedProjectChanges");
     expect(routerSource).toContain("const member = await verifyToken(input.token);");
     expect(routerSource).toContain("projectChangeRequests.decisionStatus, 'approved'");
+    expect(schemaSource).toContain('decisionStatus: mysqlEnum("decision_status", ["draft", "submitted", "approved", "rejected"])');
+    expect(schemaSource).not.toContain('mysqlEnum("change_decision_status"');
     expect(routerSource).not.toContain("UPDATE financialData");
   });
 

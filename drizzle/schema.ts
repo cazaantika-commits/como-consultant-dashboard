@@ -1672,7 +1672,7 @@ export const projectChangeRequests = mysqlTable("project_change_requests", {
 	scheduleImpact: text("schedule_impact"),
 	costImpact: text("cost_impact"),
 	cashFlowImpact: text("cash_flow_impact"),
-	decisionStatus: mysqlEnum("change_decision_status", ["draft", "submitted", "approved", "rejected"]).default("draft").notNull(),
+	decisionStatus: mysqlEnum("decision_status", ["draft", "submitted", "approved", "rejected"]).default("draft").notNull(),
 	decisionNotes: text("decision_notes"),
 	decidedAt: timestamp("decided_at", { mode: "string" }),
 	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
