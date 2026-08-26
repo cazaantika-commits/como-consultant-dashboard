@@ -22,15 +22,6 @@ describe("buyer payment calendar", () => {
     expect(calendar.map((row) => row.sequence)).toEqual([1, 2, 3, 4]);
   });
 
-  it("uses a safe default calendar while the project timing context is not ready", () => {
-    const calendar = buildPaymentCalendar([
-      { id: "booking", sequence: 1, label: "الحجز", percentage: 10, recipient: "escrow", timingRule: "booking" },
-      { id: "handover", sequence: 2, label: "التسليم", percentage: 90, recipient: "escrow", timingRule: "handover" },
-    ], undefined);
-
-    expect(calendar.map((row) => row.month)).toEqual([1, 1]);
-  });
-
   it("collects all past due installments in the late buyer's purchase month", () => {
     const rows = buildPaymentCalendar([
       { id: "booking", sequence: 1, label: "الحجز", percentage: 10, recipient: "escrow", timingRule: "booking" },

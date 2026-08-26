@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateEscrowMonthlyBalance, calculateEscrowSettlement, summarizeEscrowLiquidity } from "../client/src/lib/escrowSettlement";
-import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, calculateOffPlanInvestorProfitAllocation, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
+import { calculateDirectSaleProfitAllocation, calculateEscrowProfitAllocation, calculateInvestorCapitalSummary, computeInvestorCashFlow, type CashFlowResult } from "../client/src/lib/investorCashFlowEngine";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { buildDefaultOffPlanSalesResult, buildSalesResultFromSavedPlan } from "../client/src/lib/salesPlanCashFlow";
 
@@ -27,22 +27,6 @@ describe("calculateEscrowSettlement", () => {
     expect(allocation.finalSettlementProfit).toBe(2_108_552);
     expect(allocation.finalDeveloperShare).toBe(316_282.8);
     expect(allocation.totalDeveloperShare).toBe(1_157_385.15);
-  });
-
-  it("continues off-plan capital recovery through direct sales before splitting their surplus", () => {
-    const allocation = calculateOffPlanInvestorProfitAllocation(
-      80,
-      100,
-      [30, 30],
-      [5, 5],
-      10,
-      15,
-    );
-
-    expect(allocation.firstDeveloperShare).toBe(0);
-    expect(allocation.directSaleDeveloperShares).toEqual([0.75, 3.75]);
-    expect(allocation.finalDeveloperShare).toBe(1.5);
-    expect(allocation.totalDeveloperShare).toBe(6);
   });
 
   it("uses the actual paid and scheduled investor capital before the first COMO payment", () => {

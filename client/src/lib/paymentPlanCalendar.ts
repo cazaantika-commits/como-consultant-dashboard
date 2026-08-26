@@ -24,18 +24,6 @@ export type PaymentCalendarRow = {
   automatic: boolean;
 };
 
-function resolvePaymentCalendarContext(context?: Partial<PaymentCalendarContext>): PaymentCalendarContext {
-  const projectSalesStartMonth = Math.max(1, Number(context?.projectSalesStartMonth) || 1);
-  const constructionStartMonth = Math.max(1, Number(context?.constructionStartMonth) || projectSalesStartMonth);
-  const constructionEndMonth = Math.max(constructionStartMonth, Number(context?.constructionEndMonth) || constructionStartMonth);
-  return {
-    projectSalesStartMonth,
-    constructionStartMonth,
-    constructionEndMonth,
-    projectStartDate: context?.projectStartDate,
-  };
-}
-
 function projectMonthFromDate(value: string | undefined, projectStartDate: string | undefined): number | null {
   if (!value || !projectStartDate) return null;
   const due = String(value).match(/^(\d{4})-(\d{2})/);
@@ -78,24 +66,23 @@ function isConstructionSeries(entry: PaymentCalendarEntry): boolean {
  * expanded into the actual installments that a buyer will see and pay. The
  * final construction installment stays before handover; handover has its own row.
  */
-export function expandPaymentCalendarEntries(entries: PaymentCalendarEntry[], context?: PaymentCalendarContext): PaymentCalendarEntry[] {
-  const calendarContext = resolvePaymentCalendarContext(context);
+export function expandPaymentCalendarEntries(entries: PaymentCalendarEntry[], context: PaymentCalendarContext): PaymentCalendarEntry[] {
   const normalized = normalizePaymentCalendarEntries(entries);
   const expanded: PaymentCalendarEntry[] = [];
-  let previousMonth = calendarContext.projectSalesStartMonth;
+  let previousMonth = context.projectSalesStartMonth;
 
   for (const entry of normalized) {
-    const plannedPrevious = buildPaymentCalendar(expanded, calendarContext).at(-1)?.month ?? previousMonth;
+    const plannedPrevious = buildPaymentCalendar(expanded, context).at(-1)?.month ?? previousMonth;
     previousMonth = plannedPrevious;
     if (!isConstructionSeries(entry)) {
       expanded.push({ ...entry, sequence: expanded.length + 1 });
-      previousMonth = buildPaymentCalendar(expanded, calendarContext).at(-1)?.month ?? previousMonth;
+      previousMonth = buildPaymentCalendar(expanded, context).at(-1)?.month ?? previousMonth;
       continue;
     }
 
     const everyMonths = Math.max(1, Number(entry.offsetMonths) || 3);
-    const firstMonth = Math.max(calendarContext.projectSalesStartMonth, calendarContext.constructionStartMonth, previousMonth + everyMonths);
-    const lastConstructionCollectionMonth = Math.max(firstMonth, calendarContext.constructionEndMonth - 1);
+    const firstMonth = Math.max(context.projectSalesStartMonth, context.constructionStartMonth, previousMonth + everyMonths);
+    const lastConstructionCollectionMonth = Math.max(firstMonth, context.constructionEndMonth - 1);
     const count = Math.max(1, Math.floor((lastConstructionCollectionMonth - firstMonth) / everyMonths) + 1);
     const installmentPct = Math.round((entry.percentage / count) * 100) / 100;
     const labelBase = entry.label.includes("دفعات") || entry.label.includes("أقساط") ? "قسط الإنشاء" : entry.label;
@@ -113,7 +100,7 @@ export function expandPaymentCalendarEntries(entries: PaymentCalendarEntry[], co
         offsetMonths: index === 0 ? Math.max(1, firstMonth - previousMonth) : everyMonths,
       });
     }
-    previousMonth = buildPaymentCalendar(expanded, calendarContext).at(-1)?.month ?? previousMonth;
+    previousMonth = buildPaymentCalendar(expanded, context).at(-1)?.month ?? previousMonth;
   }
   return expanded.map((entry, index) => ({ ...entry, sequence: index + 1 }));
 }
@@ -151,26 +138,25 @@ export function calendarEntriesFromPlan(plan: FlexiblePaymentPlan): PaymentCalen
 }
 
 /** Calculates project-wide due months. A manual date locks only that one row. */
-export function buildPaymentCalendar(entries: PaymentCalendarEntry[], context?: PaymentCalendarContext): PaymentCalendarRow[] {
-  const calendarContext = resolvePaymentCalendarContext(context);
+export function buildPaymentCalendar(entries: PaymentCalendarEntry[], context: PaymentCalendarContext): PaymentCalendarRow[] {
   const ordered = entries.slice().sort((a, b) => a.sequence - b.sequence || a.id.localeCompare(b.id));
-  const constructionMonths = Math.max(1, calendarContext.constructionEndMonth - calendarContext.constructionStartMonth + 1);
-  let previousMonth = calendarContext.projectSalesStartMonth;
+  const constructionMonths = Math.max(1, context.constructionEndMonth - context.constructionStartMonth + 1);
+  let previousMonth = context.projectSalesStartMonth;
   return ordered.map((entry, index) => {
     const rule = entry.timingRule;
-    const manualMonth = rule === "manual_date" ? projectMonthFromDate(entry.manualDate, calendarContext.projectStartDate) : null;
-    let month = calendarContext.projectSalesStartMonth;
+    const manualMonth = rule === "manual_date" ? projectMonthFromDate(entry.manualDate, context.projectStartDate) : null;
+    let month = context.projectSalesStartMonth;
     if (rule === "after_previous") month = previousMonth + Math.max(0, Number(entry.offsetMonths) || 0);
     if (rule === "construction_progress") {
       const progress = Math.min(100, Math.max(0, Number(entry.progressPct) || 0));
-      month = calendarContext.constructionStartMonth + Math.max(0, Math.ceil((progress / 100) * constructionMonths) - 1);
+      month = context.constructionStartMonth + Math.max(0, Math.ceil((progress / 100) * constructionMonths) - 1);
     }
-    if (rule === "handover") month = calendarContext.constructionEndMonth;
-    if (rule === "post_handover") month = calendarContext.constructionEndMonth + Math.max(1, Number(entry.offsetMonths) || 1);
+    if (rule === "handover") month = context.constructionEndMonth;
+    if (rule === "post_handover") month = context.constructionEndMonth + Math.max(1, Number(entry.offsetMonths) || 1);
     if (manualMonth !== null) month = manualMonth;
     // The page is a chronological buyer commitment. Manual changes remain
     // possible, but a row can never become due before its predecessor.
-    month = Math.max(1, index === 0 ? calendarContext.projectSalesStartMonth : previousMonth, month);
+    month = Math.max(1, index === 0 ? context.projectSalesStartMonth : previousMonth, month);
     previousMonth = month;
     return {
       id: entry.id,
