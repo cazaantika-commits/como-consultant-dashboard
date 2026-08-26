@@ -1598,3 +1598,4 @@
 - [x] Verify Nad Al Sheba plot 3 villas investor cash flow against its feasibility study without changing off-plan projects or the Capital Portfolio
 - [x] Correct Majan escrow transfer and investor-flow movements under the agreed rule, then audit every off-plan project to exact feasibility reconciliation
 - [x] Rebuild and correct Majan Investor Cash Flow from original saved movements without feasibility plugs, then prove the visible rows reconcile to the fils
+- [x] Fix V2WaelSales constructionEndMonth crash when payment-calendar context is temporarily unavailable, without changing financial values

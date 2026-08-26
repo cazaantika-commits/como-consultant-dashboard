@@ -76,4 +76,14 @@ describe("buyer payment calendar", () => {
     expect(rows.map((row) => row.month)).toEqual([7, 8, 11, 14, 17, 20, 23]);
     expect(rows.slice(2, 6).map((row) => row.percentage)).toEqual([10, 10, 10, 10]);
   });
+
+  it("uses a safe calendar context while project timing is still loading", () => {
+    const entries = expandPaymentCalendarEntries([
+      { id: "booking", sequence: 1, label: "الحجز", percentage: 10, recipient: "escrow", timingRule: "booking" },
+      { id: "handover", sequence: 2, label: "التسليم", percentage: 90, recipient: "escrow", timingRule: "handover" },
+    ], undefined);
+    const rows = buildPaymentCalendar(entries, undefined);
+
+    expect(rows.map((row) => row.month)).toEqual([1, 1]);
+  });
 });
