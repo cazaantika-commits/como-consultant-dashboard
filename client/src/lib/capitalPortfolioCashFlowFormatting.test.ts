@@ -4,7 +4,9 @@ import {
   calculateFinalCashFlowProfit,
   calculateProfitPercentage,
   calculateProfitReconciliationDifference,
+  compactCapitalProjectName,
   formatCashFlowAmount,
+  transposePortfolioMonthlyValues,
 } from "../pages/V2CapitalPortfolio";
 
 describe("Capital Portfolio final cash-flow formatting", () => {
@@ -31,5 +33,16 @@ describe("Capital Portfolio final cash-flow formatting", () => {
     expect(calculateProfitPercentage(investorProfit, 900_646_474.423)).toBeCloseTo(18.295497059, 6);
     expect(calculateProfitPercentage(investorProfit, 466_450_553.3723883)).toBeCloseTo(35.3258771051, 6);
     expect(calculateProfitPercentage(investorProfit, 0)).toBe(0);
+  });
+
+  it("transposes existing project values without recalculation and shortens project headers", () => {
+    const values = transposePortfolioMonthlyValues([2, 3], [
+      { projectId: 2, values: [-100, 250] },
+      { projectId: 3, values: [-40, 80] },
+    ], 2);
+    expect(values).toEqual([[-100, -40], [250, 80]]);
+    expect(compactCapitalProjectName("مجان متعدد الاستخدامات (G+4P+25)")).toBe("مجان");
+    expect(compactCapitalProjectName("ند الشبا — قطعة 2 المدمجة (6182776)")).toBe("ند الشبا 2");
+    expect(compactCapitalProjectName("ند الشبا — قطعة 3 الفلل (6180578)")).toBe("الفلل");
   });
 });
