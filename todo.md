@@ -1607,4 +1607,5 @@
 - [x] Rebuild and invalidate saved sales receipt results whenever the Payment Plan calendar changes, keep 100% off-plan sales within handover, and re-reconcile Nad Al Sheba Plot 2 without balance sweeps
 - [x] Re-audit Al Jaddaf, Nad Al Sheba Plot 1, and Plot 3 Villas against current Payment Plan sources; rebuild only stale results and reconcile capital and investor profit to feasibility
 - [x] Verify every Capital Portfolio project row is an exact calendar-aligned copy of that project's final Investor Cash Flow row, and that portfolio totals equal the sum of rows, without changing the report
+- [x] Change the Capital Portfolio summary profit card to investor net profit and add profit-on-cost and profit-on-required-capital percentages inside the existing card dimensions
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

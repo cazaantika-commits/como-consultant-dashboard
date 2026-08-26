@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateCompleteInvestorCashFlowProfit,
   calculateFinalCashFlowProfit,
+  calculateProfitPercentage,
   calculateProfitReconciliationDifference,
   formatCashFlowAmount,
 } from "../pages/V2CapitalPortfolio";
@@ -23,5 +24,12 @@ describe("Capital Portfolio final cash-flow formatting", () => {
     const cashFlowProfit = calculateCompleteInvestorCashFlowProfit(18_900_000, futureMonthlyNet);
     expect(cashFlowProfit).toBe(5_550_660);
     expect(calculateProfitReconciliationDifference(cashFlowProfit, 5_550_660)).toBe(0);
+  });
+
+  it("calculates investor profit percentages on cost and required capital without changing profit", () => {
+    const investorProfit = 164_777_749.24044985;
+    expect(calculateProfitPercentage(investorProfit, 900_646_474.423)).toBeCloseTo(18.295497059, 6);
+    expect(calculateProfitPercentage(investorProfit, 466_450_553.3723883)).toBeCloseTo(35.3258771051, 6);
+    expect(calculateProfitPercentage(investorProfit, 0)).toBe(0);
   });
 });
