@@ -1662,15 +1662,15 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   if (!isScenario3 && !isScenario4 && !isBuildForSale) {
     // رأس مال المستثمر = كل ما دفعه (مصاريف المستثمر + وديعة الضمان)
     const investorCapital = costs.totalInvestor;
-    // الدفعة 1: ما يصل للمستثمر عند التصفية الأولى بعد الإنجاز.
-    const totalReceivedByLiq1 = directRevenue + escrowLiquidation;
-    // يسترد المستثمر رأس ماله أولاً. يُوزَّع الربح المتحقق فقط في الإفراج الأول؛
-    // ويُدفع الرصيد من حصة كومو مع الإفراج النهائي بعد تسوية الالتزامات المتبقية.
+    // الدفعة 1: التحويل الفعلي الخارج من حساب الضمان في الإقفال الأول فقط.
+    // مبيعات ما بعد الإنجاز المباشرة لا تدخل هذا الإقفال لأنها تصل لاحقاً في حساب المستثمر.
+    // يسترد المستثمر رأس ماله أولاً؛ ثم يُوزَّع الربح المتحقق من تحويل الضمان فقط.
+    // الرصيد من حصة كومو يبقى للإقفال النهائي بعد تسوية الالتزامات المتبقية.
     const projectProfit = totalRevenue - costs.totalCosts;
     const comoAllocation = allocateDeveloperProfitShare(
       projectProfit,
       tr.developerFeePct,
-      totalReceivedByLiq1,
+      escrowLiquidation,
       investorCapital,
     );
     

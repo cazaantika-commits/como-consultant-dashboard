@@ -29,6 +29,8 @@ describe("portfolio investor cash-flow aggregation", () => {
     const portfolio = alignPortfolioMonthlyNetFlows(projects);
 
     expect(portfolio.monthDates).toEqual(["2027-01", "2027-02", "2027-03"]);
+    expect(portfolio.rows[0].values).toEqual([-100, 30, 200]);
+    expect(portfolio.rows[1].values).toEqual([0, -40, 80]);
     expect(portfolio.debitTotals).toEqual([100, 60, 0]);
     expect(portfolio.creditTotals).toEqual([0, 50, 280]);
     expect(portfolio.totals).toEqual([-100, -10, 280]);

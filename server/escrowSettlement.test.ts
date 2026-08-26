@@ -38,6 +38,27 @@ describe("calculateEscrowSettlement", () => {
     expect(scheduledAllocation).toBe(comoAllocation.totalCost);
   });
 
+  it("bases the first COMO payment on the first escrow transfer and excludes direct post-completion sales", () => {
+    const project = {
+      preConMonths: 4,
+      constructionMonths: 12,
+      manualBuaSqft: 10_000,
+      estimatedConstructionPricePerSqft: 400,
+      residential1brCount: 20,
+      residential1brArea: 750,
+      residential1brPrice: 2_000,
+    };
+    const result = computeInvestorCashFlow(project, "offplan_escrow");
+    const firstEscrowTransfer = result.rows.find((row) => row.label === "تصفية حساب الضمان (دفعة 1)")!;
+    const directSales = result.rows.find((row) => row.label.includes("مبيعات مباشرة بعد الإنجاز"))!;
+    const comoAllocation = result.rows.find((row) => row.label.includes("حصة المطور من الأرباح"))!;
+    const capital = calculateInvestorCapitalSummary(result).requiredCapital;
+    const expectedFirstPayment = Math.max(0, firstEscrowTransfer.totalCost - capital) * 0.15;
+
+    expect(directSales.postConstructionMonths[2]).toBe(0);
+    expect(comoAllocation.postConstructionMonths[2]).toBe(expectedFirstPayment);
+  });
+
   it("identifies the first and deepest genuine liquidity deficit from the shared monthly escrow balance", () => {
     expect(summarizeEscrowLiquidity([0, 20, -10, -35, -5])).toEqual({
       hasDeficit: true,

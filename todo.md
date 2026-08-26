@@ -1585,3 +1585,5 @@
 - [x] Set the off-plan investor cash-flow Como share to exactly 15% of final project profit and keep payment timing as a distribution of that fixed total only
 - [x] Distribute the fixed Como profit share back-to-back with the two escrow releases, without deducting from investor capital or changing the fixed total
 - [x] Calculate Como's first settlement share only from realised profit after investor capital recovery, then calculate its final share from the net second release after remaining obligations
+- [x] Base the first Como profit-share payment only on the actual first escrow transfer, excluding direct sales receipts that arrive in later investor months
+- [x] Verify that Capital Portfolio only copies the final monthly investor-flow row after each project calculation and does not recompute any profit-share amount
