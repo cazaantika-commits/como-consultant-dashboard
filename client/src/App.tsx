@@ -77,7 +77,6 @@ import GeneralRequests from "./pages/GeneralRequests";
 import InternalMessages from "./pages/InternalMessages";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 import V2InvestorCashFlow from "./pages/V2InvestorCashFlow";
-import V2Portfolio from "./pages/V2Portfolio";
 import V2EscrowCashFlow from "./pages/V2EscrowCashFlow";
 import V2Feasibility from "./pages/V2Feasibility";
 import V2WaelSales from "./pages/V2WaelSales";
@@ -163,7 +162,6 @@ function Router() {
       <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
       <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
       <Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />
-      <Route path="/v2/portfolio" component={V2Portfolio} />
       <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />
       <Route path="/v2/feasibility" component={V2Feasibility} />
       <Route path="/v2/wael-sales" component={V2WaelSales} />

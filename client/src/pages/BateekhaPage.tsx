@@ -8,14 +8,11 @@ import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
 import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
 import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
 import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
-import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
 import { default as LayoutGrid } from "lucide-react/dist/esm/icons/layout-grid.js";
 import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
 import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
-import { default as TableProperties } from "lucide-react/dist/esm/icons/table-properties.js";
 import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import { default as Layers3 } from "lucide-react/dist/esm/icons/layers-3.js";
-import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -30,9 +27,6 @@ const SettingsRulesPage = lazy(() => import("./SettingsRulesPage"));
 const V2InvestorCashFlow = lazy(() => import("./V2InvestorCashFlow"));
 const V2EscrowCashFlow = lazy(() => import("./V2EscrowCashFlow"));
 const V2Feasibility = lazy(() => import("./V2Feasibility"));
-const V2Portfolio = lazy(() => import("./V2Portfolio"));
-const V2PortfolioMonthly = lazy(() => import("./V2PortfolioMonthly"));
-const V2PortfolioEscrowLiquidity = lazy(() => import("./V2PortfolioEscrowLiquidity"));
 const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
 const V2UnifiedGroupCashFlow = lazy(() => import("./V2UnifiedGroupCashFlow"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
@@ -67,9 +61,6 @@ const TABS: { id: TabId; label: string; description: string; icon: any; projectS
   { id: "escrow", label: "تدفقات الإسكرو", description: "حساب الضمان والحركات المعتمدة", icon: Landmark, projectScoped: true },
   { id: "feasibility", label: "دراسة الجدوى", description: "العائد والتكلفة ورأس المال", icon: FileText, projectScoped: true },
   { id: "mall", label: "المركز التجاري", description: "ملحقات المشروع التجارية", icon: Building2, projectScoped: true },
-  { id: "portfolio", label: "تجميع المشاريع", description: "صافي التدفقات لجميع المشاريع", icon: Briefcase, projectScoped: false },
-  { id: "portfolio_monthly", label: "العرض الشهري", description: "قراءة شهرية للمحفظة", icon: TableProperties, projectScoped: false },
-  { id: "portfolio_escrow_liquidity", label: "سيولة الإسكرو", description: "إنذار العجز والمقارنة الشهرية", icon: ShieldAlert, projectScoped: false },
   { id: "capital_portfolio", label: "محفظة رأس المال", description: "رأس المال والعوائد المجمعة", icon: WalletCards, projectScoped: false },
   { id: "unified_group_cashflow", label: "التدفقات الموحدة", description: "كل المشاريع وحركة المجموعة الشهرية", icon: Layers3, projectScoped: false },
 ];
@@ -86,9 +77,6 @@ function TabContent({ tabId }: { tabId: TabId }) {
     case "escrow": return <V2EscrowCashFlow />;
     case "feasibility": return <V2Feasibility embedded />;
     case "mall": return <div className="flex flex-col items-center justify-center gap-2 py-12 text-center"><Building2 className="h-8 w-8 text-slate-300" /><p className="text-xs text-slate-500">المركز التجاري — قيد الإعداد</p></div>;
-    case "portfolio": return <V2Portfolio />;
-    case "portfolio_monthly": return <V2PortfolioMonthly embedded />;
-    case "portfolio_escrow_liquidity": return <V2PortfolioEscrowLiquidity />;
     case "capital_portfolio": return <V2CapitalPortfolio embedded />;
     case "unified_group_cashflow": return <V2UnifiedGroupCashFlow />;
     default: return null;

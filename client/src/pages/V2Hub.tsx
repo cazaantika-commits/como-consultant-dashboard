@@ -1,7 +1,6 @@
 import { useLocation } from "wouter";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
-import { default as Briefcase } from "lucide-react/dist/esm/icons/briefcase.js";
 import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
 import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
 import { default as Users } from "lucide-react/dist/esm/icons/users.js";
@@ -15,14 +14,6 @@ const V2_PAGES = [
     icon: TrendingDown,
     color: "bg-red-50 border-red-200 text-red-700",
     iconBg: "bg-red-100",
-  },
-  {
-    title: "المحفظة الاستثمارية",
-    description: "تجميع المشاريع — التدفقات المجمّعة",
-    path: "/v2/portfolio",
-    icon: Briefcase,
-    color: "bg-teal-50 border-teal-200 text-teal-700",
-    iconBg: "bg-teal-100",
   },
   {
     title: "تدفقات الإسكرو",

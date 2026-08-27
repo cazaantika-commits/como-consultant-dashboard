@@ -14,9 +14,8 @@ describe("Financial Studies approved outlined-card visual language", () => {
   const pricing = source("client/src/pages/PricingPage.tsx");
   const timeline = source("client/src/pages/TimelinePage.tsx");
   const settings = source("client/src/pages/SettingsRulesPage.tsx");
-  const portfolio = source("client/src/pages/V2Portfolio.tsx");
-  const portfolioMonthly = source("client/src/pages/V2PortfolioMonthly.tsx");
   const capitalPortfolio = source("client/src/pages/V2CapitalPortfolio.tsx");
+  const unifiedGroupCashFlow = source("client/src/pages/V2UnifiedGroupCashFlow.tsx");
 
   it("defines reusable light outlined cards and clean colored pills", () => {
     expect(styles).toContain("FINANCIAL STUDIES — APPROVED OUTLINED CARD LANGUAGE");
@@ -29,7 +28,7 @@ describe("Financial Studies approved outlined-card visual language", () => {
   });
 
   it("applies the language to the Financial Studies board, input pages, planning canvas, and reports", () => {
-    [board, construction, investor, escrow, feasibility, pricing, timeline, settings, portfolio, portfolioMonthly, capitalPortfolio]
+    [board, construction, investor, escrow, feasibility, pricing, timeline, settings, capitalPortfolio]
       .forEach((page) => expect(page).toContain("fs-card"));
     expect(board).toContain("financial-studies-language");
     expect(construction).toContain("fs-pill fs-pill-teal");
@@ -37,5 +36,7 @@ describe("Financial Studies approved outlined-card visual language", () => {
     expect(escrow).not.toContain('rounded-2xl bg-slate-950 p-5 text-white');
     expect(timeline).toContain("fs-pill fs-pill-blue");
     expect(settings).toContain("fs-pill fs-pill-emerald");
+    expect(unifiedGroupCashFlow).toContain("التدفقات النقدية الموحدة للمجموعة");
+    expect(unifiedGroupCashFlow).toContain("تطوير قبل التشغيل");
   });
 });

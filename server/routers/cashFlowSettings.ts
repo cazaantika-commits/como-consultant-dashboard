@@ -43,7 +43,6 @@ import { buildSalesResultFromSavedPlan } from "../../client/src/lib/salesPlanCas
 import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFlowNet";
 import { buildInvestorMonthlyFundingTrace, buildInvestorMonthlyTrace } from "../../client/src/lib/financialTraceBreakdown";
 import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
-import { calculateEscrowMonthlyBalance, summarizeEscrowLiquidity } from "../../client/src/lib/escrowSettlement";
 import {
   buildUnifiedGroupCashFlow,
   type GroupCashFlowProjectMonthlyNet,
@@ -2611,50 +2610,6 @@ export const cashFlowSettingsRouter = router({
     });
 
     return buildUnifiedGroupCashFlow(sourceRows);
-  }),
-
-  /**
-   * Read-only Off-Plan escrow liquidity source for portfolio comparison and
-   * early warnings. It reuses the same engine rows and monthly balance helper
-   * displayed in each project's Sales and Escrow reports.
-   */
-  getPortfolioEscrowLiquidity: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
-    const db = await getDb();
-    if (!db) return [];
-    const [allProjects, allPlans] = await Promise.all([
-      db.select().from(projects),
-      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
-    ]);
-    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
-    for (const plan of allPlans) {
-      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
-    }
-
-    return allProjects
-      .filter((project) => (project.financingScenario || "offplan_escrow") === "offplan_escrow")
-      .map((project) => {
-        const savedPlan = newestPlanByProject.get(project.id);
-        const salesResult = buildSalesResultFromSavedPlan(savedPlan, project, "offplan_escrow");
-        const cashFlow = computeInvestorCashFlow(project, "offplan_escrow", undefined, salesResult);
-        const balance = calculateEscrowMonthlyBalance({
-          rows: cashFlow.rows,
-          designDuration: cashFlow.designDuration,
-          constructionDuration: cashFlow.constructionDuration,
-          postDuration: cashFlow.postDuration,
-          salesResult: cashFlow.usedSalesResult || salesResult,
-        });
-        const liquidity = summarizeEscrowLiquidity(balance.cumulative);
-        return {
-          projectId: project.id,
-          name: project.name,
-          monthDates: cashFlow.monthDates.slice(0, balance.cumulative.length),
-          balances: balance.cumulative,
-          hasSavedPlan: Boolean(savedPlan),
-          planStatus: savedPlan?.status || "default",
-          liquidity,
-        };
-      });
   }),
 
   /** Creates the requested approved initial Wael plan only where no plan exists. */

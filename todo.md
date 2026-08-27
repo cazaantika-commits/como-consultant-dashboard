@@ -1619,4 +1619,7 @@
 - [x] Build a unified group cash-flow report by copying approved final project cash-flow rows, audit the commercial-center rental source before inclusion, and add a Command Center next-months decision summary without parallel financial calculations
 - [x] Include the Commercial Center in the unified report as audited development cash flows only until a separately approved monthly rental and operating source exists; prohibit any invented rental or operating movements
 - [x] Keep all existing final project-source months while excluding all long-range rental and operating projections for the Commercial Center; limit the Command Center decision view to 3 or 4 upcoming months
+- [x] Retire all duplicate project-aggregation report entries from user navigation by deleting their active code, leaving Capital Portfolio, its transposed view, and Unified Group Cash Flow as the only group reports
+- [x] Ensure every Command Center cash-flow link and decision panel reads only the Unified Group Cash Flow source, never a legacy project-aggregation endpoint
+- [x] Delete the legacy project-aggregation report components, their routes, and their obsolete aggregation endpoint from the active application; retain recoverability only through version history
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

@@ -21,13 +21,16 @@ describe("external portfolio consolidation", () => {
     expect(programCashFlowSource).not.toContain("محفظة المشاريع");
   });
 
-  it("keeps all portfolio reporting inside Financial Studies", () => {
+  it("keeps only the approved Capital Portfolio and Unified Group Cash Flow reporting inside Financial Studies", () => {
     expect(appSource).toContain('path="/bateekha"');
-    expect(financialStudiesSource).toContain('id: "portfolio"');
-    expect(financialStudiesSource).toContain('id: "portfolio_monthly"');
     expect(financialStudiesSource).toContain('id: "capital_portfolio"');
-    expect(financialStudiesSource).toContain("V2Portfolio");
+    expect(financialStudiesSource).toContain('id: "unified_group_cashflow"');
     expect(financialStudiesSource).toContain("V2CapitalPortfolio");
+    expect(financialStudiesSource).toContain("V2UnifiedGroupCashFlow");
+    expect(financialStudiesSource).not.toContain('id: "portfolio"');
+    expect(financialStudiesSource).not.toContain('id: "portfolio_monthly"');
+    expect(financialStudiesSource).not.toContain('id: "portfolio_escrow_liquidity"');
+    expect(financialStudiesSource).not.toContain("V2PortfolioMonthly");
     expect(financialStudiesSource).toContain('const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));');
     expect(financialStudiesSource).not.toContain('(!selectedProjectId || tab.projectScoped)');
   });
@@ -40,6 +43,12 @@ describe("external portfolio consolidation", () => {
       "client/src/pages/PortfolioSummaryReport.tsx",
       "client/src/pages/PortfolioView.tsx",
       "client/src/pages/WorkProgramHub.tsx",
+      "client/src/pages/V2Portfolio.tsx",
+      "client/src/pages/V2PortfolioMonthly.tsx",
+      "client/src/pages/V2PortfolioEscrowLiquidity.tsx",
+      "client/src/components/ExecutivePortfolioReports.tsx",
+      "client/src/components/ExecutiveFourMonthFocus.tsx",
+      "client/src/lib/executivePortfolioReports.ts",
     ].forEach((relativePath) => {
       expect(fs.existsSync(path.resolve(process.cwd(), relativePath))).toBe(false);
     });

@@ -144,8 +144,6 @@ describe("Consolidated report source trace", () => {
 
   it("keeps every consolidated report connected to the shared clickable source-trace dialog", () => {
     const traceSource = readSource("client/src/components/FinancialSourceTrace.tsx");
-    const aggregationSource = readSource("client/src/pages/V2Portfolio.tsx");
-    const monthlySource = readSource("client/src/pages/V2PortfolioMonthly.tsx");
     const capitalSource = readSource("client/src/pages/V2CapitalPortfolio.tsx");
     const unifiedSource = readSource("client/src/pages/V2UnifiedGroupCashFlow.tsx");
     const commandCenterSource = readSource("client/src/components/ExecutiveCashFlowAlert.tsx");
@@ -155,10 +153,6 @@ describe("Consolidated report source trace", () => {
     expect(traceSource).toContain("تفصيل التجميع");
     expect(traceSource).toContain("تفصيل بنود الحركة");
     expect(traceSource).toContain("التحصيلات − المصاريف = صافي الشهر");
-    expect(aggregationSource).toContain("FinancialSourceValue");
-    expect(aggregationSource).toContain("صافي الشهر من تدفقات المستثمر");
-    expect(monthlySource).toContain("FinancialSourceValue");
-    expect(monthlySource).toContain("صافي الشهر من تدفقات المستثمر");
     expect(capitalSource).toContain("FinancialSourceValue");
     expect(capitalSource).toContain("إجمالي الإيرادات");
     expect(capitalSource).toContain("التكلفة الكلية");

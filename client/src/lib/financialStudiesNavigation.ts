@@ -10,9 +10,6 @@ export type FinancialStudiesTabId =
   | "escrow"
   | "feasibility"
   | "mall"
-  | "portfolio"
-  | "portfolio_monthly"
-  | "portfolio_escrow_liquidity"
   | "capital_portfolio"
   | "unified_group_cashflow";
 

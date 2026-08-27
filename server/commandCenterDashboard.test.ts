@@ -45,11 +45,12 @@ describe("Command Center dashboard card registry", () => {
     expect(source).toContain("لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة");
   });
 
-  it("mounts the executive portfolio section for all Command Center members", () => {
-    expect(source).toContain("canOpenExecutivePortfolioReports(member?.memberId)");
-    expect(source).toContain('activeBubble === "executive_portfolio_reports")');
-    expect(source).toContain("<ExecutivePortfolioReports onBack");
-    expect(source).not.toContain("هذه التقارير مخصصة للشيخ عيسى");
+  it("removes the executive legacy-portfolio section and opens the Unified Group Cash Flow report only", () => {
+    expect(source).not.toContain("canOpenExecutivePortfolioReports");
+    expect(source).not.toContain('activeBubble === "executive_portfolio_reports")');
+    expect(source).not.toContain("ExecutivePortfolioReports");
+    expect(source).toContain("<ExecutiveCashFlowAlert");
+    expect(source).toContain('navigate("/bateekha?tab=unified_group_cashflow")');
   });
 
   it("uses a generic assistant icon on mobile rather than the secretary image", () => {
@@ -64,7 +65,7 @@ describe("Command Center dashboard card registry", () => {
   });
 
   it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
-    expect(source).toContain('layla-closeup-advisor_5627b39e.png');
+    expect(source).toContain('layla-command-center-portrait_2ede5e10.jpg');
     expect(source).toContain('تحدث مع ليلى');
     expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));

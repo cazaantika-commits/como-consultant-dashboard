@@ -113,8 +113,6 @@ import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
-import { ExecutivePortfolioReports } from "@/components/ExecutivePortfolioReports";
-import { canOpenExecutivePortfolioReports } from "@/lib/executivePortfolioReports";
 
 const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
 
@@ -4183,8 +4181,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const utils = trpc.useUtils();
 
   const unreadCount = notifications.data?.filter((n: any) => !n.isRead).length || 0;
-  const canOpenExecutiveReports = canOpenExecutivePortfolioReports(member?.memberId);
-
   const handleMarkAllRead = async () => {
     await markAllRead.mutateAsync({ token });
     utils.commandCenter.getNotifications.invalidate({ token });
@@ -4197,17 +4193,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     const interval = setInterval(runCheck, 30 * 60 * 1000); // every 30 min
     return () => clearInterval(interval);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // If viewing work schedule (read-only)
-  if (activeBubble === "executive_portfolio_reports") {
-    return (
-      <div className="min-h-screen bg-slate-50" dir="rtl">
-        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
-        <ExecutivePortfolioReports onBack={() => setActiveBubble(null)} />
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
-      </div>
-    );
-  }
 
   // If viewing work schedule (read-only)
   if (activeBubble === "work_schedule" && showWorkSchedule) {
@@ -4445,7 +4430,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </section>
 
         <section className="mb-4">
-          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=unified_group_cashflow")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
+          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=unified_group_cashflow")} />
         </section>
 
         <ApprovedProjectChanges token={token} />
@@ -4670,16 +4655,6 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <CardTile bubble={BUBBLES[5]} size="md" />
                 </div>
               </div>
-
-              {canOpenExecutiveReports && (
-                <div>
-                  <div className="mb-2 flex items-center gap-2"><div className="h-4 w-1 rounded-full bg-slate-400" /><span className="text-[11px] font-black tracking-wide text-slate-700">تقارير المحفظة</span></div>
-                  <button onClick={() => setActiveBubble("executive_portfolio_reports")} className="group flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 text-right shadow-sm transition hover:border-slate-300 hover:shadow-md">
-                    <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white"><Briefcase className="h-5 w-5" /></span><div><p className="text-sm font-black text-slate-900">تقارير المحفظة التنفيذية</p><p className="mt-0.5 text-xs text-slate-500">التجميع، العرض الشهري، السيولة، ورأس المال</p></div></div>
-                    <span className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-600">عرض</span>
-                  </button>
-                </div>
-              )}
 
               {/* ═══ OTHER SECTION ═══ */}
               <div>

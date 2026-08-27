@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
 import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
 import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
 import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
@@ -29,7 +28,6 @@ function formatAmount(value: number) {
 
 type ExecutiveCashFlowAlertProps = {
   onOpenFullReport: () => void;
-  onOpenLiquidityReport?: () => void;
 };
 
 /**
@@ -37,21 +35,15 @@ type ExecutiveCashFlowAlertProps = {
  * the completed Unified Group Cash Flow report: negative = funding required,
  * positive = money returned. No cash-flow engine is duplicated here.
  */
-export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidityReport }: ExecutiveCashFlowAlertProps) {
+export default function ExecutiveCashFlowAlert({ onOpenFullReport }: ExecutiveCashFlowAlertProps) {
   const [horizon, setHorizon] = useState<3 | 4>(4);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
   const unifiedReportQuery = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(undefined, { staleTime: 0 });
-  const escrowLiquidityQuery = trpc.cashFlowSettings.getPortfolioEscrowLiquidity.useQuery(undefined, { staleTime: 0 });
   const report = unifiedReportQuery.data as UnifiedGroupCashFlow | null | undefined;
 
   const liquidity = useMemo(() => report ? buildUnifiedGroupLiquidity(report, { horizon }) : null, [report, horizon]);
   const alertMonths = liquidity?.months || [];
   const summary = liquidity?.summary || { required: 0, returned: 0, netFunding: 0 };
-  const escrowDeficits = (escrowLiquidityQuery.data || []).filter((project: any) => project.liquidity?.hasDeficit);
-  const earliestEscrowDeficit = escrowDeficits
-    .map((project: any) => ({ project, index: project.liquidity.firstDeficitIndex as number }))
-    .sort((left, right) => left.project.monthDates[left.index].localeCompare(right.project.monthDates[right.index]))[0];
-
   if (unifiedReportQuery.isLoading) {
     return <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-500">جاري تجهيز ملخص التدفقات الموحدة...</div>;
   }
@@ -115,11 +107,6 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidi
           </div>;
         })}
       </div>
-
-      {earliestEscrowDeficit && <div className="mx-5 mb-5 flex flex-col gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between" data-testid="executive-escrow-deficit-alert">
-        <div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700"><AlertTriangle className="h-4 w-4" /></span><div><p className="text-xs font-black text-red-800">إنذار مبكر: عجز سيولة في حسابات الضمان</p><p className="mt-1 text-xs leading-5 text-red-700">{escrowDeficits.length} مشاريع تحتاج قراراً. أول عجز: <strong>{earliestEscrowDeficit.project.name}</strong> في {monthLabel(earliestEscrowDeficit.project.monthDates[earliestEscrowDeficit.index])} بقيمة {formatAmount(earliestEscrowDeficit.project.liquidity.firstDeficit)} درهم.</p></div></div>
-        {onOpenLiquidityReport && <button onClick={onOpenLiquidityReport} className="shrink-0 rounded-xl border border-red-300 bg-white px-4 py-2 text-xs font-black text-red-700 transition hover:bg-red-100">فتح مقارنة سيولة الإسكرو</button>}
-      </div>}
 
       <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-slate-500">المصدر هو التقرير الموحد نفسه: صف صافي الشهر النهائي لكل مشروع، مع المركز التجاري كتطوير قبل التشغيل فقط؛ لا توجد أي حسابات أو إيجارات جديدة هنا.</p>
