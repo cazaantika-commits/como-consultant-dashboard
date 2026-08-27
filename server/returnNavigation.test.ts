@@ -27,6 +27,10 @@ describe("return navigation", () => {
   it("keeps Financial Studies card navigation one step deep and returns to its actual opener", () => {
     const studies = source("client/src/pages/BateekhaPage.tsx");
     expect(studies).toContain('navigate(withReturnPath(`/bateekha?tab=${tab.id}`, "/bateekha"))');
+    expect(studies).toContain("setActiveTab(tab.id)");
+    expect(studies).toContain("syncActiveTabFromUrl");
+    expect(studies).toContain('window.addEventListener("popstate", syncActiveTabFromUrl)');
+    expect(studies).toContain("setActiveTab(null);");
     expect(studies).toContain("resolveReturnPath(");
     expect(studies).toContain("العودة إلى الصفحة السابقة");
     expect(studies).toContain("<V2EscrowCashFlow embedded />");

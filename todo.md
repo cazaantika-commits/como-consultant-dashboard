@@ -1632,4 +1632,5 @@
 - [x] Add a concise Layla voice-only opening briefing in Command Center from approved task, decision, and unified cash-flow sources, with a user-triggered fallback if autoplay is blocked
 - [x] Personalize Layla's opening voice greeting and decision emphasis by the authenticated Command Center member and role
 - [x] Use the available local browser female voice for Layla's opening briefing and chat read-aloud while the external TTS credential remains unavailable
+- [x] Fix all Financial Studies project-selection cards that fail to open their selected report, preserving the currently selected project across the transition
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

@@ -98,16 +98,22 @@ export default function BateekhaPage() {
   }, [projectType]);
 
   useEffect(() => {
-    const requestedTabParam = new URLSearchParams(window.location.search).get("tab");
-    // Older Financial Studies links used "pricing" for Wael's unified sales and
-    // marketing canvas. Keep these links valid when the page is reopened.
-    const requestedTab = (requestedTabParam === "pricing" ? "sales" : requestedTabParam) as TabId | null;
-    if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && isFinancialStudiesTabVisible(requestedTab, projectType)) {
-      setActiveTab(requestedTab);
-    } else if (!requestedTab) {
-      setActiveTab(null);
-    }
-  }, [location, projectType]);
+    const syncActiveTabFromUrl = () => {
+      const requestedTabParam = new URLSearchParams(window.location.search).get("tab");
+      // Older Financial Studies links used "pricing" for Wael's unified sales and
+      // marketing canvas. Keep these links valid when the page is reopened.
+      const requestedTab = (requestedTabParam === "pricing" ? "sales" : requestedTabParam) as TabId | null;
+      if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && isFinancialStudiesTabVisible(requestedTab, projectType)) {
+        setActiveTab(requestedTab);
+      } else {
+        setActiveTab(null);
+      }
+    };
+
+    syncActiveTabFromUrl();
+    window.addEventListener("popstate", syncActiveTabFromUrl);
+    return () => window.removeEventListener("popstate", syncActiveTabFromUrl);
+  }, [projectType]);
 
   // Portfolio reports are company-wide reports. They stay visible after choosing a
   // project so the project picker never makes the three consolidated reports vanish.
@@ -115,7 +121,16 @@ export default function BateekhaPage() {
   const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
   const selectTab = (tab: (typeof TABS)[number]) => {
     if (tab.projectScoped && !selectedProjectId) return;
+    // Wouter tracks the pathname while these reports share `/bateekha` and only
+    // change the query string. Update local state as the click happens rather
+    // than waiting for a pathname change that may never occur.
+    setActiveTab(tab.id);
     navigate(withReturnPath(`/bateekha?tab=${tab.id}`, "/bateekha"));
+  };
+
+  const returnFromTab = () => {
+    setActiveTab(null);
+    navigate(resolveReturnPath(window.location.search, "/bateekha"));
   };
 
   return (
@@ -158,7 +173,7 @@ export default function BateekhaPage() {
         </main>
       ) : (
         <div className="w-full">
-          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
+          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={returnFromTab} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
           <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} /></Suspense>
         </div>
       )}
