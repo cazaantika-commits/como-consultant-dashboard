@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 import {
   cloneFlexiblePaymentPlan,
   normalizeFlexiblePaymentPlan,
@@ -74,7 +75,7 @@ function newEntry(rule: PaymentCalendarTimingRule, sequence: number, milestone?:
 }
 
 export default function V2PaymentPlan() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -242,7 +243,7 @@ export default function V2PaymentPlan() {
   };
 
   if (!selectedProjectId || !project) {
-    return <main dir="rtl" className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-4 sm:p-5"><div className="mx-auto w-full max-w-3xl rounded-3xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8"><Landmark className="mx-auto h-9 w-9 text-indigo-600" /><h1 className="mt-3 text-2xl font-black text-slate-950">خطة سداد المشترين</h1><p className="mt-2 text-sm text-slate-600">اختر مشروعًا أولًا؛ بعدها ستظهر لك الدفعات وتواريخها مباشرة.</p><div className="mx-auto mt-5 w-full max-w-sm"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /></div></div></main>;
+    return <main dir="rtl" className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-4 sm:p-5"><div className="mx-auto w-full max-w-3xl rounded-3xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8"><Landmark className="mx-auto h-9 w-9 text-indigo-600" /><h1 className="mt-3 text-2xl font-black text-slate-950">خطة سداد المشترين</h1><p className="mt-2 text-sm text-slate-600">اختر مشروعًا أولًا؛ بعدها ستظهر لك الدفعات وتواريخها مباشرة.</p><div className="mx-auto mt-5 flex w-full max-w-sm flex-col gap-3"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button></div></div></main>;
   }
 
   return (
@@ -251,7 +252,7 @@ export default function V2PaymentPlan() {
         <header className="overflow-hidden rounded-[26px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_52%,#ecfeff)] shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
           <div className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
             <div><div className="flex items-center gap-2 text-xs font-black text-indigo-700"><CalendarDays className="h-4 w-4" />خطة سداد المشترين</div><h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">الدفعات كما يراها المشتري</h1><p className="mt-2 text-sm font-medium text-slate-700">راجع كل دفعة: كم نسبتها ومتى تستحق. اضغط أي دفعة فقط إذا أردت تعديلها.</p></div>
-            <div className="flex flex-wrap items-center gap-2"><div className="min-w-[210px]"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /></div><Button variant="outline" onClick={() => navigate("/v2/wael-sales")} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />مساحة وائل</Button><Button onClick={save} disabled={saveCalendar.isPending} className="bg-indigo-700 text-white hover:bg-indigo-600"><Save className="ml-1 h-4 w-4" />حفظ الخطة</Button></div>
+            <div className="flex flex-wrap items-center gap-2"><div className="min-w-[210px]"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /></div><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button><Button onClick={save} disabled={saveCalendar.isPending} className="bg-indigo-700 text-white hover:bg-indigo-600"><Save className="ml-1 h-4 w-4" />حفظ الخطة</Button></div>
           </div>
           <div className="grid border-t border-indigo-200 bg-white/70 sm:grid-cols-4"><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">بدء البيع</p><p className="mt-1 font-black text-indigo-950">{formatProjectMonth(projectStartDate, salesStartMonth)}</p></div><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">بدء الإنشاء</p><p className="mt-1 font-black text-slate-950">{formatProjectMonth(projectStartDate, timing.constructionStartMonth)}</p></div><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">التسليم</p><p className="mt-1 font-black text-emerald-800">{formatProjectMonth(projectStartDate, constructionEndMonth)}</p></div><div className="px-5 py-3"><p className="text-[10px] font-black text-slate-500">مجموع الخطة</p><p className="mt-1 font-black text-slate-950">{total}%</p></div></div>
         </header>

@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { withReturnPath } from "@/lib/returnNavigation";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
 import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
@@ -82,7 +83,7 @@ export default function V2Hub() {
             return (
               <button
                 key={page.path}
-                onClick={() => navigate(page.path)}
+                onClick={() => navigate(withReturnPath(page.path, "/v2"))}
                 className={`p-6 rounded-xl border-2 ${page.color} text-right transition-all hover:scale-[1.02] hover:shadow-md`}
               >
                 <div className={`w-12 h-12 rounded-lg ${page.iconBg} flex items-center justify-center mb-4`}>

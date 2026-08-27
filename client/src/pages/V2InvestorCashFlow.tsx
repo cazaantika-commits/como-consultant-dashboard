@@ -21,6 +21,7 @@ import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -40,7 +41,7 @@ function formatDate(dateStr: string): string {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
 export default function V2InvestorCashFlow({ embedded = false }: { embedded?: boolean }) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
 
@@ -167,8 +168,8 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
       <div className="sticky top-0 z-40 border-b-2 border-slate-300 bg-white/95 shadow-sm backdrop-blur-sm">
         <div className="mx-auto flex max-w-full flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-5 lg:flex-nowrap lg:gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {!embedded && <button onClick={() => navigate("/bateekha")} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
-              <ArrowRight className="w-4 h-4" />العودة إلى دليل الدراسات
+            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
+              <ArrowRight className="w-4 h-4" />العودة إلى الصفحة السابقة
             </button>}
             <div className="min-w-0">
               <h1 className="text-base font-extrabold text-slate-950">التدفقات النقدية للمستثمر</h1>

@@ -1622,4 +1622,6 @@
 - [x] Retire all duplicate project-aggregation report entries from user navigation by deleting their active code, leaving Capital Portfolio, its transposed view, and Unified Group Cash Flow as the only group reports
 - [x] Ensure every Command Center cash-flow link and decision panel reads only the Unified Group Cash Flow source, never a legacy project-aggregation endpoint
 - [x] Delete the legacy project-aggregation report components, their routes, and their obsolete aggregation endpoint from the active application; retain recoverability only through version history
+- [x] Audit and correct Command Center back navigation so every visible return control follows the actual prior page or panel instead of an unrelated fixed destination
+- [x] Audit and correct return navigation across Investor Cash Flow, Escrow Cash Flow, Feasibility, Capital Portfolio, transposed Portfolio, and Unified Group Cash Flow on desktop and mobile
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

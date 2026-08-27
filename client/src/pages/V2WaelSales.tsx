@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
+import { resolveReturnPath, withReturnPath } from "@/lib/returnNavigation";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -124,7 +125,7 @@ function fmtFull(n: number): string {
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -874,6 +875,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
               {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
+              {!embedded && <Button size="sm" variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="h-10 gap-1.5 border-teal-200 bg-white px-3 text-teal-800 hover:bg-teal-50 hover:text-teal-900"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</Button>}
               <Badge className={hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
               <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -939,7 +941,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                   </div>
                 </section>
 
-                {!isBuildForSale && <section className="flex flex-col gap-4 rounded-[22px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_58%,#ecfeff)] p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[11px] font-black text-indigo-700">خطة سداد المشترين</p><h2 className="mt-1 text-xl font-black text-slate-950">رتّب الدفعات بتواريخها الحقيقية في صفحة مستقلة</h2><p className="mt-1.5 max-w-3xl text-xs font-semibold leading-5 text-slate-700">تشاهد الدفعات المرقمة، والمواعيد الفعلية، وتعديل وائل اليدوي، وحالة المشتري الذي يدخل متأخرًا؛ ثم تعود هنا لاعتماد سيناريو المبيعات والتدفقات.</p></div><Button onClick={() => navigate("/v2/payment-plan")} className="shrink-0 bg-indigo-700 text-white hover:bg-indigo-600"><Calendar className="ml-1 h-4 w-4" />فتح صفحة خطة السداد</Button></section>}
+                {!isBuildForSale && <section className="flex flex-col gap-4 rounded-[22px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_58%,#ecfeff)] p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[11px] font-black text-indigo-700">خطة سداد المشترين</p><h2 className="mt-1 text-xl font-black text-slate-950">رتّب الدفعات بتواريخها الحقيقية في صفحة مستقلة</h2><p className="mt-1.5 max-w-3xl text-xs font-semibold leading-5 text-slate-700">تشاهد الدفعات المرقمة، والمواعيد الفعلية، وتعديل وائل اليدوي، وحالة المشتري الذي يدخل متأخرًا؛ ثم تعود هنا لاعتماد سيناريو المبيعات والتدفقات.</p></div><Button onClick={() => navigate(withReturnPath("/v2/payment-plan", location))} className="shrink-0 bg-indigo-700 text-white hover:bg-indigo-600"><Calendar className="ml-1 h-4 w-4" />فتح صفحة خطة السداد</Button></section>}
 
                 <section data-testid="pricing-source-panel" className="overflow-hidden rounded-[22px] border-2 border-amber-300 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <div className="flex flex-col gap-3 border-b-2 border-amber-200 bg-[linear-gradient(115deg,#fffbeb,#ffffff_55%,#ecfeff)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

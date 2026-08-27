@@ -8,6 +8,7 @@ import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js
 import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
 import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import { useLocation } from "wouter";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useProjectContext } from "@/contexts/ProjectContext";
@@ -32,8 +33,8 @@ function fmt(n: number): string {
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
-export default function V2EscrowCashFlow() {
-  const [, navigate] = useLocation();
+export default function V2EscrowCashFlow({ embedded = false }: { embedded?: boolean } = {}) {
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId } = useProjectContext();
 
@@ -189,9 +190,9 @@ export default function V2EscrowCashFlow() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/v2")} className="p-1.5 rounded-lg hover:bg-gray-100 transition">
+            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="p-1.5 rounded-lg hover:bg-gray-100 transition" aria-label="العودة إلى الصفحة السابقة">
               <ArrowRight className="w-4 h-4 text-gray-600" />
-            </button>
+            </button>}
             <div>
               <h1 className="text-[10px] font-bold text-gray-900">التدفقات النقدية — حساب الضمان (Escrow)</h1>
               <p className="text-[10px] text-gray-500">{projectName}</p>

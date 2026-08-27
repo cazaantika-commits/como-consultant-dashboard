@@ -5,6 +5,7 @@
  * funding sources, and economics per saleable square foot.
  */
 import { useMemo } from "react";
+import { useLocation } from "wouter";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -14,6 +15,8 @@ import { calculateInvestorCapitalSummary, computeInvestorCashFlow, type Scenario
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { formatFullNumber } from "@/lib/numberFormat";
+import { resolveReturnPath } from "@/lib/returnNavigation";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
 import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
@@ -35,6 +38,7 @@ const fmtPct = (n: number) => `${n.toFixed(1)}%`;
 const fmtM = (n: number) => formatFullNumber(n, "0");
 
 export default function V2Feasibility({ embedded }: { embedded?: boolean } = {}) {
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
@@ -134,6 +138,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
     <div className="bg-gradient-to-b from-slate-50 to-white min-h-[400px]" dir="rtl">
       {/* Header */}
       <div className="bg-white border-b border-teal-100/60 px-4 py-2 flex items-center gap-3 sticky top-0 z-10 shadow-sm">
+        {!embedded && <button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100" aria-label="العودة إلى الصفحة السابقة"><ArrowRight className="h-4 w-4" /></button>}
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-700 to-teal-900 flex items-center justify-center shadow-sm">
             <BarChart2 className="w-3.5 h-3.5 text-amber-300" />

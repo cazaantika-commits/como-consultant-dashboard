@@ -113,6 +113,7 @@ import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
+import { withReturnPath } from "@/lib/returnNavigation";
 
 const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
 
@@ -4430,7 +4431,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </section>
 
         <section className="mb-4">
-          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=unified_group_cashflow")} />
+          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate(withReturnPath("/bateekha?tab=unified_group_cashflow", "/command-center"))} />
         </section>
 
         <ApprovedProjectChanges token={token} />
