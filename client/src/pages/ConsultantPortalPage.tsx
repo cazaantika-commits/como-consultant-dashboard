@@ -8,6 +8,7 @@ import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
 import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
 import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
 import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { withReturnPath } from "@/lib/returnNavigation";
 
 const CONSULTANT_WORKFLOW = [
   { step: "01", title: "جهّز طلب العروض", description: "راجِع موجز المشروع والنطاق والبرنامج قبل مخاطبة أي مكتب.", href: "/consultant-appointment-pack", icon: FileText, tone: "border-sky-200 bg-sky-50 text-sky-800" },
@@ -118,7 +119,7 @@ export default function ConsultantPortalPage() {
             {CONSULTANT_WORKFLOW.map((item) => {
               const StepIcon = item.icon;
               return (
-                <Link key={item.step} href={item.href} className="group block">
+                <Link key={item.step} href={withReturnPath(item.href, "/consultant-portal")} className="group block">
                   <article className={`h-full rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${item.tone}`}>
                     <div className="flex items-start gap-3">
                       <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-white/85 px-2 text-xs font-bold shadow-sm">{item.step}</span>
@@ -148,7 +149,7 @@ export default function ConsultantPortalPage() {
             return (
               <Link
                 key={item.id}
-                href={item.href}
+                href={withReturnPath(item.href, "/consultant-portal")}
                 className="group block"
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}

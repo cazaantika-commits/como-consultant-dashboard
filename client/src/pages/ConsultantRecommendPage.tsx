@@ -1,7 +1,7 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
@@ -9,6 +9,7 @@ import { default as Lightbulb } from "lucide-react/dist/esm/icons/lightbulb.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { Streamdown } from "streamdown";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 const CRITERIA = [
   { id: 0, name: "الخبرة والسابقة", weight: 20 },
@@ -20,6 +21,7 @@ const CRITERIA = [
 ];
 
 export default function ConsultantRecommendPage() {
+  const [location] = useLocation();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [recommendation, setRecommendation] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -119,7 +121,7 @@ export default function ConsultantRecommendPage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-stone-700 via-stone-800 to-neutral-900" />
         <div className="relative max-w-4xl mx-auto px-6 py-10">
-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+          <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-portal")} className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             العودة لمكاتب الاستشارات
           </Link>

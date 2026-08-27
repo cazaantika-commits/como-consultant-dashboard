@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,8 +21,10 @@ import { default as Hash } from "lucide-react/dist/esm/icons/hash.js";
 import { default as Plus } from "lucide-react/dist/esm/icons/plus.js";
 import { default as Trash2 } from "lucide-react/dist/esm/icons/trash-2.js";
 import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 export default function ConsultantKnowPage() {
+  const [location] = useLocation();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<any>({});
   const [newConsultantName, setNewConsultantName] = useState("");
@@ -109,7 +111,7 @@ export default function ConsultantKnowPage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-stone-700 via-stone-800 to-neutral-900" />
         <div className="relative max-w-5xl mx-auto px-6 py-10">
-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+          <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-portal")} className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             العودة لمكاتب الاستشارات
           </Link>

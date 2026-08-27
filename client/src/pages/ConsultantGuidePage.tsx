@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
 import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
 import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
@@ -16,6 +16,7 @@ import { default as SlidersHorizontal } from "lucide-react/dist/esm/icons/slider
 import { default as Building } from "lucide-react/dist/esm/icons/building.js";
 import { default as Users } from "lucide-react/dist/esm/icons/users.js";
 import { useState } from "react";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 // ═══ Technical Evaluation Criteria — ordered by weight (highest first) ═══
 const CRITERIA_GUIDE = [
@@ -248,6 +249,7 @@ function CriterionCard({ criterion, index }: { criterion: typeof CRITERIA_GUIDE[
 
 // ═══ Main Guide Page ═══
 export default function ConsultantGuidePage() {
+  const [location] = useLocation();
   const [activeSection, setActiveSection] = useState('overview');
 
   return (
@@ -256,7 +258,7 @@ export default function ConsultantGuidePage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-stone-700 via-stone-800 to-neutral-900" />
         <div className="relative max-w-5xl mx-auto px-6 py-10">
-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+          <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-portal")} className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             العودة لبوابة المكاتب الاستشارية
           </Link>

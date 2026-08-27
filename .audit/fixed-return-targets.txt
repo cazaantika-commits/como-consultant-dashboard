@@ -1,0 +1,155 @@
+client/src/pages/ActivityMonitorPage.tsx-139-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+client/src/pages/ActivityMonitorPage.tsx-140-          <div className="flex items-center gap-3">
+client/src/pages/ActivityMonitorPage.tsx:141:            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+client/src/pages/ActivityMonitorPage.tsx-142-              <ArrowLeft className="w-5 h-5" />
+client/src/pages/ActivityMonitorPage.tsx-143-            </Button>
+--
+client/src/pages/AgentAssignmentsPage.tsx-164-        <div className="container flex items-center justify-between h-16">
+client/src/pages/AgentAssignmentsPage.tsx-165-          <div className="flex items-center gap-3">
+client/src/pages/AgentAssignmentsPage.tsx:166:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-stone-500">
+client/src/pages/AgentAssignmentsPage.tsx-167-              <ArrowRight className="h-4 w-4 ml-1" />
+client/src/pages/AgentAssignmentsPage.tsx-168-              الرئيسية
+--
+client/src/pages/AgentAssignmentsSummaryPage.tsx-165-        <div className="container flex items-center justify-between h-16">
+client/src/pages/AgentAssignmentsSummaryPage.tsx-166-          <div className="flex items-center gap-3">
+client/src/pages/AgentAssignmentsSummaryPage.tsx:167:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-stone-500">
+client/src/pages/AgentAssignmentsSummaryPage.tsx-168-              <ArrowRight className="h-4 w-4 ml-1" />
+client/src/pages/AgentAssignmentsSummaryPage.tsx-169-              الرئيسية
+--
+client/src/pages/AgentDashboardPage.tsx-153-
+client/src/pages/AgentDashboardPage.tsx-154-  if (!isAuthenticated) {
+client/src/pages/AgentDashboardPage.tsx:155:    navigate("/");
+client/src/pages/AgentDashboardPage.tsx-156-    return null;
+client/src/pages/AgentDashboardPage.tsx-157-  }
+--
+client/src/pages/AgentDashboardPage.tsx-208-              variant="outline"
+client/src/pages/AgentDashboardPage.tsx-209-              size="sm"
+client/src/pages/AgentDashboardPage.tsx:210:              onClick={() => navigate("/")}
+client/src/pages/AgentDashboardPage.tsx-211-              className="text-xs gap-1.5"
+client/src/pages/AgentDashboardPage.tsx-212-            >
+--
+client/src/pages/BateekhaPage.tsx-123-      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
+client/src/pages/BateekhaPage.tsx-124-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
+client/src/pages/BateekhaPage.tsx:125:          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-teal-700"><ArrowRight className="h-4 w-4" />الرئيسية</button>
+client/src/pages/BateekhaPage.tsx-126-          <span className="h-5 w-px bg-slate-200" />
+client/src/pages/BateekhaPage.tsx-127-          <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white"><Layers3 className="h-3.5 w-3.5" /></span><h1 className="text-sm font-bold text-slate-900">الدراسات والتخطيط المالي</h1></div>
+--
+client/src/pages/CommandCenterPage.tsx-4350-  return (
+client/src/pages/CommandCenterPage.tsx-4351-    <div className="min-h-screen bg-slate-50" dir="rtl">
+client/src/pages/CommandCenterPage.tsx:4352:      <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} onNavigateHome={() => navigate("/")} />
+client/src/pages/CommandCenterPage.tsx-4353-      <NewsTicker token={token} />
+client/src/pages/CommandCenterPage.tsx-4354-      <main className="mx-auto w-full max-w-5xl px-4 py-4 sm:py-5">
+--
+client/src/pages/ConsultantDashboardPage.tsx-31-            variant="ghost"
+client/src/pages/ConsultantDashboardPage.tsx-32-            size="sm"
+client/src/pages/ConsultantDashboardPage.tsx:33:            onClick={() => navigate("/")}
+client/src/pages/ConsultantDashboardPage.tsx-34-            className="text-white hover:bg-white/20"
+client/src/pages/ConsultantDashboardPage.tsx-35-          >
+--
+client/src/pages/ContractsRegistryPage.tsx-215-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+client/src/pages/ContractsRegistryPage.tsx-216-          <div className="flex items-center gap-3">
+client/src/pages/ContractsRegistryPage.tsx:217:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-white hover:bg-white/20">
+client/src/pages/ContractsRegistryPage.tsx-218-              <ArrowRight className="w-4 h-4 ml-1" />
+client/src/pages/ContractsRegistryPage.tsx-219-              الرئيسية
+--
+client/src/pages/DevelopmentPhasesPage.tsx-382-          {activeView === "icons" ? (
+client/src/pages/DevelopmentPhasesPage.tsx-383-            <>
+client/src/pages/DevelopmentPhasesPage.tsx:384:              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
+client/src/pages/DevelopmentPhasesPage.tsx-385-                <ArrowRight className="w-4 h-4" />
+client/src/pages/DevelopmentPhasesPage.tsx-386-                الرئيسية
+--
+client/src/pages/DevelopmentStagesPage.tsx-1297-              <p className="text-sm text-muted-foreground mt-1">تتبع تقدم المشروع عبر 5 مراحل رئيسية</p>
+client/src/pages/DevelopmentStagesPage.tsx-1298-            </div>
+client/src/pages/DevelopmentStagesPage.tsx:1299:            <Button variant="outline" onClick={() => navigate("/")}>
+client/src/pages/DevelopmentStagesPage.tsx-1300-              العودة للرئيسية
+client/src/pages/DevelopmentStagesPage.tsx-1301-            </Button>
+--
+client/src/pages/DriveBrowserPage.tsx-237-              variant="ghost"
+client/src/pages/DriveBrowserPage.tsx-238-              size="sm"
+client/src/pages/DriveBrowserPage.tsx:239:              onClick={() => navigate("/")}
+client/src/pages/DriveBrowserPage.tsx-240-              className="text-white/80 hover:text-white hover:bg-white/10"
+client/src/pages/DriveBrowserPage.tsx-241-            >
+--
+client/src/pages/EngineComparisonPage.tsx-96-        {/* Header */}
+client/src/pages/EngineComparisonPage.tsx-97-        <div className="flex items-center gap-4 mb-6">
+client/src/pages/EngineComparisonPage.tsx:98:          <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+client/src/pages/EngineComparisonPage.tsx-99-            <ArrowLeft className="w-4 h-4 ml-2" />
+client/src/pages/EngineComparisonPage.tsx-100-            رجوع
+--
+client/src/pages/ExecutionDashboardPage.tsx-195-          <div className="flex items-center justify-between">
+client/src/pages/ExecutionDashboardPage.tsx-196-            <div className="flex items-center gap-3">
+client/src/pages/ExecutionDashboardPage.tsx:197:              <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+client/src/pages/ExecutionDashboardPage.tsx-198-                <ArrowLeft className="h-5 w-5" />
+client/src/pages/ExecutionDashboardPage.tsx-199-              </Button>
+--
+client/src/pages/ExecutiveVIPPage.tsx-629-            {/* Back button */}
+client/src/pages/ExecutiveVIPPage.tsx-630-            <button
+client/src/pages/ExecutiveVIPPage.tsx:631:              onClick={() => navigate("/")}
+client/src/pages/ExecutiveVIPPage.tsx-632-              className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:shadow-lg transition-all"
+client/src/pages/ExecutiveVIPPage.tsx-633-            >
+--
+client/src/pages/FactSheetPage.tsx-463-              {!embedded && (
+client/src/pages/FactSheetPage.tsx-464-                <>
+client/src/pages/FactSheetPage.tsx:465:                  <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground h-7 text-xs">
+client/src/pages/FactSheetPage.tsx-466-                    <ChevronLeft className="h-3.5 w-3.5 ml-1" />الرئيسية
+client/src/pages/FactSheetPage.tsx-467-                  </Button>
+--
+client/src/pages/GeneralRequests.tsx-346-        <div className="flex items-center justify-between mb-2">
+client/src/pages/GeneralRequests.tsx-347-          <div className="flex items-center gap-3">
+client/src/pages/GeneralRequests.tsx:348:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 text-gray-500 hover:text-gray-800 -mr-1">
+client/src/pages/GeneralRequests.tsx-349-              <ArrowRight className="w-4 h-4" />
+client/src/pages/GeneralRequests.tsx-350-              الرئيسية
+--
+client/src/pages/KnowledgeHubPage.tsx-35-export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
+client/src/pages/KnowledgeHubPage.tsx-36-  const [, navigate] = useLocation();
+client/src/pages/KnowledgeHubPage.tsx:37:  const handleBack = onBack || (() => navigate("/"));
+client/src/pages/KnowledgeHubPage.tsx-38-  const { isAuthenticated } = useAuth();
+client/src/pages/KnowledgeHubPage.tsx-39-  const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
+--
+client/src/pages/ModelStatsPage.tsx-83-            </div>
+client/src/pages/ModelStatsPage.tsx-84-          </div>
+client/src/pages/ModelStatsPage.tsx:85:          <Button variant="outline" size="sm" onClick={() => navigate("/")}>
+client/src/pages/ModelStatsPage.tsx-86-            الرئيسية
+client/src/pages/ModelStatsPage.tsx-87-          </Button>
+--
+client/src/pages/NewsTickerManagePage.tsx-114-            variant="outline"
+client/src/pages/NewsTickerManagePage.tsx-115-            size="sm"
+client/src/pages/NewsTickerManagePage.tsx:116:            onClick={() => navigate("/")}
+client/src/pages/NewsTickerManagePage.tsx-117-            className="gap-2"
+client/src/pages/NewsTickerManagePage.tsx-118-          >
+--
+client/src/pages/PaymentRequests.tsx-412-        <div className="flex items-center justify-between mb-2">
+client/src/pages/PaymentRequests.tsx-413-          <div className="flex items-center gap-3">
+client/src/pages/PaymentRequests.tsx:414:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 text-gray-500 hover:text-gray-800 -mr-1">
+client/src/pages/PaymentRequests.tsx-415-              <ArrowRight className="w-4 h-4" />
+client/src/pages/PaymentRequests.tsx-416-              الرئيسية
+--
+client/src/pages/SentEmailsPage.tsx-113-              variant="ghost"
+client/src/pages/SentEmailsPage.tsx-114-              size="icon"
+client/src/pages/SentEmailsPage.tsx:115:              onClick={() => navigate("/")}
+client/src/pages/SentEmailsPage.tsx-116-              className="rounded-xl"
+client/src/pages/SentEmailsPage.tsx-117-            >
+--
+client/src/pages/TasksPage.tsx-382-            <Button
+client/src/pages/TasksPage.tsx-383-              variant="outline"
+client/src/pages/TasksPage.tsx:384:              onClick={() => navigate("/")}
+client/src/pages/TasksPage.tsx-385-              className="text-white border-white/50 hover:bg-white/10"
+client/src/pages/TasksPage.tsx-386-              size="sm"
+--
+client/src/pages/UserManagementPage.tsx-52-      {/* Header */}
+client/src/pages/UserManagementPage.tsx-53-      <div className="flex items-center gap-4 mb-8">
+client/src/pages/UserManagementPage.tsx:54:        <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+client/src/pages/UserManagementPage.tsx-55-          <ArrowRight className="h-5 w-5" />
+client/src/pages/UserManagementPage.tsx-56-        </Button>
+--
+client/src/pages/V2Hub.tsx-67-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20">
+client/src/pages/V2Hub.tsx-68-        <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center gap-3">
+client/src/pages/V2Hub.tsx:69:          <button onClick={() => navigate("/")} className="p-2 rounded-lg hover:bg-gray-100 transition">
+client/src/pages/V2Hub.tsx-70-            <ArrowRight className="w-5 h-5 text-gray-600" />
+client/src/pages/V2Hub.tsx-71-          </button>
+--
+client/src/pages/V2Timeline.tsx-31-        <div className="max-w-[1800px] mx-auto px-1 py-1 flex items-center justify-between">
+client/src/pages/V2Timeline.tsx-32-          <div className="flex items-center gap-3">
+client/src/pages/V2Timeline.tsx:33:            <button onClick={() => navigate("/")} className="p-2 rounded-lg hover:bg-gray-100 transition">
+client/src/pages/V2Timeline.tsx-34-              <ArrowRight className="w-5 h-5 text-gray-600" />
+client/src/pages/V2Timeline.tsx-35-            </button>

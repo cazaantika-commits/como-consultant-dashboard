@@ -3069,7 +3069,7 @@ export default function CPAPage() {
         {screen === "truecost-report" && selectedProjectId && (
           <TrueCostReportScreen
             projectId={selectedProjectId}
-            onBack={() => setScreen("project-detail")}
+            onBack={() => setScreen("results")}
           />
         )}
         {screen === "project-requirements" && selectedProjectId && (

@@ -1,0 +1,412 @@
+client/src/pages/ApprovalSettings.tsx-66-        <div className="flex items-center gap-3 mb-6">
+client/src/pages/ApprovalSettings.tsx-67-          <Button variant="ghost" size="sm" onClick={() => navigate("/payment-requests")} className="gap-2">
+client/src/pages/ApprovalSettings.tsx-68-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ApprovalSettings.tsx:69:            العودة
+client/src/pages/ApprovalSettings.tsx-70-          </Button>
+client/src/pages/ApprovalSettings.tsx-71-        </div>
+--
+client/src/pages/V2Feasibility.tsx-138-    <div className="bg-gradient-to-b from-slate-50 to-white min-h-[400px]" dir="rtl">
+client/src/pages/V2Feasibility.tsx-139-      {/* Header */}
+client/src/pages/V2Feasibility.tsx-140-      <div className="bg-white border-b border-teal-100/60 px-4 py-2 flex items-center gap-3 sticky top-0 z-10 shadow-sm">
+client/src/pages/V2Feasibility.tsx:141:        {!embedded && <button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100" aria-label="العودة إلى الصفحة السابقة"><ArrowRight className="h-4 w-4" /></button>}
+client/src/pages/V2Feasibility.tsx-142-        <div className="flex items-center gap-2">
+client/src/pages/V2Feasibility.tsx-143-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-700 to-teal-900 flex items-center justify-center shadow-sm">
+--
+client/src/pages/V2InvestorCashFlow.tsx-169-        <div className="mx-auto flex max-w-full flex-wrap items-center justify-between gap-2 px-3 py-3 sm:px-5 lg:flex-nowrap lg:gap-4">
+client/src/pages/V2InvestorCashFlow.tsx-170-          <div className="flex items-center gap-3 min-w-0">
+client/src/pages/V2InvestorCashFlow.tsx-171-            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
+client/src/pages/V2InvestorCashFlow.tsx:172:              <ArrowRight className="w-4 h-4" />العودة إلى الصفحة السابقة
+client/src/pages/V2InvestorCashFlow.tsx-173-            </button>}
+client/src/pages/V2InvestorCashFlow.tsx-174-            <div className="min-w-0">
+--
+client/src/pages/V2InvestorCashFlow.tsx-272-
+client/src/pages/V2InvestorCashFlow.tsx-273-            <div className="fs-card fs-card-cyan mt-4 px-4 py-3">
+client/src/pages/V2InvestorCashFlow.tsx-274-              <div className="flex items-center justify-between gap-3">
+client/src/pages/V2InvestorCashFlow.tsx:275:                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700"><CalendarClock className="h-4 w-4 text-cyan-700" /> نبض الضغط والعودة الشهري</div>
+client/src/pages/V2InvestorCashFlow.tsx-276-                <span className="text-[11px] text-slate-500">أحمر = تمويل مطلوب · أخضر = تدفق عائد</span>
+client/src/pages/V2InvestorCashFlow.tsx-277-              </div>
+--
+client/src/pages/BateekhaPage.tsx-135-              <div>
+client/src/pages/BateekhaPage.tsx-136-                <p className="text-[11px] font-black tracking-wide text-teal-700">الدراسات والتخطيط المالي</p>
+client/src/pages/BateekhaPage.tsx-137-                <h2 className="mt-1 text-xl font-black text-slate-900">اختر المشروع مرة واحدة</h2>
+client/src/pages/BateekhaPage.tsx:138:                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">بعدها تفتح كل بطاقات المشروع نفسه، وزر العودة يعيدك إلى الخطوة السابقة فعلًا.</p>
+client/src/pages/BateekhaPage.tsx-139-              </div>
+client/src/pages/BateekhaPage.tsx-140-              <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>
+--
+client/src/pages/BateekhaPage.tsx-158-        </main>
+client/src/pages/BateekhaPage.tsx-159-      ) : (
+client/src/pages/BateekhaPage.tsx-160-        <div className="w-full">
+client/src/pages/BateekhaPage.tsx:161:          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
+client/src/pages/BateekhaPage.tsx-162-          <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} /></Suspense>
+client/src/pages/BateekhaPage.tsx-163-        </div>
+--
+client/src/pages/CPAPage.tsx-1681-                <span className="font-bold text-sky-700">{importSummary.supervisionRolesImported} دور</span>
+client/src/pages/CPAPage.tsx-1682-              </div>
+client/src/pages/CPAPage.tsx-1683-              <Button className="w-full" onClick={() => { setImportSummary(null); onBack(); }}>
+client/src/pages/CPAPage.tsx:1684:                متابعة ← العودة للمشروع
+client/src/pages/CPAPage.tsx-1685-              </Button>
+client/src/pages/CPAPage.tsx-1686-            </div>
+--
+client/src/pages/CommandCenterPage.tsx-2417-        </div>
+client/src/pages/CommandCenterPage.tsx-2418-      )}
+client/src/pages/CommandCenterPage.tsx-2419-
+client/src/pages/CommandCenterPage.tsx:2420:      <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900"><ArrowRight className="h-4 w-4" /> العودة لمركز القيادة</button>
+client/src/pages/CommandCenterPage.tsx-2421-    </div>
+client/src/pages/CommandCenterPage.tsx-2422-  );
+--
+client/src/pages/CommandCenterPage.tsx-2467-        <div className="flex items-center justify-between gap-3">
+client/src/pages/CommandCenterPage.tsx-2468-          <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx-2469-            <Button variant="ghost" size="sm" onClick={() => setSelectedProject(null)} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:2470:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-2471-            </Button>
+client/src/pages/CommandCenterPage.tsx-2472-            <h2 className="text-xl font-bold text-slate-800">{project?.name}</h2>
+--
+client/src/pages/CommandCenterPage.tsx-2737-    <div dir="rtl" className="space-y-4">
+client/src/pages/CommandCenterPage.tsx-2738-      <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx-2739-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
+client/src/pages/CommandCenterPage.tsx:2740:          <ArrowRight className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-2741-        </Button>
+client/src/pages/CommandCenterPage.tsx-2742-        <h2 className="text-lg font-bold text-slate-900">الأتعاب المالية للاستشاريين</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3017-      <div className="flex items-center justify-between">
+client/src/pages/CommandCenterPage.tsx-3018-        <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx-3019-          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:3020:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-3021-          </Button>
+client/src/pages/CommandCenterPage.tsx-3022-          <h2 className="text-lg font-bold text-slate-800">التقييم الفني — {project?.name}</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3173-                variant="outline"
+client/src/pages/CommandCenterPage.tsx-3174-                size="sm"
+client/src/pages/CommandCenterPage.tsx-3175-                onClick={() => {
+client/src/pages/CommandCenterPage.tsx:3176:                  toast.success('تم حفظ التقييم كمسودة — يمكنك العودة لإكماله لاحقاً', { duration: 3000 });
+client/src/pages/CommandCenterPage.tsx-3177-                  onBack();
+client/src/pages/CommandCenterPage.tsx-3178-                }}
+--
+client/src/pages/CommandCenterPage.tsx-3372-
+client/src/pages/CommandCenterPage.tsx-3373-          <div className="flex justify-center gap-3">
+client/src/pages/CommandCenterPage.tsx-3374-            <Button variant="outline" size="sm" onClick={() => setCurrentStep(0)} className="gap-1">
+client/src/pages/CommandCenterPage.tsx:3375:              <ArrowRight className="w-4 h-4" /> العودة للمعايير
+client/src/pages/CommandCenterPage.tsx-3376-            </Button>
+client/src/pages/CommandCenterPage.tsx-3377-
+--
+client/src/pages/CommandCenterPage.tsx-3428-    return (
+client/src/pages/CommandCenterPage.tsx-3429-      <div className="space-y-6">
+client/src/pages/CommandCenterPage.tsx-3430-        <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx:3431:          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+client/src/pages/CommandCenterPage.tsx-3432-          <SlidersHorizontal className="w-5 h-5 text-amber-600" />
+client/src/pages/CommandCenterPage.tsx-3433-          <h2 className="text-lg font-bold text-slate-800">تحليل القيمة</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3467-  return (
+client/src/pages/CommandCenterPage.tsx-3468-    <div className="space-y-6">
+client/src/pages/CommandCenterPage.tsx-3469-      <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx:3470:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+client/src/pages/CommandCenterPage.tsx-3471-        <SlidersHorizontal className="w-5 h-5 text-amber-600" />
+client/src/pages/CommandCenterPage.tsx-3472-        <h2 className="text-lg font-bold text-slate-800">تحليل القيمة - {reportData.project?.name}</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3610-    <div className="space-y-3" dir="rtl">
+client/src/pages/CommandCenterPage.tsx-3611-      <div className="flex items-center gap-3 flex-wrap">
+client/src/pages/CommandCenterPage.tsx-3612-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:3613:          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-3614-        </Button>
+client/src/pages/CommandCenterPage.tsx-3615-        <h2 className="text-xl font-bold text-slate-800">تقرير نطاق التصاميم</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3751-    <div className="space-y-3" dir="rtl">
+client/src/pages/CommandCenterPage.tsx-3752-      <div className="flex items-center gap-3 flex-wrap">
+client/src/pages/CommandCenterPage.tsx-3753-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:3754:          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-3755-        </Button>
+client/src/pages/CommandCenterPage.tsx-3756-        <h2 className="text-xl font-bold text-slate-800">تقرير نطاق الإشراف</h2>
+--
+client/src/pages/CommandCenterPage.tsx-3964-    <div className="space-y-6">
+client/src/pages/CommandCenterPage.tsx-3965-      <div className="flex items-center gap-3">
+client/src/pages/CommandCenterPage.tsx-3966-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:3967:          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+client/src/pages/CommandCenterPage.tsx-3968-        </Button>
+client/src/pages/CommandCenterPage.tsx-3969-        <Gavel className="w-5 h-5 text-purple-600" />
+--
+client/src/pages/CommandCenterPage.tsx-4203-        <div className="px-2 py-4">
+client/src/pages/CommandCenterPage.tsx-4204-          <div className="flex items-center gap-2 mb-4 px-4">
+client/src/pages/CommandCenterPage.tsx-4205-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowWorkSchedule(false); }} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:4206:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+client/src/pages/CommandCenterPage.tsx-4207-            </Button>
+client/src/pages/CommandCenterPage.tsx-4208-            <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">عرض فقط</span>
+--
+client/src/pages/CommandCenterPage.tsx-4225-        <div className="px-0 py-0">
+client/src/pages/CommandCenterPage.tsx-4226-          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+client/src/pages/CommandCenterPage.tsx-4227-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowPaymentRequests(false); utils.commandCenter.getBubbleCounts.invalidate({ token }); }} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:4228:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+client/src/pages/CommandCenterPage.tsx-4229-            </Button>
+client/src/pages/CommandCenterPage.tsx-4230-          </div>
+--
+client/src/pages/CommandCenterPage.tsx-4243-        <div className="px-0 py-0">
+client/src/pages/CommandCenterPage.tsx-4244-          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+client/src/pages/CommandCenterPage.tsx-4245-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowInternalMessages(false); }} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:4246:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+client/src/pages/CommandCenterPage.tsx-4247-            </Button>
+client/src/pages/CommandCenterPage.tsx-4248-          </div>
+--
+client/src/pages/CommandCenterPage.tsx-4260-        <div className="px-0 py-0">
+client/src/pages/CommandCenterPage.tsx-4261-          <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+client/src/pages/CommandCenterPage.tsx-4262-            <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowGeneralRequests(false); utils.commandCenter.getBubbleCounts.invalidate({ token }); }} className="text-slate-500">
+client/src/pages/CommandCenterPage.tsx:4263:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+client/src/pages/CommandCenterPage.tsx-4264-            </Button>
+client/src/pages/CommandCenterPage.tsx-4265-          </div>
+--
+client/src/pages/CommandCenterPage.tsx-4311-            memberId={member.memberId}
+client/src/pages/CommandCenterPage.tsx-4312-          />
+client/src/pages/CommandCenterPage.tsx-4313-          <Button variant="ghost" size="sm" onClick={() => { setActiveBubble(null); setShowEvaluation(false); setShowPendingEvaluationQueue(false); }} className="mt-4 text-slate-500">
+client/src/pages/CommandCenterPage.tsx:4314:            <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
+client/src/pages/CommandCenterPage.tsx-4315-          </Button>
+client/src/pages/CommandCenterPage.tsx-4316-        </div>
+--
+client/src/pages/CommandCenterPage.tsx-4702-            <button
+client/src/pages/CommandCenterPage.tsx-4703-              onClick={onNavigateHome}
+client/src/pages/CommandCenterPage.tsx-4704-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+client/src/pages/CommandCenterPage.tsx:4705:              title="العودة للرئيسية"
+client/src/pages/CommandCenterPage.tsx-4706-            >
+client/src/pages/CommandCenterPage.tsx-4707-              <ArrowRight className="w-3.5 h-3.5" />
+--
+client/src/pages/CommitteeDecisionPage.tsx-274-            <Link href="/evaluation">
+client/src/pages/CommitteeDecisionPage.tsx-275-              <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
+client/src/pages/CommitteeDecisionPage.tsx-276-                <ArrowLeft className="h-4 w-4 ml-2" />
+client/src/pages/CommitteeDecisionPage.tsx:277:                العودة للتقييم
+client/src/pages/CommitteeDecisionPage.tsx-278-              </Button>
+client/src/pages/CommitteeDecisionPage.tsx-279-            </Link>
+--
+client/src/pages/ConsultantAppointmentPackPage.tsx-32-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
+client/src/pages/ConsultantAppointmentPackPage.tsx-33-      <header className="sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-sm">
+client/src/pages/ConsultantAppointmentPackPage.tsx-34-        <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+client/src/pages/ConsultantAppointmentPackPage.tsx:35:          <Button variant="ghost" size="sm" onClick={() => navigate("/project-launch")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى بوابة الانطلاق</Button>
+client/src/pages/ConsultantAppointmentPackPage.tsx-36-          <div className="h-5 w-px bg-border" />
+client/src/pages/ConsultantAppointmentPackPage.tsx-37-          <div className="flex items-center gap-2"><div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600"><ClipboardList className="h-3.5 w-3.5 text-white" /></div><h1 className="text-sm font-bold text-foreground">حزمة تكليف الاستشاري</h1></div>
+--
+client/src/pages/ConsultantCommitteePage.tsx-155-        <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6">
+client/src/pages/ConsultantCommitteePage.tsx-156-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors mb-4 text-sm">
+client/src/pages/ConsultantCommitteePage.tsx-157-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ConsultantCommitteePage.tsx:158:            العودة لمكاتب الاستشارات
+client/src/pages/ConsultantCommitteePage.tsx-159-          </Link>
+client/src/pages/ConsultantCommitteePage.tsx-160-          <div className="flex items-center gap-4">
+--
+client/src/pages/ConsultantDetailPage.tsx-189-        <Card className="w-96 text-center">
+client/src/pages/ConsultantDetailPage.tsx-190-          <CardContent className="pt-6">
+client/src/pages/ConsultantDetailPage.tsx-191-            <p className="text-gray-600">الاستشاري غير موجود</p>
+client/src/pages/ConsultantDetailPage.tsx:192:            <Link href="/consultant-profiles"><Button className="mt-4">العودة للقائمة</Button></Link>
+client/src/pages/ConsultantDetailPage.tsx-193-          </CardContent>
+client/src/pages/ConsultantDetailPage.tsx-194-        </Card>
+--
+client/src/pages/ConsultantDetailPage.tsx-211-          <div className="flex items-center gap-3 mb-6">
+client/src/pages/ConsultantDetailPage.tsx-212-            <Link href="/consultant-know" className="inline-flex items-center gap-2 text-violet-200 hover:text-white transition-colors text-sm">
+client/src/pages/ConsultantDetailPage.tsx-213-              <ChevronLeft className="w-4 h-4" />
+client/src/pages/ConsultantDetailPage.tsx:214:              العودة لقائمة الاستشاريين
+client/src/pages/ConsultantDetailPage.tsx-215-            </Link>
+client/src/pages/ConsultantDetailPage.tsx-216-            <span className="text-violet-400">|</span>
+--
+client/src/pages/ConsultantGuidePage.tsx-258-        <div className="relative max-w-5xl mx-auto px-6 py-10">
+client/src/pages/ConsultantGuidePage.tsx-259-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+client/src/pages/ConsultantGuidePage.tsx-260-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ConsultantGuidePage.tsx:261:            العودة لبوابة المكاتب الاستشارية
+client/src/pages/ConsultantGuidePage.tsx-262-          </Link>
+client/src/pages/ConsultantGuidePage.tsx-263-          <div className="flex items-center gap-4">
+--
+client/src/pages/ConsultantGuidePage.tsx-1002-            </div>
+client/src/pages/ConsultantGuidePage.tsx-1003-            <div className="flex items-start gap-2">
+client/src/pages/ConsultantGuidePage.tsx-1004-              <span className="mt-1 text-amber-500">•</span>
+client/src/pages/ConsultantGuidePage.tsx:1005:              <span>يمكنك حفظ التقييم كمسودة والعودة لإكماله لاحقاً — لا تتسرع في الاعتماد النهائي.</span>
+client/src/pages/ConsultantGuidePage.tsx-1006-            </div>
+client/src/pages/ConsultantGuidePage.tsx-1007-            <div className="flex items-start gap-2">
+--
+client/src/pages/ConsultantKnowPage.tsx-111-        <div className="relative max-w-5xl mx-auto px-6 py-10">
+client/src/pages/ConsultantKnowPage.tsx-112-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+client/src/pages/ConsultantKnowPage.tsx-113-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ConsultantKnowPage.tsx:114:            العودة لمكاتب الاستشارات
+client/src/pages/ConsultantKnowPage.tsx-115-          </Link>
+client/src/pages/ConsultantKnowPage.tsx-116-          <div className="flex items-center gap-4">
+--
+client/src/pages/ConsultantPortalPage.tsx-84-        <div className="relative max-w-6xl mx-auto px-6 py-12">
+client/src/pages/ConsultantPortalPage.tsx-85-          <Link href="/" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-6 text-sm">
+client/src/pages/ConsultantPortalPage.tsx-86-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ConsultantPortalPage.tsx:87:            العودة للرئيسية
+client/src/pages/ConsultantPortalPage.tsx-88-          </Link>
+client/src/pages/ConsultantPortalPage.tsx-89-          <div className="flex items-start gap-5">
+--
+client/src/pages/ConsultantRecommendPage.tsx-121-        <div className="relative max-w-4xl mx-auto px-6 py-10">
+client/src/pages/ConsultantRecommendPage.tsx-122-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-400 hover:text-white transition-colors mb-4 text-sm">
+client/src/pages/ConsultantRecommendPage.tsx-123-            <ArrowLeft className="w-4 h-4" />
+client/src/pages/ConsultantRecommendPage.tsx:124:            العودة لمكاتب الاستشارات
+client/src/pages/ConsultantRecommendPage.tsx-125-          </Link>
+client/src/pages/ConsultantRecommendPage.tsx-126-          <div className="flex items-center gap-4">
+--
+client/src/pages/ContractDeliverablesPage.tsx-26-  const statusMutation = trpc.consultantProcurement.updateDeliverableStatus.useMutation({ onSuccess: () => { if (projectId && contractId) utils.consultantProcurement.listDeliverables.invalidate({ projectId, contractId }); } });
+client/src/pages/ContractDeliverablesPage.tsx-27-
+client/src/pages/ContractDeliverablesPage.tsx-28-  return <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
+client/src/pages/ContractDeliverablesPage.tsx:29:    <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur"><div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6"><Button variant="ghost" size="sm" onClick={() => navigate("/consultant-appointment-pack")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى حزمة التكليف</Button><span className="h-5 w-px bg-border" /><div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-emerald-700" /><p className="text-sm font-extrabold text-foreground">سجل تسليمات العقد</p></div></div></header>
+client/src/pages/ContractDeliverablesPage.tsx-30-    <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6"><section className="rounded-3xl border border-emerald-200 bg-gradient-to-l from-emerald-50 via-white to-cyan-50 p-6"><div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div className="max-w-xl"><div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-bold text-emerald-800"><ShieldCheck className="h-3.5 w-3.5" /> سجل مستقل لا يعدل العقد</div><h1 className="mt-3 text-2xl font-extrabold text-foreground">تسليمات الاستشاري بعد التعيين</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">اختر عقدًا قائمًا ثم سجل مخرجاته ومعايير قبولها. يبقى العقد نفسه ومرفقاته وشروطه كما هي.</p></div><div className="grid w-full gap-3 sm:grid-cols-2 md:w-[420px]"><select value={projectId ?? ""} onChange={(e) => { setProjectId(e.target.value ? Number(e.target.value) : null); setContractId(null); }} className="h-11 rounded-xl border border-emerald-300 bg-white px-3 text-sm font-semibold"><option value="">— اختر مشروعًا —</option>{projects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}</select><select value={contractId ?? ""} disabled={!projectId} onChange={(e) => setContractId(e.target.value ? Number(e.target.value) : null)} className="h-11 rounded-xl border border-emerald-300 bg-white px-3 text-sm font-semibold"><option value="">— اختر عقدًا —</option>{contracts.map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></div></div></section>
+client/src/pages/ContractDeliverablesPage.tsx-31-      {projectId && contracts.length === 0 && <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">لا يوجد عقد لهذا المشروع بعد. يظهر السجل بعد تسجيل عقد قائم فقط.</p>}
+--
+client/src/pages/DevelopmentPhasesPage.tsx-397-            <>
+client/src/pages/DevelopmentPhasesPage.tsx-398-              <Button variant="ghost" size="sm" onClick={() => setActiveView("icons")} className="gap-1.5">
+client/src/pages/DevelopmentPhasesPage.tsx-399-                <ArrowRight className="w-4 h-4" />
+client/src/pages/DevelopmentPhasesPage.tsx:400:                العودة
+client/src/pages/DevelopmentPhasesPage.tsx-401-              </Button>
+client/src/pages/DevelopmentPhasesPage.tsx-402-              <div className="h-5 w-px bg-border" />
+--
+client/src/pages/DevelopmentStagesPage.tsx-1297-              <p className="text-sm text-muted-foreground mt-1">تتبع تقدم المشروع عبر 5 مراحل رئيسية</p>
+client/src/pages/DevelopmentStagesPage.tsx-1298-            </div>
+client/src/pages/DevelopmentStagesPage.tsx-1299-            <Button variant="outline" onClick={() => navigate("/")}>
+client/src/pages/DevelopmentStagesPage.tsx:1300:              العودة للرئيسية
+client/src/pages/DevelopmentStagesPage.tsx-1301-            </Button>
+client/src/pages/DevelopmentStagesPage.tsx-1302-          </div>
+--
+client/src/pages/ExecutiveVIPPage.tsx-218-    <div className="animate-in slide-in-from-right duration-300">
+client/src/pages/ExecutiveVIPPage.tsx-219-      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors">
+client/src/pages/ExecutiveVIPPage.tsx-220-        <ChevronLeft className="w-5 h-5" />
+client/src/pages/ExecutiveVIPPage.tsx:221:        <span className="text-sm">العودة</span>
+client/src/pages/ExecutiveVIPPage.tsx-222-      </button>
+client/src/pages/ExecutiveVIPPage.tsx-223-      <div className={`${color} rounded-3xl p-5 mb-6 text-white shadow-xl`}>
+--
+client/src/pages/FactSheetPage.tsx-471-              {embedded && onBack && (
+client/src/pages/FactSheetPage.tsx-472-                <>
+client/src/pages/FactSheetPage.tsx-473-                  <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-foreground h-7 text-xs">
+client/src/pages/FactSheetPage.tsx:474:                    <ChevronLeft className="h-3.5 w-3.5 ml-1" />العودة
+client/src/pages/FactSheetPage.tsx-475-                  </Button>
+client/src/pages/FactSheetPage.tsx-476-                  <Separator orientation="vertical" className="h-5" />
+--
+client/src/pages/FinancialEvaluationScreen.tsx-49-  if (!projectId) return (
+client/src/pages/FinancialEvaluationScreen.tsx-50-    <div className="text-center py-12">
+client/src/pages/FinancialEvaluationScreen.tsx-51-      <div className="text-amber-600 font-semibold mb-4">لم يتم تحديد مشروع</div>
+client/src/pages/FinancialEvaluationScreen.tsx:52:      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+client/src/pages/FinancialEvaluationScreen.tsx-53-    </div>
+client/src/pages/FinancialEvaluationScreen.tsx-54-  );
+--
+client/src/pages/FinancialEvaluationScreen.tsx-117-    <div className="text-center py-12">
+client/src/pages/FinancialEvaluationScreen.tsx-118-      <div className="text-red-600 font-semibold mb-4">خطأ في تحميل البيانات</div>
+client/src/pages/FinancialEvaluationScreen.tsx-119-      <div className="text-slate-500 text-sm mb-4">{reportQuery.error?.message || 'المشروع غير موجود'}</div>
+client/src/pages/FinancialEvaluationScreen.tsx:120:      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+client/src/pages/FinancialEvaluationScreen.tsx-121-    </div>
+client/src/pages/FinancialEvaluationScreen.tsx-122-  );
+--
+client/src/pages/FinancialEvaluationScreen.tsx-251-      <div className="flex items-center justify-between">
+client/src/pages/FinancialEvaluationScreen.tsx-252-        <div className="flex items-center gap-3">
+client/src/pages/FinancialEvaluationScreen.tsx-253-          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+client/src/pages/FinancialEvaluationScreen.tsx:254:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+client/src/pages/FinancialEvaluationScreen.tsx-255-          </Button>
+client/src/pages/FinancialEvaluationScreen.tsx-256-          <FileBarChart2 className="w-5 h-5 text-indigo-600" />
+--
+client/src/pages/GoogleConnectPage.tsx-105-                <span className="text-lg font-semibold">Google Drive مربوط</span>
+client/src/pages/GoogleConnectPage.tsx-106-              </div>
+client/src/pages/GoogleConnectPage.tsx-107-              <p className="text-sm text-muted-foreground">
+client/src/pages/GoogleConnectPage.tsx:108:                يمكنك الآن العودة والمتابعة
+client/src/pages/GoogleConnectPage.tsx-109-              </p>
+client/src/pages/GoogleConnectPage.tsx-110-            </div>
+--
+client/src/pages/KnowledgeHubPage.tsx-86-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
+client/src/pages/KnowledgeHubPage.tsx-87-          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5 shrink-0">
+client/src/pages/KnowledgeHubPage.tsx-88-            <ArrowRight className="w-4 h-4" />
+client/src/pages/KnowledgeHubPage.tsx:89:            العودة
+client/src/pages/KnowledgeHubPage.tsx-90-          </Button>
+client/src/pages/KnowledgeHubPage.tsx-91-          <div className="h-5 w-px bg-border" />
+--
+client/src/pages/MeetingRoomPage.tsx-640-                className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 bg-violet-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-violet-700 transition-all text-xs"
+client/src/pages/MeetingRoomPage.tsx-641-              >
+client/src/pages/MeetingRoomPage.tsx-642-                <ChevronDown className="w-3.5 h-3.5" />
+client/src/pages/MeetingRoomPage.tsx:643:                {unreadCount > 0 ? `${unreadCount} رسائل جديدة` : "العودة للأسفل"}
+client/src/pages/MeetingRoomPage.tsx-644-              </button>
+client/src/pages/MeetingRoomPage.tsx-645-            </div>
+--
+client/src/pages/ProjectDetailPage.tsx-372-        <h2 className="text-lg font-semibold">المشروع غير موجود</h2>
+client/src/pages/ProjectDetailPage.tsx-373-        <Button onClick={() => navigate("/bateekha")} variant="outline">
+client/src/pages/ProjectDetailPage.tsx-374-          <ArrowRight className="w-4 h-4 ml-1" />
+client/src/pages/ProjectDetailPage.tsx:375:          العودة للدراسات المالية
+client/src/pages/ProjectDetailPage.tsx-376-        </Button>
+client/src/pages/ProjectDetailPage.tsx-377-      </div>
+--
+client/src/pages/ProjectLaunchGatePage.tsx-35-        <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
+client/src/pages/ProjectLaunchGatePage.tsx-36-          <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+client/src/pages/ProjectLaunchGatePage.tsx-37-            <Button variant="ghost" size="sm" onClick={() => navigate("/development-phases")} className="gap-1.5">
+client/src/pages/ProjectLaunchGatePage.tsx:38:              <ArrowRight className="w-4 h-4" /> العودة إلى جولة التطوير
+client/src/pages/ProjectLaunchGatePage.tsx-39-            </Button>
+client/src/pages/ProjectLaunchGatePage.tsx-40-            <div className="h-5 w-px bg-border" />
+--
+client/src/pages/ProjectLifecyclePage.tsx-665-    <div className="max-w-3xl mx-auto px-4 py-6" dir="rtl">
+client/src/pages/ProjectLifecyclePage.tsx-666-      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4 gap-1.5">
+client/src/pages/ProjectLifecyclePage.tsx-667-        <ArrowLeft className="w-4 h-4" />
+client/src/pages/ProjectLifecyclePage.tsx:668:        العودة للخدمات
+client/src/pages/ProjectLifecyclePage.tsx-669-      </Button>
+client/src/pages/ProjectLifecyclePage.tsx-670-
+--
+client/src/pages/ProjectLifecyclePage.tsx-903-    <div className="max-w-3xl mx-auto px-4 py-6" dir="rtl">
+client/src/pages/ProjectLifecyclePage.tsx-904-      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4 gap-1.5">
+client/src/pages/ProjectLifecyclePage.tsx-905-        <ArrowLeft className="w-4 h-4" />
+client/src/pages/ProjectLifecyclePage.tsx:906:        العودة للمراحل
+client/src/pages/ProjectLifecyclePage.tsx-907-      </Button>
+client/src/pages/ProjectLifecyclePage.tsx-908-
+--
+client/src/pages/ProjectReferencePage.tsx-39-
+client/src/pages/ProjectReferencePage.tsx-40-  return (
+client/src/pages/ProjectReferencePage.tsx-41-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
+client/src/pages/ProjectReferencePage.tsx:42:      <header className="sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-sm"><div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"><Button variant="ghost" size="sm" onClick={() => navigate("/project-launch")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى بوابة الانطلاق</Button><span className="h-5 w-px bg-border" /><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white"><BookOpenCheck className="h-3.5 w-3.5" /></span><h1 className="text-sm font-bold text-foreground">مرجعية المشروع وخط الأساس</h1></div></div></header>
+client/src/pages/ProjectReferencePage.tsx-43-      <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-9">
+client/src/pages/ProjectReferencePage.tsx-44-        <section className="rounded-3xl border border-teal-200/70 bg-gradient-to-l from-teal-50/80 via-white to-cyan-50/60 p-6 shadow-sm md:p-8"><div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between"><div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 px-3 py-1 text-xs font-bold text-teal-800"><ShieldCheck className="h-3.5 w-3.5" /> قراءة من المصادر المعتمدة</span><h2 className="mt-3 text-2xl font-extrabold text-foreground">ما هي مراجع المشروع قبل تثبيت خط الأساس؟</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">يجمع هذا العرض روابط الحقائق والوثائق وقرار السوق والبرنامج والسجل القانوني. يبقى Google Drive مكان الملف الأصلي، ولا يغيّر المرجع أي رقم أو تاريخ.</p></div><div className="w-full md:w-80"><label className="mb-2 block text-xs font-bold text-foreground">اختر المشروع لمراجعة مرجعيته</label><select value={projectId ?? ""} onChange={(event) => setProjectId(event.target.value ? Number(event.target.value) : null)} disabled={isLoadingProjects} className="h-11 w-full rounded-xl border border-teal-300 bg-white px-3 text-sm font-semibold text-foreground outline-none ring-offset-background focus:ring-2 focus:ring-teal-500"><option value="">— اختر مشروعًا —</option>{projects.map((project: any) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></div></div></section>
+--
+client/src/pages/TaskSettingsPage.tsx-339-            <Link href="/tasks">
+client/src/pages/TaskSettingsPage.tsx-340-              <Button variant="outline" className="gap-2">
+client/src/pages/TaskSettingsPage.tsx-341-                <ArrowLeft className="w-4 h-4" />
+client/src/pages/TaskSettingsPage.tsx:342:                العودة للمهام
+client/src/pages/TaskSettingsPage.tsx-343-              </Button>
+client/src/pages/TaskSettingsPage.tsx-344-            </Link>
+--
+client/src/pages/TrueCostReportScreen.tsx-237-      <div className="flex items-center justify-between">
+client/src/pages/TrueCostReportScreen.tsx-238-        <div className="flex items-center gap-3">
+client/src/pages/TrueCostReportScreen.tsx-239-          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+client/src/pages/TrueCostReportScreen.tsx:240:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+client/src/pages/TrueCostReportScreen.tsx-241-          </Button>
+client/src/pages/TrueCostReportScreen.tsx-242-          <FileBarChart2 className="w-5 h-5 text-indigo-600" />
+--
+client/src/pages/TrueCostReportView.tsx-177-      <div className="flex items-center justify-between">
+client/src/pages/TrueCostReportView.tsx-178-        <div className="flex items-center gap-3">
+client/src/pages/TrueCostReportView.tsx-179-          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+client/src/pages/TrueCostReportView.tsx:180:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+client/src/pages/TrueCostReportView.tsx-181-          </Button>
+client/src/pages/TrueCostReportView.tsx-182-          <FileBarChart2 className="w-5 h-5 text-indigo-600" />
+--
+client/src/pages/V2CapitalPortfolio.tsx-240-      <div className="max-w-[1800px] mx-auto">
+client/src/pages/V2CapitalPortfolio.tsx-241-        <div className="fs-card fs-card-violet px-5 py-4 text-slate-900 flex items-start justify-between gap-4">
+client/src/pages/V2CapitalPortfolio.tsx-242-          <div className="flex items-start gap-3">
+client/src/pages/V2CapitalPortfolio.tsx:243:            {!embedded && <button onClick={() => onBack ? onBack() : navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} className="mt-0.5 inline-flex items-center gap-1.5 rounded-md border border-teal-300 bg-teal-600 px-2.5 py-1.5 text-[11px] font-extrabold text-white shadow-sm transition hover:bg-teal-500" aria-label="العودة إلى الصفحة السابقة"><ArrowRight className="h-4 w-4" />العودة إلى الصفحة السابقة</button>}
+client/src/pages/V2CapitalPortfolio.tsx-244-            <div><h1 className="text-base font-extrabold">تقرير محفظة رأس المال</h1><p className="mt-1 text-[11px] text-slate-600">من مخرجات الدراسات والتخطيط المالي — يستثني مشاريع البناء للتأجير من مؤشرات الإيرادات والأرباح</p></div>
+client/src/pages/V2CapitalPortfolio.tsx-245-          </div>
+--
+client/src/pages/V2EscrowCashFlow.tsx-190-      <div className="bg-white border-b border-gray-200">
+client/src/pages/V2EscrowCashFlow.tsx-191-        <div className="max-w-full mx-auto px-4 py-2 flex items-center justify-between">
+client/src/pages/V2EscrowCashFlow.tsx-192-          <div className="flex items-center gap-3">
+client/src/pages/V2EscrowCashFlow.tsx:193:            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="p-1.5 rounded-lg hover:bg-gray-100 transition" aria-label="العودة إلى الصفحة السابقة">
+client/src/pages/V2EscrowCashFlow.tsx-194-              <ArrowRight className="w-4 h-4 text-gray-600" />
+client/src/pages/V2EscrowCashFlow.tsx-195-            </button>}
+--
+client/src/pages/V2PaymentPlan.tsx-243-  };
+client/src/pages/V2PaymentPlan.tsx-244-
+client/src/pages/V2PaymentPlan.tsx-245-  if (!selectedProjectId || !project) {
+client/src/pages/V2PaymentPlan.tsx:246:    return <main dir="rtl" className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-4 sm:p-5"><div className="mx-auto w-full max-w-3xl rounded-3xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8"><Landmark className="mx-auto h-9 w-9 text-indigo-600" /><h1 className="mt-3 text-2xl font-black text-slate-950">خطة سداد المشترين</h1><p className="mt-2 text-sm text-slate-600">اختر مشروعًا أولًا؛ بعدها ستظهر لك الدفعات وتواريخها مباشرة.</p><div className="mx-auto mt-5 flex w-full max-w-sm flex-col gap-3"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button></div></div></main>;
+client/src/pages/V2PaymentPlan.tsx-247-  }
+client/src/pages/V2PaymentPlan.tsx-248-
+--
+client/src/pages/V2PaymentPlan.tsx-252-        <header className="overflow-hidden rounded-[26px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_52%,#ecfeff)] shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
+client/src/pages/V2PaymentPlan.tsx-253-          <div className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+client/src/pages/V2PaymentPlan.tsx-254-            <div><div className="flex items-center gap-2 text-xs font-black text-indigo-700"><CalendarDays className="h-4 w-4" />خطة سداد المشترين</div><h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">الدفعات كما يراها المشتري</h1><p className="mt-2 text-sm font-medium text-slate-700">راجع كل دفعة: كم نسبتها ومتى تستحق. اضغط أي دفعة فقط إذا أردت تعديلها.</p></div>
+client/src/pages/V2PaymentPlan.tsx:255:            <div className="flex flex-wrap items-center gap-2"><div className="min-w-[210px]"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /></div><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button><Button onClick={save} disabled={saveCalendar.isPending} className="bg-indigo-700 text-white hover:bg-indigo-600"><Save className="ml-1 h-4 w-4" />حفظ الخطة</Button></div>
+client/src/pages/V2PaymentPlan.tsx-256-          </div>
+client/src/pages/V2PaymentPlan.tsx-257-          <div className="grid border-t border-indigo-200 bg-white/70 sm:grid-cols-4"><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">بدء البيع</p><p className="mt-1 font-black text-indigo-950">{formatProjectMonth(projectStartDate, salesStartMonth)}</p></div><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">بدء الإنشاء</p><p className="mt-1 font-black text-slate-950">{formatProjectMonth(projectStartDate, timing.constructionStartMonth)}</p></div><div className="border-b border-indigo-100 px-5 py-3 sm:border-b-0 sm:border-l"><p className="text-[10px] font-black text-slate-500">التسليم</p><p className="mt-1 font-black text-emerald-800">{formatProjectMonth(projectStartDate, constructionEndMonth)}</p></div><div className="px-5 py-3"><p className="text-[10px] font-black text-slate-500">مجموع الخطة</p><p className="mt-1 font-black text-slate-950">{total}%</p></div></div>
+--
+client/src/pages/V2WaelSales.tsx-875-            </div>
+client/src/pages/V2WaelSales.tsx-876-            <div className="flex flex-wrap items-center gap-2.5">
+client/src/pages/V2WaelSales.tsx-877-              {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
+client/src/pages/V2WaelSales.tsx:878:              {!embedded && <Button size="sm" variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="h-10 gap-1.5 border-teal-200 bg-white px-3 text-teal-800 hover:bg-teal-50 hover:text-teal-900"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</Button>}
+client/src/pages/V2WaelSales.tsx-879-              <Badge className={hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
+client/src/pages/V2WaelSales.tsx-880-              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
+--
+client/src/pages/V2WaelSales.tsx-1029-            {false && <section className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
+client/src/pages/V2WaelSales.tsx-1030-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+client/src/pages/V2WaelSales.tsx-1031-                <div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-xl ${activeRoom.tone}`}><activeRoom.icon className="h-5 w-5" /></div><div><p className="text-[10px] font-bold text-slate-500">{activeRoom.eyebrow}</p><h2 className="text-lg font-black text-slate-900">{activeRoom.title}</h2><p className="mt-0.5 text-xs text-slate-500">{activeRoom.description}</p></div></div>
+client/src/pages/V2WaelSales.tsx:1032:                <Button variant="outline" size="sm" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />العودة للوحة السيناريو</Button>
+client/src/pages/V2WaelSales.tsx-1033-              </div>
+client/src/pages/V2WaelSales.tsx-1034-              <div className="space-y-4">

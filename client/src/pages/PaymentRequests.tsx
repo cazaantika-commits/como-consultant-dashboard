@@ -34,6 +34,7 @@ import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
 import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
 import { default as ArchiveRestore } from "lucide-react/dist/esm/icons/archive-restore.js";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
+import { withReturnPath } from "@/lib/returnNavigation";
 
 type PaymentRequest = {
   id: number;
@@ -80,7 +81,7 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
   const isReadOnlyMember = memberRole === 'wael' || memberRole === 'sheikh_issa';
   const { isReadOnly } = useAuth();
   const searchStr = useSearch();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
   const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
@@ -439,7 +440,7 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
               {showArchived ? "عرض النشطة" : "الأرشيف"}
             </Button>
             {!embedded && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
+              <Button variant="outline" size="sm" onClick={() => navigate(withReturnPath("/approval-settings", location))} className="gap-2 text-sm">
                 <Settings className="w-4 h-4" />
                 إعدادات الموافقة
               </Button>

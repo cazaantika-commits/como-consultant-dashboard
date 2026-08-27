@@ -13,9 +13,10 @@ import { default as Save } from "lucide-react/dist/esm/icons/save.js";
 import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
 import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { useLocation } from "wouter";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 export default function ApprovalSettings() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { toast } = useToast();
 
   const { data: settings, isLoading, refetch } = trpc.approvalSettings.getAll.useQuery();
@@ -64,7 +65,7 @@ export default function ApprovalSettings() {
       {/* Header */}
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/payment-requests")} className="gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/payment-requests"))} className="gap-2">
             <ArrowLeft className="w-4 h-4" />
             العودة
           </Button>

@@ -1,0 +1,203 @@
+--- client/src/pages/ApprovalSettings.tsx
+67:          <Button variant="ghost" size="sm" onClick={() => navigate("/payment-requests")} className="gap-2">
+69:            العودة
+--- client/src/pages/BateekhaPage.tsx
+118:    navigate(withReturnPath(`/bateekha?tab=${tab.id}`, "/bateekha"));
+125:          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-teal-700"><ArrowRight className="h-4 w-4" />الرئيسية</button>
+138:                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">بعدها تفتح كل بطاقات المشروع نفسه، وزر العودة يعيدك إلى الخطوة السابقة فعلًا.</p>
+161:          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
+--- client/src/pages/CPAPage.tsx
+503:  onBack,
+514:  onBack: () => void;
+549:    onSuccess: () => { toast({ title: "تم حذف المشروع بنجاح" }); onBack(); },
+591:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+1389:  onBack,
+1394:  onBack: () => void;
+1446:        onBack();
+1537:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+1641:            <Button variant="outline" onClick={onBack}>إلغاء</Button>
+1647:      <Dialog open={!!importSummary} onOpenChange={(open) => { if (!open) { setImportSummary(null); onBack(); } }}>
+1683:              <Button className="w-full" onClick={() => { setImportSummary(null); onBack(); }}>
+1684:                متابعة ← العودة للمشروع
+1698:  onBack,
+1702:  onBack: () => void;
+1751:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+1918:  onBack,
+1923:  onBack: () => void;
+2028:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+2178:  onBack,
+2182:  onBack: () => void;
+2207:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+2451:function SettingsScreen({ onBack }: { onBack: () => void }) {
+2516:        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+3028:            onBack={goHome}
+3044:            onBack={() => setScreen("project-detail")}
+3051:            onBack={() => setScreen("project-detail")}
+3059:            onBack={() => setScreen("project-detail")}
+3065:            onBack={() => setScreen("project-detail")}
+3072:            onBack={() => setScreen("project-detail")}
+3076:          <ProjectRequirementsScreen projectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
+3079:          <OfferReaderContainer cpaProjectId={selectedProjectId} projectConsultantId={selectedPcId} consultantName={selectedConsultantName} onBack={() => setScreen("project-detail")} />
+3082:          <FinancialOfferComparisonContainer cpaProjectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
+3085:          <SettingsScreen onBack={goHome} />
+--- client/src/pages/CommandCenterPage.tsx
+1010:function RequestsAndInquiries({ token, memberId, memberNameAr, memberRole, onBack }: {
+1015:  onBack: () => void;
+1097:          <button onClick={onBack} className="p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors">
+1345:function BubbleDetail({ token, bubbleType, onBack, memberRole }: { token: string; bubbleType: string; onBack: () => void; memberRole: string }) {
+1436:          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700 -mr-2">
+1684:function MilestonesKpisView({ token, onBack, memberRole = '' }: { token: string; onBack: () => void; memberRole?: string }) {
+1725:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700 -mr-2">
+2377:function PendingEvaluationQueue({ token, onOpenOverview, onBack }: { token: string; onOpenOverview: () => void; onBack: () => void }) {
+2420:      <button onClick={onBack} className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900"><ArrowRight className="h-4 w-4" /> العودة لمركز القيادة</button>
+2442:    return <FinancialEvaluationScreen projectId={cpaProjectId} onBack={() => setActiveTab(null)} />;
+2445:    return <TechnicalEvaluationView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+2448:    return <ValueAnalysisView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+2451:    return <CommitteeDecisionView token={token} projectId={selectedProject} memberId={memberId} onBack={() => setActiveTab(null)} />;
+2454:    return <DesignScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+2457:    return <SupervisionScopeReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+2460:    return <TrueCostReportView token={token} projectId={selectedProject} onBack={() => setActiveTab(null)} />;
+2470:              <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+2706:function FinancialEvaluationView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+2739:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500 hover:text-slate-700">
+2740:          <ArrowRight className="w-4 h-4 ml-1" /> العودة
+2877:function TechnicalEvaluationView({ token, projectId, memberId, onBack }: { token: string; projectId: number; memberId: string; onBack: () => void }) {
+3019:          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+3020:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+3176:                  toast.success('تم حفظ التقييم كمسودة — يمكنك العودة لإكماله لاحقاً', { duration: 3000 });
+3177:                  onBack();
+3375:              <ArrowRight className="w-4 h-4" /> العودة للمعايير
+3417:function ValueAnalysisView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+3431:          <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+3470:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500"><ArrowLeft className="w-4 h-4 ml-1" /> العودة</Button>
+3569:function DesignScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+3612:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+3613:          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+3717:function SupervisionScopeReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+3753:        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-500">
+3754:          <ArrowLeft className="w-4 h-4 ml-1" /> العودة
+--- client/src/pages/CommitteeDecisionPage.tsx
+277:                العودة للتقييم
+--- client/src/pages/ConsultantAppointmentPackPage.tsx
+35:          <Button variant="ghost" size="sm" onClick={() => navigate("/project-launch")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى بوابة الانطلاق</Button>
+62:          {reviewQuery.data && <section className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-2"><ListChecks className="h-5 w-5 text-violet-700" /><div><h4 className="font-extrabold text-foreground">قائمة مراجعة الحزمة قبل طلب العروض</h4><p className="mt-1 text-xs text-muted-foreground">تقرأ هذه القائمة مصادرها ولا تحفظ أي تعديل فيها.</p></div></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${reviewQuery.data.complete ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{reviewQuery.data.complete ? "الحزمة جاهزة لمسودة طلب عروض" : "تحتاج استكمال"}</span></div><div className="mt-4 grid gap-3 md:grid-cols-2">{reviewQuery.data.items.map((item: any) => <div key={item.key} className={`rounded-xl border p-3 ${item.complete ? "border-emerald-200 bg-emerald-50/50" : "border-amber-200 bg-amber-50/50"}`}><p className="text-sm font-bold text-foreground">{item.complete ? "✓" : "○"} {item.label}</p><p className="mt-1 text-[11px] font-bold text-muted-foreground">المصدر: {item.source}</p>{!item.complete && <p className="mt-2 text-xs leading-5 text-amber-900">الإجراء: {item.action}</p>}</div>)}</div><div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4"><Button disabled={!reviewQuery.data.complete || createDraft.isPending} onClick={() => createDraft.mutate({ projectId })} className="gap-1.5 bg-violet-700 hover:bg-violet-800"><Send className="h-4 w-4" /> إنشاء مسودة طلب عروض داخلية</Button><Button variant="outline" onClick={() => navigate("/contract-deliverables")}>فتح سجل التسليمات بعد التعيين</Button><p className="text-xs text-muted-foreground">{draftsQuery.data?.length ? `يوجد ${draftsQuery.data.length} مسودة داخلية. لم يُرسل أي طلب.` : "لن يُرسل أي طلب أو دعوة تلقائيًا."}</p></div>{createDraft.data && <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{createDraft.data.message}</p>}</section>}
+--- client/src/pages/ConsultantCommitteePage.tsx
+158:            العودة لمكاتب الاستشارات
+--- client/src/pages/ConsultantDetailPage.tsx
+192:            <Link href="/consultant-profiles"><Button className="mt-4">العودة للقائمة</Button></Link>
+214:              العودة لقائمة الاستشاريين
+--- client/src/pages/ConsultantGuidePage.tsx
+261:            العودة لبوابة المكاتب الاستشارية
+1005:              <span>يمكنك حفظ التقييم كمسودة والعودة لإكماله لاحقاً — لا تتسرع في الاعتماد النهائي.</span>
+--- client/src/pages/ConsultantKnowPage.tsx
+114:            العودة لمكاتب الاستشارات
+--- client/src/pages/ConsultantPortalPage.tsx
+87:            العودة للرئيسية
+--- client/src/pages/ConsultantRecommendPage.tsx
+124:            العودة لمكاتب الاستشارات
+--- client/src/pages/ContractDeliverablesPage.tsx
+29:    <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur"><div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6"><Button variant="ghost" size="sm" onClick={() => navigate("/consultant-appointment-pack")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى حزمة التكليف</Button><span className="h-5 w-px bg-border" /><div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-emerald-700" /><p className="text-sm font-extrabold text-foreground">سجل تسليمات العقد</p></div></div></header>
+--- client/src/pages/DevelopmentPhasesPage.tsx
+384:              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
+400:                العودة
+--- client/src/pages/DevelopmentStagesPage.tsx
+1299:            <Button variant="outline" onClick={() => navigate("/")}>
+1300:              العودة للرئيسية
+--- client/src/pages/ExecutiveVIPPage.tsx
+214:function SubPage({ title, icon, color, onBack, children }: {
+215:  title: string; icon: React.ReactNode; color: string; onBack: () => void; children: React.ReactNode;
+219:      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors">
+221:        <span className="text-sm">العودة</span>
+419:    <SubPage title="عاجل" icon={<AlertTriangle className="w-6 h-6" />} color="bg-gradient-to-r from-red-500 to-rose-600" onBack={() => setActiveSection(null)}>
+443:    <SubPage title="هام" icon={<Star className="w-6 h-6" />} color="bg-gradient-to-r from-amber-500 to-yellow-600" onBack={() => setActiveSection(null)}>
+467:      <SubPage title="المركز التجاري" icon={<Building2 className="w-6 h-6" />} color="bg-gradient-to-r from-blue-500 to-indigo-600" onBack={() => setActiveSection(null)}>
+490:    <SubPage title="محضر الاجتماع السابق" icon={<FileText className="w-6 h-6" />} color="bg-gradient-to-r from-purple-500 to-violet-600" onBack={() => setActiveSection(null)}>
+495:        <button onClick={() => navigate("/meetings")} className="bg-gradient-to-r from-purple-500 to-violet-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
+503:    <SubPage title="المشاريع" icon={<Briefcase className="w-6 h-6" />} color="bg-gradient-to-r from-emerald-500 to-teal-600" onBack={() => setActiveSection(null)}>
+506:          <Card key={p.id} className="p-4 hover:shadow-md transition-all cursor-pointer active:scale-[0.98]" onClick={() => navigate(`/project/${p.id}`)}>
+526:    <SubPage title="برامج العمل" icon={<BarChart3 className="w-6 h-6" />} color="bg-gradient-to-r from-cyan-500 to-blue-600" onBack={() => setActiveSection(null)}>
+531:        <button onClick={() => navigate("/execution-dashboard")} className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
+539:    <SubPage title="التدفقات النقدية" icon={<DollarSign className="w-6 h-6" />} color="bg-gradient-to-r from-green-500 to-emerald-600" onBack={() => setActiveSection(null)}>
+544:        <button onClick={() => navigate("/bateekha")} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
+552:    <SubPage title="البريد الإلكتروني" icon={<Mail className="w-6 h-6" />} color="bg-gradient-to-r from-pink-500 to-rose-600" onBack={() => setActiveSection(null)}>
+557:        <button onClick={() => navigate("/sent-emails")} className="bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all">
+631:              onClick={() => navigate("/")}
+--- client/src/pages/FactSheetPage.tsx
+181:export default function FactSheetPage({ embedded = false, initialProjectId, onBack, documentOnly = false }: { embedded?: boolean; initialProjectId?: number | null; onBack?: () => void; documentOnly?: boolean }) {
+465:                  <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground h-7 text-xs">
+471:              {embedded && onBack && (
+473:                  <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-foreground h-7 text-xs">
+474:                    <ChevronLeft className="h-3.5 w-3.5 ml-1" />العودة
+--- client/src/pages/FinancialEvaluationScreen.tsx
+48:export default function FinancialEvaluationScreen({ projectId, onBack }: { projectId?: number; onBack: () => void }) {
+52:      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+120:      <Button onClick={onBack} variant="outline" size="sm">العودة</Button>
+253:          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+254:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+--- client/src/pages/GeneralRequests.tsx
+348:            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 text-gray-500 hover:text-gray-800 -mr-1">
+384:              <Button variant="outline" size="sm" onClick={() => navigate("/approval-settings")} className="gap-2 text-sm">
+515:          <button onClick={() => setShowArchived(false)} className="mr-auto text-xs underline hover:no-underline">عودة للنشطة</button>
+539:                <ArchiveRestore className="w-4 h-4 ml-2" /> عودة للطلبات النشطة
+--- client/src/pages/GoogleConnectPage.tsx
+108:                يمكنك الآن العودة والمتابعة
+--- client/src/pages/KnowledgeHubPage.tsx
+35:export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
+37:  const handleBack = onBack || (() => navigate("/"));
+87:          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5 shrink-0">
+89:            العودة
+--- client/src/pages/MeetingRoomPage.tsx
+643:                {unreadCount > 0 ? `${unreadCount} رسائل جديدة` : "العودة للأسفل"}
+--- client/src/pages/ProjectDetailPage.tsx
+373:        <Button onClick={() => navigate("/bateekha")} variant="outline">
+375:          العودة للدراسات المالية
+394:              onClick={() => navigate("/bateekha")}
+433:              onClick={() => navigate("/bateekha?tab=general")}
+--- client/src/pages/ProjectLaunchGatePage.tsx
+37:            <Button variant="ghost" size="sm" onClick={() => navigate("/development-phases")} className="gap-1.5">
+38:              <ArrowRight className="w-4 h-4" /> العودة إلى جولة التطوير
+88:                <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => navigate("/project-reference")} className="gap-2 border-teal-200 bg-white text-teal-800 hover:bg-teal-50"><BookOpenCheck className="w-4 h-4" /> مرجع المشروع</Button><Button onClick={() => navigate(gate.nextActionHref)} className="gap-2 bg-slate-900 text-white hover:bg-slate-800"><ExternalLink className="w-4 h-4" /> افتح المصدر المناسب</Button></div>
+117:                    <button onClick={() => navigate(item.href)} className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-cyan-700 hover:text-cyan-900"><ExternalLink className="w-3.5 h-3.5" /> افتح المصدر: {item.sourceLabel}</button>
+--- client/src/pages/ProjectLifecyclePage.tsx
+578:  onBack,
+603:  onBack: () => void;
+632:      onBack();
+666:      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4 gap-1.5">
+668:        العودة للخدمات
+839:  onBack,
+844:  onBack: () => void;
+882:        onBack={() => setSelectedService(null)}
+904:      <Button variant="ghost" size="sm" onClick={onBack} className="mb-4 gap-1.5">
+906:        العودة للمراحل
+1153:          onBack={() => setSelectedStage(null)}
+--- client/src/pages/ProjectReferencePage.tsx
+42:      <header className="sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-sm"><div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-3 px-4 sm:px-6"><Button variant="ghost" size="sm" onClick={() => navigate("/project-launch")} className="gap-1.5"><ArrowRight className="h-4 w-4" /> العودة إلى بوابة الانطلاق</Button><span className="h-5 w-px bg-border" /><div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white"><BookOpenCheck className="h-3.5 w-3.5" /></span><h1 className="text-sm font-bold text-foreground">مرجعية المشروع وخط الأساس</h1></div></div></header>
+49:          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{reference.sources.map((source: any) => { const style = STATUS_STYLE[source.status as ReferenceStatus]; const StatusIcon = style.icon; return <article key={source.id} className="rounded-2xl border border-border bg-card p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold text-foreground">{source.title}</h3><p className="mt-1 text-xs text-muted-foreground">المصدر: {source.source}</p></div><span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-bold ${style.className}`}><StatusIcon className="h-3.5 w-3.5" />{style.label}</span></div><p className="mt-4 rounded-xl bg-muted/45 px-3 py-3 text-xs leading-5 text-foreground">{source.detail}</p><button onClick={() => navigate(source.href)} className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-teal-700 hover:text-teal-900"><ExternalLink className="h-3.5 w-3.5" /> افتح المصدر</button></article>; })}</div>
+--- client/src/pages/TaskSettingsPage.tsx
+342:                العودة للمهام
+--- client/src/pages/TrueCostReportScreen.tsx
+48:export default function TrueCostReportScreen({ projectId, onBack }: { projectId: number; onBack: () => void }) {
+239:          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+240:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+--- client/src/pages/TrueCostReportView.tsx
+47:export default function TrueCostReportView({ token, projectId, onBack }: { token: string; projectId: number; onBack: () => void }) {
+179:          <Button variant="ghost" size="sm" onClick={onBack} data-hide-print className="text-slate-500 hover:text-slate-700">
+180:            <ArrowRight className="w-4 h-4 ml-1" /> العودة
+--- client/src/pages/V2CapitalPortfolio.tsx
+113:export default function V2CapitalPortfolio({ embedded = false, onBack }: { embedded?: boolean; onBack?: () => void }) {
+243:            {!embedded && <button onClick={() => onBack ? onBack() : navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} className="mt-0.5 inline-flex items-center gap-1.5 rounded-md border border-teal-300 bg-teal-600 px-2.5 py-1.5 text-[11px] font-extrabold text-white shadow-sm transition hover:bg-teal-500" aria-label="العودة إلى الصفحة السابقة"><ArrowRight className="h-4 w-4" />العودة إلى الصفحة السابقة</button>}
+--- client/src/pages/V2EscrowCashFlow.tsx
+193:            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="p-1.5 rounded-lg hover:bg-gray-100 transition" aria-label="العودة إلى الصفحة السابقة">
+--- client/src/pages/V2Feasibility.tsx
+141:        {!embedded && <button type="button" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100" aria-label="العودة إلى الصفحة السابقة"><ArrowRight className="h-4 w-4" /></button>}
+--- client/src/pages/V2InvestorCashFlow.tsx
+171:            {!embedded && <button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-teal-800">
+172:              <ArrowRight className="w-4 h-4" />العودة إلى الصفحة السابقة
+275:                <div className="flex items-center gap-2 text-xs font-semibold text-slate-700"><CalendarClock className="h-4 w-4 text-cyan-700" /> نبض الضغط والعودة الشهري</div>
+--- client/src/pages/V2PaymentPlan.tsx
+246:    return <main dir="rtl" className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-4 sm:p-5"><div className="mx-auto w-full max-w-3xl rounded-3xl border-2 border-slate-200 bg-white p-6 text-center shadow-sm sm:p-8"><Landmark className="mx-auto h-9 w-9 text-indigo-600" /><h1 className="mt-3 text-2xl font-black text-slate-950">خطة سداد المشترين</h1><p className="mt-2 text-sm text-slate-600">اختر مشروعًا أولًا؛ بعدها ستظهر لك الدفعات وتواريخها مباشرة.</p><div className="mx-auto mt-5 flex w-full max-w-sm flex-col gap-3"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button></div></div></main>;
+255:            <div className="flex flex-wrap items-center gap-2"><div className="min-w-[210px]"><ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { hydratedPlanId.current = null; setSelectedProjectId(id); }} /></div><Button variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2/wael-sales"))} className="border-indigo-300 bg-white text-indigo-900"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى المبيعات</Button><Button onClick={save} disabled={saveCalendar.isPending} className="bg-indigo-700 text-white hover:bg-indigo-600"><Save className="ml-1 h-4 w-4" />حفظ الخطة</Button></div>
+--- client/src/pages/V2WaelSales.tsx
+878:              {!embedded && <Button size="sm" variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="h-10 gap-1.5 border-teal-200 bg-white px-3 text-teal-800 hover:bg-teal-50 hover:text-teal-900"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</Button>}
+944:                {!isBuildForSale && <section className="flex flex-col gap-4 rounded-[22px] border-2 border-indigo-300 bg-[linear-gradient(120deg,#eef2ff,#ffffff_58%,#ecfeff)] p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[11px] font-black text-indigo-700">خطة سداد المشترين</p><h2 className="mt-1 text-xl font-black text-slate-950">رتّب الدفعات بتواريخها الحقيقية في صفحة مستقلة</h2><p className="mt-1.5 max-w-3xl text-xs font-semibold leading-5 text-slate-700">تشاهد الدفعات المرقمة، والمواعيد الفعلية، وتعديل وائل اليدوي، وحالة المشتري الذي يدخل متأخرًا؛ ثم تعود هنا لاعتماد سيناريو المبيعات والتدفقات.</p></div><Button onClick={() => navigate(withReturnPath("/v2/payment-plan", location))} className="shrink-0 bg-indigo-700 text-white hover:bg-indigo-600"><Calendar className="ml-1 h-4 w-4" />فتح صفحة خطة السداد</Button></section>}
+1032:                <Button variant="outline" size="sm" className="gap-1.5"><LayoutDashboard className="h-3.5 w-3.5" />العودة للوحة السيناريو</Button>

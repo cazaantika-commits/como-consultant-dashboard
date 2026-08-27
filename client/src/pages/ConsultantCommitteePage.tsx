@@ -1,7 +1,7 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,6 +16,7 @@ import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
 import { Streamdown } from "streamdown";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 const CRITERIA = [
   { id: 0, name: "الخبرة والسابقة", weight: 20 },
@@ -27,6 +28,7 @@ const CRITERIA = [
 ];
 
 export default function ConsultantCommitteePage() {
+  const [location] = useLocation();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [decisionType, setDecisionType] = useState<string>("");
   const [selectedConsultantId, setSelectedConsultantId] = useState<string>("");
@@ -153,7 +155,7 @@ export default function ConsultantCommitteePage() {
       {/* Header */}
       <div className="w-full border-b border-stone-200 bg-white">
         <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6">
-          <Link href="/consultant-portal" className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors mb-4 text-sm">
+          <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-portal")} className="inline-flex items-center gap-2 text-stone-500 hover:text-stone-900 transition-colors mb-4 text-sm">
             <ArrowLeft className="w-4 h-4" />
             العودة لمكاتب الاستشارات
           </Link>

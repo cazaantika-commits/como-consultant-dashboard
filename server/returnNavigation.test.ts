@@ -45,4 +45,20 @@ describe("return navigation", () => {
     expect(source("client/src/pages/V2PaymentPlan.tsx").match(/العودة إلى المبيعات/g)).toHaveLength(2);
     expect(source("client/src/pages/V2EscrowCashFlow.tsx")).toContain("embedded = false");
   });
+
+  it("preserves the immediate source across approvals and consultant workflow pages", () => {
+    expect(source("client/src/pages/PaymentRequests.tsx")).toContain('withReturnPath("/approval-settings", location)');
+    expect(source("client/src/pages/ApprovalSettings.tsx")).toContain("resolveReturnPath(");
+    expect(source("client/src/pages/ConsultantPortalPage.tsx")).toContain('withReturnPath(item.href, "/consultant-portal")');
+    [
+      "client/src/pages/ConsultantCommitteePage.tsx",
+      "client/src/pages/ConsultantGuidePage.tsx",
+      "client/src/pages/ConsultantKnowPage.tsx",
+      "client/src/pages/ConsultantRecommendPage.tsx",
+    ].forEach((path) => expect(source(path)).toContain("resolveReturnPath("));
+  });
+
+  it("returns from the true-cost report to the immediately preceding results screen", () => {
+    expect(source("client/src/pages/CPAPage.tsx")).toContain('onBack={() => setScreen("results")}');
+  });
 });
