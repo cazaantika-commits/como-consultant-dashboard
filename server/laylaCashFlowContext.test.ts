@@ -127,6 +127,9 @@ describe("Layla cash-flow source context", () => {
       expect.objectContaining({ month: "2026-11", paid: 7, received: 0, net: -7, cumulative: -107 }),
       expect.objectContaining({ month: "2026-12", paid: 0, received: 19, net: 19, cumulative: -88 }),
     ]);
+
+    const defaultResult = getLaylaProjectCashFlow(shiftedReport, { project_name: "مجان", months: 1 });
+    expect((defaultResult as any).months[0]).toMatchObject({ month: "2026-11", net: -7 });
   });
 
   it("returns only the copied group totals and their project drivers", () => {

@@ -105,7 +105,11 @@ export function getLaylaProjectCashFlow(report: UnifiedGroupCashFlow, input: Pro
     return { found: false, reason: "لم يصل الصف النهائي لهذا المشروع إلى التقرير الموحد" };
   }
 
-  const { startIndex, endIndex } = monthSlice(report.monthDates, input.from_month, input.months);
+  const { startIndex, endIndex } = monthSlice(
+    report.monthDates,
+    input.from_month || project.monthDates[0],
+    input.months,
+  );
   const monthlyCumulative = project.monthlyCumulative || [];
   const movementMonths = report.monthDates.slice(startIndex, endIndex).map((monthDate, index) => {
     const groupIndex = startIndex + index;
