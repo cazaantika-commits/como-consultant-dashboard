@@ -197,7 +197,7 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
       const headers = ["البند / الشهر", ...selectedProjects.map((project) => compactCapitalProjectName(project.name)), "الإجمالي"];
       const rows = originalColumnLabels.map((label, index) => [label, ...(literalTransposedMatrix[index] || [])]);
       const cell = (value: string, header = false, total = false) => `<${header ? "th" : "td"}${total ? ' class="total-column"' : ""}>${value}</${header ? "th" : "td"}>`;
-      return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>محفظة رأس المال — العرض المعكوس</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#0f172a}.header{background:#0f172a;color:#fff;padding:14px 18px;border-radius:8px;max-width:980px;margin-right:0}.table-wrap{width:max-content;max-width:980px;margin:16px 0 16px auto;overflow:auto}table{border-collapse:collapse;font-size:10px;width:auto}th{background:#0f172a;color:#fff;padding:7px 10px;border:1px solid #334155;white-space:nowrap}td{padding:6px 10px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}.total-column{background:#1e293b!important;color:#fff!important;font-weight:700;border-right:2px solid #64748b!important;border-left:2px solid #64748b!important}</style></head><body><div class="header"><h1>محفظة رأس المال — العرض المعكوس</h1><p>نسخة من التدفقات الحالية · التجميع: ${PERIOD_OPTIONS.find((item) => item.value === groupSize)?.label}</p></div><div class="table-wrap"><table><thead><tr>${headers.map((value, index) => cell(value, true, index === headers.length - 1)).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((value, index) => cell(value, false, index === row.length - 1)).join("")}</tr>`).join("")}</tbody></table></div></body></html>`;
+      return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>محفظة رأس المال — العرض المعكوس</title><style>body{font-family:Tahoma,Arial,sans-serif;padding:24px;color:#0f172a}.header{background:#0f172a;color:#fff;padding:14px 18px;border-radius:8px;max-width:980px;margin-right:0}.table-wrap{width:max-content;max-width:980px;margin:16px 0 16px auto;overflow:auto;box-shadow:0 8px 24px rgba(15,23,42,.08)}table{border-collapse:collapse;font-size:10px;width:auto}th{background:#0f172a;color:#fff;padding:7px 10px;border:1px solid #334155;white-space:nowrap}td{padding:6px 10px;border:1px solid #cbd5e1;text-align:center;white-space:nowrap}tr:nth-child(even) td{background:#f8fafc}tr.month-start td{border-top:3px solid #0f172a!important}.total-column{background:linear-gradient(180deg,#0f766e,#115e59)!important;color:#fff!important;font-weight:700;border-right:2px solid #2dd4bf!important;border-left:2px solid #2dd4bf!important}</style></head><body><div class="header"><h1>محفظة رأس المال — العرض المعكوس</h1><p>نسخة من التدفقات الحالية · التجميع: ${PERIOD_OPTIONS.find((item) => item.value === groupSize)?.label}</p></div><div class="table-wrap"><table><thead><tr>${headers.map((value, index) => cell(value, true, index === headers.length - 1)).join("")}</tr></thead><tbody>${rows.map((row, rowIndex) => `<tr${rowIndex === 7 ? ' class="month-start"' : ""}>${row.map((value, index) => cell(value, false, index === row.length - 1)).join("")}</tr>`).join("")}</tbody></table></div></body></html>`;
     }
     const headers = ["المشروع", "الخيار", "إجمالي الإيرادات", "التكلفة الكلية", "رأس المال", "المدفوع", "المتبقي", "مدفوع سابقًا", ...groupedPortfolio.periods.map((period) => formatPeriod(period.startDate, period.endDate)), "الأرباح", "فرق مقابل دراسة الجدوى"];
     const detailRows = selectedProjects.map((project) => {
@@ -328,25 +328,27 @@ export default function V2CapitalPortfolio({ embedded = false, onBack }: { embed
               </tbody>
             </table>
           </div>
-          {viewMode === "transposed" && <div className="overflow-x-auto border-y-2 border-slate-400 py-3">
+          {viewMode === "transposed" && <div className="overflow-x-auto border-y-2 border-slate-400 bg-linear-to-b from-slate-50 to-white py-3">
             <div className="ml-auto mr-0 w-max max-w-full pr-3 pl-0">
-              <table className="w-max border-separate border-spacing-0 text-[11px]" data-testid="capital-portfolio-transposed">
+              <table className="w-max border-separate border-spacing-0 overflow-hidden rounded-lg text-[11px] shadow-[0_10px_28px_rgba(15,23,42,0.12)]" data-testid="capital-portfolio-transposed">
                 <thead><tr className="bg-slate-900 text-white">
                   <th className="min-w-[122px] border-l border-slate-600 px-3 py-2.5 text-right font-extrabold">البند / الشهر</th>
                   {selectedProjects.map((project, index) => <th key={project.projectId} className="min-w-[108px] border-l border-slate-600 px-2 py-2.5 font-extrabold"><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{compactCapitalProjectName(project.name)}</span></th>)}
-                  <th className="relative -translate-y-0.5 min-w-[148px] border-x-2 border-t-2 border-slate-500 bg-slate-700 px-3 py-3 font-extrabold text-white shadow-sm">الإجمالي</th>
+                  <th className="relative -translate-y-0.5 min-w-[148px] border-x-2 border-t-2 border-teal-300 bg-linear-to-b from-teal-700 to-emerald-800 px-3 py-3 font-extrabold text-white shadow-sm">الإجمالي</th>
                 </tr></thead>
                 <tbody>
                   {originalColumnLabels.map((label, rowIndex) => {
                     const rowValues = literalTransposedMatrix[rowIndex] || [];
                     const isLastRow = rowIndex === originalColumnLabels.length - 1;
-                    return <tr key={label} className={isLastRow ? "bg-slate-800 text-white" : "even:bg-slate-50"}>
-                      <td className={`border-b border-l px-3 py-2 text-right font-extrabold ${isLastRow ? "border-slate-600 bg-slate-800 text-white" : "border-slate-200 bg-slate-100 text-slate-800"}`}>{label}</td>
+                    const isFirstMonthlyRow = rowIndex === 7;
+                    const dividerClass = isFirstMonthlyRow ? "border-t-[3px] border-t-slate-800" : "";
+                    return <tr key={label} className={isLastRow ? "bg-slate-800 text-white" : isFirstMonthlyRow ? "bg-slate-50" : "even:bg-slate-50"}>
+                      <td className={`border-b border-l px-3 py-2 text-right font-extrabold ${dividerClass} ${isLastRow ? "border-slate-600 bg-slate-800 text-white" : isFirstMonthlyRow ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 bg-slate-100 text-slate-800"}`}>{label}</td>
                       {rowValues.slice(0, -1).map((display, projectIndex) => {
                         const tone = display.startsWith("−") ? "bg-rose-50 text-rose-700" : display.startsWith("+") ? "bg-emerald-50 text-emerald-700" : label === "إجمالي الإيرادات" || label === "المدفوع" ? "text-emerald-700" : label === "المتبقي" || label === "مدفوع سابقًا" ? "text-rose-700" : "text-slate-800";
-                        return <td key={`${label}-${selectedProjects[projectIndex]?.projectId}`} className={`border-b border-l px-2 py-2 text-center font-bold tabular-nums ${isLastRow ? "border-slate-600 text-white" : `border-slate-200 ${tone}`}`}>{display || "—"}</td>;
+                        return <td key={`${label}-${selectedProjects[projectIndex]?.projectId}`} className={`border-b border-l px-2 py-2 text-center font-bold tabular-nums ${dividerClass} ${isLastRow ? "border-slate-600 text-white" : `border-slate-200 ${tone}`}`}>{display || "—"}</td>;
                       })}
-                      <td className="relative -translate-y-0.5 min-w-[148px] border-x-2 border-b border-slate-500 bg-slate-700 px-3 py-2.5 text-center font-extrabold text-white tabular-nums shadow-sm">{rowValues.at(-1) || "—"}</td>
+                      <td className={`relative -translate-y-0.5 min-w-[148px] border-x-2 border-b border-teal-300 bg-linear-to-b from-teal-700 to-emerald-800 px-3 py-2.5 text-center font-extrabold text-white tabular-nums shadow-sm ${dividerClass}`}>{rowValues.at(-1) || "—"}</td>
                     </tr>;
                   })}
                 </tbody>

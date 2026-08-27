@@ -1615,4 +1615,5 @@
 - [x] Keep transposed project columns tightly aligned and make the final total column wider, visually elevated, and clearly distinguished
 - [x] Align the compact transposed Capital Portfolio table to the right edge of its container without changing values or column dimensions
 - [x] Match the transposed Capital Portfolio styling to the original table's navy header, borders, row heights, project dots, and signed-flow colors while retaining a distinct total column
+- [x] Polish the transposed Capital Portfolio without changing values: darken the divider after Paid Previously, redesign the Total column color, and improve the compact visual hierarchy
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
