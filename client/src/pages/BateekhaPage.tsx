@@ -34,6 +34,7 @@ const V2Portfolio = lazy(() => import("./V2Portfolio"));
 const V2PortfolioMonthly = lazy(() => import("./V2PortfolioMonthly"));
 const V2PortfolioEscrowLiquidity = lazy(() => import("./V2PortfolioEscrowLiquidity"));
 const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
+const V2UnifiedGroupCashFlow = lazy(() => import("./V2UnifiedGroupCashFlow"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
 
 type TabId = FinancialStudiesTabId;
@@ -70,6 +71,7 @@ const TABS: { id: TabId; label: string; description: string; icon: any; projectS
   { id: "portfolio_monthly", label: "العرض الشهري", description: "قراءة شهرية للمحفظة", icon: TableProperties, projectScoped: false },
   { id: "portfolio_escrow_liquidity", label: "سيولة الإسكرو", description: "إنذار العجز والمقارنة الشهرية", icon: ShieldAlert, projectScoped: false },
   { id: "capital_portfolio", label: "محفظة رأس المال", description: "رأس المال والعوائد المجمعة", icon: WalletCards, projectScoped: false },
+  { id: "unified_group_cashflow", label: "التدفقات الموحدة", description: "كل المشاريع وحركة المجموعة الشهرية", icon: Layers3, projectScoped: false },
 ];
 
 function TabContent({ tabId }: { tabId: TabId }) {
@@ -88,6 +90,7 @@ function TabContent({ tabId }: { tabId: TabId }) {
     case "portfolio_monthly": return <V2PortfolioMonthly embedded />;
     case "portfolio_escrow_liquidity": return <V2PortfolioEscrowLiquidity />;
     case "capital_portfolio": return <V2CapitalPortfolio embedded />;
+    case "unified_group_cashflow": return <V2UnifiedGroupCashFlow />;
     default: return null;
   }
 }

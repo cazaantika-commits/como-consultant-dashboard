@@ -7,9 +7,11 @@ import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
 import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
 import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
 import { trpc } from "@/lib/trpc";
-import type { PortfolioProjectMonthlyNet } from "@/lib/portfolioAggregation";
-import { buildExecutivePortfolioLiquidity } from "@/lib/executivePortfolioLiquidity";
 import { formatFullNumber } from "@/lib/numberFormat";
+import {
+  buildUnifiedGroupLiquidity,
+  type UnifiedGroupCashFlow,
+} from "@/lib/unifiedGroupCashFlow";
 
 const MONTH_NAMES = [
   "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
@@ -31,27 +33,27 @@ type ExecutiveCashFlowAlertProps = {
 };
 
 /**
- * Read-only decision surface for the Command Center.
- * It deliberately consumes the same signed net monthly rows as the frozen
- * Project Aggregation report: negative = investor funding required, positive = returned.
+ * Read-only decision surface for the Command Center. It deliberately consumes
+ * the completed Unified Group Cash Flow report: negative = funding required,
+ * positive = money returned. No cash-flow engine is duplicated here.
  */
 export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidityReport }: ExecutiveCashFlowAlertProps) {
   const [horizon, setHorizon] = useState<3 | 4>(4);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
-  const portfolioQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(undefined, { staleTime: 0 });
+  const unifiedReportQuery = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(undefined, { staleTime: 0 });
   const escrowLiquidityQuery = trpc.cashFlowSettings.getPortfolioEscrowLiquidity.useQuery(undefined, { staleTime: 0 });
-  const projects = (portfolioQuery.data || []) as PortfolioProjectMonthlyNet[];
+  const report = unifiedReportQuery.data as UnifiedGroupCashFlow | null | undefined;
 
-  const liquidity = useMemo(() => buildExecutivePortfolioLiquidity(projects, { horizon }), [projects, horizon]);
-  const alertMonths = liquidity.months;
-  const summary = liquidity.summary;
+  const liquidity = useMemo(() => report ? buildUnifiedGroupLiquidity(report, { horizon }) : null, [report, horizon]);
+  const alertMonths = liquidity?.months || [];
+  const summary = liquidity?.summary || { required: 0, returned: 0, netFunding: 0 };
   const escrowDeficits = (escrowLiquidityQuery.data || []).filter((project: any) => project.liquidity?.hasDeficit);
   const earliestEscrowDeficit = escrowDeficits
     .map((project: any) => ({ project, index: project.liquidity.firstDeficitIndex as number }))
     .sort((left, right) => left.project.monthDates[left.index].localeCompare(right.project.monthDates[right.index]))[0];
 
-  if (portfolioQuery.isLoading) {
-    return <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-500">جاري تجهيز ملخص التدفقات للمحفظة...</div>;
+  if (unifiedReportQuery.isLoading) {
+    return <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-500">جاري تجهيز ملخص التدفقات الموحدة...</div>;
   }
 
   if (alertMonths.length === 0) {
@@ -70,7 +72,7 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidi
             </div>
             <div>
               <p className="text-[11px] font-semibold tracking-[0.12em] text-amber-700">لِلْقَرار التنفيذي</p>
-              <h2 className="mt-1 text-xl font-black text-slate-900">التزامات المحفظة القادمة</h2>
+              <h2 className="mt-1 text-xl font-black text-slate-900">التزامات المجموعة القادمة</h2>
               <p className="mt-1 text-xs text-slate-600">ما المطلوب، متى، ومن أي مشروع خلال الأشهر القادمة</p>
             </div>
           </div>
@@ -93,7 +95,7 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidi
             <p className="mt-2 text-2xl font-black text-amber-900">{formatAmount(summary.netFunding)} <span className="text-sm font-semibold text-amber-800">درهم</span></p>
           </div>
         </div>
-        {liquidity.peakMonth && <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-white/75 px-4 py-2.5 text-xs"><span className="font-bold text-amber-800">{liquidity.peakKind === "required" ? "أعلى ضغط تمويلي:" : "أعلى عائد متوقع:"}</span><span className="font-black text-slate-900">{monthLabel(liquidity.peakMonth.monthDate)}</span><span className={liquidity.peakKind === "required" ? "font-black text-red-700" : "font-black text-emerald-700"}>{formatAmount(liquidity.peakKind === "required" ? liquidity.peakMonth.required : liquidity.peakMonth.returned)} درهم</span></div>}
+        {liquidity?.peakMonth && <div className="relative mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-slate-200 bg-white/75 px-4 py-2.5 text-xs"><span className="font-bold text-amber-800">{liquidity.peakKind === "required" ? "أعلى ضغط تمويلي:" : "أعلى عائد متوقع:"}</span><span className="font-black text-slate-900">{monthLabel(liquidity.peakMonth.monthDate)}</span><span className={liquidity.peakKind === "required" ? "font-black text-red-700" : "font-black text-emerald-700"}>{formatAmount(liquidity.peakKind === "required" ? liquidity.peakMonth.required : liquidity.peakMonth.returned)} درهم</span></div>}
       </div>
 
       <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
@@ -120,8 +122,8 @@ export default function ExecutiveCashFlowAlert({ onOpenFullReport, onOpenLiquidi
       </div>}
 
       <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-slate-500">المصدر هو صف «صافي الشهر» المعتمد نفسه في تقرير تجميع المشاريع؛ لا توجد أي حسابات جديدة هنا.</p>
-        <button onClick={onOpenFullReport} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> فتح التقرير المجمّع الكامل</button>
+        <p className="text-xs text-slate-500">المصدر هو التقرير الموحد نفسه: صف صافي الشهر النهائي لكل مشروع، مع المركز التجاري كتطوير قبل التشغيل فقط؛ لا توجد أي حسابات أو إيجارات جديدة هنا.</p>
+        <button onClick={onOpenFullReport} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-800"><ArrowLeft className="h-4 w-4" /> فتح تقرير التدفقات الموحد</button>
       </div>
     </section>
   );

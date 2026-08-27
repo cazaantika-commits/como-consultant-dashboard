@@ -3,6 +3,12 @@ import {
   alignPortfolioMonthlyNetFlows,
   groupCalendarAlignedPortfolio,
 } from "../client/src/lib/portfolioAggregation";
+import {
+  buildUnifiedGroupCashFlow,
+  buildUnifiedGroupLiquidity,
+} from "../client/src/lib/unifiedGroupCashFlow";
+import V2UnifiedGroupCashFlow from "../client/src/pages/V2UnifiedGroupCashFlow";
+import ExecutiveCashFlowAlert from "../client/src/components/ExecutiveCashFlowAlert";
 import fs from "node:fs";
 import path from "node:path";
 import { buildInvestorMonthlyTrace, combineFinancialTraceBreakdowns } from "../client/src/lib/financialTraceBreakdown";
@@ -75,6 +81,64 @@ describe("Project Aggregation calendar-aligned net investor flows", () => {
   });
 });
 
+describe("Unified Group Cash Flow copy-only aggregation", () => {
+  const report = buildUnifiedGroupCashFlow([
+    {
+      projectId: 101,
+      name: "مشروع بيع",
+      financingScenario: "offplan_escrow",
+      startDate: "2026-09",
+      monthDates: ["2026-09", "2026-10", "2026-11"],
+      monthlyDebit: [100, 0, 0],
+      monthlyCredit: [0, 40, 0],
+      monthlyNet: [-100, 40, 0],
+      paidBeforeSchedule: 25,
+      sourceKind: "investor_cash_flow",
+      sourceLabel: "صف صافي الشهر النهائي من تدفقات المستثمر",
+      includesOperatingCashFlows: false,
+    },
+    {
+      projectId: 1,
+      name: "مركز مجان التجاري (G+4)",
+      financingScenario: "build_for_rent",
+      startDate: "2026-09",
+      monthDates: ["2026-09", "2026-10", "2026-11"],
+      monthlyDebit: [30, 20, 10],
+      monthlyCredit: [0, 0, 0],
+      monthlyNet: [-30, -20, -10],
+      paidBeforeSchedule: 5,
+      sourceKind: "commercial_development",
+      sourceLabel: "صف تدفقات تطوير المركز التجاري قبل التشغيل",
+      scopeNote: "يشمل تكاليف التطوير المعتمدة فقط؛ لا توجد توقعات إيجار أو مصروفات تشغيل في هذا التقرير.",
+      includesOperatingCashFlows: false,
+    },
+  ]);
+
+  it("copies each final source cell, including Commercial Center development spending, without creating rental credits", () => {
+    expect(report.rows.find((row) => row.projectId === 101)?.values).toEqual([-100, 40, 0]);
+    expect(report.rows.find((row) => row.projectId === 1)?.values).toEqual([-30, -20, -10]);
+    expect(report.rows.find((row) => row.projectId === 1)?.creditValues).toEqual([0, 0, 0]);
+    expect(report.rows.find((row) => row.projectId === 1)?.sourceKind).toBe("commercial_development");
+    expect(report.rows.find((row) => row.projectId === 1)?.includesOperatingCashFlows).toBe(false);
+    expect(report.paidBeforeScheduleTotal).toBe(30);
+  });
+
+  it("sets group totals to the exact monthly sum of copied project rows and cumulative totals to their running sum", () => {
+    expect(report.totals).toEqual([-130, 20, -10]);
+    expect(report.cumulativeTotals).toEqual([-160, -140, -150]);
+    report.monthDates.forEach((_, index) => {
+      expect(report.totals[index]).toBe(report.rows.reduce((sum, row) => sum + row.values[index], 0));
+    });
+  });
+
+  it("derives the decision view from the report rows only", () => {
+    const liquidity = buildUnifiedGroupLiquidity(report, { horizon: 3, asOfMonth: "2026-09" });
+    expect(liquidity.months.map((month) => month.total)).toEqual([-130, 20, -10]);
+    expect(liquidity.summary).toEqual({ required: 140, returned: 20, netFunding: 120 });
+    expect(liquidity.months[0].drivers.map((driver) => driver.projectId)).toEqual([101, 1]);
+  });
+});
+
 describe("Consolidated report source trace", () => {
   const readSource = (relativePath: string) => fs.readFileSync(path.resolve(process.cwd(), relativePath), "utf8");
 
@@ -83,6 +147,9 @@ describe("Consolidated report source trace", () => {
     const aggregationSource = readSource("client/src/pages/V2Portfolio.tsx");
     const monthlySource = readSource("client/src/pages/V2PortfolioMonthly.tsx");
     const capitalSource = readSource("client/src/pages/V2CapitalPortfolio.tsx");
+    const unifiedSource = readSource("client/src/pages/V2UnifiedGroupCashFlow.tsx");
+    const commandCenterSource = readSource("client/src/components/ExecutiveCashFlowAlert.tsx");
+    const cashFlowRouterSource = readSource("server/routers/cashFlowSettings.ts");
 
     expect(traceSource).toContain("مصدر الرقم");
     expect(traceSource).toContain("تفصيل التجميع");
@@ -95,6 +162,19 @@ describe("Consolidated report source trace", () => {
     expect(capitalSource).toContain("FinancialSourceValue");
     expect(capitalSource).toContain("إجمالي الإيرادات");
     expect(capitalSource).toContain("التكلفة الكلية");
+    expect(unifiedSource).toContain("FinancialSourceValue");
+    expect(unifiedSource).toContain("تطوير قبل التشغيل");
+    expect(unifiedSource).toContain("لا يعرض التقرير توقعات إيجار");
+    expect(commandCenterSource).toContain("getUnifiedGroupCashFlows");
+    expect(commandCenterSource).toContain("buildUnifiedGroupLiquidity");
+    expect(cashFlowRouterSource).toContain("getUnifiedGroupCashFlows");
+    expect(cashFlowRouterSource).toContain('sourceKind: isCommercialDevelopment ? "commercial_development"');
+    expect(cashFlowRouterSource).toContain("لا توجد توقعات إيجار أو مصروفات تشغيل في هذا التقرير");
+  });
+
+  it("compiles the Unified Group Cash Flow report and Command Center decision component", () => {
+    expect(typeof V2UnifiedGroupCashFlow).toBe("function");
+    expect(typeof ExecutiveCashFlowAlert).toBe("function");
   });
 });
 

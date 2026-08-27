@@ -44,6 +44,10 @@ import { calculateInvestorMonthlyNet } from "../../client/src/lib/investorCashFl
 import { buildInvestorMonthlyFundingTrace, buildInvestorMonthlyTrace } from "../../client/src/lib/financialTraceBreakdown";
 import { isCapitalPortfolioEligibleScenario } from "../../client/src/lib/portfolioReportRules";
 import { calculateEscrowMonthlyBalance, summarizeEscrowLiquidity } from "../../client/src/lib/escrowSettlement";
+import {
+  buildUnifiedGroupCashFlow,
+  type GroupCashFlowProjectMonthlyNet,
+} from "../../client/src/lib/unifiedGroupCashFlow";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2553,6 +2557,60 @@ export const cashFlowSettingsRouter = router({
         monthlyTrace,
       };
     });
+  }),
+
+  /**
+   * Unified Group Cash Flow source. It copies each project's existing final
+   * Investor Cash Flow row and calendar-aligns the copies only. The commercial
+   * center is included as verified development spending before operations; this
+   * endpoint never creates rental or operating estimates.
+   */
+  getUnifiedGroupCashFlows: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    const db = await getDb();
+    if (!db) return null;
+
+    const [allProjects, allPlans] = await Promise.all([
+      db.select().from(projects),
+      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+    ]);
+    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
+    for (const plan of allPlans) {
+      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
+    }
+
+    const sourceRows: GroupCashFlowProjectMonthlyNet[] = allProjects.map((project) => {
+      const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
+      const isCommercialDevelopment = scenario === "build_for_rent" || scenario === "rental";
+      const salesResult = isCommercialDevelopment
+        ? undefined
+        : buildSalesResultFromSavedPlan(newestPlanByProject.get(project.id), project, scenario);
+      const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
+      const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
+
+      return {
+        projectId: project.id,
+        name: project.name,
+        financingScenario: scenario,
+        startDate: cashFlow.startDate,
+        monthDates: cashFlow.monthDates.slice(0, investorNet.netFlow.length),
+        monthlyDebit: investorNet.debitTotals,
+        monthlyCredit: investorNet.creditTotals,
+        monthlyNet: investorNet.netFlow,
+        paidBeforeSchedule: investorNet.paidBeforeSchedule,
+        monthlyTrace: buildInvestorMonthlyTrace(cashFlow, salesResult),
+        sourceKind: isCommercialDevelopment ? "commercial_development" : "investor_cash_flow",
+        sourceLabel: isCommercialDevelopment
+          ? "صف تدفقات تطوير المركز التجاري قبل التشغيل"
+          : "صف صافي الشهر النهائي من تدفقات المستثمر",
+        scopeNote: isCommercialDevelopment
+          ? "يشمل تكاليف التطوير المعتمدة فقط؛ لا توجد توقعات إيجار أو مصروفات تشغيل في هذا التقرير."
+          : undefined,
+        includesOperatingCashFlows: false,
+      };
+    });
+
+    return buildUnifiedGroupCashFlow(sourceRows);
   }),
 
   /**

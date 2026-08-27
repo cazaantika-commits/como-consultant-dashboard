@@ -1616,5 +1616,7 @@
 - [x] Align the compact transposed Capital Portfolio table to the right edge of its container without changing values or column dimensions
 - [x] Match the transposed Capital Portfolio styling to the original table's navy header, borders, row heights, project dots, and signed-flow colors while retaining a distinct total column
 - [x] Polish the transposed Capital Portfolio without changing values: darken the divider after Paid Previously, redesign the Total column color, and improve the compact visual hierarchy
-- [ ] Build a unified group cash-flow report by copying approved final project cash-flow rows, audit the commercial-center rental source before inclusion, and add a Command Center next-months decision summary without parallel financial calculations
+- [x] Build a unified group cash-flow report by copying approved final project cash-flow rows, audit the commercial-center rental source before inclusion, and add a Command Center next-months decision summary without parallel financial calculations
+- [x] Include the Commercial Center in the unified report as audited development cash flows only until a separately approved monthly rental and operating source exists; prohibit any invented rental or operating movements
+- [x] Keep all existing final project-source months while excluding all long-range rental and operating projections for the Commercial Center; limit the Command Center decision view to 3 or 4 upcoming months
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

@@ -13,7 +13,8 @@ export type FinancialStudiesTabId =
   | "portfolio"
   | "portfolio_monthly"
   | "portfolio_escrow_liquidity"
-  | "capital_portfolio";
+  | "capital_portfolio"
+  | "unified_group_cashflow";
 
 const BUILD_FOR_SALE_HIDDEN_TABS: FinancialStudiesTabId[] = [
   "marketing",

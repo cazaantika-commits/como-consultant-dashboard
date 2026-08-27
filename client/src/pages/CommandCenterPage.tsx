@@ -4445,7 +4445,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </section>
 
         <section className="mb-4">
-          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=portfolio")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
+          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate("/bateekha?tab=unified_group_cashflow")} onOpenLiquidityReport={() => navigate("/bateekha?tab=portfolio_escrow_liquidity")} />
         </section>
 
         <ApprovedProjectChanges token={token} />
