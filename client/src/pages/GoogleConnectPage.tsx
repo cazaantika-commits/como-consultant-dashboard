@@ -6,10 +6,14 @@ import { default as CheckCircle } from "lucide-react/dist/esm/icons/circle-check
 import { default as ExternalLink } from "lucide-react/dist/esm/icons/external-link.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as XCircle } from "lucide-react/dist/esm/icons/circle-x.js";
+import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { useEffect, useState } from "react";
 import { getLoginUrl } from "@/const";
+import { useLocation } from "wouter";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 export default function GoogleConnectPage() {
+  const [location, navigate] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [callbackProcessing, setCallbackProcessing] = useState(false);
   const [callbackResult, setCallbackResult] = useState<string | null>(null);
@@ -64,6 +68,9 @@ export default function GoogleConnectPage() {
             <a href={getLoginUrl()}>
               <Button className="w-full">تسجيل الدخول</Button>
             </a>
+            <Button variant="outline" className="mt-3 w-full gap-2" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/"))}>
+              <ArrowRight className="h-4 w-4" /> العودة إلى الصفحة السابقة
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -128,6 +135,9 @@ export default function GoogleConnectPage() {
               )}
             </div>
           )}
+          <Button variant="outline" className="w-full gap-2" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/"))}>
+            <ArrowRight className="h-4 w-4" /> العودة إلى الصفحة السابقة
+          </Button>
         </CardContent>
       </Card>
     </div>

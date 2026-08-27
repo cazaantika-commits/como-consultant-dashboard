@@ -20,3 +20,15 @@ The later attempt to open the Payment Requests card redirected to the external M
 ## Guardrails
 
 `resolveReturnPath` accepts only an in-application relative path and rejects external or protocol-relative values. Direct URL entry therefore uses the page’s local fallback rather than navigating to an untrusted address.
+
+## Consultant workflow check — 2026-08-27
+
+The live Consultant Portal rendered the six workflow cards with a `returnTo=/consultant-portal` parameter on each direct workflow link. The Consultant Guide then loaded directly with that parameter and displayed a visible return link. This confirms that the portal can now retain its own position as the immediate return step for its child screens.
+
+The Consultant Guide return control was pressed in the live preview and returned directly to the Consultant Portal. The Committee Decision page also loaded with `returnTo=/consultant-portal`; its visible return link resolved to the portal rather than its former unregistered `/evaluation` route.
+
+## Remaining application routes — 2026-08-27
+
+Static review covered 27 application files containing explicit return controls or route transitions. The audit distinguished intended `الرئيسية` controls from actual return controls. Corrections were made where a return link discarded its immediate source: Approval Settings, Consultant Portal child screens, Contract Deliverables, Committee Decision, Project Detail, Project Reference, Google Connect, and the True Cost report’s internal results step.
+
+Desktop and mobile preview captures confirmed visible return controls at the Consultant Portal, Consultant Guide, Committee Decision, Project Reference, Google Connect, Payment Plan, Capital Portfolio, and Unified Group Cash Flow. The Capital Portfolio capture was still loading its protected financial data but the page shell and the return control rendered normally; no navigation error or missing-component error appeared. The route contract is also covered by the return-navigation test suite.

@@ -37,6 +37,7 @@ import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.j
 import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
 import { default as AlertCircle } from "lucide-react/dist/esm/icons/circle-alert.js";
 import { default as Percent } from "lucide-react/dist/esm/icons/percent.js";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 // Fact Sheet field groups - mirrors the database schema sections
 const FIELD_GROUPS = [
@@ -327,7 +328,7 @@ function ConsultantsPanel({ consultants, financialData }: { consultants: any[]; 
 
 export default function ProjectDetailPage() {
   const { user, loading, isAuthenticated } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [match, params] = useRoute("/project/:id");
   const projectId = params?.id ? parseInt(params.id) : null;
 
@@ -370,7 +371,7 @@ export default function ProjectDetailPage() {
       <div className="min-h-screen flex items-center justify-center flex-col gap-4">
         <AlertCircle className="w-12 h-12 text-muted-foreground" />
         <h2 className="text-lg font-semibold">المشروع غير موجود</h2>
-        <Button onClick={() => navigate("/bateekha")} variant="outline">
+        <Button onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))} variant="outline">
           <ArrowRight className="w-4 h-4 ml-1" />
           العودة للدراسات المالية
         </Button>
@@ -391,7 +392,7 @@ export default function ProjectDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate("/bateekha")}
+              onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/bateekha"))}
               className="text-white hover:bg-white/20"
             >
               <ArrowRight className="w-4 h-4 ml-1" />

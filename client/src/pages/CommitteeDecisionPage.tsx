@@ -31,7 +31,8 @@ import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js"
 import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
 import { default as Info } from "lucide-react/dist/esm/icons/info.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { resolveReturnPath } from "@/lib/returnNavigation";
 
 // Fee Deviation Zone definitions
 const FEE_ZONES = {
@@ -62,6 +63,7 @@ const DECISION_BASIS_OPTIONS = [
 ];
 
 export default function CommitteeDecisionPage() {
+  const [location] = useLocation();
   const { user } = useAuth();
 
 
@@ -271,10 +273,10 @@ export default function CommitteeDecisionPage() {
       <div className="bg-gradient-to-l from-slate-900 via-slate-800 to-slate-900 text-white">
         <div className="container py-8">
           <div className="flex items-center gap-4 mb-6">
-            <Link href="/evaluation">
+            <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-evaluation")}>
               <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
                 <ArrowLeft className="h-4 w-4 ml-2" />
-                العودة للتقييم
+                العودة إلى الصفحة السابقة
               </Button>
             </Link>
           </div>

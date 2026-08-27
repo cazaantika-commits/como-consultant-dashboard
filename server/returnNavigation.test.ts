@@ -55,6 +55,11 @@ describe("return navigation", () => {
       "client/src/pages/ConsultantGuidePage.tsx",
       "client/src/pages/ConsultantKnowPage.tsx",
       "client/src/pages/ConsultantRecommendPage.tsx",
+      "client/src/pages/ContractDeliverablesPage.tsx",
+      "client/src/pages/GoogleConnectPage.tsx",
+      "client/src/pages/CommitteeDecisionPage.tsx",
+      "client/src/pages/ProjectDetailPage.tsx",
+      "client/src/pages/ProjectReferencePage.tsx",
     ].forEach((path) => expect(source(path)).toContain("resolveReturnPath("));
   });
 
