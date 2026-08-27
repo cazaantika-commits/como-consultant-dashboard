@@ -1628,4 +1628,5 @@
 - [x] Audit Layla's current command-center chat knowledge, execution scope, safeguards, and response quality; report the actual capability level before changing it
 - [x] Replace every visible executive-assistant identity reference from Salwa to Layla in the Command Center and chat experience without changing chat behavior or data
 - [x] Connect Layla to approved investor and unified group cash-flow source summaries so she can answer and explain monthly cash movements without inventing figures or changing financial data
+- [x] Connect Layla to verified Command Center sources for decisions, approvals, payment requests, tasks, meetings, and project status, with read-and-explain access only
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

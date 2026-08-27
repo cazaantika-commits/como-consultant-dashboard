@@ -24,6 +24,8 @@ import {
   internalMessages,
   cpaProjects,
   projectChangeRequests,
+  tasks,
+  meetings,
 } from "../../drizzle/schema";
 import { eq, desc, sql, and, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -33,6 +35,7 @@ import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
 import { loadUnifiedGroupCashFlowSource } from "./cashFlowSettings";
 import { laylaCashFlowTools, runLaylaCashFlowTool } from "../laylaCashFlowContext";
+import { formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, laylaCommandCenterTools, loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
 
 // --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
@@ -945,12 +948,26 @@ export const commandCenterRouter = router({
       
       // Get platform context. Financial answers use an explicit read-only source
       // tool below, rather than a prompt-only summary or an alternative formula.
-      const [projectsList, consultantsList, recentItems, cashFlowReport] = await Promise.all([
+      const [projectsList, consultantsList, recentItems, cashFlowReport, commandCenterSnapshot] = await Promise.all([
         db.select({ id: projects.id, name: projects.name }).from(projects).limit(20),
         db.select({ id: consultants.id, name: consultants.name, specialization: consultants.specialization }).from(consultants).limit(30),
         db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")).orderBy(desc(commandCenterItems.createdAt)).limit(10),
         loadUnifiedGroupCashFlowSource(),
+        loadLaylaCommandCenterSnapshot(db, member, {
+          projects, projectChangeRequests, committeeDecisions, evaluationApprovals, paymentRequests, generalRequests,
+          tasks, meetings, evaluationSessions, projectMilestones, projectKpis, commandCenterItems,
+        }),
       ]);
+
+      if (isLaylaCommandCenterOverviewRequest(input.message)) {
+        const laylaResponse = formatLaylaCommandCenterOverview(commandCenterSnapshot);
+        await db.insert(commandCenterChat).values({
+          memberId: member.memberId,
+          role: "salwa",
+          content: laylaResponse,
+        });
+        return { response: laylaResponse };
+      }
       
       const systemPrompt = `أنتِ ليلى، المساعدة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.
       
@@ -960,9 +977,10 @@ export const commandCenterRouter = router({
 
 مهامك:
 1. اجيبي عن استفسارات المشاريع والاستشاريين بوضوح وباختصار.
-2. عند السؤال عن أي تدفق نقدي، مشروع، شهر، مدفوع، مستلم، صافي، تراكمي، أو سبب حركة: استخدمي أداة التدفقات المناسبة أولًا ثم اشرحي القيم العائدة منها فقط.
-3. لا تخمّني أي مبلغ أو فترة. إذا لم يرجع المصدر قيمة، قولي ذلك بوضوح واطلبي اسم المشروع أو الشهر.
-4. لا تقولي إنك أرسلتِ رسالة أو أنشأتِ مهمة أو عدلتِ بيانات؛ المحادثة لا تملك تنفيذ هذه الأوامر في هذه المرحلة.
+2. عند السؤال عن أي تدفق نقدي، مشروع، شهر، مدفوع، مستلم، صافي، تراكمي، رأس مال، أو سبب حركة: استخدمي أداة التدفقات المناسبة أولًا ثم اشرحي القيم العائدة منها فقط.
+3. عند السؤال عن القرارات أو الاعتمادات أو طلبات الصرف أو الطلبات أو المهام أو الاجتماعات أو حالة المشروع: استخدمي أداة مركز القيادة أولًا ثم اشرحي القيم العائدة منها فقط.
+4. لا تخمّني أي مبلغ أو فترة أو حالة. إذا لم يرجع المصدر قيمة، قولي ذلك بوضوح واطلبي اسم المشروع أو الفترة.
+5. لا تقولي إنك أرسلتِ رسالة أو أنشأتِ مهمة أو عدلتِ بيانات؛ المحادثة لا تملك تنفيذ هذه الأوامر في هذه المرحلة.
 
 المشاريع الحالية: ${projectsList.map(p => `${p.name} (${p.id})`).join(", ") || "لا توجد مشاريع"}
 الاستشاريون: ${consultantsList.map(c => `${c.name} - ${c.specialization || ""}`).join(", ") || "لا يوجد استشاريون"}
@@ -977,6 +995,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 - لا تستخدمي إيموجي كثيرة
 - عند شرح تدفق مشروع، رتبي الإجابة: الشهر، المدفوع، المستلم، الصافي، التراكمي، ثم سبب الحركة إذا طلبه العضو.
 - المركز التجاري ظاهر حاليًا كتدفقات تطوير قبل التشغيل فقط؛ لا تقولي إن له إيجارًا أو مصروفات تشغيل لأن المصدر لا يحتوي عليها.
+- إذا عاد مصدر مركز القيادة بلا عناصر، قولي ببساطة: «لا توجد عناصر ظاهرة حاليًا في مصدر مركز القيادة ضمن هذا النوع». لا تذكري الاستعلامات أو الأدوات ولا تخترعي سببًا لغيابها.
 - إذا طلب العضو شيئاً خارج صلاحياتك، وجهيه بأدب`;
 
       const messages = [
@@ -990,20 +1009,28 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       try {
         const firstResponse = await invokeLLM({
           messages,
-          tools: cashFlowReport ? laylaCashFlowTools : undefined,
-          toolChoice: cashFlowReport ? "auto" : "none",
+          tools: cashFlowReport ? [...laylaCashFlowTools, ...laylaCommandCenterTools] : laylaCommandCenterTools,
+          toolChoice: "auto",
           max_tokens: 1024,
         });
         const firstMessage = firstResponse.choices?.[0]?.message;
         const toolCalls = firstMessage?.tool_calls || [];
         let laylaResponse = firstMessage ? messageText(firstMessage.content) : "";
 
-        if (cashFlowReport && toolCalls.length > 0) {
+        if (toolCalls.length > 0) {
           const allowedToolCalls = toolCalls.slice(0, 2);
-          const toolResults = allowedToolCalls.map((toolCall) => ({
+          const resolvedToolResults = allowedToolCalls.map((toolCall) => ({
+            name: toolCall.function.name,
+            result: toolCall.function.name === "lookup_command_center"
+              ? runLaylaCommandCenterTool(commandCenterSnapshot, toolCall.function.arguments)
+              : cashFlowReport
+                ? runLaylaCashFlowTool(cashFlowReport, toolCall.function.name, toolCall.function.arguments)
+                : { found: false, reason: "مصدر التدفقات غير متاح في هذه المحاولة" },
+          }));
+          const toolResults = allowedToolCalls.map((toolCall, index) => ({
             role: "tool" as const,
             tool_call_id: toolCall.id,
-            content: JSON.stringify(runLaylaCashFlowTool(cashFlowReport, toolCall.function.name, toolCall.function.arguments)),
+            content: JSON.stringify(resolvedToolResults[index].result),
           }));
           const finalResponse = await invokeLLM({
             messages: [
@@ -1011,13 +1038,17 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
               { role: "assistant" as const, content: laylaResponse, tool_calls: allowedToolCalls },
               ...toolResults,
             ],
-            tools: laylaCashFlowTools,
+            tools: [...laylaCashFlowTools, ...laylaCommandCenterTools],
             toolChoice: "none",
             max_tokens: 1024,
           });
           laylaResponse = finalResponse.choices?.[0]?.message
             ? messageText(finalResponse.choices[0].message.content)
             : "";
+          if (!laylaResponse.trim()) {
+            const commandCenterResult = resolvedToolResults.find((resolved) => resolved.name === "lookup_command_center")?.result;
+            if (commandCenterResult) laylaResponse = formatLaylaCommandCenterFallback(commandCenterResult);
+          }
         }
 
         laylaResponse = laylaResponse || "عذرًا، لم يصل رد قابل للعرض. يرجى المحاولة مرة أخرى.";
