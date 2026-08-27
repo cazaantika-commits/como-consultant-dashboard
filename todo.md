@@ -1629,4 +1629,7 @@
 - [x] Replace every visible executive-assistant identity reference from Salwa to Layla in the Command Center and chat experience without changing chat behavior or data
 - [x] Connect Layla to approved investor and unified group cash-flow source summaries so she can answer and explain monthly cash movements without inventing figures or changing financial data
 - [x] Connect Layla to verified Command Center sources for decisions, approvals, payment requests, tasks, meetings, and project status, with read-and-explain access only
+- [x] Add a concise Layla voice-only opening briefing in Command Center from approved task, decision, and unified cash-flow sources, with a user-triggered fallback if autoplay is blocked
+- [x] Personalize Layla's opening voice greeting and decision emphasis by the authenticated Command Center member and role
+- [x] Use the available local browser female voice for Layla's opening briefing and chat read-aloud while the external TTS credential remains unavailable
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

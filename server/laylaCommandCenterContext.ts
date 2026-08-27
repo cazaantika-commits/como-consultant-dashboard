@@ -265,3 +265,24 @@ export function formatLaylaCommandCenterOverview(snapshot: LaylaCommandCenterSna
     section("المشاريع ذات المتابعة", atRiskProjects, "project"),
   ].join("\n");
 }
+
+/** A small read-only payload for Layla's opening audio briefing. */
+export function buildLaylaOpeningOperations(snapshot: LaylaCommandCenterSnapshot) {
+  const urgentTasks = snapshot.tasks.filter((task) => task.priority === "urgent").length;
+  const followUpProjects = snapshot.project_status.filter((item) => {
+    const milestones = Array.isArray(item.milestones) ? item.milestones : [];
+    const kpis = Array.isArray(item.kpis) ? item.kpis : [];
+    return milestones.length > 0 || kpis.length > 0;
+  }).map((item) => String(item.project)).filter(Boolean);
+  return {
+    generatedAt: snapshot.generated_at,
+    openTasks: snapshot.tasks.length,
+    urgentTasks,
+    pendingPayments: snapshot.payment_requests.length,
+    pendingRequests: snapshot.requests.length,
+    decisions: snapshot.decisions.length,
+    evaluations: snapshot.evaluations.length,
+    meetings: snapshot.meetings.length,
+    followUpProjects,
+  };
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, runLaylaCommandCenterTool, type LaylaCommandCenterSnapshot } from "./laylaCommandCenterContext";
+import { buildLaylaOpeningOperations, formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, runLaylaCommandCenterTool, type LaylaCommandCenterSnapshot } from "./laylaCommandCenterContext";
 
 const snapshot: LaylaCommandCenterSnapshot = {
   generated_at: "2026-08-27T00:00:00.000Z",
@@ -9,7 +9,7 @@ const snapshot: LaylaCommandCenterSnapshot = {
   approvals: [{ project: "مجان", evaluator: "وائل", approved: false }],
   payment_requests: [{ request_number: "PAY-1", project: "مجان", amount: 5000, status: "pending_wael" }],
   requests: [{ request_number: "REQ-1", subject: "اعتماد عرض", project: "الجداف", status: "pending_sheikh" }],
-  tasks: [{ title: "مراجعة المخطط", project: "مجان", status: "progress" }],
+  tasks: [{ title: "مراجعة المخطط", project: "مجان", status: "progress", priority: "urgent" }],
   meetings: [{ title: "اجتماع المستثمر", status: "preparing" }],
   evaluations: [{ title: "تقييم استشاري", project: "مجان", status: "pending" }],
   project_status: [{ project: "مجان", milestones: [{ title: "التصميم", status: "delayed" }], kpis: [] }],
@@ -49,5 +49,15 @@ describe("Layla Command Center read-only context", () => {
     const summary = formatLaylaCommandCenterOverview(snapshot);
     expect(summary).toContain("طلبات الصرف المعلقة (1): PAY-1");
     expect(summary).toContain("جلسات التقييم (1): تقييم استشاري");
+  });
+
+  it("builds the opening briefing payload from the existing snapshot without a write path", () => {
+    expect(buildLaylaOpeningOperations(snapshot)).toMatchObject({
+      openTasks: 1,
+      urgentTasks: 1,
+      pendingPayments: 1,
+      evaluations: 1,
+      followUpProjects: ["مجان"],
+    });
   });
 });

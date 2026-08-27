@@ -114,6 +114,9 @@ import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
 import { withReturnPath } from "@/lib/returnNavigation";
+import { buildLaylaOpeningBriefing } from "@/lib/laylaOpeningBriefing";
+import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
+import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 
 const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
 
@@ -459,7 +462,6 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const [micError, setMicError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
   const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -468,7 +470,6 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const chatMutation = trpc.commandCenter.chatWithSalwa.useMutation();
   const clearMutation = trpc.commandCenter.clearChatHistory.useMutation();
   const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
-  const ttsMutation = trpc.commandCenter.textToSpeech.useMutation();
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
@@ -494,11 +495,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
 
   // Stop audio on close
   useEffect(() => {
-    if (!isOpen && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsSpeaking(false);
-    }
+    if (!isOpen) { stopLaylaBrowserVoice(); setIsSpeaking(false); }
   }, [isOpen]);
 
   const handleSend = async (text?: string) => {
@@ -518,7 +515,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   };
 
   const handleClear = async () => {
-    if (audioRef.current) { audioRef.current.pause(); setIsSpeaking(false); }
+    stopLaylaBrowserVoice();
+    setIsSpeaking(false);
     await clearMutation.mutateAsync({ token });
     utils.commandCenter.getChatHistory.invalidate({ token });
     toast.success("تم مسح المحادثة");
@@ -621,29 +619,17 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
 
   // TTS: Play Layla's response
   const handlePlayResponse = async (text: string) => {
-    if (isSpeaking && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+    if (isSpeaking) {
+      stopLaylaBrowserVoice();
       setIsSpeaking(false);
       return;
     }
-    try {
-      const stripped = text.replace(/[#*_~`>\[\]()]/g, "").slice(0, 4096);
-      const result = await ttsMutation.mutateAsync({ token, text: stripped });
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(result.audioBase64), c => c.charCodeAt(0))],
-        { type: "audio/mpeg" }
-      );
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-      audio.onplay = () => setIsSpeaking(true);
-      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); };
-      audio.onerror = () => { setIsSpeaking(false); URL.revokeObjectURL(audioUrl); };
-      audio.play();
-    } catch {
-      toast.error("فشل تشغيل الصوت");
-    }
+    const played = speakWithLaylaBrowserVoice(text.replace(/[#*_~`>\[\]()]/g, "").slice(0, 4096), {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => { setIsSpeaking(false); toast.error("لا يتوفر صوت على هذا الجهاز"); },
+    });
+    if (!played) toast.error("لا يتوفر صوت على هذا الجهاز");
   };
 
   if (!isOpen) return null;
@@ -4181,14 +4167,67 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const [showGeneralRequests, setShowGeneralRequests] = useState(false);
   const [showInternalMessages, setShowInternalMessages] = useState(false);
+  const [openingBriefingState, setOpeningBriefingState] = useState<"idle" | "loading" | "playing" | "blocked">("idle");
+  const openingBriefingStartedPlaybackRef = useRef(false);
+  const openingBriefingFallbackTimerRef = useRef<number | null>(null);
+  const openingBriefingStartedRef = useRef(false);
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
+  const openingOperations = trpc.commandCenter.getLaylaOpeningOperations.useQuery({ token }, { staleTime: 0 });
+  const unifiedGroupCashFlow = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(undefined, { staleTime: 0 });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
   const markAllRead = trpc.commandCenter.markAllNotificationsRead.useMutation();
   const checkReminders = trpc.commandCenter.checkPendingReminders.useMutation();
   const utils = trpc.useUtils();
 
   const unreadCount = notifications.data?.filter((n: any) => !n.isRead).length || 0;
+  const openingBriefingText = useMemo(() => {
+    if (!openingOperations.data) return null;
+    return buildLaylaOpeningBriefing(
+      { memberId: member.memberId, nameAr: member.nameAr, role: member.role },
+      openingOperations.data,
+      unifiedGroupCashFlow.data as UnifiedGroupCashFlow | undefined,
+    );
+  }, [member.memberId, member.nameAr, member.role, openingOperations.data, unifiedGroupCashFlow.data]);
+
+  const playOpeningBriefing = useCallback(async () => {
+    if (!openingBriefingText) return;
+    if (openingBriefingState === "playing") {
+      stopLaylaBrowserVoice();
+      setOpeningBriefingState("idle");
+      return;
+    }
+    openingBriefingStartedPlaybackRef.current = false;
+    setOpeningBriefingState("loading");
+    const played = speakWithLaylaBrowserVoice(openingBriefingText, {
+      onStart: () => {
+        openingBriefingStartedPlaybackRef.current = true;
+        if (openingBriefingFallbackTimerRef.current) window.clearTimeout(openingBriefingFallbackTimerRef.current);
+        setOpeningBriefingState("playing");
+      },
+      onEnd: () => setOpeningBriefingState("idle"),
+      onError: () => setOpeningBriefingState("blocked"),
+    });
+    if (!played) {
+      setOpeningBriefingState("blocked");
+      return;
+    }
+    openingBriefingFallbackTimerRef.current = window.setTimeout(() => {
+      if (!openingBriefingStartedPlaybackRef.current) setOpeningBriefingState("blocked");
+    }, 1600);
+  }, [openingBriefingState, openingBriefingText]);
+
+  useEffect(() => {
+    if (!openingBriefingText || unifiedGroupCashFlow.isLoading || openingBriefingStartedRef.current) return;
+    openingBriefingStartedRef.current = true;
+    const timer = window.setTimeout(() => { void playOpeningBriefing(); }, 650);
+    return () => window.clearTimeout(timer);
+  }, [openingBriefingText, playOpeningBriefing, unifiedGroupCashFlow.isLoading]);
+
+  useEffect(() => () => {
+    stopLaylaBrowserVoice();
+    if (openingBriefingFallbackTimerRef.current) window.clearTimeout(openingBriefingFallbackTimerRef.current);
+  }, []);
   const handleMarkAllRead = async () => {
     await markAllRead.mutateAsync({ token });
     utils.commandCenter.getNotifications.invalidate({ token });
@@ -4427,6 +4466,20 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                   <MessageSquare className="w-4 h-4" />
                   <span>تحدث مع ليلى</span>
                 </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => { void playOpeningBriefing(); }}
+                      disabled={!openingBriefingText || openingBriefingState === "loading"}
+                      aria-label={openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {openingBriefingState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : openingBriefingState === "playing" ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}</TooltipContent>
+                </Tooltip>
                 <button onClick={() => setActiveBubble("reports")}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
                   <FileBarChart2 className="w-4 h-4" />

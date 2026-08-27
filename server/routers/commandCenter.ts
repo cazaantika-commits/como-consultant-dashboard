@@ -35,7 +35,7 @@ import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
 import { loadUnifiedGroupCashFlowSource } from "./cashFlowSettings";
 import { laylaCashFlowTools, runLaylaCashFlowTool } from "../laylaCashFlowContext";
-import { formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, laylaCommandCenterTools, loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
+import { buildLaylaOpeningOperations, formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, laylaCommandCenterTools, loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
 
 // --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
@@ -334,6 +334,20 @@ export const commandCenterRouter = router({
         .forEach(i => { counts[i.bubbleType] = (counts[i.bubbleType] || 0) + 1; });
 
       return counts;
+    }),
+
+  // Small read-only data payload used only for Layla's opening voice briefing.
+  getLaylaOpeningOperations: publicProcedure
+    .input(z.object({ token: z.string() }))
+    .query(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const snapshot = await loadLaylaCommandCenterSnapshot(db, member, {
+        projects, projectChangeRequests, committeeDecisions, evaluationApprovals, paymentRequests, generalRequests,
+        tasks, meetings, evaluationSessions, projectMilestones, projectKpis, commandCenterItems,
+      });
+      return buildLaylaOpeningOperations(snapshot);
     }),
 
   // Admin: Create a new item in a bubble
@@ -1450,43 +1464,6 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       }
 
       return { text: (result as any).text || "", language: (result as any).language || "ar", duration: (result as any).duration || 0 };
-    }),
-
-  // --- Text-to-Speech for Command Center ---
-  textToSpeech: publicProcedure
-    .input(z.object({
-      token: z.string(),
-      text: z.string().min(1).max(4096),
-    }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid token" });
-
-      const openaiKey = process.env.OPENAI_API_KEY;
-      if (!openaiKey) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "OpenAI API key not configured" });
-
-      const response = await fetch("https://api.openai.com/v1/audio/speech", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openaiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "tts-1-hd",
-          input: input.text,
-          voice: "nova",
-          response_format: "mp3",
-          speed: 1.0,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "فشل تحويل النص إلى صوت" });
-      }
-
-      const arrayBuffer = await response.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      return { audioBase64: base64, mimeType: "audio/mpeg" };
     }),
 
   // ═══ Project-based Evaluation for Command Center ═══
