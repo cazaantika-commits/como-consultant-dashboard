@@ -1625,4 +1625,7 @@
 - [x] Audit and correct Command Center back navigation so every visible return control follows the actual prior page or panel instead of an unrelated fixed destination
 - [x] Audit and correct return navigation across Investor Cash Flow, Escrow Cash Flow, Feasibility, Capital Portfolio, transposed Portfolio, and Unified Group Cash Flow on desktop and mobile
 - [x] Audit and correct return navigation in all remaining non-financial application sections after the completed Command Center and Financial Studies review
+- [x] Audit Layla's current command-center chat knowledge, execution scope, safeguards, and response quality; report the actual capability level before changing it
+- [x] Replace every visible executive-assistant identity reference from Salwa to Layla in the Command Center and chat experience without changing chat behavior or data
+- [x] Connect Layla to approved investor and unified group cash-flow source summaries so she can answer and explain monthly cash movements without inventing figures or changing financial data
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

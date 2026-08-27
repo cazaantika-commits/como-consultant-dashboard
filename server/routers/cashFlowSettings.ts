@@ -59,6 +59,68 @@ type DistributionMethod = typeof DISTRIBUTION_METHODS[number];
 const FUNDING_SOURCES = ["investor", "escrow"] as const;
 type FundingSource = typeof FUNDING_SOURCES[number];
 
+/**
+ * Single read-only source for the unified report and Layla's cash-flow answers.
+ * It runs the existing final Investor Cash Flow source path, then copies its rows
+ * into the unified calendar; it introduces no new revenue, cost, escrow, or profit formula.
+ */
+export async function loadUnifiedGroupCashFlowSource() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [allProjects, allPlans] = await Promise.all([
+    db.select().from(projects),
+    db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+  ]);
+  const newestPlanByProject = new Map<number, typeof allPlans[number]>();
+  for (const plan of allPlans) {
+    if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
+  }
+
+  const sourceRows: GroupCashFlowProjectMonthlyNet[] = allProjects.map((project) => {
+    const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
+    const isCommercialDevelopment = scenario === "build_for_rent" || scenario === "rental";
+    const salesResult = isCommercialDevelopment
+      ? undefined
+      : buildSalesResultFromSavedPlan(newestPlanByProject.get(project.id), project, scenario);
+    const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
+    const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
+    const capital = calculateInvestorCapitalSummary(cashFlow);
+
+    return {
+      projectId: project.id,
+      name: project.name,
+      financingScenario: scenario,
+      startDate: cashFlow.startDate,
+      monthDates: cashFlow.monthDates.slice(0, investorNet.netFlow.length),
+      monthlyDebit: investorNet.debitTotals,
+      monthlyCredit: investorNet.creditTotals,
+      monthlyNet: investorNet.netFlow,
+      monthlyCumulative: investorNet.cumulative,
+      paidBeforeSchedule: investorNet.paidBeforeSchedule,
+      cashFlowSummary: {
+        requiredCapital: capital.requiredCapital,
+        paidCapital: investorNet.paidBeforeSchedule,
+        remainingCapital: capital.remainingCapital,
+        totalInvestorPayments: investorNet.paidBeforeSchedule + investorNet.debitTotals.reduce((sum, value) => sum + value, 0),
+        totalInvestorReceipts: investorNet.creditTotals.reduce((sum, value) => sum + value, 0),
+        finalNet: investorNet.cumulative.at(-1) ?? -investorNet.paidBeforeSchedule,
+      },
+      monthlyTrace: buildInvestorMonthlyTrace(cashFlow, salesResult),
+      sourceKind: isCommercialDevelopment ? "commercial_development" : "investor_cash_flow",
+      sourceLabel: isCommercialDevelopment
+        ? "صف تدفقات تطوير المركز التجاري قبل التشغيل"
+        : "صف صافي الشهر النهائي من تدفقات المستثمر",
+      scopeNote: isCommercialDevelopment
+        ? "يشمل تكاليف التطوير المعتمدة فقط؛ لا توجد توقعات إيجار أو مصروفات تشغيل في هذا التقرير."
+        : undefined,
+      includesOperatingCashFlows: false,
+    };
+  });
+
+  return buildUnifiedGroupCashFlow(sourceRows);
+}
+
 const CATEGORIES = [
   "land", "design", "offplan_reg", "construction",
   "marketing_sales", "admin", "developer_fee", "revenue", "other"
@@ -2566,50 +2628,7 @@ export const cashFlowSettingsRouter = router({
    */
   getUnifiedGroupCashFlows: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) throw new Error("Unauthorized");
-    const db = await getDb();
-    if (!db) return null;
-
-    const [allProjects, allPlans] = await Promise.all([
-      db.select().from(projects),
-      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
-    ]);
-    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
-    for (const plan of allPlans) {
-      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
-    }
-
-    const sourceRows: GroupCashFlowProjectMonthlyNet[] = allProjects.map((project) => {
-      const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
-      const isCommercialDevelopment = scenario === "build_for_rent" || scenario === "rental";
-      const salesResult = isCommercialDevelopment
-        ? undefined
-        : buildSalesResultFromSavedPlan(newestPlanByProject.get(project.id), project, scenario);
-      const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
-      const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
-
-      return {
-        projectId: project.id,
-        name: project.name,
-        financingScenario: scenario,
-        startDate: cashFlow.startDate,
-        monthDates: cashFlow.monthDates.slice(0, investorNet.netFlow.length),
-        monthlyDebit: investorNet.debitTotals,
-        monthlyCredit: investorNet.creditTotals,
-        monthlyNet: investorNet.netFlow,
-        paidBeforeSchedule: investorNet.paidBeforeSchedule,
-        monthlyTrace: buildInvestorMonthlyTrace(cashFlow, salesResult),
-        sourceKind: isCommercialDevelopment ? "commercial_development" : "investor_cash_flow",
-        sourceLabel: isCommercialDevelopment
-          ? "صف تدفقات تطوير المركز التجاري قبل التشغيل"
-          : "صف صافي الشهر النهائي من تدفقات المستثمر",
-        scopeNote: isCommercialDevelopment
-          ? "يشمل تكاليف التطوير المعتمدة فقط؛ لا توجد توقعات إيجار أو مصروفات تشغيل في هذا التقرير."
-          : undefined,
-        includesOperatingCashFlows: false,
-      };
-    });
-
-    return buildUnifiedGroupCashFlow(sourceRows);
+    return loadUnifiedGroupCashFlowSource();
   }),
 
   /** Creates the requested approved initial Wael plan only where no plan exists. */

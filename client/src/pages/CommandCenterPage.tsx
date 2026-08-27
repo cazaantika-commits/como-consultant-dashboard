@@ -450,7 +450,7 @@ function LoginScreen({ onLogin, hint }: { onLogin: (token: string) => void; hint
 }
 
 // ═══════════════════════════════════════════════════════
-// SALWA CHAT PANEL (with Voice)
+// LAYLA CHAT PANEL (with Voice)
 // ═══════════════════════════════════════════════════════
 function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memberName: string; isOpen: boolean; onClose: () => void }) {
   const [message, setMessage] = useState("");
@@ -472,6 +472,13 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
+  const displayLaylaContent = (content: unknown) => String(content || "")
+    .replaceAll("سلوى", "ليلى")
+    .replaceAll("Salwa", "Layla")
+    .replace(
+      "مهمتي هي مساعدتك في إدارة مركز القيادة، تنفيذ أوامرك بإضافة المحتوى للفقاعات، إرسال الرسائل للشركاء التنفيذيين (وائل والشيخ عيسى)، وإنشاء جلسات التقييم، بالإضافة إلى تزويدك بالمعلومات حول مشاريعنا الاستثمارية والاستشاريين المعنيين.",
+      "مهمتي مساعدتك في فهم معلومات مركز القيادة والتدفقات النقدية المعتمدة والإجابة عن استفساراتك من مصادرها.",
+    );
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -612,7 +619,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   };
 
-  // TTS: Play Salwa's response
+  // TTS: Play Layla's response
   const handlePlayResponse = async (text: string) => {
     if (isSpeaking && audioRef.current) {
       audioRef.current.pause();
@@ -687,7 +694,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
             <div key={msg.id || i} className={`flex ${msg.role === "member" ? "justify-start" : "justify-end"} gap-2`}>
               {msg.role === "salwa" && (
                 <button
-                  onClick={() => handlePlayResponse(msg.content)}
+                  onClick={() => handlePlayResponse(displayLaylaContent(msg.content))}
                   className="self-end mb-1 p-1.5 rounded-full hover:bg-amber-100 transition-colors flex-shrink-0"
                   title="استمع للرد"
                 >
@@ -700,9 +707,9 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
                   : "bg-gradient-to-l from-amber-500 to-amber-600 text-white rounded-bl-md shadow-md"
               }`}>
                 {msg.role === "salwa" ? (
-                  <Streamdown>{msg.content}</Streamdown>
+                  <Streamdown>{displayLaylaContent(msg.content)}</Streamdown>
                 ) : (
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
+                  <p className="whitespace-pre-wrap">{displayLaylaContent(msg.content)}</p>
                 )}
               </div>
             </div>

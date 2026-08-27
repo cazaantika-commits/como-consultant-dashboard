@@ -31,6 +31,8 @@ import crypto from "crypto";
 import { invokeLLM } from "../_core/llm";
 import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
+import { loadUnifiedGroupCashFlowSource } from "./cashFlowSettings";
+import { laylaCashFlowTools, runLaylaCashFlowTool } from "../laylaCashFlowContext";
 
 // --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
@@ -67,6 +69,13 @@ function getPersonalizedGreeting(memberId: string, fallback: string | null) {
   if (memberId === "sheikh_issa") return "يا مرحبا شيخ عيسى، شنو تحب نراجع اليوم؟";
   if (memberId === "abdulrahman") return "أهلاً عبدالرحمن، مركز القيادة بانتظارك";
   return fallback || "أهلاً بك في مركز القيادة";
+}
+
+function messageText(content?: string | Array<{ type: string; text?: string }>) {
+  if (!content) return "";
+  return typeof content === "string"
+    ? content
+    : content.filter((part) => part.type === "text").map((part) => part.text || "").join("\n");
 }
 
 export const commandCenterRouter = router({
@@ -906,7 +915,7 @@ export const commandCenterRouter = router({
       };
     }),
 
-  // ═══ Salwa Chat (Command Center specific) ═══
+  // ═══ Layla Chat (Command Center specific) ═══
   
   chatWithSalwa: publicProcedure
     .input(z.object({
@@ -934,23 +943,26 @@ export const commandCenterRouter = router({
       // Reverse to chronological order
       const chronological = history.reverse();
       
-      // Get platform context
-      const [projectsList, consultantsList, recentItems] = await Promise.all([
+      // Get platform context. Financial answers use an explicit read-only source
+      // tool below, rather than a prompt-only summary or an alternative formula.
+      const [projectsList, consultantsList, recentItems, cashFlowReport] = await Promise.all([
         db.select({ id: projects.id, name: projects.name }).from(projects).limit(20),
         db.select({ id: consultants.id, name: consultants.name, specialization: consultants.specialization }).from(consultants).limit(30),
         db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")).orderBy(desc(commandCenterItems.createdAt)).limit(10),
+        loadUnifiedGroupCashFlowSource(),
       ]);
       
-      const systemPrompt = `أنتِ سلوى، السكرتيرة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.
+      const systemPrompt = `أنتِ ليلى، المساعدة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.
       
 دورك: قناة تواصل ذكية بين عبدالرحمن (المشرف) ووائل والشيخ عيسى (الشركاء التنفيذيون).
 
 العضو الحالي: ${member.nameAr} (${member.role === "admin" ? "المشرف" : "شريك تنفيذي"})
 
 مهامك:
-1. إذا كان العضو هو عبدالرحمن (المشرف): تنفذين أوامره لإضافة محتوى للفقاعات، إرسال رسائل للشركاء، إنشاء جلسات تقييم
-2. إذا كان العضو شريكاً تنفيذياً: تجيبين على استفساراتهم، تنقلين طلباتهم لعبدالرحمن، تساعدينهم في التقييمات
-3. تقدمين معلومات عن المشاريع والاستشاريين بذكاء وسرعة
+1. اجيبي عن استفسارات المشاريع والاستشاريين بوضوح وباختصار.
+2. عند السؤال عن أي تدفق نقدي، مشروع، شهر، مدفوع، مستلم، صافي، تراكمي، أو سبب حركة: استخدمي أداة التدفقات المناسبة أولًا ثم اشرحي القيم العائدة منها فقط.
+3. لا تخمّني أي مبلغ أو فترة. إذا لم يرجع المصدر قيمة، قولي ذلك بوضوح واطلبي اسم المشروع أو الشهر.
+4. لا تقولي إنك أرسلتِ رسالة أو أنشأتِ مهمة أو عدلتِ بيانات؛ المحادثة لا تملك تنفيذ هذه الأوامر في هذه المرحلة.
 
 المشاريع الحالية: ${projectsList.map(p => `${p.name} (${p.id})`).join(", ") || "لا توجد مشاريع"}
 الاستشاريون: ${consultantsList.map(c => `${c.name} - ${c.specialization || ""}`).join(", ") || "لا يوجد استشاريون"}
@@ -963,6 +975,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 - كوني مختصرة وواضحة
 - استخدمي اللغة العربية الفصحى
 - لا تستخدمي إيموجي كثيرة
+- عند شرح تدفق مشروع، رتبي الإجابة: الشهر، المدفوع، المستلم، الصافي، التراكمي، ثم سبب الحركة إذا طلبه العضو.
+- المركز التجاري ظاهر حاليًا كتدفقات تطوير قبل التشغيل فقط؛ لا تقولي إن له إيجارًا أو مصروفات تشغيل لأن المصدر لا يحتوي عليها.
 - إذا طلب العضو شيئاً خارج صلاحياتك، وجهيه بأدب`;
 
       const messages = [
@@ -974,20 +988,51 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       ];
       
       try {
-        const response = await invokeLLM({ messages, max_tokens: 1024 });
-        const salwaResponse = response.choices?.[0]?.message?.content || "عذراً، حدث خطأ. يرجى المحاولة مرة أخرى.";
+        const firstResponse = await invokeLLM({
+          messages,
+          tools: cashFlowReport ? laylaCashFlowTools : undefined,
+          toolChoice: cashFlowReport ? "auto" : "none",
+          max_tokens: 1024,
+        });
+        const firstMessage = firstResponse.choices?.[0]?.message;
+        const toolCalls = firstMessage?.tool_calls || [];
+        let laylaResponse = firstMessage ? messageText(firstMessage.content) : "";
+
+        if (cashFlowReport && toolCalls.length > 0) {
+          const allowedToolCalls = toolCalls.slice(0, 2);
+          const toolResults = allowedToolCalls.map((toolCall) => ({
+            role: "tool" as const,
+            tool_call_id: toolCall.id,
+            content: JSON.stringify(runLaylaCashFlowTool(cashFlowReport, toolCall.function.name, toolCall.function.arguments)),
+          }));
+          const finalResponse = await invokeLLM({
+            messages: [
+              ...messages,
+              { role: "assistant" as const, content: laylaResponse, tool_calls: allowedToolCalls },
+              ...toolResults,
+            ],
+            tools: laylaCashFlowTools,
+            toolChoice: "none",
+            max_tokens: 1024,
+          });
+          laylaResponse = finalResponse.choices?.[0]?.message
+            ? messageText(finalResponse.choices[0].message.content)
+            : "";
+        }
+
+        laylaResponse = laylaResponse || "عذرًا، لم يصل رد قابل للعرض. يرجى المحاولة مرة أخرى.";
         
-        // Save Salwa's response
+        // Keep the existing storage enum value for compatibility; visible identity is Layla.
         await db.insert(commandCenterChat).values({
           memberId: member.memberId,
           role: "salwa",
-          content: salwaResponse,
+          content: laylaResponse,
         });
         
-        return { response: salwaResponse };
+        return { response: laylaResponse };
       } catch (err: any) {
-        console.error("[CommandCenter Salwa] Error:", err);
-        return { response: "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى." };
+        console.error("[CommandCenter Layla] Error:", err);
+        return { response: "عذرًا، حدث خطأ تقني. لم أستطع قراءة مصدر التدفقات في هذه المحاولة." };
       }
     }),
 

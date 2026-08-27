@@ -15,6 +15,17 @@ export type GroupCashFlowSourceKind = "investor_cash_flow" | "commercial_develop
 export type GroupCashFlowProjectMonthlyNet = PortfolioProjectMonthlyNet & {
   /** Opening investor outflow copied from the project's final cash-flow report. */
   paidBeforeSchedule: number;
+  /** Running balance copied from the project's final Investor Cash Flow report. */
+  monthlyCumulative?: number[];
+  /** Summary values already displayed by the project's final Investor Cash Flow report. */
+  cashFlowSummary?: {
+    requiredCapital: number;
+    paidCapital: number;
+    remainingCapital: number;
+    totalInvestorPayments: number;
+    totalInvestorReceipts: number;
+    finalNet: number;
+  };
   sourceKind: GroupCashFlowSourceKind;
   sourceLabel: string;
   scopeNote?: string;
