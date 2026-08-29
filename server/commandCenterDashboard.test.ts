@@ -6,6 +6,7 @@ const routerSource = readFileSync("server/routers/commandCenter.ts", "utf8");
 const serverSource = readFileSync("server/_core/index.ts", "utf8");
 const storageProxySource = readFileSync("server/_core/storageProxy.ts", "utf8");
 const schemaSource = readFileSync("drizzle/schema.ts", "utf8");
+const cashFlowRouterSource = readFileSync("server/routers/cashFlowSettings.ts", "utf8");
 
 describe("Command Center dashboard card registry", () => {
   it("does not render stale tile indexes beyond the current nine-card BUBBLES registry", () => {
@@ -45,12 +46,27 @@ describe("Command Center dashboard card registry", () => {
     expect(source).toContain("لا تظهر هنا الجلسات التجريبية أو الجلسات المكتملة");
   });
 
-  it("removes the executive legacy-portfolio section and opens the Unified Group Cash Flow report only", () => {
+  it("keeps legacy aggregation removed and exposes only the approved portfolio and unified reports", () => {
     expect(source).not.toContain("canOpenExecutivePortfolioReports");
-    expect(source).not.toContain('activeBubble === "executive_portfolio_reports")');
+    expect(source).not.toContain('activeBubble === "executive_portfolio_reports"');
     expect(source).not.toContain("ExecutivePortfolioReports");
     expect(source).toContain("<ExecutiveCashFlowAlert");
-    expect(source).toContain('navigate("/bateekha?tab=unified_group_cashflow")');
+    expect(source).toContain('data-testid="command-center-financial-report-access"');
+    expect(source).toContain('setActiveBubble("financial_portfolio_standard")');
+    expect(source).toContain('setActiveBubble("financial_portfolio_transposed")');
+    expect(source).toContain('setActiveBubble("financial_unified")');
+    expect(source).toContain("بدون المركز التجاري");
+    expect(source).toContain("يشمل المركز التجاري");
+  });
+
+  it("grants active Command Center members read-only access to approved aggregate report queries", () => {
+    expect(cashFlowRouterSource).toContain("commandCenterReportAccessInput");
+    expect(cashFlowRouterSource).toContain("assertFinancialReportReadAccess");
+    expect(cashFlowRouterSource).toContain("commandCenterMembers.accessToken");
+    expect(cashFlowRouterSource).toContain("commandCenterMembers.isActive");
+    expect(cashFlowRouterSource).toContain("getPortfolioInvestorNetCashFlows: publicProcedure.input(commandCenterReportAccessInput)");
+    expect(cashFlowRouterSource).toContain("getUnifiedGroupCashFlows: publicProcedure.input(commandCenterReportAccessInput)");
+    expect(cashFlowRouterSource).toContain("getFinancialStudiesCapitalPortfolio: publicProcedure.input(commandCenterReportAccessInput)");
   });
 
   it("uses a generic assistant icon on mobile rather than the secretary image", () => {

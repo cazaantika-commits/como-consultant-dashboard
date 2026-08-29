@@ -39,8 +39,15 @@ function unsignedAmount(value: number) {
   return formatFullNumber(Math.abs(value), "0");
 }
 
-export default function V2UnifiedGroupCashFlow() {
-  const reportQuery = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(undefined, { staleTime: 0 });
+type V2UnifiedGroupCashFlowProps = {
+  memberToken?: string;
+};
+
+export default function V2UnifiedGroupCashFlow({ memberToken }: V2UnifiedGroupCashFlowProps = {}) {
+  const reportQuery = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(
+    memberToken ? { commandCenterToken: memberToken } : undefined,
+    { staleTime: 0 },
+  );
   const report = reportQuery.data as UnifiedGroupCashFlow | null | undefined;
   const [horizon, setHorizon] = useState<3 | 4>(4);
   const liquidity = useMemo(

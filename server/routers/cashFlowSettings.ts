@@ -20,6 +20,7 @@ import {
   competitionPricing,
   users,
   waelSalesPlans,
+  commandCenterMembers,
 } from "../../drizzle/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { ENV } from "../_core/env";
@@ -58,6 +59,26 @@ type DistributionMethod = typeof DISTRIBUTION_METHODS[number];
 
 const FUNDING_SOURCES = ["investor", "escrow"] as const;
 type FundingSource = typeof FUNDING_SOURCES[number];
+
+const commandCenterReportAccessInput = z.object({
+  commandCenterToken: z.string().min(1).optional(),
+}).optional();
+
+/** Allow platform users or active Command Center members to read approved aggregate reports only. */
+async function assertFinancialReportReadAccess(
+  ctx: { user?: unknown },
+  input?: { commandCenterToken?: string },
+) {
+  if (ctx.user) return;
+  const token = input?.commandCenterToken;
+  if (!token) throw new Error("Unauthorized");
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const [member] = await db.select({ id: commandCenterMembers.id })
+    .from(commandCenterMembers)
+    .where(and(eq(commandCenterMembers.accessToken, token), eq(commandCenterMembers.isActive, 1)));
+  if (!member) throw new Error("Unauthorized");
+}
 
 /**
  * Single read-only source for the unified report and Layla's cash-flow answers.
@@ -2578,8 +2599,8 @@ export const cashFlowSettingsRouter = router({
    * A positive value is money received by the investor; a negative value is
    * investor funding required in that same month.
    */
-  getPortfolioInvestorNetCashFlows: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
+  getPortfolioInvestorNetCashFlows: publicProcedure.input(commandCenterReportAccessInput).query(async ({ ctx, input }) => {
+    await assertFinancialReportReadAccess(ctx, input);
     const db = await getDb();
     if (!db) return [];
 
@@ -2626,8 +2647,8 @@ export const cashFlowSettingsRouter = router({
    * center is included as verified development spending before operations; this
    * endpoint never creates rental or operating estimates.
    */
-  getUnifiedGroupCashFlows: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
+  getUnifiedGroupCashFlows: publicProcedure.input(commandCenterReportAccessInput).query(async ({ ctx, input }) => {
+    await assertFinancialReportReadAccess(ctx, input);
     return loadUnifiedGroupCashFlowSource();
   }),
 
@@ -2695,8 +2716,8 @@ export const cashFlowSettingsRouter = router({
    * Capital Portfolio columns but all data is computed from the current
    * Financial Studies engines and saved Sales Plan inputs.
    */
-  getFinancialStudiesCapitalPortfolio: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
+  getFinancialStudiesCapitalPortfolio: publicProcedure.input(commandCenterReportAccessInput).query(async ({ ctx, input }) => {
+    await assertFinancialReportReadAccess(ctx, input);
     const db = await getDb();
     if (!db) return [];
 

@@ -113,6 +113,8 @@ import InternalMessagesPage from "./InternalMessages";
 import TrueCostReportView from "./TrueCostReportView";
 import FinancialEvaluationScreen from "./FinancialEvaluationScreen";
 import ExecutiveCashFlowAlert from "@/components/ExecutiveCashFlowAlert";
+import V2CapitalPortfolio from "./V2CapitalPortfolio";
+import V2UnifiedGroupCashFlow from "./V2UnifiedGroupCashFlow";
 import { withReturnPath } from "@/lib/returnNavigation";
 import { buildLaylaOpeningBriefing } from "@/lib/laylaOpeningBriefing";
 import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
@@ -4174,7 +4176,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const openingOperations = trpc.commandCenter.getLaylaOpeningOperations.useQuery({ token }, { staleTime: 0 });
-  const unifiedGroupCashFlow = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery(undefined, { staleTime: 0 });
+  const unifiedGroupCashFlow = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery({ commandCenterToken: token }, { staleTime: 0 });
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
   const markAllRead = trpc.commandCenter.markAllNotificationsRead.useMutation();
   const checkReminders = trpc.commandCenter.checkPendingReminders.useMutation();
@@ -4240,6 +4242,33 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     const interval = setInterval(runCheck, 30 * 60 * 1000); // every 30 min
     return () => clearInterval(interval);
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (activeBubble === "financial_portfolio_standard" || activeBubble === "financial_portfolio_transposed") {
+    const initialViewMode = activeBubble === "financial_portfolio_transposed" ? "transposed" : "standard";
+    return (
+      <div className="min-h-screen bg-slate-50" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-2 py-3 sm:px-4">
+          <Button variant="ghost" size="sm" onClick={() => setActiveBubble(null)} className="mb-2 text-slate-600"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى مركز القيادة</Button>
+          <V2CapitalPortfolio embedded onBack={() => setActiveBubble(null)} commandCenterToken={token} initialViewMode={initialViewMode} />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
+
+  if (activeBubble === "financial_unified") {
+    return (
+      <div className="min-h-screen bg-slate-50" dir="rtl">
+        <DashboardHeader member={member} onLogout={onLogout} unreadCount={unreadCount} onNotifications={handleMarkAllRead} onSalwa={() => setShowSalwa(true)} />
+        <div className="px-2 py-3 sm:px-4">
+          <Button variant="ghost" size="sm" onClick={() => setActiveBubble(null)} className="mb-2 text-slate-600"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى مركز القيادة</Button>
+          <V2UnifiedGroupCashFlow memberToken={token} />
+        </div>
+        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      </div>
+    );
+  }
 
   // If viewing work schedule (read-only)
   if (activeBubble === "work_schedule" && showWorkSchedule) {
@@ -4491,7 +4520,52 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </section>
 
         <section className="mb-4">
-          <ExecutiveCashFlowAlert onOpenFullReport={() => navigate(withReturnPath("/bateekha?tab=unified_group_cashflow", "/command-center"))} />
+          <ExecutiveCashFlowAlert onOpenFullReport={() => setActiveBubble("financial_unified")} />
+        </section>
+
+        <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_38px_rgba(15,23,42,0.07)]" dir="rtl" data-testid="command-center-financial-report-access">
+          <div className="flex flex-col gap-3 border-b border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-bold tracking-[0.11em] text-teal-700">التقارير المالية المعتمدة</p>
+              <h2 className="mt-1 text-lg font-black text-slate-900">مرجعان منفصلان للعرض والقرار</h2>
+              <p className="mt-1 text-xs text-slate-600">افتح التقرير المناسب مباشرة؛ لا تُخلط مشاريع الاستثمار مع المركز التجاري.</p>
+            </div>
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600"><Landmark className="h-3.5 w-3.5 text-teal-700" />من المصدر النهائي</span>
+          </div>
+          <div className="grid gap-3 p-4 lg:grid-cols-2 sm:p-5">
+            <article className="rounded-2xl border border-violet-200 bg-gradient-to-bl from-violet-50 via-white to-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black text-violet-900">محفظة رأس المال</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-600">مشاريع البيع والاستثمار المعتمدة فقط. المركز التجاري مستثنى من الإيرادات والأرباح ورأس المال هنا.</p>
+                </div>
+                <Landmark className="h-5 w-5 shrink-0 text-violet-600" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className="rounded-md border border-violet-200 bg-white px-2 py-1 text-[10px] font-bold text-violet-800">بدون المركز التجاري</span>
+                <span className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600">عرضان لنفس الخلايا</span>
+              </div>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button onClick={() => setActiveBubble("financial_portfolio_standard")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl bg-violet-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-800"><ArrowLeft className="h-4 w-4" />العرض الأفقي</button>
+                <button onClick={() => setActiveBubble("financial_portfolio_transposed")} className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-800 transition hover:bg-violet-50"><ArrowLeft className="h-4 w-4" />العرض العمودي</button>
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-teal-200 bg-gradient-to-bl from-teal-50 via-white to-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black text-teal-900">التدفقات النقدية الموحدة للمجموعة</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-600">جميع المشاريع في صفوف شهرية واحدة. يشمل المركز التجاري كتطوير قبل التشغيل فقط، بلا إيجارات مفترضة.</p>
+                </div>
+                <FileBarChart2 className="h-5 w-5 shrink-0 text-teal-600" />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className="rounded-md border border-teal-200 bg-white px-2 py-1 text-[10px] font-bold text-teal-800">يشمل المركز التجاري</span>
+                <span className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600">صافي الحركة الشهرية النهائي</span>
+              </div>
+              <button onClick={() => setActiveBubble("financial_unified")} className="mt-4 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-teal-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-teal-800"><ArrowLeft className="h-4 w-4" />فتح تقرير جميع المشاريع</button>
+            </article>
+          </div>
         </section>
 
         <ApprovedProjectChanges token={token} />

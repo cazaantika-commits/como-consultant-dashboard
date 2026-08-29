@@ -110,18 +110,21 @@ function scenarioLabel(scenario: string): string {
   return "بدون أوف بلان";
 }
 
-export default function V2CapitalPortfolio({ embedded = false, onBack }: { embedded?: boolean; onBack?: () => void }) {
+export default function V2CapitalPortfolio({ embedded = false, onBack, commandCenterToken, initialViewMode }: { embedded?: boolean; onBack?: () => void; commandCenterToken?: string; initialViewMode?: "standard" | "transposed" }) {
   const [location, navigate] = useLocation();
-  const portfolioQuery = trpc.cashFlowSettings.getFinancialStudiesCapitalPortfolio.useQuery(undefined, { staleTime: 0 });
-  const investorFlowsQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(undefined, { staleTime: 0 });
+  const reportReadInput = commandCenterToken ? { commandCenterToken } : undefined;
+  const portfolioQuery = trpc.cashFlowSettings.getFinancialStudiesCapitalPortfolio.useQuery(reportReadInput, { staleTime: 0 });
+  const investorFlowsQuery = trpc.cashFlowSettings.getPortfolioInvestorNetCashFlows.useQuery(reportReadInput, { staleTime: 0 });
   const projects = (portfolioQuery.data || []) as CapitalProject[];
   const investorFlowProjects = (investorFlowsQuery.data || []) as PortfolioProjectMonthlyNet[];
   const [selected, setSelected] = useState<number[]>([]);
   const [groupSize, setGroupSize] = useState<1 | 3 | 4 | 6>(1);
   const [viewMode, setViewMode] = useState<"standard" | "transposed">(() => (
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("portfolioView") === "transposed"
-      ? "transposed"
-      : "standard"
+    initialViewMode ?? (
+      typeof window !== "undefined" && new URLSearchParams(window.location.search).get("portfolioView") === "transposed"
+        ? "transposed"
+        : "standard"
+    )
   ));
 
   useEffect(() => {

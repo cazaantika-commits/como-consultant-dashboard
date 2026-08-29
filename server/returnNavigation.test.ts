@@ -21,7 +21,10 @@ describe("return navigation", () => {
 
   it("routes Command Center financial drill-downs back to Command Center", () => {
     const commandCenter = source("client/src/pages/CommandCenterPage.tsx");
-    expect(commandCenter).toContain('withReturnPath("/bateekha?tab=unified_group_cashflow", "/command-center")');
+    expect(commandCenter).toContain('setActiveBubble("financial_portfolio_standard")');
+    expect(commandCenter).toContain('setActiveBubble("financial_portfolio_transposed")');
+    expect(commandCenter).toContain('setActiveBubble("financial_unified")');
+    expect(commandCenter).toContain('onClick={() => setActiveBubble(null)}');
   });
 
   it("keeps Financial Studies card navigation one step deep and returns to its actual opener", () => {
