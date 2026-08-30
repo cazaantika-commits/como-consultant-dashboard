@@ -170,6 +170,18 @@ describe("Consolidated report source trace", () => {
     expect(typeof V2UnifiedGroupCashFlow).toBe("function");
     expect(typeof ExecutiveCashFlowAlert).toBe("function");
   });
+
+  it("fits the desktop monthly table inside a compact page without horizontal scrolling", () => {
+    const unifiedSource = readSource("client/src/pages/V2UnifiedGroupCashFlow.tsx");
+    expect(unifiedSource).toContain('lg:w-[75vw]');
+    expect(unifiedSource).toContain('lg:overflow-x-hidden');
+    expect(unifiedSource).toContain('table-fixed');
+    expect(unifiedSource).toContain('className="w-[10.5%]"');
+    expect(unifiedSource).toContain('className="w-[14%]"');
+    expect(unifiedSource).toContain('className="w-[15%]"');
+    expect(unifiedSource).toContain('return "ند الشبا 1"');
+    expect(unifiedSource).toContain('return "مجان متعدد"');
+  });
 });
 
 describe("Financial source expense and receipt breakdown", () => {

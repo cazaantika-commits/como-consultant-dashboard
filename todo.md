@@ -1637,3 +1637,4 @@
 - [x] Replace consultant-project classification templates with one comprehensive design-and-supervision scope library, and let every newly created project select its own independent scope items
 - [x] Preserve the existing comprehensive scope library unchanged, remove project classification dependencies, and initialize every current and new project with an editable independent scope selection
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
+- [x] Compact the Unified Group Cash Flow monthly table to fit entirely within the page without horizontal scrolling, using shortened project names and narrow equal project columns while keeping group total and cumulative columns wider

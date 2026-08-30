@@ -26,7 +26,8 @@ describe("Financial Studies visual system", () => {
     expect(timelineSource).toContain("bg-slate-900");
     expect(investorSource).toContain("min-w-[860px]");
     expect(investorSource).toContain("border-slate-400");
-    expect(unifiedSource).toContain("w-max min-w-[820px]");
+    expect(unifiedSource).toContain("w-full min-w-[760px] table-fixed");
+    expect(unifiedSource).toContain("lg:overflow-x-hidden");
     expect(unifiedSource).toContain("border-r-2 border-slate-400");
     expect(capitalSource).toContain("w-max min-w-[860px]");
     expect(capitalSource).toContain("bg-slate-800");
