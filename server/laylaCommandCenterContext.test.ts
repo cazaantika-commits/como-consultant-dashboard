@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildLaylaOpeningOperations, formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, runLaylaCommandCenterTool, type LaylaCommandCenterSnapshot } from "./laylaCommandCenterContext";
+import { readFileSync } from "node:fs";
 
 const snapshot: LaylaCommandCenterSnapshot = {
   generated_at: "2026-08-27T00:00:00.000Z",
@@ -59,5 +60,11 @@ describe("Layla Command Center read-only context", () => {
       evaluations: 1,
       followUpProjects: ["مجان"],
     });
+  });
+
+  it("forces Layla to answer every Command Center member in Arabic", () => {
+    const routerSource = readFileSync("server/routers/commandCenter.ts", "utf8");
+    expect(routerSource).toContain("استخدمي اللغة العربية الفصحى فقط مع جميع الأعضاء");
+    expect(routerSource).toContain("حتى إذا كان السؤال بلغة أخرى");
   });
 });

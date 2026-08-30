@@ -629,9 +629,9 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     const played = speakWithLaylaBrowserVoice(text.replace(/[#*_~`>\[\]()]/g, "").slice(0, 4096), {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
-      onError: () => { setIsSpeaking(false); toast.error("لا يتوفر صوت على هذا الجهاز"); },
+      onError: () => { setIsSpeaking(false); toast.error("لا يتوفر صوت عربي على هذا الجهاز"); },
     });
-    if (!played) toast.error("لا يتوفر صوت على هذا الجهاز");
+    if (!played) toast.error("لا يتوفر صوت عربي على هذا الجهاز");
   };
 
   if (!isOpen) return null;
