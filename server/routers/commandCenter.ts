@@ -1891,28 +1891,36 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       // 1. Find CPA project
-      const cpaProjectRows = await db.execute(sql`SELECT id, building_category_id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+      const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
       const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
       if (!cpaProjectArr || cpaProjectArr.length === 0) {
         return { scopeItems: [], consultants: [], itemGaps: {}, designFees: {}, designGaps: {}, coverageStatus: {} };
       }
       const cpaProjectId = Number(cpaProjectArr[0].id);
-      const buildingCategoryId = cpaProjectArr[0].building_category_id;
+      const requirementSetRows = await db.execute(sql`
+        SELECT id FROM project_consultant_requirement_sets
+        WHERE project_id = ${input.projectId} AND status IN ('DRAFT', 'APPROVED')
+        ORDER BY revision_no DESC, id DESC LIMIT 1
+      `);
+      const requirementSetArr = Array.isArray(requirementSetRows) ? (requirementSetRows[0] as any[]) : (requirementSetRows as any[]);
+      const requirementSetId = requirementSetArr?.[0]?.id ? Number(requirementSetArr[0].id) : null;
 
       // 2. Re-run calculation engine so data is fresh
       const { runCalculationEngine } = await import('./cpa');
       await runCalculationEngine(cpaProjectId).catch(() => {});
 
-      // 3. All required scope items for this building category (NOT_REQUIRED excluded)
+      // 3. Design items selected for this project's independent scope.
       const scopeRows = await db.execute(sql`
         SELECT si.id, si.code, si.label, si.sort_order, si.item_number,
-               COALESCE(src.cost_aed, 0) as reference_cost,
-               scm.status as matrix_status
-        FROM cpa_scope_items si
-        JOIN cpa_scope_category_matrix scm ON scm.scope_item_id = si.id AND scm.building_category_id = ${buildingCategoryId}
-        LEFT JOIN cpa_scope_reference_costs src ON src.scope_item_id = si.id AND src.building_category_id = ${buildingCategoryId}
+               COALESCE(pcr.gap_value_aed, 0) as reference_cost,
+               'PROJECT_SELECTED' as matrix_status
+        FROM project_consultant_requirements pcr
+        JOIN consultant_requirement_reference_items ref
+          ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SCOPE'
+        JOIN cpa_scope_items si ON si.id = ref.legacy_scope_item_id
         LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
-        WHERE si.is_active = 1 AND scm.status != 'NOT_REQUIRED'
+        WHERE pcr.requirement_set_id = ${requirementSetId}
+          AND pcr.is_required = 1 AND si.is_active = 1
           AND (ss.code IS NULL OR ss.code != 'CONTRACT')
         ORDER BY si.item_number ASC, si.sort_order ASC
       `);
@@ -2037,25 +2045,33 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 
       // 1. Get CPA project for this platform project
       const cpaProjRows = toRows(await db.execute(
-        sql`SELECT id, building_category_id, duration_months FROM cpa_projects WHERE project_id = ${projectId} LIMIT 1`
+        sql`SELECT id, duration_months FROM cpa_projects WHERE project_id = ${projectId} LIMIT 1`
       ));
       if (!cpaProjRows.length) return { roles: [], consultants: [], roleGaps: {}, supervisionFees: {}, supervisionGaps: {} };
       const cpaProjectId = Number(cpaProjRows[0].id);
-      const buildingCategoryId = cpaProjRows[0].building_category_id;
+      const requirementSets = toRows(await db.execute(sql`
+        SELECT id FROM project_consultant_requirement_sets
+        WHERE project_id = ${projectId} AND status IN ('DRAFT', 'APPROVED')
+        ORDER BY revision_no DESC, id DESC LIMIT 1
+      `));
+      const requirementSetId = requirementSets[0]?.id ? Number(requirementSets[0].id) : null;
 
       // Re-run calculation engine so data is fresh
       const { runCalculationEngine } = await import('./cpa');
       await runCalculationEngine(cpaProjectId).catch(() => {});
 
-      // 2. Get all supervision roles required for this building category (via baseline)
+      // 2. Get supervision roles selected for this project's independent scope.
       const rolesArr = toRows(await db.execute(
-        sql`SELECT sr.id, sr.code, sr.label, sr.monthly_rate_aed, sb.required_allocation_pct
-            FROM cpa_supervision_roles sr
-            JOIN cpa_supervision_baseline sb ON sb.supervision_role_id = sr.id
-            WHERE sb.building_category_id = ${buildingCategoryId}
-              AND sr.is_active = 1
-              AND sb.required_allocation_pct > 0
-            ORDER BY sr.sort_order`
+        sql`SELECT sr.id, sr.code, sr.label,
+                   COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed,
+                   COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct
+            FROM project_consultant_requirements pcr
+            JOIN consultant_requirement_reference_items ref
+              ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SUPERVISION'
+            JOIN cpa_supervision_roles sr ON sr.id = ref.legacy_supervision_role_id
+            WHERE pcr.requirement_set_id = ${requirementSetId}
+              AND pcr.is_required = 1 AND sr.is_active = 1
+            ORDER BY pcr.sort_order, pcr.id`
       ));
 
       // 3. Get consultants with evaluation results for this CPA project
@@ -2130,9 +2146,12 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const totalCC = Number(cpaProject.bua_sqft || 0) * Number(cpaProject.construction_cost_per_sqft || 0);
       const durationMonths = Number(cpaProject.duration_months || 0);
 
-      // Get building category
-      const [catRows] = await db.execute(sql`SELECT code, label FROM cpa_building_categories WHERE id = ${cpaProject.building_category_id}`) as any[];
-      const cat = catRows?.[0] || {};
+      const [requirementSetRows] = await db.execute(sql`
+        SELECT id FROM project_consultant_requirement_sets
+        WHERE project_id = ${input.projectId} AND status IN ('DRAFT', 'APPROVED')
+        ORDER BY revision_no DESC, id DESC LIMIT 1
+      `) as any[];
+      const requirementSetId = requirementSetRows?.[0]?.id ? Number(requirementSetRows[0].id) : null;
 
       // Get evaluation results with consultant info (deduplicated - latest per consultant)
       const [results] = await db.execute(sql`
@@ -2169,16 +2188,19 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       `) as any[];
       const approval = approvalRows?.[0] || null;
 
-      // Get supervision baseline
+      // Get the supervision baseline selected for this project only.
       const [baselineRows] = await db.execute(sql`
-        SELECT sb.supervision_role_id, sb.required_allocation_pct,
-               sr.code, sr.label, sr.monthly_rate_aed
-        FROM cpa_supervision_baseline sb
-        JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
-        WHERE sb.building_category_id = ${cpaProject.building_category_id}
-          AND sb.required_allocation_pct > 0
-          AND sr.is_active = 1
-        ORDER BY sr.sort_order
+        SELECT sr.id as supervision_role_id,
+               COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct,
+               sr.code, sr.label,
+               COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed
+        FROM project_consultant_requirements pcr
+        JOIN consultant_requirement_reference_items ref
+          ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SUPERVISION'
+        JOIN cpa_supervision_roles sr ON sr.id = ref.legacy_supervision_role_id
+        WHERE pcr.requirement_set_id = ${requirementSetId}
+          AND pcr.is_required = 1 AND sr.is_active = 1
+        ORDER BY pcr.sort_order, pcr.id
       `) as any[];
 
       // Build consultant data
@@ -2228,7 +2250,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         bua: Number(cpaProject.bua_sqft) || 0,
         constructionCost: totalCC,
         durationMonths,
-        category: cat.label || cat.code || '',
+        category: 'نطاق خاص بالمشروع',
         consultants,
         supervisionBaseline: (baselineRows || []).map((b: any) => ({
           roleId: Number(b.supervision_role_id),

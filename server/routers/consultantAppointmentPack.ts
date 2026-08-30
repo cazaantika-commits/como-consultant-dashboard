@@ -1,13 +1,10 @@
 import { z } from "zod";
-import { and, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
-  cpaBuildinCategories,
-  cpaProjects,
-  cpaScopeCategoryMatrix,
-  cpaScopeItems,
-  cpaScopeSections,
   lifecycleStages,
   marketDecisionApprovals,
+  projectConsultantRequirements,
+  projectConsultantRequirementSets,
   projectMarketEvidence,
   projectMarketSearchProfiles,
   projectServiceInstances,
@@ -23,7 +20,6 @@ type AppointmentPackSeed = {
   approvedDecision?: { decidedAt: string; notes: string | null };
   activeLifecycleStages: number;
   plannedServices: number;
-  buildingCategory?: { label: string; description: string | null };
   scopeSections: Array<{ label: string; items: Array<{ label: string; status: string }> }>;
 };
 
@@ -58,7 +54,7 @@ export function buildConsultantAppointmentPack(seed: AppointmentPackSeed) {
     readiness: {
       marketReady: Boolean(profile) && seed.verifiedEvidenceCount > 0 && Boolean(seed.approvedDecision),
       programReady: seed.activeLifecycleStages > 0 && seed.plannedServices > 0,
-      scopeReady: Boolean(seed.buildingCategory) && scopeCount > 0,
+      scopeReady: scopeCount > 0,
     },
     sections: {
       projectBrief: [
@@ -79,8 +75,7 @@ export function buildConsultantAppointmentPack(seed: AppointmentPackSeed) {
         plannedServices: seed.plannedServices,
       },
       scope: {
-        category: seed.buildingCategory?.label ?? null,
-        categoryDescription: seed.buildingCategory?.description ?? null,
+        source: "نطاق مستقل خاص بالمشروع",
         itemCount: scopeCount,
         sections: seed.scopeSections,
       },
@@ -95,37 +90,50 @@ export const consultantAppointmentPackRouter = router({
       const db = await getDb();
       if (!db) throw new Error("قاعدة البيانات غير متاحة");
 
-      const [projectRows, profileRows, evidenceRows, decisionRows, stageRows, serviceRows, cpaProjectRows] = await Promise.all([
+      const [projectRows, profileRows, evidenceRows, decisionRows, stageRows, serviceRows, draftRequirementSetRows] = await Promise.all([
         db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1),
         db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
         db.select({ id: projectMarketEvidence.id }).from(projectMarketEvidence).where(and(eq(projectMarketEvidence.projectId, input.projectId), eq(projectMarketEvidence.verificationStatus, "verified"))),
         db.select({ decidedAt: marketDecisionApprovals.decidedAt, notes: marketDecisionApprovals.notes }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, input.projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).orderBy(desc(marketDecisionApprovals.decidedAt)).limit(1),
         db.select({ id: lifecycleStages.id }).from(lifecycleStages).where(eq(lifecycleStages.isActive, 1)),
         db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, input.projectId), isNotNull(projectServiceInstances.plannedDueDate))),
-        db.select().from(cpaProjects).where(eq(cpaProjects.projectId, input.projectId)).limit(1),
+        db.select({ id: projectConsultantRequirementSets.id })
+          .from(projectConsultantRequirementSets)
+          .where(and(eq(projectConsultantRequirementSets.projectId, input.projectId), eq(projectConsultantRequirementSets.status, "DRAFT")))
+          .orderBy(desc(projectConsultantRequirementSets.revisionNo))
+          .limit(1),
       ]);
 
       const project = projectRows[0];
       if (!project) throw new Error("لم يُعثر على المشروع المطلوب");
-      const cpaProject = cpaProjectRows[0];
-      const categoryRows = cpaProject?.buildingCategoryId
-        ? await db.select().from(cpaBuildinCategories).where(eq(cpaBuildinCategories.id, cpaProject.buildingCategoryId)).limit(1)
+      let requirementSetId = draftRequirementSetRows[0]?.id;
+      if (!requirementSetId) {
+        const approvedRows = await db.select({ id: projectConsultantRequirementSets.id })
+          .from(projectConsultantRequirementSets)
+          .where(and(eq(projectConsultantRequirementSets.projectId, input.projectId), eq(projectConsultantRequirementSets.status, "APPROVED")))
+          .orderBy(desc(projectConsultantRequirementSets.revisionNo))
+          .limit(1);
+        requirementSetId = approvedRows[0]?.id;
+      }
+      const selectedRequirements = requirementSetId
+        ? await db.select({
+            label: projectConsultantRequirements.label,
+            workstream: projectConsultantRequirements.workstream,
+            requirementGroup: projectConsultantRequirements.requirementGroup,
+          })
+          .from(projectConsultantRequirements)
+          .where(and(eq(projectConsultantRequirements.requirementSetId, requirementSetId), eq(projectConsultantRequirements.isRequired, 1)))
+          .orderBy(projectConsultantRequirements.workstream, projectConsultantRequirements.requirementGroup, projectConsultantRequirements.sortOrder)
         : [];
-      const matrixRows = cpaProject?.buildingCategoryId
-        ? await db.select().from(cpaScopeCategoryMatrix).where(eq(cpaScopeCategoryMatrix.buildingCategoryId, cpaProject.buildingCategoryId))
-        : [];
-      const scopeIds = matrixRows.filter((row) => row.status !== "NOT_REQUIRED").map((row) => row.scopeItemId);
-      const [scopeItems, sectionRows] = await Promise.all([
-        scopeIds.length > 0
-          ? db.select().from(cpaScopeItems).where(and(eq(cpaScopeItems.isActive, 1), inArray(cpaScopeItems.id, scopeIds))).orderBy(cpaScopeItems.sortOrder)
-          : Promise.resolve([]),
-        db.select().from(cpaScopeSections).where(eq(cpaScopeSections.isActive, 1)).orderBy(cpaScopeSections.sortOrder),
-      ]);
-      const matrixByItem = new Map(matrixRows.map((row) => [row.scopeItemId, row.status]));
-      const scopeSections = sectionRows.map((section) => ({
-        label: section.label,
-        items: scopeItems.filter((item) => item.sectionId === section.id).map((item) => ({ label: item.label, status: matrixByItem.get(item.id) ?? "INCLUDED" })),
-      })).filter((section) => section.items.length > 0);
+      const sectionMap = new Map<string, Array<{ label: string; status: string }>>();
+      for (const requirement of selectedRequirements) {
+        const streamLabel = requirement.workstream === "SUPERVISION" ? "الإشراف" : "التصميم والخدمات الاستشارية";
+        const sectionLabel = `${streamLabel} — ${requirement.requirementGroup}`;
+        const items = sectionMap.get(sectionLabel) ?? [];
+        items.push({ label: requirement.label, status: "REQUIRED" });
+        sectionMap.set(sectionLabel, items);
+      }
+      const scopeSections = Array.from(sectionMap, ([label, items]) => ({ label, items }));
 
       return buildConsultantAppointmentPack({
         project,
@@ -134,7 +142,6 @@ export const consultantAppointmentPackRouter = router({
         approvedDecision: decisionRows[0],
         activeLifecycleStages: stageRows.length,
         plannedServices: serviceRows.length,
-        buildingCategory: categoryRows[0],
         scopeSections,
       });
     }),

@@ -27,6 +27,59 @@ async function qRows<T = DbRow>(
   return (result[0] as unknown as T[]) ?? [];
 }
 
+async function getCurrentRequirementSetId(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  systemProjectId: number
+) {
+  const rows = await qRows<any>(
+    db,
+    sql`SELECT id
+        FROM project_consultant_requirement_sets
+        WHERE project_id = ${systemProjectId}
+          AND status IN ('DRAFT', 'APPROVED')
+        ORDER BY revision_no DESC, id DESC
+        LIMIT 1`
+  );
+  return rows[0]?.id ? Number(rows[0].id) : null;
+}
+
+async function createBlankProjectRequirementSet(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  systemProjectId: number
+) {
+  const currentId = await getCurrentRequirementSetId(db, systemProjectId);
+  if (currentId) return currentId;
+
+  const revisions = await qRows<any>(
+    db,
+    sql`SELECT COALESCE(MAX(revision_no), 0) + 1 AS next_revision
+        FROM project_consultant_requirement_sets
+        WHERE project_id = ${systemProjectId}`
+  );
+  const revisionNo = Number(revisions[0]?.next_revision ?? 1);
+  await db.execute(sql`
+    INSERT INTO project_consultant_requirement_sets
+      (project_id, title, revision_no, status, notes)
+    VALUES
+      (${systemProjectId}, 'نطاق الاستشاريين الخاص بالمشروع', ${revisionNo}, 'DRAFT', 'نسخة مستقلة من المكتبة الشاملة؛ الاختيار خاص بهذا المشروع فقط')
+  `);
+  const setId = await getCurrentRequirementSetId(db, systemProjectId);
+  if (!setId) throw new Error("تعذر إنشاء نطاق مستقل للمشروع");
+
+  await db.execute(sql`
+    INSERT INTO project_consultant_requirements
+      (requirement_set_id, reference_item_id, source_type, workstream, requirement_group,
+       code, label, description, is_required, gap_value_aed, pricing_basis,
+       duration_months, allocation_pct, sort_order)
+    SELECT ${setId}, id, 'REFERENCE', workstream, requirement_group,
+           code, label, description, 0, default_gap_value_aed, pricing_basis,
+           default_duration_months, default_allocation_pct, sort_order
+    FROM consultant_requirement_reference_items
+    WHERE is_active = 1
+  `);
+  return setId;
+}
+
 // ---- Calculation Engine ----------------------------------------------------
 
 export async function runCalculationEngine(cpaProjectId: number) {
@@ -36,89 +89,57 @@ export async function runCalculationEngine(cpaProjectId: number) {
   // Step 1: Get cpa_project
   const projects = await qRows<any>(
     db,
-    sql`SELECT p.*, bc.id as cat_id, bc.code as cat_code, bc.label as cat_label,
-               bc.supervision_duration_months as cat_supervision_months
+    sql`SELECT p.*
         FROM cpa_projects p
-        LEFT JOIN cpa_building_categories bc ON bc.id = p.building_category_id
         WHERE p.id = ${cpaProjectId}`
   );
   if (!projects[0]) throw new Error("CPA project not found");
   const proj = projects[0];
 
-  // Resolve category if not set
-  let catId = proj.building_category_id ?? proj.cat_id;
-  if (!catId) {
-    const cats = await qRows<any>(
-      db,
-      sql`SELECT id FROM cpa_building_categories
-          WHERE is_active = 1
-            AND (bua_min_sqft IS NULL OR bua_min_sqft <= ${proj.bua_sqft})
-            AND (bua_max_sqft IS NULL OR bua_max_sqft >= ${proj.bua_sqft})
-          ORDER BY sort_order LIMIT 1`
-    );
-    catId = cats[0]?.id ?? null;
-  }
+  const requirementSetId = await getCurrentRequirementSetId(db, Number(proj.project_id));
 
   const totalConstructionCost =
     toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
   // Use project's actual duration_months for fee adjustment calculations
   const durationMonths = toNum(proj.duration_months);
 
-  // Step 2: Mandatory scope items for this category (display only)
-  // Use GROUP BY + MAX to prevent duplicates from multiple reference cost rows
-  const mandatoryItems = catId
-    ? await qRows<any>(
-        db,
-        sql`SELECT si.id, si.code, si.label, scm.status,
-                   COALESCE(MAX(src.cost_aed), 0) as ref_cost
-            FROM cpa_scope_category_matrix scm
-            JOIN cpa_scope_items si ON si.id = scm.scope_item_id
-            LEFT JOIN cpa_scope_reference_costs src
-              ON src.scope_item_id = scm.scope_item_id
-              AND src.building_category_id = scm.building_category_id
-            WHERE scm.building_category_id = ${catId}
-              AND scm.status IN ('INCLUDED', 'GREEN')
-              AND si.is_active = 1
-            GROUP BY si.id, si.code, si.label, scm.status`
-      )
-    : [];
-
-  // Step 2B: All REQUIRED scope items for gap detection
-  // IMPORTANT: Exclude NOT_REQUIRED items — they should NOT be flagged as gaps
+  // Step 2: Design items selected for this project only.
   // Exclude CONTRACT items — they are tracked separately
   // Exclude CORE items (1-11) — they are always included implicitly in any consultant's scope
-  // Use GROUP BY + MAX to prevent duplicates if multiple reference cost rows exist
-  const allRequiredItems = catId
+  const allRequiredItems = requirementSetId
     ? await qRows<any>(
         db,
-        sql`SELECT si.id, si.code, si.label, si.item_number, scm.status,
-                   COALESCE(MAX(src.cost_aed), 0) as ref_cost,
+        sql`SELECT si.id, pcr.code, pcr.label, si.item_number,
+                   COALESCE(pcr.gap_value_aed, 0) as ref_cost,
                    ss.code as section_code
-            FROM cpa_scope_category_matrix scm
-            JOIN cpa_scope_items si ON si.id = scm.scope_item_id
-            LEFT JOIN cpa_scope_reference_costs src
-              ON src.scope_item_id = scm.scope_item_id
-              AND src.building_category_id = scm.building_category_id
+            FROM project_consultant_requirements pcr
+            JOIN consultant_requirement_reference_items ref ON ref.id = pcr.reference_item_id
+            JOIN cpa_scope_items si ON si.id = ref.legacy_scope_item_id
             LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
-            WHERE scm.building_category_id = ${catId}
-              AND scm.status != 'NOT_REQUIRED'
+            WHERE pcr.requirement_set_id = ${requirementSetId}
+              AND pcr.is_required = 1
+              AND ref.source_type = 'LEGACY_SCOPE'
               AND (ss.code IS NULL OR ss.code != 'CONTRACT')
               AND si.item_number > 11
               AND si.is_active = 1
-            GROUP BY si.id, si.code, si.label, si.item_number, scm.status, ss.code`
+            ORDER BY pcr.sort_order, pcr.id`
       )
     : [];
 
-  // Step 3: Supervision baseline
-  const supervisionBaseline = catId
+  // Step 3: Supervision roles selected for this project only.
+  const supervisionBaseline = requirementSetId
     ? await qRows<any>(
         db,
-        sql`SELECT sb.supervision_role_id, sb.required_allocation_pct,
-                   sr.code, sr.label, sr.monthly_rate_aed
-            FROM cpa_supervision_baseline sb
-            JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
-            WHERE sb.building_category_id = ${catId}
-              AND sb.required_allocation_pct > 0
+        sql`SELECT sr.id as supervision_role_id,
+                   COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct,
+                   sr.code, sr.label,
+                   COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed
+            FROM project_consultant_requirements pcr
+            JOIN consultant_requirement_reference_items ref ON ref.id = pcr.reference_item_id
+            JOIN cpa_supervision_roles sr ON sr.id = ref.legacy_supervision_role_id
+            WHERE pcr.requirement_set_id = ${requirementSetId}
+              AND pcr.is_required = 1
+              AND ref.source_type = 'LEGACY_SUPERVISION'
               AND sr.is_active = 1`
       )
     : [];
@@ -177,8 +198,6 @@ export async function runCalculationEngine(cpaProjectId: number) {
     for (const item of allRequiredItems) {
       const status = coverageMap[item.id] ?? "NOT_MENTIONED";
       if (status === "INCLUDED") continue;
-      // Skip if item is NOT_REQUIRED — it's not a real gap
-      if (item.status === "NOT_REQUIRED") continue;
       // Core items (1-11) are always included implicitly — never a gap
       // (Already filtered in SQL, but double-check here)
       if (item.item_number && item.item_number <= 11) continue;
@@ -831,11 +850,18 @@ export const cpaRouter = router({
       return qRows(
         db,
         sql`SELECT cp.*, p.name as project_name, p.plotNumber as sys_plot_number,
-                   bc.label as category_label, bc.code as category_code,
-                   (SELECT COUNT(*) FROM cpa_project_consultants pc WHERE pc.cpa_project_id = cp.id) as consultant_count
+                   (SELECT COUNT(*) FROM cpa_project_consultants pc WHERE pc.cpa_project_id = cp.id) as consultant_count,
+                   (SELECT COUNT(*)
+                    FROM project_consultant_requirement_sets prs
+                    JOIN project_consultant_requirements pr ON pr.requirement_set_id = prs.id
+                    WHERE prs.id = (
+                      SELECT current_set.id FROM project_consultant_requirement_sets current_set
+                      WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                      ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
+                    )
+                      AND pr.is_required = 1) as scope_item_count
             FROM cpa_projects cp
             JOIN projects p ON p.id = cp.project_id
-            LEFT JOIN cpa_building_categories bc ON bc.id = cp.building_category_id
             ORDER BY cp.created_at DESC`
       );
     }),
@@ -849,13 +875,50 @@ export const cpaRouter = router({
           db,
           sql`SELECT cp.*, p.name as project_name, p.bua as sys_bua,
                      p.pricePerSqft as sys_price_per_sqft,
-                     bc.label as category_label, bc.code as category_code
+                     (SELECT COUNT(*)
+                      FROM project_consultant_requirement_sets prs
+                      JOIN project_consultant_requirements pr ON pr.requirement_set_id = prs.id
+                      WHERE prs.id = (
+                        SELECT current_set.id FROM project_consultant_requirement_sets current_set
+                        WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                        ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
+                      )
+                        AND pr.is_required = 1) as scope_item_count
               FROM cpa_projects cp
               JOIN projects p ON p.id = cp.project_id
-              LEFT JOIN cpa_building_categories bc ON bc.id = cp.building_category_id
               WHERE cp.id = ${input.id}`
         );
         return rows[0] ?? null;
+      }),
+
+    getSelectedSupervisionRoles: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return qRows(
+          db,
+          sql`SELECT sr.id as supervision_role_id, sr.code as role_code,
+                     sr.label as role_label, sr.team_type,
+                     COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed,
+                     COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct
+              FROM cpa_projects cp
+              JOIN project_consultant_requirement_sets prs
+                ON prs.id = (
+                  SELECT current_set.id FROM project_consultant_requirement_sets current_set
+                  WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                  ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
+                )
+              JOIN project_consultant_requirements pcr
+                ON pcr.requirement_set_id = prs.id AND pcr.is_required = 1
+              JOIN consultant_requirement_reference_items ref
+                ON ref.id = pcr.reference_item_id
+               AND ref.source_type = 'LEGACY_SUPERVISION'
+              JOIN cpa_supervision_roles sr
+                ON sr.id = ref.legacy_supervision_role_id AND sr.is_active = 1
+              WHERE cp.id = ${input.id}
+              ORDER BY pcr.sort_order, pcr.id`
+        );
       }),
 
     create: protectedProcedure
@@ -864,12 +927,8 @@ export const cpaRouter = router({
           projectId: z.number(),
           plotNumber: z.string(),
           location: z.string().optional(),
-          projectType: z
-            .enum(["RESIDENTIAL", "COMMERCIAL", "MIXED_USE", "OTHER"])
-            .optional(),
           description: z.string().optional(),
           buaSqft: z.number(),
-          buildingCategoryId: z.number().nullable().optional(),
           constructionCostPerSqft: z.number(),
           durationMonths: z.number(),
         })
@@ -877,28 +936,17 @@ export const cpaRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
-        let catId = input.buildingCategoryId ?? null;
-        if (!catId) {
-          const cats = await qRows<any>(
-            db,
-            sql`SELECT id FROM cpa_building_categories
-                WHERE is_active = 1
-                  AND (bua_min_sqft IS NULL OR bua_min_sqft <= ${input.buaSqft})
-                  AND (bua_max_sqft IS NULL OR bua_max_sqft >= ${input.buaSqft})
-                ORDER BY sort_order LIMIT 1`
-          );
-          catId = cats[0]?.id ?? null;
-        }
         const r = await db.execute(
           sql`INSERT INTO cpa_projects
-                (project_id, plot_number, location, project_type, description,
-                 bua_sqft, building_category_id, construction_cost_per_sqft, duration_months)
+                (project_id, plot_number, location, description,
+                 bua_sqft, construction_cost_per_sqft, duration_months)
               VALUES (${input.projectId}, ${input.plotNumber}, ${input.location ?? null},
-                      ${input.projectType ?? "RESIDENTIAL"}, ${input.description ?? null},
-                      ${input.buaSqft}, ${catId}, ${input.constructionCostPerSqft},
+                      ${input.description ?? null}, ${input.buaSqft}, ${input.constructionCostPerSqft},
                       ${input.durationMonths})`
         );
-        return { id: (r[0] as any).insertId };
+        const id = Number((r[0] as any).insertId);
+        const requirementSetId = await createBlankProjectRequirementSet(db, input.projectId);
+        return { id, requirementSetId };
       }),
 
     update: protectedProcedure
@@ -907,12 +955,8 @@ export const cpaRouter = router({
           id: z.number(),
           plotNumber: z.string().optional(),
           location: z.string().optional(),
-          projectType: z
-            .enum(["RESIDENTIAL", "COMMERCIAL", "MIXED_USE", "OTHER"])
-            .optional(),
           description: z.string().optional(),
           buaSqft: z.number().optional(),
-          buildingCategoryId: z.number().nullable().optional(),
           constructionCostPerSqft: z.number().optional(),
           durationMonths: z.number().optional(),
           status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
@@ -927,14 +971,10 @@ export const cpaRouter = router({
           await db.execute(sql`UPDATE cpa_projects SET plot_number=${fields.plotNumber} WHERE id=${id}`);
         if (fields.location !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET location=${fields.location} WHERE id=${id}`);
-        if (fields.projectType !== undefined)
-          await db.execute(sql`UPDATE cpa_projects SET project_type=${fields.projectType} WHERE id=${id}`);
         if (fields.description !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET description=${fields.description} WHERE id=${id}`);
         if (fields.buaSqft !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET bua_sqft=${fields.buaSqft} WHERE id=${id}`);
-        if (fields.buildingCategoryId !== undefined)
-          await db.execute(sql`UPDATE cpa_projects SET building_category_id=${fields.buildingCategoryId} WHERE id=${id}`);
         if (fields.constructionCostPerSqft !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET construction_cost_per_sqft=${fields.constructionCostPerSqft} WHERE id=${id}`);
         if (fields.durationMonths !== undefined)
@@ -1257,12 +1297,27 @@ export const cpaRouter = router({
         if (!db) return [];
         return qRows(
           db,
-          sql`SELECT csc.*, si.code as item_code, si.label as item_label, si.item_number,
+          sql`SELECT /* current project scope */ csc.id, csc.project_consultant_id, si.id as scope_item_id,
+                     COALESCE(csc.coverage_status, 'NOT_MENTIONED') as coverage_status,
+                     csc.notes, si.code as item_code, si.label as item_label, si.item_number,
                      si.default_type, ss.label as section_label, ss.code as section_code
-              FROM cpa_consultant_scope_coverage csc
-              JOIN cpa_scope_items si ON si.id = csc.scope_item_id
+              FROM cpa_project_consultants pc
+              JOIN cpa_projects cp ON cp.id = pc.cpa_project_id
+              JOIN project_consultant_requirement_sets prs
+                ON prs.id = (
+                  SELECT current_set.id FROM project_consultant_requirement_sets current_set
+                  WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                  ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
+                )
+              JOIN project_consultant_requirements pcr
+                ON pcr.requirement_set_id = prs.id AND pcr.is_required = 1
+              JOIN consultant_requirement_reference_items ref
+                ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SCOPE'
+              JOIN cpa_scope_items si ON si.id = ref.legacy_scope_item_id
               LEFT JOIN cpa_scope_sections ss ON ss.id = si.section_id
-              WHERE csc.project_consultant_id = ${input.projectConsultantId}
+              LEFT JOIN cpa_consultant_scope_coverage csc
+                ON csc.project_consultant_id = pc.id AND csc.scope_item_id = si.id
+              WHERE pc.id = ${input.projectConsultantId}
               ORDER BY si.sort_order, si.item_number`
         );
       }),
@@ -1279,6 +1334,27 @@ export const cpaRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        const selected = await qRows<any>(
+          db,
+          sql`SELECT /* current project scope */ pcr.id
+              FROM cpa_project_consultants pc
+              JOIN cpa_projects cp ON cp.id = pc.cpa_project_id
+              JOIN project_consultant_requirement_sets prs
+                ON prs.id = (
+                  SELECT current_set.id FROM project_consultant_requirement_sets current_set
+                  WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                  ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
+                )
+              JOIN project_consultant_requirements pcr
+                ON pcr.requirement_set_id = prs.id AND pcr.is_required = 1
+              JOIN consultant_requirement_reference_items ref
+                ON ref.id = pcr.reference_item_id
+               AND ref.source_type = 'LEGACY_SCOPE'
+               AND ref.legacy_scope_item_id = ${input.scopeItemId}
+              WHERE pc.id = ${input.projectConsultantId}
+              LIMIT 1`
+        );
+        if (!selected[0]) throw new Error("هذا البند غير مختار في نطاق المشروع");
         await db.execute(
           sql`INSERT INTO cpa_consultant_scope_coverage
                 (project_consultant_id, scope_item_id, coverage_status, notes)
@@ -1440,9 +1516,7 @@ export const cpaRouter = router({
           if (pRows[0]) projName = pRows[0].name;
         }
 
-        // Get building category
-        const cats = await qRows<any>(db, sql`SELECT code, label FROM cpa_building_categories WHERE id = ${proj.building_category_id}`);
-        const cat = cats[0] || {};
+        const requirementSetId = await getCurrentRequirementSetId(db, Number(proj.project_id));
 
         // Get evaluation results with consultant info (deduplicated - latest per consultant)
         const results = await qRows<any>(db, sql`
@@ -1473,16 +1547,19 @@ export const cpaRouter = router({
         const approvalRows = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
         const approval = approvalRows[0] || null;
 
-        // Get supervision baseline
+        // Get supervision roles selected for this project's independent scope.
         const baselineRows = await qRows<any>(db, sql`
-          SELECT sb.supervision_role_id, sb.required_allocation_pct,
-                 sr.code, sr.label, sr.monthly_rate_aed
-          FROM cpa_supervision_baseline sb
-          JOIN cpa_supervision_roles sr ON sr.id = sb.supervision_role_id
-          WHERE sb.building_category_id = ${proj.building_category_id}
-            AND sb.required_allocation_pct > 0
-            AND sr.is_active = 1
-          ORDER BY sr.sort_order
+          SELECT sr.id as supervision_role_id,
+                 COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct,
+                 sr.code, sr.label,
+                 COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed
+          FROM project_consultant_requirements pcr
+          JOIN consultant_requirement_reference_items ref
+            ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SUPERVISION'
+          JOIN cpa_supervision_roles sr ON sr.id = ref.legacy_supervision_role_id
+          WHERE pcr.requirement_set_id = ${requirementSetId}
+            AND pcr.is_required = 1 AND sr.is_active = 1
+          ORDER BY pcr.sort_order, pcr.id
         `);
 
         // Get scope gaps per consultant
@@ -1589,7 +1666,7 @@ export const cpaRouter = router({
           bua: toNum(proj.bua_sqft),
           constructionCost: totalCC,
           durationMonths,
-          category: cat.label || cat.code || '',
+          category: 'نطاق خاص بالمشروع',
           consultants,
           supervisionBaseline: baselineRows.map((b: any) => ({
             roleId: Number(b.supervision_role_id),

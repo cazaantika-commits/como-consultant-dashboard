@@ -254,7 +254,7 @@ export default function TrueCostReportView({ token, projectId, onBack }: { token
 
       {/* Project Info Bar */}
       <div className="flex flex-wrap gap-6 px-2 text-sm bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-200 p-4">
-        <div><span className="text-slate-500">فئة المبنى:</span> <span className="font-semibold text-slate-800">{report.category}</span></div>
+        <div><span className="text-slate-500">مصدر النطاق:</span> <span className="font-semibold text-slate-800">{report.category}</span></div>
         <div><span className="text-slate-500">المساحة:</span> <span className="font-semibold text-slate-800">{report.bua.toLocaleString()} قدم²</span></div>
         <div><span className="text-slate-500">تكلفة البناء:</span> <span className="font-semibold text-slate-800">{report.constructionCost.toLocaleString()} درهم</span></div>
         <div><span className="text-slate-500">مدة الإشراف:</span> <span className="font-semibold text-slate-800">{report.durationMonths} شهر</span></div>

@@ -110,9 +110,12 @@ export const consultantRequirementsRouter = router({
         const set = sets[0] ?? null;
         if (!set) return { set: null, requirements: [] };
         const requirements = await qRows(db, sql`
-          SELECT * FROM project_consultant_requirements
-          WHERE requirement_set_id = ${set.id}
-          ORDER BY workstream, requirement_group, sort_order, id
+          SELECT pcr.*, ref.source_type AS reference_source_type,
+                 ref.legacy_scope_item_id, ref.legacy_supervision_role_id
+          FROM project_consultant_requirements pcr
+          LEFT JOIN consultant_requirement_reference_items ref ON ref.id = pcr.reference_item_id
+          WHERE pcr.requirement_set_id = ${set.id}
+          ORDER BY pcr.workstream, pcr.requirement_group, pcr.sort_order, pcr.id
         `);
         return { set, requirements };
       }),
@@ -142,10 +145,33 @@ export const consultantRequirementsRouter = router({
             (requirement_set_id, reference_item_id, source_type, workstream, requirement_group, code, label, description,
              is_required, gap_value_aed, pricing_basis, duration_months, allocation_pct, sort_order)
           SELECT ${setId}, id, 'REFERENCE', workstream, requirement_group, code, label, description,
-                 default_enabled, default_gap_value_aed, pricing_basis, default_duration_months, default_allocation_pct, sort_order
+                 0, default_gap_value_aed, pricing_basis, default_duration_months, default_allocation_pct, sort_order
           FROM consultant_requirement_reference_items WHERE is_active = 1
         `);
         return { success: true, setId };
+      }),
+
+    saveSelection: protectedProcedure
+      .input(z.object({ setId: z.number(), requirementIds: z.array(z.number().int().positive()) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("DB unavailable");
+        const sets = await qRows<any>(db, sql`
+          SELECT status FROM project_consultant_requirement_sets WHERE id = ${input.setId} LIMIT 1
+        `);
+        if (!sets[0] || sets[0].status !== 'DRAFT') throw new Error("لا يمكن تعديل معيار معتمد؛ أنشئ مراجعة جديدة");
+        await db.execute(sql`
+          UPDATE project_consultant_requirements SET is_required = 0 WHERE requirement_set_id = ${input.setId}
+        `);
+        if (input.requirementIds.length > 0) {
+          await db.execute(sql`
+            UPDATE project_consultant_requirements
+            SET is_required = 1
+            WHERE requirement_set_id = ${input.setId}
+              AND id IN (${sql.join(input.requirementIds.map((id) => sql`${id}`), sql`, `)})
+          `);
+        }
+        return { success: true, selectedCount: input.requirementIds.length };
       }),
 
     createRevision: protectedProcedure
@@ -201,23 +227,6 @@ export const consultantRequirementsRouter = router({
         if (fields.allocationPct !== undefined) sets.push(sql`allocation_pct = ${fields.allocationPct}`);
         if (!sets.length) return { success: true };
         await db.execute(sql`UPDATE project_consultant_requirements SET ${sql.join(sets, sql`, `)} WHERE id = ${input.id}`);
-        return { success: true };
-      }),
-
-    addCustomRequirement: protectedProcedure
-      .input(z.object({ setId: z.number(), requirementGroup: z.string().trim().min(1).max(200), label: z.string().trim().min(1).max(300), workstream: z.enum(["DESIGN", "ENGINEERING", "SUPERVISION", "GENERAL"]), gapValueAed: z.number().min(0).nullable(), pricingBasis: z.enum(["FIXED", "MONTHLY", "PERCENT_OF_FEE", "MANUAL"]) }))
-      .mutation(async ({ input }) => {
-        const db = await getDb();
-        if (!db) throw new Error("DB unavailable");
-        const sets = await qRows<any>(db, sql`SELECT status FROM project_consultant_requirement_sets WHERE id = ${input.setId} LIMIT 1`);
-        if (!sets[0] || sets[0].status !== 'DRAFT') throw new Error("يمكن الإضافة في مسودة المشروع فقط");
-        await db.execute(sql`
-          INSERT INTO project_consultant_requirements
-            (requirement_set_id, source_type, workstream, requirement_group, label, is_required, gap_value_aed, pricing_basis, sort_order)
-          SELECT ${input.setId}, 'CUSTOM', ${input.workstream}, ${input.requirementGroup}, ${input.label}, 1,
-                 ${input.gapValueAed}, ${input.pricingBasis}, COALESCE(MAX(sort_order), 0) + 1
-          FROM project_consultant_requirements WHERE requirement_set_id = ${input.setId}
-        `);
         return { success: true };
       }),
 

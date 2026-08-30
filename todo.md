@@ -1634,4 +1634,6 @@
 - [x] Use the available local browser female voice for Layla's opening briefing and chat read-aloud while the external TTS credential remains unavailable
 - [x] Fix all Financial Studies project-selection cards that fail to open their selected report, preserving the currently selected project across the transition
 - [x] Rebuild and save the three Command Center report-entry cards from scratch above the current live GitHub version without rollback or loss of earlier work
+- [x] Replace consultant-project classification templates with one comprehensive design-and-supervision scope library, and let every newly created project select its own independent scope items
+- [x] Preserve the existing comprehensive scope library unchanged, remove project classification dependencies, and initialize every current and new project with an editable independent scope selection
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values

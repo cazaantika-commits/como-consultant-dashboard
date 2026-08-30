@@ -128,32 +128,32 @@ function RankBadge({ rank }: { rank: number | null }) {
 
 function ProjectListScreen({
   onSelectProject,
+  onScopeSetup,
   onSettings,
 }: {
   onSelectProject: (id: number) => void;
+  onScopeSetup: (id: number) => void;
   onSettings: () => void;
 }) {
   const { toast } = useToast();
   const projectsQuery = trpc.cpa.projects.list.useQuery();
   const sysProjectsQuery = trpc.cpa.getSystemProjects.useQuery();
-  const categoriesQuery = trpc.cpa.settings.getBuildingCategories.useQuery();
   const createMutation = trpc.cpa.projects.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       projectsQuery.refetch();
       setShowCreate(false);
       toast({ title: "تم إنشاء المشروع بنجاح" });
+      onScopeSetup(Number(data.id));
     },
     onError: (e) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
 
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(() => new URLSearchParams(window.location.search).get("create") === "1");
   const [form, setForm] = useState({
     projectId: "",
     plotNumber: "",
     location: "",
-    projectType: "RESIDENTIAL",
     buaSqft: "",
-    buildingCategoryId: "",
     constructionCostPerSqft: "",
     durationMonths: "",
     description: "",
@@ -161,29 +161,6 @@ function ProjectListScreen({
 
   const projects = projectsQuery.data ?? [];
   const sysProjects = sysProjectsQuery.data ?? [];
-  const categories = categoriesQuery.data ?? [];
-
-  // Map permittedUse text to project type enum
-  function detectProjectType(permittedUse: string | null | undefined): string {
-    if (!permittedUse) return "RESIDENTIAL";
-    const u = permittedUse.toLowerCase();
-    if (u.includes("تجار") || u.includes("commercial") || u.includes("retail") || u.includes("مكاتب") || u.includes("office")) return "COMMERCIAL";
-    if (u.includes("متعدد") || u.includes("mixed") || u.includes("سكني تجاري")) return "MIXED_USE";
-    if (u.includes("سكن") || u.includes("residential") || u.includes("villa") || u.includes("فيلا")) return "RESIDENTIAL";
-    return "RESIDENTIAL";
-  }
-
-  // Auto-detect building category from BUA
-  function detectCategoryFromBUA(buaStr: string): string {
-    const bua = Number(buaStr);
-    if (!bua || !categories.length) return "";
-    const match = (categories as any[]).find((c) => {
-      const minOk = c.bua_min_sqft == null || bua >= Number(c.bua_min_sqft);
-      const maxOk = c.bua_max_sqft == null || bua <= Number(c.bua_max_sqft);
-      return minOk && maxOk && c.is_active;
-    });
-    return match ? String(match.id) : "";
-  }
 
   function handleCreate() {
     if (!form.projectId || !form.plotNumber || !form.buaSqft || !form.constructionCostPerSqft || !form.durationMonths) {
@@ -194,10 +171,8 @@ function ProjectListScreen({
       projectId: Number(form.projectId),
       plotNumber: form.plotNumber,
       location: form.location || undefined,
-      projectType: form.projectType as any,
       description: form.description || undefined,
       buaSqft: Number(form.buaSqft),
-      buildingCategoryId: form.buildingCategoryId ? Number(form.buildingCategoryId) : undefined,
       constructionCostPerSqft: Number(form.constructionCostPerSqft),
       durationMonths: Number(form.durationMonths),
     });
@@ -290,11 +265,9 @@ function ProjectListScreen({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <StatusBadge status={project.status ?? "ACTIVE"} />
-                        {project.category_label && (
-                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                            {project.category_label}
-                          </span>
-                        )}
+                        <span className="text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full">
+                          {project.scope_item_count ?? 0} بند في نطاق المشروع
+                        </span>
                       </div>
                       <h3 className="font-bold text-lg text-foreground group-hover:text-sky-600 transition-colors">
                         {project.project_name}
@@ -350,11 +323,6 @@ function ProjectListScreen({
                   if (!sp) { setForm({ ...form, projectId: v }); return; }
                   const rawBua = sp.manual_bua_sqft ?? sp.gfa_sqft ?? sp.bua ?? "";
                   const buaStr = rawBua ? String(Math.round(Number(rawBua))) : "";
-                  const detectedCatId = detectCategoryFromBUA(buaStr);
-                  const detectedCat = (categories as any[]).find((c) => String(c.id) === detectedCatId);
-                  const durationFromCat = detectedCat?.supervision_duration_months
-                    ? String(detectedCat.supervision_duration_months)
-                    : "";
                   const constructionCost = sp.construction_cost_per_sqft ? String(Math.round(Number(sp.construction_cost_per_sqft))) : "";
                   setForm({
                     ...form,
@@ -363,9 +331,6 @@ function ProjectListScreen({
                     location: sp.area_code ?? "",
                     buaSqft: buaStr,
                     constructionCostPerSqft: constructionCost,
-                    buildingCategoryId: detectedCatId,
-                    durationMonths: durationFromCat,
-                    projectType: detectProjectType(sp.permitted_use),
                   });
                 }}
               >
@@ -394,8 +359,7 @@ function ProjectListScreen({
                   <div><span className="text-muted-foreground">الموقع: </span><strong>{form.location || "—"}</strong></div>
                   <div><span className="text-muted-foreground">BUA: </span><strong>{form.buaSqft ? Number(form.buaSqft).toLocaleString() + " قدم²" : "—"}</strong></div>
                   <div><span className="text-muted-foreground">تكلفة الإنشاء: </span><strong>{form.constructionCostPerSqft ? form.constructionCostPerSqft + " AED/قدم²" : "—"}</strong></div>
-                  <div><span className="text-muted-foreground">الفئة: </span><strong>{(categories as any[]).find((c) => String(c.id) === form.buildingCategoryId)?.label || "—"}</strong></div>
-                  <div><span className="text-muted-foreground">مدة الإشراف: </span><strong>{form.durationMonths ? form.durationMonths + " شهر" : "—"}</strong></div>
+                  <div><span className="text-muted-foreground">مدة الإشراف: </span><strong>{form.durationMonths ? form.durationMonths + " شهر" : "تُدخل يدويًا"}</strong></div>
                 </div>
               </div>
             )}
@@ -407,27 +371,9 @@ function ProjectListScreen({
                 <Input
                   type="number"
                   value={form.buaSqft}
-                  onChange={(e) => {
-                    const newBua = e.target.value;
-                    const detectedCatId = detectCategoryFromBUA(newBua);
-                    const detectedCat = (categories as any[]).find((c) => String(c.id) === detectedCatId);
-                    const durationFromCat = detectedCat?.supervision_duration_months
-                      ? String(detectedCat.supervision_duration_months)
-                      : form.durationMonths;
-                    setForm({ ...form, buaSqft: newBua, buildingCategoryId: detectedCatId || form.buildingCategoryId, durationMonths: durationFromCat });
-                  }}
+                  onChange={(e) => setForm({ ...form, buaSqft: e.target.value })}
                   placeholder="مثال: 50000"
                 />
-                {form.buaSqft && (() => {
-                  const detectedId = detectCategoryFromBUA(form.buaSqft);
-                  const cat = (categories as any[]).find((c) => String(c.id) === detectedId);
-                  return cat ? (
-                    <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      الفئة: <strong>{cat.label}</strong> · الإشراف: <strong>{cat.supervision_duration_months} شهر</strong>
-                    </p>
-                  ) : null;
-                })()}
               </div>
               <div>
                 <Label>تكلفة الإنشاء / قدم² *</Label>
@@ -435,28 +381,9 @@ function ProjectListScreen({
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>فئة المبنى</Label>
-                <Select value={form.buildingCategoryId} onValueChange={(v) => {
-                  const cat = (categories as any[]).find((c) => String(c.id) === v);
-                  const dur = cat?.supervision_duration_months
-                    ? String(cat.supervision_duration_months)
-                    : form.durationMonths;
-                  setForm({ ...form, buildingCategoryId: v, durationMonths: dur });
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="تلقائي..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c: any) => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>مدة الإشراف (شهر)</Label>
-                <Input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} placeholder="من الفئة تلقائياً" />
+              <div className="col-span-2">
+                <Label>مدة الإشراف (شهر) *</Label>
+                <Input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} placeholder="تُحدد لهذا المشروع" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -470,18 +397,8 @@ function ProjectListScreen({
               </div>
             </div>
             <div>
-              <Label>نوع المشروع</Label>
-              <Select value={form.projectType} onValueChange={(v) => setForm({ ...form, projectType: v })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="RESIDENTIAL">سكني</SelectItem>
-                  <SelectItem value="COMMERCIAL">تجاري</SelectItem>
-                  <SelectItem value="MIXED_USE">متعدد الاستخدامات</SelectItem>
-                  <SelectItem value="OTHER">أخرى</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>تفاصيل المشروع</Label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="أدخل أي تفاصيل خاصة بهذا المشروع قبل اختيار نطاقه" className="min-h-20" />
             </div>
             <div className="flex gap-2 pt-2">
               <Button className="flex-1" onClick={handleCreate} disabled={createMutation.isPending}>
@@ -552,8 +469,7 @@ function ProjectDetailScreen({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
-  const [editForm, setEditForm] = useState({ buaSqft: '', constructionCostPerSqft: '', durationMonths: '', buildingCategoryId: '' });
-  const categoriesForEdit = trpc.cpa.settings.getBuildingCategories.useQuery();
+  const [editForm, setEditForm] = useState({ buaSqft: '', constructionCostPerSqft: '', durationMonths: '' });
   const updateProjectMutation = trpc.cpa.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); setShowEditProject(false); toast({ title: 'تم تحديث بيانات المشروع' }); },
     onError: (e) => toast({ title: 'خطأ في التحديث', description: e.message, variant: 'destructive' }),
@@ -615,7 +531,6 @@ function ProjectDetailScreen({
               buaSqft: String(project.bua_sqft ?? ''),
               constructionCostPerSqft: String(project.construction_cost_per_sqft ?? ''),
               durationMonths: String(project.duration_months ?? ''),
-              buildingCategoryId: String(project.building_category_id ?? ''),
             });
             setShowEditProject(true);
           }}
@@ -694,22 +609,6 @@ function ProjectDetailScreen({
                 placeholder="مثال: 30"
               />
             </div>
-            <div>
-              <Label>فئة المبنى</Label>
-              <Select
-                value={editForm.buildingCategoryId}
-                onValueChange={(v) => setEditForm({ ...editForm, buildingCategoryId: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر فئة المبنى..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {(categoriesForEdit.data ?? []).map((cat: any) => (
-                    <SelectItem key={cat.id} value={String(cat.id)}>{cat.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => setShowEditProject(false)}>إلغاء</Button>
               <Button
@@ -722,7 +621,6 @@ function ProjectDetailScreen({
                     buaSqft: Number(editForm.buaSqft),
                     constructionCostPerSqft: Number(editForm.constructionCostPerSqft),
                     durationMonths: Number(editForm.durationMonths),
-                    buildingCategoryId: editForm.buildingCategoryId ? Number(editForm.buildingCategoryId) : null,
                   });
                 }}
                 disabled={updateProjectMutation.isPending}
@@ -741,7 +639,7 @@ function ProjectDetailScreen({
           { label: "BUA", value: `${fmt(project.bua_sqft)} قدم²` },
           { label: "تكلفة الإنشاء", value: fmtAED(totalCost) },
           { label: "مدة الإشراف", value: `${project.duration_months} شهر` },
-          { label: "فئة المبنى", value: project.category_label ?? "غير محدد" },
+          { label: "بنود نطاق المشروع", value: `${project.scope_item_count ?? 0} بند` },
         ].map((s, i) => (
           <Card key={i} className="text-center">
             <CardContent className="p-3">
@@ -766,7 +664,6 @@ function ProjectDetailScreen({
                 variant="outline"
                 className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
                 onClick={() => {
-                  const catLabel = project.category_label ?? "غير محدد";
                   const totalCostFmt = (project.bua_sqft * project.construction_cost_per_sqft).toLocaleString("en-US", { maximumFractionDigits: 0 });
                   const consultantList = consultants.map((c: any, i: number) => `${i + 1}. ${c.trade_name ?? c.legal_name} (consultant_code: "${c.consultant_code}")`).join("\n");
                   const scopeItems = [
@@ -791,7 +688,7 @@ function ProjectDetailScreen({
 بيانات المشروع:
 - اسم المشروع: ${project.project_name}
 - رقم القطعة: ${project.plot_number ?? "—"}
-- فئة المبنى: ${catLabel}
+- نطاق المشروع المختار: ${project.scope_item_count ?? 0} بند
 - المساحة الإجمالية (BUA): ${Number(project.bua_sqft).toLocaleString("en-US")} قدم²
 - تكلفة الإنشاء الإجمالية: AED ${totalCostFmt}
 - مدة المشروع: ${project.duration_months} شهر
@@ -1040,7 +937,7 @@ function SupervisionFeeDialog({
   pcId,
   consultantName,
   projectDurationMonths,
-  buildingCategoryId,
+  cpaProjectId,
   onClose,
   onSaved,
 }: {
@@ -1048,16 +945,16 @@ function SupervisionFeeDialog({
   pcId: number;
   consultantName: string;
   projectDurationMonths: number;
-  buildingCategoryId: number | null;
+  cpaProjectId: number;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { toast } = useToast();
 
-  // Fetch baseline roles for this building category
-  const baselineQuery = trpc.cpa.settings.getSupervisionBaseline.useQuery(
-    { buildingCategoryId: buildingCategoryId ?? 0 },
-    { enabled: open && buildingCategoryId != null && buildingCategoryId > 0 }
+  // Fetch supervision roles selected for this project's independent scope.
+  const baselineQuery = trpc.cpa.projects.getSelectedSupervisionRoles.useQuery(
+    { id: cpaProjectId },
+    { enabled: open && cpaProjectId > 0 }
   );
 
   // Fetch existing supervision team entries for this consultant
@@ -1105,7 +1002,7 @@ function SupervisionFeeDialog({
   const isLoading = baselineQuery.isLoading || teamQuery.isLoading;
   const isSaving = updateTeamMutation.isPending || updateFeesMutation.isPending;
 
-  // Calculate total supervision fee
+  // Calculate total supervision fee from the roles selected for this project.
   const totalFee = baseline.reduce((sum: number, row: any) => {
     const rate = parseFloat(rates[Number(row.supervision_role_id)] ?? "0") || 0;
     const alloc = parseFloat(row.required_allocation_pct) || 100;
@@ -1114,7 +1011,7 @@ function SupervisionFeeDialog({
 
   const handleSave = async () => {
     if (baseline.length === 0) {
-      toast({ title: "لا توجد أدوار إشراف لهذه الفئة", variant: "destructive" });
+      toast({ title: "لم تُحدد أدوار إشراف في نطاق المشروع", variant: "destructive" });
       return;
     }
     try {
@@ -1213,7 +1110,7 @@ function SupervisionFeeDialog({
                 </DialogTitle>
               </DialogHeader>
 
-              <div className="flex-1 overflow-y-auto pr-1">
+              <div className="flex-1 overflow-y-auto pr-1" data-scope-source="project">
                 {isLoading ? (
                   <motion.div
                     initial={{ opacity: 0 }}
@@ -1223,21 +1120,13 @@ function SupervisionFeeDialog({
                     <Loader2 className="w-5 h-5 animate-spin" />
                     جاري التحميل...
                   </motion.div>
-                ) : buildingCategoryId == null ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="py-6 text-center text-amber-600 text-sm"
-                  >
-                    ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
-                  </motion.div>
                 ) : baseline.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="py-6 text-center text-muted-foreground text-sm"
                   >
-                    لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
+                    لا توجد أدوار إشراف مختارة لهذا المشروع. اخترها من نطاق المشروع أولًا.
                   </motion.div>
                 ) : (
                   <motion.div
@@ -1924,17 +1813,12 @@ function SupervisionReviewScreen({
 }) {
   const { toast } = useToast();
 
-  // Fetch project to get duration and building category
+  // Fetch project duration; required roles come from the independent project scope.
   const projectQuery = trpc.cpa.projects.getById.useQuery({ id: projectId });
   const project = projectQuery.data;
-  const buildingCategoryId = project?.building_category_id ?? null;
   const projectDurationMonths = project?.duration_months ?? 24;
 
-  // Fetch baseline roles for this building category
-  const baselineQuery = trpc.cpa.settings.getSupervisionBaseline.useQuery(
-    { buildingCategoryId: buildingCategoryId ?? 0 },
-    { enabled: buildingCategoryId != null && buildingCategoryId > 0 }
-  );
+  const baselineQuery = trpc.cpa.projects.getSelectedSupervisionRoles.useQuery({ id: projectId });
 
   // Fetch existing supervision team entries for this consultant
   const teamQuery = trpc.cpa.consultants.getSupervisionTeam.useQuery(
@@ -1975,7 +1859,7 @@ function SupervisionReviewScreen({
   const isLoading = projectQuery.isLoading || baselineQuery.isLoading || teamQuery.isLoading;
   const isSaving = updateTeamMutation.isPending || updateFeesMutation.isPending || evalMutation.isPending;
 
-  // Calculate total supervision fee
+  // Calculate total supervision fee from the roles selected for this project.
   const totalFee = baseline.reduce((sum: number, row: any) => {
     const rate = parseFloat(rates[Number(row.supervision_role_id)] ?? "0") || 0;
     const alloc = parseFloat(row.required_allocation_pct) || 100;
@@ -1991,7 +1875,7 @@ function SupervisionReviewScreen({
 
   const handleSave = async () => {
     if (baseline.length === 0) {
-      toast({ title: "لا توجد أدوار إشراف لهذه الفئة", variant: "destructive" });
+      toast({ title: "لم تُحدد أدوار إشراف في نطاق المشروع", variant: "destructive" });
       return;
     }
     try {
@@ -2058,14 +1942,10 @@ function SupervisionReviewScreen({
           <Loader2 className="w-5 h-5 animate-spin" />
           جاري التحميل...
         </div>
-      ) : buildingCategoryId == null ? (
-        <div className="py-6 text-center text-amber-600 text-sm">
-          ⚠️ يرجى تحديد فئة المبنى للمشروع أولاً لعرض أدوار الإشراف.
-        </div>
       ) : baseline.length === 0 ? (
         <div className="py-6 text-center text-muted-foreground text-sm border-2 border-dashed rounded-xl">
           <Layers className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          لا توجد أدوار إشراف محددة لهذه الفئة. يمكنك إضافتها من الإعدادات.
+          لا توجد أدوار إشراف مختارة لهذا المشروع. اخترها من نطاق المشروع أولًا.
         </div>
       ) : (
         <Card>
@@ -2520,7 +2400,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <Separator orientation="vertical" className="h-5" />
         <div className="flex-1">
           <h2 className="font-bold text-lg">إعدادات النظام</h2>
-          <p className="text-sm text-muted-foreground">المرجع الموحد لبنود متطلبات الاستشاريين، مع إبقاء الإعدادات السابقة للرجوع إليها</p>
+          <p className="text-sm text-muted-foreground">المكتبة الشاملة الثابتة لنطاق التصميم والإشراف وبيانات مكاتب الاستشاريين</p>
         </div>
         <Button
           size="sm"
@@ -2535,15 +2415,9 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4 gap-1 h-auto w-full md:grid-cols-8">
-          <TabsTrigger value="reference" className="text-xs">المرجع الموحد</TabsTrigger>
-          <TabsTrigger value="scope-matrix" className="text-xs">النطاق السابق</TabsTrigger>
-          <TabsTrigger value="ref-costs" className="text-xs">الأسعار السابقة</TabsTrigger>
-          <TabsTrigger value="supervision-matrix" className="text-xs">الإشراف السابق</TabsTrigger>
-          <TabsTrigger value="categories" className="text-xs">فئات المباني</TabsTrigger>
-          <TabsTrigger value="roles" className="text-xs">أدوار الإشراف</TabsTrigger>
+        <TabsList className="grid grid-cols-2 gap-1 h-auto w-full">
+          <TabsTrigger value="reference" className="text-xs">المكتبة الشاملة</TabsTrigger>
           <TabsTrigger value="consultants" className="text-xs">الاستشاريون</TabsTrigger>
-          <TabsTrigger value="scope" className="text-xs">بنود النطاق</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reference" className="mt-4">
@@ -2927,13 +2801,15 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 // ---- Main Page ------------------------------------------------------------
 
 export default function CPAPage() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const initialScopeProjectId = Number(new URLSearchParams(window.location.search).get("scopeProjectId"));
+  const [screen, setScreen] = useState<Screen>(Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : "home");
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
 
   function goHome() { setScreen("home"); setSelectedProjectId(null); setSelectedPcId(null); }
   function goProject(id: number) { setSelectedProjectId(id); setScreen("project-detail"); }
+  function goScopeSetup(id: number) { setSelectedProjectId(id); setScreen("project-requirements"); }
   function goImportJson(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("import-json"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }
   function goSupervisionReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("supervision-review"); }
@@ -2943,6 +2819,12 @@ export default function CPAPage() {
   function goOfferReader(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("offer-reader"); }
   function goFinancialComparison() { setScreen("financial-comparison"); }
   function goSettings() { setScreen("settings"); }
+
+  useEffect(() => {
+    if (Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0) {
+      setSelectedProjectId(initialScopeProjectId);
+    }
+  }, [initialScopeProjectId, setSelectedProjectId]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -3020,7 +2902,7 @@ export default function CPAPage() {
 
       <div className={`mx-auto px-4 py-6 ${screen === 'truecost-report' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
         {screen === "home" && (
-          <ProjectListScreen onSelectProject={goProject} onSettings={goSettings} />
+          <ProjectListScreen onSelectProject={goProject} onScopeSetup={goScopeSetup} onSettings={goSettings} />
         )}
         {screen === "project-detail" && selectedProjectId && (
           <ProjectDetailScreen

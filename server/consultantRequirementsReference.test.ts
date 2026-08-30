@@ -22,13 +22,14 @@ describe("consultant requirements reference safeguards", () => {
     expect(migration).not.toMatch(/UPDATE\s+cpa_/i);
   });
 
-  it("keeps each reference item configurable for on/off and project-ready pricing", () => {
+  it("keeps the comprehensive reference visible but prevents expanding or editing it from the UI", () => {
     expect(router).toContain("defaultEnabled");
     expect(router).toContain("defaultGapValueAed");
     expect(router).toContain("pricingBasis");
-    expect(component).toContain("مفعّل افتراضيًا");
-    expect(component).toContain("قيمة الفجوة");
-    expect(component).toContain("تُحدد للمشروع");
+    expect(component).toContain("المكتبة الشاملة لنطاق التصميم والإشراف");
+    expect(component).toContain("دون إضافة أو تغيير");
+    expect(component).not.toContain("reference.create");
+    expect(component).not.toContain("reference.update");
   });
 
   it("creates project copies and revisions without writing over the approved comparison basis", () => {

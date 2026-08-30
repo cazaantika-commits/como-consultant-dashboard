@@ -3,9 +3,10 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   consultantRfpDrafts,
   contractDeliverables,
-  cpaProjects,
   marketDecisionApprovals,
   projectContracts,
+  projectConsultantRequirements,
+  projectConsultantRequirementSets,
   projectMarketEvidence,
   projectMarketSearchProfiles,
   projects,
@@ -27,7 +28,7 @@ export function deriveAppointmentReview(input: {
     { key: "project_facts", label: "حقائق المشروع والوثائق المرجعية", source: "بطاقة المشروع وخازن", complete: input.projectExists && input.factsReady, action: "استكمل حقائق الأرض والاستخدام والمساحة في بطاقة المشروع." },
     { key: "market", label: "مرجع السوق وقرار المنتج", source: "المعرفة والتحليل", complete: input.marketProfileReady && input.verifiedEvidenceCount > 0 && input.approvedDecision, action: "احفظ فلترة السوق، وثّق دليلًا متوافقًا، ثم اعتمد قرار السوق." },
     { key: "program", label: "البرنامج الأولي", source: "جولة مراحل التطوير", complete: input.plannedServices > 0, action: "ضع مواعيد أولية للخدمات الرئيسية في جولة مراحل التطوير." },
-    { key: "scope", label: "نطاق التكليف المطلوب", source: "مصفوفة نطاق الاستشاري", complete: input.scopeReady, action: "حدد فئة المشروع ونطاقه في مصفوفة الاستشاري قبل طلب العروض." },
+    { key: "scope", label: "نطاق التكليف المطلوب", source: "نطاق المشروع المستقل", complete: input.scopeReady, action: "اختر بنود التصميم والإشراف المطلوبة لهذا المشروع قبل طلب العروض." },
   ];
   return { items, complete: items.every((item) => item.complete) };
 }
@@ -35,14 +36,31 @@ export function deriveAppointmentReview(input: {
 async function loadAppointmentReview(projectId: number) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
-  const [projectRows, profileRows, evidenceRows, decisionRows, serviceRows, cpaProjectRows] = await Promise.all([
+  const [projectRows, profileRows, evidenceRows, decisionRows, serviceRows, requirementSetRows] = await Promise.all([
     db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
     db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, projectId)).limit(1),
     db.select({ id: projectMarketEvidence.id }).from(projectMarketEvidence).where(and(eq(projectMarketEvidence.projectId, projectId), eq(projectMarketEvidence.verificationStatus, "verified"))),
     db.select({ id: marketDecisionApprovals.id }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).limit(1),
     db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
-    db.select({ id: cpaProjects.id, buildingCategoryId: cpaProjects.buildingCategoryId }).from(cpaProjects).where(eq(cpaProjects.projectId, projectId)).limit(1),
+    db.select({ id: projectConsultantRequirementSets.id })
+      .from(projectConsultantRequirementSets)
+      .where(and(eq(projectConsultantRequirementSets.projectId, projectId), eq(projectConsultantRequirementSets.status, "DRAFT")))
+      .orderBy(desc(projectConsultantRequirementSets.revisionNo))
+      .limit(1),
   ]);
+  if (!requirementSetRows[0]) {
+    requirementSetRows.push(...await db.select({ id: projectConsultantRequirementSets.id })
+      .from(projectConsultantRequirementSets)
+      .where(and(eq(projectConsultantRequirementSets.projectId, projectId), eq(projectConsultantRequirementSets.status, "APPROVED")))
+      .orderBy(desc(projectConsultantRequirementSets.revisionNo))
+      .limit(1));
+  }
+  const selectedScopeRows = requirementSetRows[0]
+    ? await db.select({ id: projectConsultantRequirements.id })
+      .from(projectConsultantRequirements)
+      .where(and(eq(projectConsultantRequirements.requirementSetId, requirementSetRows[0].id), eq(projectConsultantRequirements.isRequired, 1)))
+      .limit(1)
+    : [];
   const project = projectRows[0];
   const factsReady = Boolean(project?.plotNumber && project?.permittedUse && (project?.gfaSqft || project?.manualBuaSqft || project?.bua));
   const review = deriveAppointmentReview({
@@ -52,7 +70,7 @@ async function loadAppointmentReview(projectId: number) {
     verifiedEvidenceCount: evidenceRows.length,
     approvedDecision: Boolean(decisionRows[0]),
     plannedServices: serviceRows.length,
-    scopeReady: Boolean(cpaProjectRows[0]?.buildingCategoryId),
+    scopeReady: selectedScopeRows.length > 0,
   });
   return { db, project, review, evidenceCount: evidenceRows.length, plannedServices: serviceRows.length, approvedDecisionId: decisionRows[0]?.id ?? null };
 }
