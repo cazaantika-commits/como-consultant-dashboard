@@ -1654,3 +1654,4 @@
 - [x] Exclude Paid Previously from the Unified Group Cash Flow table's monthly cumulative column so it starts from the first visible month, while preserving Paid Previously separately and using it only in peak-capital summary calculations
 - [x] Implement the full agreed Unified Group Cash Flow executive hierarchy: paid to date, remaining new funding to peak, peak capital equation and month, next four months and project drivers, lifetime cash-cycle metrics with explanations, project funding distribution, and peak explanation, all derived from unchanged approved project cash-flow rows
 - [x] Highlight the dynamically calculated peak-funding month row in the Unified Group Cash Flow table and move the badge automatically whenever source inputs change
+- [x] Diagnose and fix Layla producing no audible speech, verify manual and autoplay paths honestly, and make her concise Arabic briefing start with a personalized greeting followed by only the most important points

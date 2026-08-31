@@ -15,6 +15,7 @@ export type LaylaOpeningOperations = {
 type OpeningMember = { memberId: string; nameAr: string; role: string };
 
 const MONTH_NAMES = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const MAX_BRIEFING_POINTS = 2;
 
 function amount(value: number) {
   return new Intl.NumberFormat("ar-AE", { maximumFractionDigits: 0 }).format(Math.abs(value));
@@ -26,44 +27,50 @@ function monthLabel(monthDate: string) {
 }
 
 function greeting(member: OpeningMember) {
-  const laylaIntroduction = "أنا ليلى، مساعدتك في مركز القيادة.";
-  if (member.memberId === "sheikh_issa") return `حياك الله يا شيخ عيسى. ${laylaIntroduction} هذا ملخص القرار السريع.`;
-  if (member.memberId === "wael") return `أهلاً وائل. ${laylaIntroduction} هذا ملخص المتابعة التشغيلي السريع.`;
-  return `أهلاً ${member.nameAr}. ${laylaIntroduction} هذا ملخص مركز القيادة السريع.`;
+  if (member.memberId === "sheikh_issa") return "حياك الله يا شيخ عيسى، أنا ليلى.";
+  if (member.memberId === "wael") return "أهلاً وائل، أنا ليلى.";
+  const name = member.nameAr?.trim() || "بك";
+  return `أهلاً ${name}، أنا ليلى.`;
 }
 
 /**
- * Presentation-only speech text. All figures and counts are copied from the
- * read-only Command Center snapshot and the completed Unified Group report.
+ * Short presentation-only speech text. Every fact is copied from the read-only
+ * Command Center snapshot or the approved Unified Group cash-flow report.
  */
 export function buildLaylaOpeningBriefing(
   member: OpeningMember,
   operations: LaylaOpeningOperations,
   report?: UnifiedGroupCashFlow | null,
 ): string {
-  const parts: string[] = [greeting(member)];
+  const priorities: string[] = [];
 
   if (operations.urgentTasks > 0) {
-    parts.push(`هناك ${operations.urgentTasks} مهام عاجلة ضمن ${operations.openTasks} مهام مفتوحة.`);
-  } else if (operations.openTasks > 0) {
-    parts.push(`هناك ${operations.openTasks} مهام مفتوحة للمتابعة.`);
+    priorities.push(`لديك ${operations.urgentTasks} مهام عاجلة من أصل ${operations.openTasks} مهام مفتوحة.`);
   }
-  if (operations.pendingPayments > 0) parts.push(`وتوجد ${operations.pendingPayments} طلبات صرف معلقة ضمن نطاق صلاحيتك.`);
-  if (operations.pendingRequests > 0) parts.push(`كما توجد ${operations.pendingRequests} طلبات تحتاج متابعة.`);
-  if (operations.decisions > 0) parts.push(`وهناك ${operations.decisions} قرارات ظاهرة للمراجعة.`);
-  if (operations.evaluations > 0) parts.push(`ولدينا ${operations.evaluations} جلسات تقييم قائمة.`);
-  if (operations.followUpProjects.length > 0) parts.push(`المشاريع ذات المتابعة: ${operations.followUpProjects.slice(0, 2).join(" و")}.`);
+  if (operations.pendingPayments > 0) {
+    priorities.push(`وهناك ${operations.pendingPayments} طلبات صرف معلقة ضمن صلاحيتك.`);
+  }
+  if (operations.pendingRequests > 0) {
+    priorities.push(`وهناك ${operations.pendingRequests} طلبات تحتاج متابعة.`);
+  }
 
   if (report) {
     const liquidity = buildUnifiedGroupLiquidity(report, { horizon: 3 });
     if (liquidity.summary.required > 0) {
       const peak = liquidity.peakKind === "required" ? liquidity.peakMonth : undefined;
-      parts.push(`خلال الأشهر الثلاثة القادمة، التمويل المطلوب ${amount(liquidity.summary.required)} درهم.${peak ? ` وأعلى ضغط في ${monthLabel(peak.monthDate)} بقيمة ${amount(peak.required)} درهم.` : ""}`);
+      priorities.push(`التمويل المطلوب خلال الأشهر الثلاثة القادمة ${amount(liquidity.summary.required)} درهم${peak ? `، وأعلى ضغط في ${monthLabel(peak.monthDate)}` : ""}.`);
     } else if (liquidity.summary.returned > 0) {
-      parts.push(`خلال الأشهر الثلاثة القادمة، صافي المبالغ المستلمة ${amount(liquidity.summary.returned)} درهم.`);
+      priorities.push(`صافي المبالغ المستلمة خلال الأشهر الثلاثة القادمة ${amount(liquidity.summary.returned)} درهم.`);
     }
   }
 
-  if (parts.length === 1) parts.push("لا توجد عناصر عاجلة ظاهرة حاليًا في السجلات المعتمدة.");
-  return parts.join(" ");
+  if (priorities.length === 0 && operations.decisions > 0) {
+    priorities.push(`يوجد ${operations.decisions} قرارات ظاهرة للمراجعة.`);
+  }
+  if (priorities.length === 0 && operations.evaluations > 0) {
+    priorities.push(`يوجد ${operations.evaluations} جلسات تقييم قائمة.`);
+  }
+  if (priorities.length === 0) priorities.push("لا توجد عناصر عاجلة ظاهرة حاليًا.");
+
+  return [greeting(member), ...priorities.slice(0, MAX_BRIEFING_POINTS)].join(" ");
 }

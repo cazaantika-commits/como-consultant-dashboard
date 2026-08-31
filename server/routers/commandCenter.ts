@@ -36,6 +36,7 @@ import { storagePut } from "../storage";
 import { loadUnifiedGroupCashFlowSource } from "./cashFlowSettings";
 import { laylaCashFlowTools, runLaylaCashFlowTool } from "../laylaCashFlowContext";
 import { buildLaylaOpeningOperations, formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, laylaCommandCenterTools, loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
+import { generateLaylaSpeechAudio } from "../laylaSpeech";
 
 // --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
@@ -1464,6 +1465,22 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       }
 
       return { text: (result as any).text || "", language: (result as any).language || "ar", duration: (result as any).duration || 0 };
+    }),
+
+  // --- High-quality Arabic speech for Layla ---
+  generateLaylaSpeech: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      text: z.string().min(1).max(1200),
+    }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      try {
+        return await generateLaylaSpeechAudio(input.text);
+      } catch (error) {
+        console.error("[Layla TTS] Generation failed:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر توليد صوت ليلى عالي الجودة" });
+      }
     }),
 
   // ═══ Project-based Evaluation for Command Center ═══

@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  LAYLA_DEFAULT_VOICE_WAIT_MS,
   LAYLA_SPEECH_LANGUAGE,
   LAYLA_SPEECH_PITCH,
   LAYLA_SPEECH_RATE,
   selectLaylaBrowserVoice,
+  speakWithLaylaBrowserVoice,
+  stopLaylaBrowserVoice,
 } from "./laylaBrowserVoice";
 
 describe("Layla browser voice selection", () => {
@@ -24,7 +27,7 @@ describe("Layla browser voice selection", () => {
     expect(voice?.lang).toBe("ar-AE");
   });
 
-  it("never falls back to an English female voice when no Arabic voice exists", () => {
+  it("never explicitly selects an English female voice when no Arabic voice exists", () => {
     const voice = selectLaylaBrowserVoice([
       { name: "Microsoft Zira - English", lang: "en-US" },
       { name: "Samantha", lang: "en-US" },
@@ -55,5 +58,93 @@ describe("Layla browser voice selection", () => {
     expect(LAYLA_SPEECH_RATE).toBeLessThanOrEqual(1.2);
     expect(LAYLA_SPEECH_PITCH).toBeGreaterThanOrEqual(1);
     expect(LAYLA_SPEECH_PITCH).toBeLessThanOrEqual(1.1);
+  });
+});
+
+describe("Layla browser speech playback", () => {
+  afterEach(() => {
+    stopLaylaBrowserVoice();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("queues an ar-AE utterance through the browser default engine when no voice list is exposed", () => {
+    vi.useFakeTimers();
+    const speak = vi.fn();
+    const cancel = vi.fn();
+    const resume = vi.fn();
+    class MockUtterance {
+      voice?: SpeechSynthesisVoice;
+      lang = "";
+      rate = 1;
+      pitch = 1;
+      volume = 1;
+      onstart?: () => void;
+      onend?: () => void;
+      onerror?: () => void;
+      constructor(public text: string) {}
+    }
+    const speechSynthesis = {
+      getVoices: () => [],
+      cancel,
+      resume,
+      speak,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("SpeechSynthesisUtterance", MockUtterance);
+    vi.stubGlobal("window", {
+      speechSynthesis,
+      SpeechSynthesisUtterance: MockUtterance,
+      setTimeout,
+    });
+
+    expect(speakWithLaylaBrowserVoice("مرحباً بكم")).toBe(true);
+    vi.advanceTimersByTime(LAYLA_DEFAULT_VOICE_WAIT_MS + 50);
+
+    expect(resume).toHaveBeenCalledOnce();
+    expect(speak).toHaveBeenCalledOnce();
+    const utterance = speak.mock.calls[0][0] as MockUtterance;
+    expect(utterance.lang).toBe("ar-AE");
+    expect(utterance.voice).toBeUndefined();
+  });
+
+  it("uses an exposed Arabic female voice and avoids cancel/speak in the same browser task", () => {
+    vi.useFakeTimers();
+    const arabicVoice = { name: "Microsoft Salma Online (Natural)", lang: "ar-EG", voiceURI: "salma" } as SpeechSynthesisVoice;
+    const speak = vi.fn();
+    class MockUtterance {
+      voice?: SpeechSynthesisVoice;
+      lang = "";
+      rate = 1;
+      pitch = 1;
+      volume = 1;
+      onstart?: () => void;
+      onend?: () => void;
+      onerror?: () => void;
+      constructor(public text: string) {}
+    }
+    const speechSynthesis = {
+      getVoices: () => [arabicVoice],
+      cancel: vi.fn(),
+      resume: vi.fn(),
+      speak,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("SpeechSynthesisUtterance", MockUtterance);
+    vi.stubGlobal("window", {
+      speechSynthesis,
+      SpeechSynthesisUtterance: MockUtterance,
+      setTimeout,
+    });
+
+    expect(speakWithLaylaBrowserVoice("أهلاً بكم")).toBe(true);
+    expect(speak).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(40);
+    expect(speak).toHaveBeenCalledOnce();
+    const utterance = speak.mock.calls[0][0] as MockUtterance;
+    expect(utterance.voice).toBe(arabicVoice);
+    expect(utterance.lang).toBe("ar-AE");
   });
 });
