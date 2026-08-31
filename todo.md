@@ -1656,3 +1656,4 @@
 - [x] Highlight the dynamically calculated peak-funding month row in the Unified Group Cash Flow table and move the badge automatically whenever source inputs change
 - [x] Diagnose and fix Layla producing no audible speech, verify manual and autoplay paths honestly, and make her concise Arabic briefing start with a personalized greeting followed by only the most important points
 - [ ] Diagnose Layla's confirmed no-audio failure on the user's device from real browser logs, expose the exact playback stage, and keep the task open until the user confirms audible output
+- [x] Simplify the Unified Group Cash Flow report to one compact row for paid, remaining funding, peak capital, and peak month, remove the Commercial Center banner and all duplicated Command Center excerpts, and place the monthly table immediately afterward without changing calculations
