@@ -61,7 +61,7 @@ async function createBlankProjectRequirementSet(
     INSERT INTO project_consultant_requirement_sets
       (project_id, title, revision_no, status, notes)
     VALUES
-      (${systemProjectId}, 'نطاق الاستشاريين الخاص بالمشروع', ${revisionNo}, 'DRAFT', 'نسخة مستقلة من المكتبة الشاملة؛ الاختيار خاص بهذا المشروع فقط')
+      (${systemProjectId}, 'نطاق التصميم الخاص بالمشروع', ${revisionNo}, 'DRAFT', 'DESIGN_SCOPE_ENCYCLOPEDIA_V1 | نسخة مستقلة من موسوعة التصميم ذات 42 بندًا؛ الاختيار خاص بهذا المشروع فقط')
   `);
   const setId = await getCurrentRequirementSetId(db, systemProjectId);
   if (!setId) throw new Error("تعذر إنشاء نطاق مستقل للمشروع");
@@ -75,7 +75,7 @@ async function createBlankProjectRequirementSet(
            code, label, description, 0, default_gap_value_aed, pricing_basis,
            default_duration_months, default_allocation_pct, sort_order
     FROM consultant_requirement_reference_items
-    WHERE is_active = 1
+    WHERE is_active = 1 AND workstream = 'DESIGN'
   `);
   return setId;
 }

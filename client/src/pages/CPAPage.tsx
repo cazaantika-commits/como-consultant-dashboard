@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ScopeMatrixTable, ReferenceCostsTable, SupervisionBaselineTable } from "./CPASettingsMatrices";
 import { ConsultantRequirementsReference } from "@/components/consultant/ConsultantRequirementsReference";
 import ProjectRequirementsScreen from "./ProjectRequirementsScreen";
-import OfferReaderScreen from "./OfferReaderScreen";
+import OfferReaderContainer from "./OfferReaderContainer";
 import FinancialOfferComparisonContainer from "./FinancialOfferComparisonContainer";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -67,7 +67,6 @@ import TrueCostReportScreen from "./TrueCostReportScreen";
 type Screen =
   | "home"
   | "project-detail"
-  | "import-json"
   | "scope-review"
   | "supervision-review"
   | "results"
@@ -422,7 +421,6 @@ function ProjectListScreen({
 function ProjectDetailScreen({
   projectId,
   onBack,
-  onImportJson,
   onScopeReview,
   onSupervisionReview,
   onProjectRequirements,
@@ -433,7 +431,6 @@ function ProjectDetailScreen({
 }: {
   projectId: number;
   onBack: () => void;
-  onImportJson: (pcId: number, consultantName: string) => void;
   onScopeReview: (pcId: number, consultantName: string) => void;
   onSupervisionReview: (pcId: number, consultantName: string) => void;
   onProjectRequirements: () => void;
@@ -663,113 +660,6 @@ function ProjectDetailScreen({
               الاستشاريون ({consultants.length})
             </CardTitle>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
-                onClick={() => {
-                  const totalCostFmt = (project.bua_sqft * project.construction_cost_per_sqft).toLocaleString("en-US", { maximumFractionDigits: 0 });
-                  const consultantList = consultants.map((c: any, i: number) => `${i + 1}. ${c.trade_name ?? c.legal_name} (consultant_code: "${c.consultant_code}")`).join("\n");
-                  const scopeItems = [
-                    "29. Green Building / Sustainability",
-                    "30. 3rd Party Structural Audit",
-                    "31. Security Design / SIRA",
-                    "32. Vertical Transportation",
-                    "33. BMU — Facade Maintenance",
-                    "34. Facade Engineering",
-                    "35. Wind Tunnel Study",
-                    "36. AV & ELV Design",
-                    "37. FLS Specialist",
-                    "38. Facade Lighting",
-                    "39. Traffic Impact Study (TIS)",
-                    "40. Acoustic & Vibration",
-                    "41. LEED Certification",
-                    "42. Cost Management",
-                    "43. Value Engineering",
-                  ].join("\n");
-                  const msg = `طلب قراءة عروض استشارية — نظام كومو للتقييم المالي
-
-بيانات المشروع:
-- اسم المشروع: ${project.project_name}
-- رقم القطعة: ${project.plot_number ?? "—"}
-- نطاق المشروع المختار: ${project.scope_item_count ?? 0} بند
-- المساحة الإجمالية (BUA): ${Number(project.bua_sqft).toLocaleString("en-US")} قدم²
-- تكلفة الإنشاء الإجمالية: AED ${totalCostFmt}
-- مدة المشروع: ${project.duration_months} شهر
-
-الاستشاريون المطلوب تقييمهم:
-${consultantList}
-
-المطلوب:
-لكل استشاري من القائمة أعلاه، اقرأ عرضه وأرجع ملف JSON بالتنسيق التالي:
-
-{
-  "consultant_code": "كود_الاستشاري",
-  "proposal_date": "YYYY-MM-DD",
-  "proposal_reference": "رقم المرجع",
-  "design_fee": {
-    "method": "LUMP_SUM or PERCENTAGE",
-    "amount": null,
-    "percentage": null
-  },
-  "supervision_fee": {
-    "submitted": true,
-    "method": "LUMP_SUM or PERCENTAGE or MONTHLY_RATE",
-    "amount": null,
-    "percentage": null,
-    "stated_duration_months": null,
-    "team": [
-      {
-        "role_code": "RE",
-        "proposed_monthly_rate": 45000,
-        "proposed_allocation_pct": 100
-      }
-    ]
-  },
-  "scope_coverage": [
-    { "item_number": 29, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 30, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 31, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 32, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 33, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 34, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 35, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 36, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 37, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 38, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 39, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 40, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 41, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 42, "status": "INCLUDED or EXCLUDED" },
-    { "item_number": 43, "status": "INCLUDED or EXCLUDED" }
-  ]
-}
-
-Specialized scope items reference:
-${scopeItems}
-
-Rules:
-1. design_fee.method = LUMP_SUM or PERCENTAGE only (no MONTHLY_RATE for design).
-   Fill amount (number) or percentage (decimal e.g. 0.018 = 1.8%), leave the other null.
-2. scope_coverage: INCLUDED if explicitly included. EXCLUDED if excluded or not mentioned.
-3. supervision_fee.submitted = false if consultant submitted no supervision fee at all.
-   In that case set method: null and team: [].
-4. supervision_fee.team: list ALL supervision roles the consultant mentioned, regardless of fee method.
-   If a role is mentioned without allocation %, set proposed_allocation_pct: 0.
-   If no team was mentioned at all, set team: [].
-5. supervision_fee.stated_duration_months: duration in months consultant based their fee on.
-   If not mentioned, set null.
-6. Available role codes: RE, DEPUTY_RE, CIVIL_INSPECTOR, MEP_INSPECTOR, HSE_OFFICER,
-   DOC_CONTROLLER, QA_QC, HO_STRUCTURAL, HO_ARCH, HO_MECHANICAL, HO_ELECTRICAL.
-7. Do NOT calculate anything. Extract only what is written in the proposal.`;
-                  navigator.clipboard.writeText(msg).then(() => {
-                    toast({ title: "✅ تم نسخ الطلب", description: "الصقه في Claude الآن" });
-                  });
-                }}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                نسخ طلب Claude
-              </Button>
               <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
                 <Plus className="w-3.5 h-3.5 ml-1" />
                 إضافة
@@ -820,10 +710,6 @@ Rules:
                       <Button size="sm" variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onOfferReader(c.id, c.trade_name || c.legal_name)}>
                         <FileSearch className="w-3.5 h-3.5 ml-1" />
                         قراءة العرض
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-slate-500" onClick={() => onImportJson(c.id, c.trade_name || c.legal_name)}>
-                        <FileJson className="w-3.5 h-3.5 ml-1" />
-                        JSON السابق
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => onScopeReview(c.id, c.trade_name || c.legal_name)}>
                         <Eye className="w-3.5 h-3.5 ml-1" />
@@ -2404,7 +2290,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <Separator orientation="vertical" className="h-5" />
         <div className="flex-1">
           <h2 className="font-bold text-lg">إعدادات النظام</h2>
-          <p className="text-sm text-muted-foreground">المكتبة الشاملة الثابتة لنطاق التصميم والإشراف وبيانات مكاتب الاستشاريين</p>
+          <p className="text-sm text-muted-foreground">موسوعة نطاق التصميم ذات 42 بندًا وبيانات مكاتب الاستشاريين</p>
         </div>
         <Button
           size="sm"
@@ -2816,7 +2702,6 @@ export default function CPAPage() {
   function goHome() { setScreen("home"); setSelectedProjectId(null); setSelectedPcId(null); }
   function goProject(id: number) { setSelectedProjectId(id); setScreen("project-detail"); }
   function goScopeSetup(id: number) { setSelectedProjectId(id); setScreen("project-requirements"); }
-  function goImportJson(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("import-json"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }
   function goSupervisionReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("supervision-review"); }
   function goResults() { setScreen("results"); }
@@ -2847,18 +2732,12 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">الإعدادات</span>
             </>
           )}
-          {(screen === "project-detail" || screen === "project-requirements" || screen === "offer-reader" || screen === "financial-comparison" || screen === "import-json" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
+          {(screen === "project-detail" || screen === "project-requirements" || screen === "offer-reader" || screen === "financial-comparison" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
             <>
               <span>/</span>
               <button onClick={() => { setScreen("project-detail"); }} className="hover:text-foreground transition-colors">
                 تفاصيل المشروع
               </button>
-            </>
-          )}
-          {screen === "import-json" && (
-            <>
-              <span>/</span>
-              <span className="text-foreground font-medium">استيراد JSON</span>
             </>
           )}
           {screen === "scope-review" && (
@@ -2914,7 +2793,6 @@ export default function CPAPage() {
           <ProjectDetailScreen
             projectId={selectedProjectId}
             onBack={goHome}
-            onImportJson={goImportJson}
             onScopeReview={goScopeReview}
             onSupervisionReview={goSupervisionReview}
             onProjectRequirements={goProjectRequirements}
@@ -2922,14 +2800,6 @@ export default function CPAPage() {
             onFinancialComparison={goFinancialComparison}
             onResults={goResults}
             onTrueCostReport={goTrueCostReport}
-          />
-        )}
-        {screen === "import-json" && selectedPcId && selectedProjectId && (
-          <ImportJsonScreen
-            projectConsultantId={selectedPcId}
-            cpaProjectId={selectedProjectId}
-            consultantName={selectedConsultantName}
-            onBack={() => setScreen("project-detail")}
           />
         )}
         {screen === "scope-review" && selectedPcId && (

@@ -2,102 +2,101 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const root = "/home/ubuntu/como-consultant-dashboard";
-const migration = readFileSync(`${root}/drizzle/0065_consultant_requirement_reference.sql`, "utf8");
+const referenceMigration = readFileSync(`${root}/drizzle/0065_consultant_requirement_reference.sql`, "utf8");
 const projectMigration = readFileSync(`${root}/drizzle/0066_project_consultant_requirement_sets.sql`, "utf8");
-const readingMigration = readFileSync(`${root}/drizzle/0067_consultant_offer_readings.sql`, "utf8");
-const router = readFileSync(`${root}/server/routers/consultantRequirements.ts`, "utf8");
+const encyclopediaMigration = readFileSync(`${root}/drizzle/0072_final_design_scope_encyclopedia.sql`, "utf8");
+const cleanScopeMigration = readFileSync(`${root}/drizzle/0073_design_only_project_scope_snapshots.sql`, "utf8");
+const requirementsRouter = readFileSync(`${root}/server/routers/consultantRequirements.ts`, "utf8");
 const offerRouter = readFileSync(`${root}/server/routers/offerReader.ts`, "utf8");
 const comparisonRouter = readFileSync(`${root}/server/routers/financialOfferComparison.ts`, "utf8");
-const gapMigration = readFileSync(`${root}/drizzle/0068_consultant_offer_gap_overrides.sql`, "utf8");
-const encyclopediaMigration = readFileSync(`${root}/drizzle/0072_final_design_scope_encyclopedia.sql`, "utf8");
+const cpaRouter = readFileSync(`${root}/server/routers/cpa.ts`, "utf8");
 const component = readFileSync(`${root}/client/src/components/consultant/ConsultantRequirementsReference.tsx`, "utf8");
+const projectScopeComponent = readFileSync(`${root}/client/src/components/consultant/ProjectConsultantRequirements.tsx`, "utf8");
 const offerReviewScreen = readFileSync(`${root}/client/src/pages/OfferReaderScreen.tsx`, "utf8");
-const commandCenterScreen = readFileSync(`${root}/client/src/pages/CommandCenterPage.tsx`, "utf8");
+const cpaPage = readFileSync(`${root}/client/src/pages/CPAPage.tsx`, "utf8");
 
-describe("consultant requirements reference safeguards", () => {
-  it("creates an independent reference seeded from legacy records without deleting them", () => {
-    expect(migration).toContain("CREATE TABLE IF NOT EXISTS consultant_requirement_reference_items");
-    expect(migration).toContain("FROM cpa_scope_items si");
-    expect(migration).toContain("FROM cpa_supervision_roles sr");
-    expect(migration).not.toMatch(/DELETE\s+FROM\s+cpa_/i);
-    expect(migration).not.toMatch(/UPDATE\s+cpa_/i);
-  });
-
-  it("keeps the comprehensive reference visible but prevents expanding or editing it from the UI", () => {
-    expect(router).toContain("defaultEnabled");
-    expect(router).toContain("defaultGapValueAed");
-    expect(router).toContain("pricingBasis");
-    expect(component).toContain("الموسوعة الشاملة لنطاق التصميم والإشراف");
-    expect(component).toContain("الاسم الإنجليزي الرسمي وشرح المعنى بالعربية");
-    expect(component).not.toContain("reference.create");
-    expect(component).not.toContain("reference.update");
-  });
-
-  it("publishes exactly the approved 42-item design encyclopedia without touching project or supervision records", () => {
+describe("clean consultant design-scope input safeguards", () => {
+  it("preserves the historical reference tables while publishing exactly the approved 42-item design encyclopedia", () => {
+    expect(referenceMigration).toContain("CREATE TABLE IF NOT EXISTS consultant_requirement_reference_items");
+    expect(referenceMigration).not.toMatch(/DELETE\s+FROM\s+cpa_/i);
     const approvedRows = encyclopediaMigration.match(/^\s+\(\d+, '[A-Z0-9_]+',/gm) ?? [];
-    const executableSql = encyclopediaMigration.replace(/--.*$/gm, "");
+    const executableEncyclopediaSql = encyclopediaMigration.replace(/--.*$/gm, "");
     expect(approvedRows).toHaveLength(42);
     expect(encyclopediaMigration).toContain("Lead Consultant / Architect of Record");
     expect(encyclopediaMigration).toContain("Tenant''s Handbook — Structural and MEP Technical Guidelines");
-    expect(executableSql).not.toMatch(/UPDATE\s+project_consultant_requirements/i);
-    expect(executableSql).not.toMatch(/DELETE\s+FROM\s+project_consultant_requirements/i);
-    expect(executableSql).not.toMatch(/UPDATE\s+cpa_supervision_roles/i);
-    expect(executableSql).not.toMatch(/INSERT\s+INTO\s+cpa_supervision_roles/i);
+    expect(executableEncyclopediaSql).not.toMatch(/UPDATE\s+project_consultant_requirements/i);
   });
 
-  it("shows the approved Settings columns and omits the minimum-scope column", () => {
-    expect(component).toContain("الرقم");
-    expect(component).toContain("الرمز");
+  it("shows a design-only encyclopedia with the approved columns and no legal or supervision section", () => {
+    expect(component).toContain("الموسوعة الشاملة لنطاق التصميم");
+    expect(component).toContain("42 بند تصميم");
     expect(component).toContain("الاسم الإنجليزي الرسمي");
     expect(component).toContain("الشرح العربي للمعنى");
-    expect(component).not.toContain("الحد الأدنى الواضح للنطاق");
-    expect(component).toContain("DesignEncyclopediaTable");
-    expect(component).toContain("SupervisionReferenceTable");
+    expect(component).toContain('item.workstream === "DESIGN"');
+    expect(component).not.toContain("SupervisionReferenceTable");
+    expect(component).not.toContain("نطاق التصميم والإشراف");
   });
 
-  it("creates project copies and revisions without writing over the approved comparison basis", () => {
+  it("creates independent project snapshots from design rows only and approves only a complete 42-item source", () => {
     expect(projectMigration).toContain("project_consultant_requirement_sets");
-    expect(projectMigration).toContain("project_consultant_requirements");
-    expect(router).toContain("createFromReference");
-    expect(router).toContain("createRevision");
-    expect(router).toContain("لا يمكن تعديل معيار معتمد");
-    expect(projectMigration).not.toMatch(/DELETE\s+FROM\s+cpa_/i);
+    expect(requirementsRouter).toContain("createFromReference");
+    expect(requirementsRouter).toContain("workstream = 'DESIGN'");
+    expect(requirementsRouter).toContain('Number(counts[0].design_count) !== 42');
+    expect(requirementsRouter).toContain('Number(counts[0].non_design_count) !== 0');
+    expect(projectScopeComponent).toContain("مختار من {requirements.length}");
+    expect(projectScopeComponent).toContain("لا توجد تصنيفات مشاريع");
+    expect(projectScopeComponent).toContain("لا يؤثر");
+    expect(projectScopeComponent).not.toContain("المدة (شهر)");
+    expect(projectScopeComponent).not.toContain("نطاق الإشراف");
   });
 
-  it("stores an assistant-review request separately and never writes into legacy CPA evaluation results", () => {
-    expect(readingMigration).toContain("consultant_offer_readings");
-    expect(offerRouter).toContain("requestAssistantReview");
-    expect(offerRouter).toContain("اعتمد متطلبات المشروع أولًا");
-    expect(offerRouter).toContain("status = 'SUPERSEDED'");
+  it("migrates each current project to a new draft without deleting history, supervision, offers, or financial results", () => {
+    expect(cleanScopeMigration).toContain("DESIGN_SCOPE_ENCYCLOPEDIA_V1");
+    expect(cleanScopeMigration).toContain("reference_item.workstream = 'DESIGN'");
+    expect(cleanScopeMigration).toContain("current_set.status = 'REPLACED'");
+    expect(cleanScopeMigration).not.toMatch(/DELETE\s+FROM\s+project_consultant_requirement/i);
+    expect(cleanScopeMigration).not.toMatch(/UPDATE\s+cpa_project_consultants/i);
+    expect(cleanScopeMigration).not.toMatch(/UPDATE\s+cpa_consultant_supervision_team/i);
+    expect(cleanScopeMigration).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
+    expect(cleanScopeMigration).not.toContain("FIDIC_CONTRACT");
+    expect(cleanScopeMigration).not.toContain("PI_INSURANCE");
+  });
+
+  it("removes the external JSON workflow from the active project UI", () => {
+    const projectDetail = cpaPage.slice(cpaPage.indexOf("function ProjectDetailScreen"), cpaPage.indexOf("function ImportJsonScreen"));
+    const mainPage = cpaPage.slice(cpaPage.indexOf("export default function CPAPage"));
+    expect(projectDetail).not.toContain("نسخ طلب Claude");
+    expect(projectDetail).not.toContain("JSON السابق");
+    expect(mainPage).not.toContain('setScreen("import-json")');
+    expect(mainPage).not.toContain('screen === "import-json"');
+    expect(projectDetail).toContain("قراءة العرض");
+  });
+
+  it("analyzes the original PDF internally with structured output and keeps owner approval as the gate", () => {
+    expect(offerRouter).toContain('OFFER_READER_MODEL = "gemini-3.1-pro-preview"');
+    expect(offerRouter).toContain("invokeLLM");
+    expect(offerRouter).toContain('type: "file_url"');
+    expect(offerRouter).toContain('response_format: { type: "json_schema"');
+    expect(offerRouter).toContain("approveForEvaluation");
+    expect(offerRouter).toContain("تجاهل البنود القانونية والتعاقدية والإشراف");
+    expect(offerReviewScreen).toContain("رفع ملف العرض الأصلي");
+    expect(offerReviewScreen).toContain("تحليل العرض");
+    expect(offerReviewScreen).toContain("اعتماد وإرسال إلى التقييم");
+    expect(offerReviewScreen).not.toContain("بدء إدخال مراجعة المساعد");
+    expect(offerReviewScreen).not.toContain("JSON السابق");
+    expect(offerReviewScreen).not.toContain("ملف JSON");
+  });
+
+  it("writes approved design inputs into the existing evaluation contract without changing its calculations or supervision", () => {
+    expect(offerRouter).toContain("UPDATE cpa_project_consultants");
+    expect(offerRouter).toContain("design_fee_method");
+    expect(offerRouter).toContain("INSERT INTO cpa_consultant_scope_coverage");
+    expect(offerRouter).not.toMatch(/supervision_fee_(amount|method|percentage)/);
+    expect(offerRouter).not.toContain("cpa_consultant_supervision_team");
     expect(offerRouter).not.toMatch(/INSERT\s+INTO\s+cpa_evaluation_results/i);
     expect(offerRouter).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
-  });
-
-  it("does not invoke an automated model to interpret consultant offers", () => {
-    expect(offerRouter).toContain("requestAssistantReview");
-    expect(offerRouter).toContain("saveAssistantReview");
-    expect(offerRouter).not.toContain("invokeLLM");
-    expect(offerRouter).not.toContain("runDraft");
-    expect(offerReviewScreen).toContain("بدء إدخال مراجعة المساعد");
-    expect(offerReviewScreen).toContain("النظام لا يفسر العرض");
-    expect(offerRouter).toContain("saveOwnerCorrection");
-    expect(offerRouter).toContain("OWNER_CORRECTION");
-  });
-
-  it("calculates a reviewed offer comparison separately and preserves editable gap values outside CPA results", () => {
-    expect(gapMigration).toContain("consultant_offer_gap_overrides");
-    expect(comparisonRouter).toContain("status = 'REVIEWED'");
-    expect(comparisonRouter).toContain("setGapOverride");
-    expect(comparisonRouter).not.toMatch(/INSERT\s+INTO\s+cpa_evaluation_results/i);
-    expect(comparisonRouter).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
+    expect(cpaRouter).toContain("runCalculationEngine");
+    expect(cpaRouter).toContain("cpa_consultant_scope_coverage");
     expect(comparisonRouter).toContain("getSupervisionReport");
-    expect(comparisonRouter).toContain("workstream = 'SUPERVISION'");
-  });
-
-  it("exposes the financial comparison as read-only evidence without changing the technical evaluation methodology", () => {
-    expect(comparisonRouter).toContain("getEvidenceStatus");
-    expect(comparisonRouter).not.toMatch(/UPDATE\s+consultant_technical_evaluations/i);
-    expect(commandCenterScreen).toContain("مرجع التقرير المالي المعتمد");
-    expect(commandCenterScreen).toContain("لا يختار التقرير مكتبًا");
   });
 });

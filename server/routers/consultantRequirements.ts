@@ -55,8 +55,8 @@ export const consultantRequirementsRouter = router({
                default_duration_months, default_allocation_pct, sort_order, is_active,
                created_at, updated_at
         FROM consultant_requirement_reference_items
-        WHERE is_active = 1
-        ORDER BY workstream, requirement_group, sort_order, id
+        WHERE is_active = 1 AND workstream = 'DESIGN'
+        ORDER BY sort_order, id
       `);
     }),
 
@@ -114,8 +114,8 @@ export const consultantRequirementsRouter = router({
                  ref.legacy_scope_item_id, ref.legacy_supervision_role_id
           FROM project_consultant_requirements pcr
           LEFT JOIN consultant_requirement_reference_items ref ON ref.id = pcr.reference_item_id
-          WHERE pcr.requirement_set_id = ${set.id}
-          ORDER BY pcr.workstream, pcr.requirement_group, pcr.sort_order, pcr.id
+          WHERE pcr.requirement_set_id = ${set.id} AND pcr.workstream = 'DESIGN'
+          ORDER BY pcr.sort_order, pcr.id
         `);
         return { set, requirements };
       }),
@@ -132,7 +132,7 @@ export const consultantRequirementsRouter = router({
         if (current[0]) throw new Error("توجد مواصفة قائمة لهذا المشروع؛ أنشئ مراجعة جديدة بدلًا من ذلك");
         await db.execute(sql`
           INSERT INTO project_consultant_requirement_sets (project_id, title, revision_no, status)
-          VALUES (${input.projectId}, ${input.title ?? 'متطلبات الاستشاريين للمشروع'}, 1, 'DRAFT')
+          VALUES (${input.projectId}, ${input.title ?? 'نطاق التصميم الخاص بالمشروع'}, 1, 'DRAFT')
         `);
         const created = await qRows<any>(db, sql`
           SELECT id FROM project_consultant_requirement_sets
@@ -146,7 +146,8 @@ export const consultantRequirementsRouter = router({
              is_required, gap_value_aed, pricing_basis, duration_months, allocation_pct, sort_order)
           SELECT ${setId}, id, 'REFERENCE', workstream, requirement_group, code, label, description,
                  0, default_gap_value_aed, pricing_basis, default_duration_months, default_allocation_pct, sort_order
-          FROM consultant_requirement_reference_items WHERE is_active = 1
+          FROM consultant_requirement_reference_items
+          WHERE is_active = 1 AND workstream = 'DESIGN'
         `);
         return { success: true, setId };
       }),
@@ -161,13 +162,16 @@ export const consultantRequirementsRouter = router({
         `);
         if (!sets[0] || sets[0].status !== 'DRAFT') throw new Error("لا يمكن تعديل معيار معتمد؛ أنشئ مراجعة جديدة");
         await db.execute(sql`
-          UPDATE project_consultant_requirements SET is_required = 0 WHERE requirement_set_id = ${input.setId}
+          UPDATE project_consultant_requirements
+          SET is_required = 0
+          WHERE requirement_set_id = ${input.setId} AND workstream = 'DESIGN'
         `);
         if (input.requirementIds.length > 0) {
           await db.execute(sql`
             UPDATE project_consultant_requirements
             SET is_required = 1
             WHERE requirement_set_id = ${input.setId}
+              AND workstream = 'DESIGN'
               AND id IN (${sql.join(input.requirementIds.map((id) => sql`${id}`), sql`, `)})
           `);
         }
@@ -197,7 +201,8 @@ export const consultantRequirementsRouter = router({
              is_required, gap_value_aed, pricing_basis, duration_months, allocation_pct, sort_order)
           SELECT ${setId}, reference_item_id, source_type, workstream, requirement_group, code, label, description,
                  is_required, gap_value_aed, pricing_basis, duration_months, allocation_pct, sort_order
-          FROM project_consultant_requirements WHERE requirement_set_id = ${input.setId}
+          FROM project_consultant_requirements
+          WHERE requirement_set_id = ${input.setId} AND workstream = 'DESIGN'
         `);
         return { success: true, setId };
       }),
@@ -235,8 +240,19 @@ export const consultantRequirementsRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
-        const counts = await qRows<any>(db, sql`SELECT status, COUNT(*) AS required_count FROM project_consultant_requirement_sets s JOIN project_consultant_requirements r ON r.requirement_set_id = s.id WHERE s.id = ${input.setId} AND r.is_required = 1 GROUP BY s.id, s.status`);
-        if (!counts[0] || counts[0].status !== 'DRAFT' || Number(counts[0].required_count) < 1) throw new Error("يلزم وجود بند مطلوب واحد على الأقل قبل الاعتماد");
+        const counts = await qRows<any>(db, sql`
+          SELECT s.status,
+                 COUNT(r.id) AS design_count,
+                 SUM(CASE WHEN r.is_required = 1 THEN 1 ELSE 0 END) AS required_count,
+                 SUM(CASE WHEN r.workstream <> 'DESIGN' THEN 1 ELSE 0 END) AS non_design_count
+          FROM project_consultant_requirement_sets s
+          LEFT JOIN project_consultant_requirements r ON r.requirement_set_id = s.id
+          WHERE s.id = ${input.setId}
+          GROUP BY s.id, s.status
+        `);
+        if (!counts[0] || counts[0].status !== 'DRAFT') throw new Error("لا توجد مسودة نطاق قابلة للاعتماد");
+        if (Number(counts[0].design_count) !== 42 || Number(counts[0].non_design_count) !== 0) throw new Error("يجب أن يعتمد المشروع على موسوعة التصميم النهائية ذات 42 بندًا فقط");
+        if (Number(counts[0].required_count) < 1) throw new Error("يلزم اختيار بند تصميم واحد على الأقل قبل الاعتماد");
         await db.execute(sql`UPDATE project_consultant_requirement_sets SET status = 'APPROVED', approved_at = CURRENT_TIMESTAMP WHERE id = ${input.setId}`);
         return { success: true };
       }),
