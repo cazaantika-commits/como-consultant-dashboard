@@ -253,13 +253,11 @@ function ProjectListScreen({
         </div>
       ) : (
         <div className="grid gap-4">
-          {projects.map((project: any) => (
-            <button
-              key={project.id}
-              onClick={() => onSelectProject(project.id)}
-              className="w-full text-right group"
-            >
-              <Card className="hover:shadow-md transition-all hover:border-sky-300 cursor-pointer">
+          {projects.map((project: any) => {
+            const isArticBaseline = String(project.scope_notes ?? "").startsWith("ARTEC_SCOPE_BASELINE_V1")
+              || String(project.scope_title ?? "").includes("ARTEC");
+            return (
+              <Card key={project.id} className="group transition-all hover:border-sky-300 hover:shadow-md">
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -268,6 +266,7 @@ function ProjectListScreen({
                         <span className="text-xs text-violet-700 bg-violet-50 px-2 py-0.5 rounded-full">
                           {project.scope_item_count ?? 0} بند في نطاق المشروع
                         </span>
+                        {isArticBaseline && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-700">نطاق ARTEC النموذجي</span>}
                       </div>
                       <h3 className="font-bold text-lg text-foreground group-hover:text-sky-600 transition-colors">
                         {project.project_name}
@@ -292,14 +291,19 @@ function ProjectListScreen({
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
                     <span>تكلفة الإنشاء: {fmtAED(project.bua_sqft * project.construction_cost_per_sqft)}</span>
-                    <span className="text-sky-600 font-medium group-hover:underline">فتح التحليل ←</span>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" className="h-8 gap-1 border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onScopeSetup(project.id)}>
+                        <Layers className="h-3.5 w-3.5" />فتح وتعديل نطاق المشروع
+                      </Button>
+                      <Button size="sm" className="h-8 bg-sky-600 text-white hover:bg-sky-700" onClick={() => onSelectProject(project.id)}>فتح التحليل ←</Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            </button>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -521,7 +525,7 @@ function ProjectDetailScreen({
           className="text-violet-700 border-violet-200 hover:bg-violet-50 gap-1"
         >
           <Layers className="w-3.5 h-3.5" />
-          متطلبات المشروع
+          نطاق المشروع
         </Button>
         <Button
           variant="outline"

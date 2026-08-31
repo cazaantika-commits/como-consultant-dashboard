@@ -2147,11 +2147,12 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const durationMonths = Number(cpaProject.duration_months || 0);
 
       const [requirementSetRows] = await db.execute(sql`
-        SELECT id FROM project_consultant_requirement_sets
+        SELECT id, title FROM project_consultant_requirement_sets
         WHERE project_id = ${input.projectId} AND status IN ('DRAFT', 'APPROVED')
         ORDER BY revision_no DESC, id DESC LIMIT 1
       `) as any[];
       const requirementSetId = requirementSetRows?.[0]?.id ? Number(requirementSetRows[0].id) : null;
+      const scopeSourceLabel = requirementSetRows?.[0]?.title || 'نطاق خاص بالمشروع';
 
       // Get evaluation results with consultant info (deduplicated - latest per consultant)
       const [results] = await db.execute(sql`
@@ -2250,7 +2251,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         bua: Number(cpaProject.bua_sqft) || 0,
         constructionCost: totalCC,
         durationMonths,
-        category: 'نطاق خاص بالمشروع',
+        category: scopeSourceLabel,
         consultants,
         supervisionBaseline: (baselineRows || []).map((b: any) => ({
           roleId: Number(b.supervision_role_id),

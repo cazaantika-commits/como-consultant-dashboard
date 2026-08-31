@@ -851,6 +851,18 @@ export const cpaRouter = router({
         db,
         sql`SELECT cp.*, p.name as project_name, p.plotNumber as sys_plot_number,
                    (SELECT COUNT(*) FROM cpa_project_consultants pc WHERE pc.cpa_project_id = cp.id) as consultant_count,
+                   (SELECT current_set.title
+                    FROM project_consultant_requirement_sets current_set
+                    WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                    ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_title,
+                   (SELECT current_set.notes
+                    FROM project_consultant_requirement_sets current_set
+                    WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                    ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_notes,
+                   (SELECT current_set.status
+                    FROM project_consultant_requirement_sets current_set
+                    WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                    ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_status,
                    (SELECT COUNT(*)
                     FROM project_consultant_requirement_sets prs
                     JOIN project_consultant_requirements pr ON pr.requirement_set_id = prs.id
@@ -875,6 +887,18 @@ export const cpaRouter = router({
           db,
           sql`SELECT cp.*, p.name as project_name, p.bua as sys_bua,
                      p.pricePerSqft as sys_price_per_sqft,
+                     (SELECT current_set.title
+                      FROM project_consultant_requirement_sets current_set
+                      WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                      ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_title,
+                     (SELECT current_set.notes
+                      FROM project_consultant_requirement_sets current_set
+                      WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                      ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_notes,
+                     (SELECT current_set.status
+                      FROM project_consultant_requirement_sets current_set
+                      WHERE current_set.project_id = cp.project_id AND current_set.status IN ('DRAFT', 'APPROVED')
+                      ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1) as scope_status,
                      (SELECT COUNT(*)
                       FROM project_consultant_requirement_sets prs
                       JOIN project_consultant_requirements pr ON pr.requirement_set_id = prs.id
@@ -1517,6 +1541,10 @@ export const cpaRouter = router({
         }
 
         const requirementSetId = await getCurrentRequirementSetId(db, Number(proj.project_id));
+        const requirementSetRows = requirementSetId
+          ? await qRows<any>(db, sql`SELECT title FROM project_consultant_requirement_sets WHERE id = ${requirementSetId} LIMIT 1`)
+          : [];
+        const scopeSourceLabel = requirementSetRows[0]?.title || 'نطاق خاص بالمشروع';
 
         // Get evaluation results with consultant info (deduplicated - latest per consultant)
         const results = await qRows<any>(db, sql`
@@ -1666,7 +1694,7 @@ export const cpaRouter = router({
           bua: toNum(proj.bua_sqft),
           constructionCost: totalCC,
           durationMonths,
-          category: 'نطاق خاص بالمشروع',
+          category: scopeSourceLabel,
           consultants,
           supervisionBaseline: baselineRows.map((b: any) => ({
             roleId: Number(b.supervision_role_id),

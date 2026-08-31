@@ -1641,3 +1641,6 @@
 - [x] Fix Layla browser speech so every briefing and read-aloud is forced to Arabic, prefers the highest-quality Arabic female voice, and uses a faster natural speaking rate
 - [x] Enlarge the Unified Group Cash Flow monthly table figures while preserving full-page column fit, and keep the column header row fixed during vertical scrolling
 - [x] Apply larger figures, a fixed column header, and contained page-width layout to the Capital Portfolio monthly-project detail table without changing financial values or formulas
+- [x] Analyze the provided ARTIC Schedule of Design Fees for all plots and adopt its verified structure as an independent editable model for every consultant project without inventing scope items
+- [x] Map ARTIC scope and fee entries to the existing comprehensive library and preserve project-to-project isolation when initializing or editing each project's model
+- [x] Keep each ARTIC-derived project scope fully editable for selection, duration, and gap value, and use the owner's saved revision as the official comparison baseline
