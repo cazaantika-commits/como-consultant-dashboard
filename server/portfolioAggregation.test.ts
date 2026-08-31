@@ -154,6 +154,27 @@ describe("Unified Group Cash Flow copy-only aggregation", () => {
     expect(executive.projectsAtPeak.map((project) => [project.projectId, project.capitalAtGroupPeak])).toEqual([[101, 125], [1, 35]]);
     expect(executive.projectsAtPeak.reduce((sum, project) => sum + project.capitalAtGroupPeak, 0)).toBe(executive.peakCapital);
   });
+
+  it("moves the peak month when the approved monthly source inputs change", () => {
+    const shiftedReport = buildUnifiedGroupCashFlow([
+      {
+        projectId: 201,
+        name: "مشروع متغير",
+        financingScenario: "offplan_escrow",
+        startDate: "2026-09",
+        monthDates: ["2026-09", "2026-10", "2026-11"],
+        monthlyDebit: [20, 20, 90],
+        monthlyCredit: [0, 50, 0],
+        monthlyNet: [-20, 30, -90],
+        paidBeforeSchedule: 10,
+        sourceKind: "investor_cash_flow",
+        sourceLabel: "صف صافي الشهر النهائي من تدفقات المستثمر",
+        includesOperatingCashFlows: false,
+      },
+    ]);
+
+    expect(buildUnifiedGroupExecutiveSummary(shiftedReport).peakMonthDate).toBe("2026-11");
+  });
 });
 
 describe("Consolidated report source trace", () => {
@@ -181,6 +202,10 @@ describe("Consolidated report source trace", () => {
     expect(unifiedSource).toContain("تراكمي التمويل الجديد");
     expect(unifiedSource).toContain("أين يتركز رأس المال عند ذروة المجموعة؟");
     expect(unifiedSource).toContain("لماذا هذه هي الذروة؟");
+    expect(unifiedSource).toContain("const isPeakMonth = executive.peakMonthDate === monthDate");
+    expect(unifiedSource).toContain('id={isPeakMonth ? "unified-peak-month-row" : undefined}');
+    expect(unifiedSource).toContain('data-testid={isPeakMonth ? "unified-peak-month-row" : undefined}');
+    expect(unifiedSource).toContain("شهر الذروة");
     expect(commandCenterSource).toContain("getUnifiedGroupCashFlows");
     expect(commandCenterSource).toContain("buildUnifiedGroupLiquidity");
     expect(cashFlowRouterSource).toContain("getUnifiedGroupCashFlows");

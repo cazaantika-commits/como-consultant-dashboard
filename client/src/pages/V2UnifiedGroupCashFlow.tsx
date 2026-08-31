@@ -205,7 +205,31 @@ export default function V2UnifiedGroupCashFlow({ memberToken }: V2UnifiedGroupCa
                   const total = report.totals[monthIndex] || 0;
                   const cumulative = report.cumulativeTotals[monthIndex] || 0;
                   const groupTrace = combineFinancialTraceBreakdowns(report.rows.map((row) => row.monthlyTrace?.[monthIndex]));
-                  return <tr key={monthDate} className="even:bg-slate-50"><td className="sticky right-0 z-10 whitespace-nowrap border-b border-l border-slate-300 bg-inherit px-2 py-2 text-right font-black text-slate-800">{formatMonth(monthDate)}</td>{report.rows.map((row) => { const value = row.values[monthIndex] || 0; const kind = flowKind(value); const trace = row.monthlyTrace?.[monthIndex]; return <td key={row.projectId} className={`whitespace-nowrap border-b border-l border-slate-200 px-1 py-2 text-center font-bold tabular-nums ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-emerald-700" : "text-slate-300"}`}>{kind === "zero" ? "—" : <FinancialSourceValue testId={`unified-group-trace-project-${row.projectId}-${monthIndex}`} trace={{ report: "التدفقات النقدية الموحدة للمجموعة", project: row.name, row: row.sourceLabel, period: formatMonth(monthDate), rule: row.sourceKind === "commercial_development" ? "نسخ صافي التدفقات المعتمدة لتطوير المركز التجاري قبل التشغيل، بلا إيجارات أو مصاريف تشغيل مقدّرة." : "نسخ صف صافي الشهر النهائي المعتمد من تقرير تدفقات المستثمر بعد محاذاة التاريخ.", value, expenses: trace?.expenses, receipts: trace?.receipts }}>{signedAmount(value)}</FinancialSourceValue>}</td>; })}<td className={`whitespace-nowrap border-b border-r-2 border-slate-300 bg-teal-50 px-2 py-2 text-center font-black tabular-nums ${flowKind(total) === "required" ? "text-red-800" : flowKind(total) === "returned" ? "text-emerald-800" : "text-slate-400"}`}>{flowKind(total) === "zero" ? "—" : <FinancialSourceValue testId={`unified-group-trace-total-${monthIndex}`} trace={{ report: "التدفقات النقدية الموحدة للمجموعة", project: "جميع المشاريع", row: "إجمالي المجموعة", period: formatMonth(monthDate), rule: "مجموع صفوف صافي الشهر المنسوخة للمشاريع كافة في الشهر نفسه.", value: total, expenses: groupTrace.expenses, receipts: groupTrace.receipts, contributors: report.rows.map((row) => ({ name: row.name, value: row.values[monthIndex] || 0 })) }}>{signedAmount(total)}</FinancialSourceValue>}</td><td className={`whitespace-nowrap border-b border-r border-slate-200 bg-slate-100 px-2 py-2 text-center font-black tabular-nums ${flowKind(cumulative) === "required" ? "text-red-800" : flowKind(cumulative) === "returned" ? "text-emerald-800" : "text-slate-500"}`}>{signedAmount(cumulative)}</td></tr>;
+                  const isPeakMonth = executive.peakMonthDate === monthDate;
+                  return <tr
+                    key={monthDate}
+                    id={isPeakMonth ? "unified-peak-month-row" : undefined}
+                    data-testid={isPeakMonth ? "unified-peak-month-row" : undefined}
+                    aria-label={isPeakMonth ? `شهر الذروة: ${formatMonth(monthDate)}` : undefined}
+                    className={isPeakMonth ? "bg-amber-50 shadow-[inset_0_2px_0_#f59e0b,inset_0_-2px_0_#f59e0b]" : "even:bg-slate-50"}
+                  >
+                    <td className={`sticky right-0 z-10 whitespace-nowrap border-b border-l px-2 py-2 text-right font-black ${isPeakMonth ? "border-amber-400 bg-amber-200 text-amber-950" : "border-slate-300 bg-inherit text-slate-800"}`}>
+                      <span className="block">{formatMonth(monthDate)}</span>
+                      {isPeakMonth && <span className="mt-1 inline-flex rounded-full bg-amber-600 px-1.5 py-0.5 text-[8px] font-black text-white shadow-sm">شهر الذروة</span>}
+                    </td>
+                    {report.rows.map((row) => {
+                      const value = row.values[monthIndex] || 0;
+                      const kind = flowKind(value);
+                      const trace = row.monthlyTrace?.[monthIndex];
+                      return <td key={row.projectId} className={`whitespace-nowrap border-b border-l px-1 py-2 text-center font-bold tabular-nums ${isPeakMonth ? "border-amber-300 bg-amber-50/80" : "border-slate-200"} ${kind === "required" ? "text-red-700" : kind === "returned" ? "text-emerald-700" : "text-slate-300"}`}>
+                        {kind === "zero" ? "—" : <FinancialSourceValue testId={`unified-group-trace-project-${row.projectId}-${monthIndex}`} trace={{ report: "التدفقات النقدية الموحدة للمجموعة", project: row.name, row: row.sourceLabel, period: formatMonth(monthDate), rule: row.sourceKind === "commercial_development" ? "نسخ صافي التدفقات المعتمدة لتطوير المركز التجاري قبل التشغيل، بلا إيجارات أو مصاريف تشغيل مقدّرة." : "نسخ صف صافي الشهر النهائي المعتمد من تقرير تدفقات المستثمر بعد محاذاة التاريخ.", value, expenses: trace?.expenses, receipts: trace?.receipts }}>{signedAmount(value)}</FinancialSourceValue>}
+                      </td>;
+                    })}
+                    <td className={`whitespace-nowrap border-b border-r-2 px-2 py-2 text-center font-black tabular-nums ${isPeakMonth ? "border-amber-400 bg-amber-100" : "border-slate-300 bg-teal-50"} ${flowKind(total) === "required" ? "text-red-800" : flowKind(total) === "returned" ? "text-emerald-800" : "text-slate-400"}`}>
+                      {flowKind(total) === "zero" ? "—" : <FinancialSourceValue testId={`unified-group-trace-total-${monthIndex}`} trace={{ report: "التدفقات النقدية الموحدة للمجموعة", project: "جميع المشاريع", row: "إجمالي المجموعة", period: formatMonth(monthDate), rule: "مجموع صفوف صافي الشهر المنسوخة للمشاريع كافة في الشهر نفسه.", value: total, expenses: groupTrace.expenses, receipts: groupTrace.receipts, contributors: report.rows.map((row) => ({ name: row.name, value: row.values[monthIndex] || 0 })) }}>{signedAmount(total)}</FinancialSourceValue>}
+                    </td>
+                    <td className={`whitespace-nowrap border-b border-r px-2 py-2 text-center font-black tabular-nums ${isPeakMonth ? "border-amber-400 bg-amber-200" : "border-slate-200 bg-slate-100"} ${flowKind(cumulative) === "required" ? "text-red-800" : flowKind(cumulative) === "returned" ? "text-emerald-800" : "text-slate-500"}`} title={isPeakMonth ? "أكبر عجز تراكمي للتمويل الجديد في النطاق الحالي" : undefined}>{signedAmount(cumulative)}</td>
+                  </tr>;
                 })}
               </tbody>
             </table>
