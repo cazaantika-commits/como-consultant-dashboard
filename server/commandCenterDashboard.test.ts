@@ -105,6 +105,19 @@ describe("Command Center dashboard card registry", () => {
     expect(storageProxySource).toContain('v1/storage/presign/get');
   });
 
+  it("keeps Layla voice diagnosable and manually playable when autoplay is blocked", () => {
+    expect(routerSource).toContain("reportLaylaVoiceEvent");
+    expect(routerSource).toContain("[Layla TTS client]");
+    expect(source).toContain("openingBriefingAudioRef");
+    expect(source).toContain("openingBriefingAutoplayAttemptedRef.current");
+    expect(source).toContain("preload=\"auto\"");
+    expect(source).toContain("controls={openingBriefingState === \"error\"}");
+    expect(source).toContain("اضغط لسماع ملخص ليلى");
+    expect(source).toContain("تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.");
+    expect(source).toContain("manual_play_attempted");
+    expect(source).toContain("play_failed");
+  });
+
   it("uses compact neutral executive action cards rather than oversized colored priority blocks", () => {
     expect(source).toContain('min-h-[102px]');
     expect(source).toContain('borderRight: `4px solid ${accentColor}`');

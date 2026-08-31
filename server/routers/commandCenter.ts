@@ -1474,13 +1474,39 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       text: z.string().min(1).max(1200),
     }))
     .mutation(async ({ input }) => {
-      await verifyToken(input.token);
+      const member = await verifyToken(input.token);
       try {
-        return await generateLaylaSpeechAudio(input.text);
+        console.log(`[Layla TTS] generation_requested member=${member.memberId} chars=${input.text.length}`);
+        const result = await generateLaylaSpeechAudio(input.text);
+        console.log(`[Layla TTS] generation_ready member=${member.memberId} bytes=${Buffer.byteLength(result.audioBase64, "base64")}`);
+        return result;
       } catch (error) {
         console.error("[Layla TTS] Generation failed:", error);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر توليد صوت ليلى عالي الجودة" });
       }
+    }),
+
+  reportLaylaVoiceEvent: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      stage: z.enum([
+        "generation_requested",
+        "generation_ready",
+        "autoplay_attempted",
+        "autoplay_blocked",
+        "manual_play_attempted",
+        "play_started",
+        "play_ended",
+        "play_failed",
+        "browser_fallback_started",
+        "browser_fallback_failed",
+      ]),
+      detail: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      console.log(`[Layla TTS client] member=${member.memberId} stage=${input.stage}${input.detail ? ` detail=${input.detail}` : ""}`);
+      return { ok: true };
     }),
 
   // ═══ Project-based Evaluation for Command Center ═══

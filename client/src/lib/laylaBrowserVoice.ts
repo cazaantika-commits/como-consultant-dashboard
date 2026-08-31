@@ -40,10 +40,10 @@ export function stopLaylaBrowserVoice() {
 
 export function speakWithLaylaBrowserVoice(
   text: string,
-  handlers: { onStart?: () => void; onEnd?: () => void; onError?: () => void } = {},
+  handlers: { onStart?: () => void; onEnd?: () => void; onError?: (error?: unknown) => void } = {},
 ) {
   if (typeof window === "undefined" || !("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
-    handlers.onError?.();
+    handlers.onError?.(new Error("speechSynthesis unavailable"));
     return false;
   }
 
@@ -73,7 +73,7 @@ export function speakWithLaylaBrowserVoice(
     utterance.volume = 1;
     utterance.onstart = () => handlers.onStart?.();
     utterance.onend = () => handlers.onEnd?.();
-    utterance.onerror = () => handlers.onError?.();
+    utterance.onerror = (event) => handlers.onError?.(new Error(event.error || "speech synthesis error"));
 
     // Chrome can drop a new utterance when cancel() and speak() happen in the same task.
     window.setTimeout(() => {

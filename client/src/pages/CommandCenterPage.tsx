@@ -4191,14 +4191,18 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
   const [showPaymentRequests, setShowPaymentRequests] = useState(false);
   const [showGeneralRequests, setShowGeneralRequests] = useState(false);
   const [showInternalMessages, setShowInternalMessages] = useState(false);
-  const [openingBriefingState, setOpeningBriefingState] = useState<"idle" | "loading" | "playing" | "blocked">("idle");
+  const [openingBriefingState, setOpeningBriefingState] = useState<"idle" | "loading" | "ready" | "playing" | "blocked" | "error">("idle");
+  const [openingBriefingAudioSrc, setOpeningBriefingAudioSrc] = useState<string | null>(null);
+  const [openingBriefingError, setOpeningBriefingError] = useState<string | null>(null);
   const openingBriefingStartedRef = useRef(false);
-  const openingBriefingAudioCacheRef = useRef<{ text: string; audioBase64: string; mimeType: string } | null>(null);
+  const openingBriefingAutoplayAttemptedRef = useRef(false);
+  const openingBriefingAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const counts = trpc.commandCenter.getBubbleCounts.useQuery({ token });
   const openingOperations = trpc.commandCenter.getLaylaOpeningOperations.useQuery({ token }, { staleTime: 0 });
   const unifiedGroupCashFlow = trpc.cashFlowSettings.getUnifiedGroupCashFlows.useQuery({ commandCenterToken: token }, { staleTime: 0 });
-  const generateLaylaSpeech = trpc.commandCenter.generateLaylaSpeech.useMutation();
+  const { mutateAsync: generateLaylaSpeechAsync } = trpc.commandCenter.generateLaylaSpeech.useMutation();
+  const { mutate: reportLaylaVoiceEventMutate } = trpc.commandCenter.reportLaylaVoiceEvent.useMutation();
   const notifications = trpc.commandCenter.getNotifications.useQuery({ token });
   const markAllRead = trpc.commandCenter.markAllNotificationsRead.useMutation();
   const checkReminders = trpc.commandCenter.checkPendingReminders.useMutation();
@@ -4214,55 +4218,93 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
     );
   }, [member.memberId, member.nameAr, member.role, openingOperations.data, unifiedGroupCashFlow.data]);
 
-  const playOpeningBriefing = useCallback(async (startedByUser = true) => {
-    if (!openingBriefingText) return;
-    if (openingBriefingState === "playing") {
-      stopLaylaGeneratedAudio();
-      stopLaylaBrowserVoice();
-      setOpeningBriefingState("idle");
-      return;
-    }
-    setOpeningBriefingState("loading");
+  const reportVoiceStage = useCallback((stage: Parameters<typeof reportLaylaVoiceEventMutate>[0]["stage"], detail?: string) => {
+    reportLaylaVoiceEventMutate({ token, stage, detail }, { onError: () => undefined });
+  }, [reportLaylaVoiceEventMutate, token]);
 
-    try {
-      let generated = openingBriefingAudioCacheRef.current;
-      if (!generated || generated.text !== openingBriefingText) {
-        const result = await generateLaylaSpeech.mutateAsync({ token, text: openingBriefingText });
-        generated = { text: openingBriefingText, audioBase64: result.audioBase64, mimeType: result.mimeType };
-        openingBriefingAudioCacheRef.current = generated;
-      }
-
-      const playedGenerated = await playLaylaGeneratedAudio(generated.audioBase64, generated.mimeType, {
-        onStart: () => setOpeningBriefingState("playing"),
-        onEnd: () => setOpeningBriefingState("idle"),
-      });
-      if (playedGenerated) return;
-    } catch (error) {
-      console.warn("[Layla TTS] High-quality speech unavailable, using browser fallback:", error);
-    }
-
+  const playBrowserFallback = useCallback((startedByUser: boolean) => {
+    if (!openingBriefingText) return false;
     const playedFallback = speakWithLaylaBrowserVoice(openingBriefingText, {
-      onStart: () => setOpeningBriefingState("playing"),
-      onEnd: () => setOpeningBriefingState("idle"),
-      onError: () => {
-        setOpeningBriefingState("blocked");
-        if (startedByUser) toast.error("تعذر تشغيل صوت ليلى على هذا الجهاز");
+      onStart: () => {
+        setOpeningBriefingState("playing");
+        reportVoiceStage("browser_fallback_started");
+      },
+      onEnd: () => setOpeningBriefingState(openingBriefingAudioSrc ? "ready" : "idle"),
+      onError: (error) => {
+        const detail = error instanceof Error ? `${error.name}: ${error.message}` : "browser speech error";
+        setOpeningBriefingState("error");
+        setOpeningBriefingError(detail);
+        reportVoiceStage("browser_fallback_failed", detail);
+        if (startedByUser) toast.error("تعذر تشغيل صوت ليلى؛ أعد المحاولة من مشغل الصوت الظاهر");
       },
     });
     if (!playedFallback) {
-      setOpeningBriefingState("blocked");
-      if (startedByUser) toast.error("هذا المتصفح لا يدعم تشغيل الصوت");
+      setOpeningBriefingState("error");
+      setOpeningBriefingError("هذا المتصفح لا يدعم نطق النص");
+      reportVoiceStage("browser_fallback_failed", "speechSynthesis unavailable");
     }
-  }, [generateLaylaSpeech, openingBriefingState, openingBriefingText, token]);
+    return playedFallback;
+  }, [openingBriefingAudioSrc, openingBriefingText, reportVoiceStage]);
+
+  const playOpeningBriefing = useCallback((startedByUser = true) => {
+    if (!openingBriefingText) return;
+    if (openingBriefingState === "playing") {
+      openingBriefingAudioRef.current?.pause();
+      stopLaylaBrowserVoice();
+      setOpeningBriefingState(openingBriefingAudioSrc ? "ready" : "idle");
+      return;
+    }
+    const audio = openingBriefingAudioRef.current;
+    if (audio && openingBriefingAudioSrc) {
+      setOpeningBriefingError(null);
+      reportVoiceStage(startedByUser ? "manual_play_attempted" : "autoplay_attempted");
+      const playPromise = audio.play();
+      void playPromise.catch((error: any) => {
+        const detail = `${error?.name || "PlaybackError"}: ${error?.message || "audio.play rejected"}`;
+        console.warn("[Layla TTS] Prepared audio playback failed:", error);
+        setOpeningBriefingState(startedByUser ? "error" : "blocked");
+        setOpeningBriefingError(detail);
+        reportVoiceStage(startedByUser ? "play_failed" : "autoplay_blocked", detail);
+        if (startedByUser) playBrowserFallback(true);
+      });
+      return;
+    }
+    if (startedByUser) playBrowserFallback(true);
+  }, [openingBriefingAudioSrc, openingBriefingState, openingBriefingText, playBrowserFallback, reportVoiceStage]);
 
   useEffect(() => {
     if (!openingBriefingText || unifiedGroupCashFlow.isLoading || openingBriefingStartedRef.current) return;
     openingBriefingStartedRef.current = true;
-    const timer = window.setTimeout(() => { void playOpeningBriefing(false); }, 650);
+    let cancelled = false;
+    setOpeningBriefingState("loading");
+    setOpeningBriefingError(null);
+    reportVoiceStage("generation_requested");
+    void generateLaylaSpeechAsync({ token, text: openingBriefingText })
+      .then((result) => {
+        if (cancelled) return;
+        setOpeningBriefingAudioSrc(`data:${result.mimeType};base64,${result.audioBase64}`);
+        setOpeningBriefingState("ready");
+        reportVoiceStage("generation_ready", `base64_chars=${result.audioBase64.length}`);
+      })
+      .catch((error: any) => {
+        if (cancelled) return;
+        const detail = `${error?.name || "GenerationError"}: ${error?.message || "speech generation failed"}`;
+        setOpeningBriefingState("error");
+        setOpeningBriefingError(detail);
+        console.warn("[Layla TTS] High-quality speech generation failed:", error);
+      });
+    return () => { cancelled = true; };
+  }, [generateLaylaSpeechAsync, openingBriefingText, reportVoiceStage, token, unifiedGroupCashFlow.isLoading]);
+
+  useEffect(() => {
+    if (!openingBriefingAudioSrc || openingBriefingState !== "ready" || openingBriefingAutoplayAttemptedRef.current) return;
+    openingBriefingAutoplayAttemptedRef.current = true;
+    const timer = window.setTimeout(() => playOpeningBriefing(false), 250);
     return () => window.clearTimeout(timer);
-  }, [openingBriefingText, playOpeningBriefing, unifiedGroupCashFlow.isLoading]);
+  }, [openingBriefingAudioSrc, openingBriefingState, playOpeningBriefing]);
 
   useEffect(() => () => {
+    openingBriefingAudioRef.current?.pause();
     stopLaylaGeneratedAudio();
     stopLaylaBrowserVoice();
   }, []);
@@ -4533,16 +4575,49 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 </button>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => { void playOpeningBriefing(true); }}
-                      disabled={!openingBriefingText || openingBriefingState === "loading"}
-                      aria-label={openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}
-                      className={`inline-flex h-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 ${openingBriefingState === "blocked" ? "gap-2 px-3" : "w-8"}`}
-                    >
-                      {openingBriefingState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : openingBriefingState === "playing" ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                      {openingBriefingState === "blocked" && <span className="text-[11px] font-black">اضغط لسماع ملخص ليلى</span>}
-                    </button>
+                    <div className="flex flex-col items-start gap-1">
+                      <audio
+                        ref={openingBriefingAudioRef}
+                        src={openingBriefingAudioSrc || undefined}
+                        preload="auto"
+                        controls={openingBriefingState === "error"}
+                        className={openingBriefingState === "error" ? "h-9 w-[250px] max-w-full" : "hidden"}
+                        onCanPlay={() => {
+                          if (openingBriefingState === "loading") setOpeningBriefingState("ready");
+                        }}
+                        onPlay={() => {
+                          setOpeningBriefingState("playing");
+                          setOpeningBriefingError(null);
+                          reportVoiceStage("play_started");
+                        }}
+                        onEnded={() => {
+                          setOpeningBriefingState("ready");
+                          reportVoiceStage("play_ended");
+                        }}
+                        onError={() => {
+                          const mediaError = openingBriefingAudioRef.current?.error;
+                          const detail = `MediaError code=${mediaError?.code || "unknown"} message=${mediaError?.message || "audio element error"}`;
+                          setOpeningBriefingState("error");
+                          setOpeningBriefingError(detail);
+                          reportVoiceStage("play_failed", detail);
+                        }}
+                      />
+                      {openingBriefingState !== "error" && (
+                        <button
+                          type="button"
+                          onClick={() => { playOpeningBriefing(true); }}
+                          disabled={!openingBriefingText || openingBriefingState === "loading"}
+                          aria-label={openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}
+                          className="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {openingBriefingState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : openingBriefingState === "playing" ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                          <span className="text-[11px] font-black">
+                            {openingBriefingState === "loading" ? "جاري تجهيز صوت ليلى" : openingBriefingState === "playing" ? "إيقاف صوت ليلى" : openingBriefingState === "blocked" ? "اضغط لسماع ملخص ليلى" : "تشغيل صوت ليلى"}
+                          </span>
+                        </button>
+                      )}
+                      {openingBriefingError && <span className="max-w-[280px] text-[10px] font-semibold text-red-600">تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.</span>}
+                    </div>
                   </TooltipTrigger>
                   <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}</TooltipContent>
                 </Tooltip>
