@@ -1639,3 +1639,4 @@
 - [x] Fix V2PaymentPlan addPeriodicSeries ReferenceError without changing saved payment plans or financial values
 - [x] Compact the Unified Group Cash Flow monthly table to fit entirely within the page without horizontal scrolling, using shortened project names and narrow equal project columns while keeping group total and cumulative columns wider
 - [x] Fix Layla browser speech so every briefing and read-aloud is forced to Arabic, prefers the highest-quality Arabic female voice, and uses a faster natural speaking rate
+- [x] Enlarge the Unified Group Cash Flow monthly table figures while preserving full-page column fit, and keep the column header row fixed during vertical scrolling

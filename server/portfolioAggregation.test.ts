@@ -182,6 +182,14 @@ describe("Consolidated report source trace", () => {
     expect(unifiedSource).toContain('return "ند الشبا 1"');
     expect(unifiedSource).toContain('return "مجان متعدد"');
   });
+
+  it("keeps larger figures readable and the monthly column headers fixed while scrolling", () => {
+    const unifiedSource = readSource("client/src/pages/V2UnifiedGroupCashFlow.tsx");
+    expect(unifiedSource).toContain("text-[clamp(10px,0.66vw,12px)]");
+    expect(unifiedSource).toContain("max-h-[72vh] overflow-auto");
+    expect(unifiedSource).toContain("sticky right-0 top-0 z-40");
+    expect(unifiedSource).toContain("sticky top-0 z-30");
+  });
 });
 
 describe("Financial source expense and receipt breakdown", () => {
