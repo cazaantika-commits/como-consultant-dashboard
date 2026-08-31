@@ -332,13 +332,13 @@ export default function V2CapitalPortfolio({ embedded = false, onBack, commandCe
               </tbody>
             </table>
           </div>
-          {viewMode === "transposed" && <div className="overflow-x-auto border-y-2 border-slate-400 bg-linear-to-b from-slate-50 to-white py-3">
+          {viewMode === "transposed" && <div className="max-h-[72vh] overflow-auto overscroll-contain border-y-2 border-slate-400 bg-linear-to-b from-slate-50 to-white py-3 [scrollbar-gutter:stable]">
             <div className="ml-auto mr-0 w-max max-w-full pr-3 pl-0">
-              <table className="w-max border-separate border-spacing-0 overflow-hidden rounded-lg text-[11px] shadow-[0_10px_28px_rgba(15,23,42,0.12)]" data-testid="capital-portfolio-transposed">
+              <table className="w-max border-separate border-spacing-0 rounded-lg text-[clamp(12px,0.9vw,14px)] shadow-[0_10px_28px_rgba(15,23,42,0.12)]" data-testid="capital-portfolio-transposed">
                 <thead><tr className="bg-slate-900 text-white">
-                  <th className="min-w-[122px] border-l border-slate-600 px-3 py-2.5 text-right font-extrabold">البند / الشهر</th>
-                  {selectedProjects.map((project, index) => <th key={project.projectId} className="min-w-[108px] border-l border-slate-600 px-2 py-2.5 font-extrabold"><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{compactCapitalProjectName(project.name)}</span></th>)}
-                  <th className="relative -translate-y-0.5 min-w-[148px] border-x-2 border-t-2 border-teal-300 bg-linear-to-b from-teal-700 to-emerald-800 px-3 py-3 font-extrabold text-white shadow-sm">الإجمالي</th>
+                  <th className="sticky top-0 z-40 min-w-[122px] border-l border-slate-600 bg-slate-900 px-3 py-2.5 text-right font-extrabold shadow-[0_3px_8px_rgba(15,23,42,0.28)]">البند / الشهر</th>
+                  {selectedProjects.map((project, index) => <th key={project.projectId} className="sticky top-0 z-30 min-w-[108px] border-l border-slate-600 bg-slate-900 px-2 py-2.5 font-extrabold shadow-[0_3px_8px_rgba(15,23,42,0.28)]"><span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: PROJECT_COLORS[index % PROJECT_COLORS.length] }} />{compactCapitalProjectName(project.name)}</span></th>)}
+                  <th className="sticky top-0 z-30 min-w-[148px] border-x-2 border-t-2 border-teal-300 bg-linear-to-b from-teal-700 to-emerald-800 px-3 py-3 font-extrabold text-white shadow-[0_3px_8px_rgba(15,23,42,0.28)]">الإجمالي</th>
                 </tr></thead>
                 <tbody>
                   {originalColumnLabels.map((label, rowIndex) => {

@@ -1640,3 +1640,4 @@
 - [x] Compact the Unified Group Cash Flow monthly table to fit entirely within the page without horizontal scrolling, using shortened project names and narrow equal project columns while keeping group total and cumulative columns wider
 - [x] Fix Layla browser speech so every briefing and read-aloud is forced to Arabic, prefers the highest-quality Arabic female voice, and uses a faster natural speaking rate
 - [x] Enlarge the Unified Group Cash Flow monthly table figures while preserving full-page column fit, and keep the column header row fixed during vertical scrolling
+- [x] Apply larger figures, a fixed column header, and contained page-width layout to the Capital Portfolio monthly-project detail table without changing financial values or formulas

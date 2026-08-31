@@ -190,6 +190,15 @@ describe("Consolidated report source trace", () => {
     expect(unifiedSource).toContain("sticky right-0 top-0 z-40");
     expect(unifiedSource).toContain("sticky top-0 z-30");
   });
+
+  it("keeps the Capital Portfolio transposed figures larger and its project header fixed", () => {
+    const capitalSource = readSource("client/src/pages/V2CapitalPortfolio.tsx");
+    expect(capitalSource).toContain('data-testid="capital-portfolio-transposed"');
+    expect(capitalSource).toContain("text-[clamp(12px,0.9vw,14px)]");
+    expect(capitalSource).toContain("max-h-[72vh] overflow-auto");
+    expect(capitalSource).toContain("sticky top-0 z-40");
+    expect(capitalSource).toContain("sticky top-0 z-30");
+  });
 });
 
 describe("Financial source expense and receipt breakdown", () => {
