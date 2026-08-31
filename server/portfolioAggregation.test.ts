@@ -135,6 +135,10 @@ describe("Unified Group Cash Flow copy-only aggregation", () => {
   it("derives the decision view from the report rows only", () => {
     const liquidity = buildUnifiedGroupLiquidity(report, { horizon: 3, asOfMonth: "2026-09" });
     expect(liquidity.months.map((month) => month.total)).toEqual([-130, 20, -10]);
+    expect(liquidity.months.map((month) => [month.saleInvestmentNet, month.commercialDevelopmentNet])).toEqual([[-100, -30], [40, -20], [0, -10]]);
+    liquidity.months.forEach((month) => {
+      expect(month.saleInvestmentNet + month.commercialDevelopmentNet).toBe(month.total);
+    });
     expect(liquidity.months.map((month) => [month.spend, month.receipts])).toEqual([[130, 0], [20, 40], [10, 0]]);
     expect(liquidity.summary).toEqual({ required: 140, returned: 20, netFunding: 120 });
     expect(liquidity.months[0].drivers.map((driver) => driver.projectId)).toEqual([101, 1]);

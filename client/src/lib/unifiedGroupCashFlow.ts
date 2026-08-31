@@ -49,6 +49,10 @@ export type UnifiedGroupCashFlow = Omit<CalendarAlignedPortfolio, "rows"> & {
 export type UnifiedGroupLiquidityMonth = {
   monthDate: string;
   total: number;
+  /** Signed net copied from sale/investment project rows for the month. */
+  saleInvestmentNet: number;
+  /** Signed net copied from Commercial Center development rows for the month. */
+  commercialDevelopmentNet: number;
   spend: number;
   receipts: number;
   required: number;
@@ -225,10 +229,18 @@ export function buildUnifiedGroupLiquidity(
       }))
       .filter((row) => Math.abs(row.value) > 0.000001)
       .sort((left, right) => Math.abs(right.value) - Math.abs(left.value));
+    const saleInvestmentNet = drivers
+      .filter((driver) => driver.sourceKind === "investor_cash_flow")
+      .reduce((sum, driver) => sum + driver.value, 0);
+    const commercialDevelopmentNet = drivers
+      .filter((driver) => driver.sourceKind === "commercial_development")
+      .reduce((sum, driver) => sum + driver.value, 0);
 
     return {
       monthDate,
       total,
+      saleInvestmentNet,
+      commercialDevelopmentNet,
       spend: report.debitTotals[index] || 0,
       receipts: report.creditTotals[index] || 0,
       required: Math.max(-total, 0),

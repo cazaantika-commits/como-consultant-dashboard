@@ -4632,7 +4632,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         </section>
 
         <section className="mb-4">
-          <ExecutiveCashFlowAlert onOpenFullReport={() => setActiveBubble("financial_unified")} />
+          <ExecutiveCashFlowAlert memberToken={token} />
         </section>
 
         <section className="mb-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_16px_38px_rgba(15,23,42,0.07)]" dir="rtl" data-testid="command-center-financial-report-access">
