@@ -4,6 +4,7 @@ import {
   groupCalendarAlignedPortfolio,
 } from "../client/src/lib/portfolioAggregation";
 import {
+  buildUnifiedGroupExecutiveSummary,
   buildUnifiedGroupCashFlow,
   buildUnifiedGroupLiquidity,
 } from "../client/src/lib/unifiedGroupCashFlow";
@@ -123,9 +124,9 @@ describe("Unified Group Cash Flow copy-only aggregation", () => {
     expect(report.paidBeforeScheduleTotal).toBe(30);
   });
 
-  it("sets group totals to the exact monthly sum of copied project rows and cumulative totals to their running sum", () => {
+  it("sets group totals to the exact monthly sum and starts future cumulative funding at the first visible month", () => {
     expect(report.totals).toEqual([-130, 20, -10]);
-    expect(report.cumulativeTotals).toEqual([-160, -140, -150]);
+    expect(report.cumulativeTotals).toEqual([-130, -110, -120]);
     report.monthDates.forEach((_, index) => {
       expect(report.totals[index]).toBe(report.rows.reduce((sum, row) => sum + row.values[index], 0));
     });
@@ -134,8 +135,24 @@ describe("Unified Group Cash Flow copy-only aggregation", () => {
   it("derives the decision view from the report rows only", () => {
     const liquidity = buildUnifiedGroupLiquidity(report, { horizon: 3, asOfMonth: "2026-09" });
     expect(liquidity.months.map((month) => month.total)).toEqual([-130, 20, -10]);
+    expect(liquidity.months.map((month) => [month.spend, month.receipts])).toEqual([[130, 0], [20, 40], [10, 0]]);
     expect(liquidity.summary).toEqual({ required: 140, returned: 20, netFunding: 120 });
     expect(liquidity.months[0].drivers.map((driver) => driver.projectId)).toEqual([101, 1]);
+  });
+
+  it("separates paid previously from new funding while preserving the peak-capital equation", () => {
+    const executive = buildUnifiedGroupExecutiveSummary(report);
+    expect(executive.paidBefore).toBe(30);
+    expect(executive.remainingNewFunding).toBe(130);
+    expect(executive.peakCapital).toBe(160);
+    expect(executive.peakMonthDate).toBe("2026-09");
+    expect(executive.firstRecoveryMonthDate).toBe("2026-10");
+    expect(executive.totalSpend).toBe(190);
+    expect(executive.totalReceipts).toBe(40);
+    expect(executive.recycledCash).toBe(30);
+    expect(executive.closingNet).toBe(-150);
+    expect(executive.projectsAtPeak.map((project) => [project.projectId, project.capitalAtGroupPeak])).toEqual([[101, 125], [1, 35]]);
+    expect(executive.projectsAtPeak.reduce((sum, project) => sum + project.capitalAtGroupPeak, 0)).toBe(executive.peakCapital);
   });
 });
 
@@ -159,6 +176,11 @@ describe("Consolidated report source trace", () => {
     expect(unifiedSource).toContain("FinancialSourceValue");
     expect(unifiedSource).toContain("تطوير قبل التشغيل");
     expect(unifiedSource).toContain("لا يعرض التقرير توقعات إيجار");
+    expect(unifiedSource).toContain("المتبقي المطلوب منك حتى الذروة");
+    expect(unifiedSource).toContain("معادلة رأس المال عند الذروة");
+    expect(unifiedSource).toContain("تراكمي التمويل الجديد");
+    expect(unifiedSource).toContain("أين يتركز رأس المال عند ذروة المجموعة؟");
+    expect(unifiedSource).toContain("لماذا هذه هي الذروة؟");
     expect(commandCenterSource).toContain("getUnifiedGroupCashFlows");
     expect(commandCenterSource).toContain("buildUnifiedGroupLiquidity");
     expect(cashFlowRouterSource).toContain("getUnifiedGroupCashFlows");

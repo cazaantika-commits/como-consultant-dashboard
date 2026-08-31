@@ -49,6 +49,8 @@ export type UnifiedGroupCashFlow = Omit<CalendarAlignedPortfolio, "rows"> & {
 export type UnifiedGroupLiquidityMonth = {
   monthDate: string;
   total: number;
+  spend: number;
+  receipts: number;
   required: number;
   returned: number;
   netFunding: number;
@@ -71,6 +73,29 @@ export type UnifiedGroupLiquidity = {
   peakKind: "required" | "returned" | null;
 };
 
+export type UnifiedGroupProjectFundingAtPeak = {
+  projectId: number;
+  name: string;
+  sourceKind: GroupCashFlowSourceKind;
+  paidBefore: number;
+  monthlyNetToGroupPeak: number;
+  capitalAtGroupPeak: number;
+  shareOfGroupPeak: number;
+};
+
+export type UnifiedGroupExecutiveSummary = {
+  paidBefore: number;
+  remainingNewFunding: number;
+  peakCapital: number;
+  peakMonthDate: string | null;
+  firstRecoveryMonthDate: string | null;
+  totalSpend: number;
+  totalReceipts: number;
+  recycledCash: number;
+  closingNet: number;
+  projectsAtPeak: UnifiedGroupProjectFundingAtPeak[];
+};
+
 /**
  * Calendar-aligns and sums only the already-final monthly project rows supplied
  * by the caller. It never recalculates revenue, expenses, escrow, capital, or profit.
@@ -82,7 +107,7 @@ export function buildUnifiedGroupCashFlow(
   const projectById = new Map(projects.map((project) => [project.projectId, project]));
   const paidBeforeScheduleTotal = projects.reduce((sum, project) => sum + (Number(project.paidBeforeSchedule) || 0), 0);
   const cumulativeTotals = aligned.totals.reduce<number[]>((all, value) => {
-    all.push((all[all.length - 1] ?? -paidBeforeScheduleTotal) + value);
+    all.push((all[all.length - 1] ?? 0) + value);
     return all;
   }, []);
 
@@ -101,6 +126,72 @@ export function buildUnifiedGroupCashFlow(
         includesOperatingCashFlows: Boolean(source?.includesOperatingCashFlows),
       };
     }),
+  };
+}
+
+/**
+ * Builds the executive capital view from the exact copied report cells.
+ * "Paid previously" remains a separate opening component; the monthly running
+ * balance begins at zero so its deepest deficit is the additional new funding
+ * required after the visible schedule starts.
+ */
+export function buildUnifiedGroupExecutiveSummary(
+  report: UnifiedGroupCashFlow,
+): UnifiedGroupExecutiveSummary {
+  let peakIndex = -1;
+  let lowestFutureCumulative = 0;
+
+  report.cumulativeTotals.forEach((value, index) => {
+    if (value < lowestFutureCumulative) {
+      lowestFutureCumulative = value;
+      peakIndex = index;
+    }
+  });
+
+  const paidBefore = report.paidBeforeScheduleTotal;
+  const remainingNewFunding = Math.max(-lowestFutureCumulative, 0);
+  const peakCapital = paidBefore + remainingNewFunding;
+  const totalFutureSpend = report.debitTotals.reduce((sum, value) => sum + value, 0);
+  const totalReceipts = report.creditTotals.reduce((sum, value) => sum + value, 0);
+  const totalSpend = paidBefore + totalFutureSpend;
+  const recycledCash = Math.max(Math.min(totalFutureSpend - remainingNewFunding, totalReceipts), 0);
+  const closingNet = -paidBefore + report.totals.reduce((sum, value) => sum + value, 0);
+  const firstRecoveryIndex = peakIndex >= 0
+    ? report.cumulativeTotals.findIndex((value, index) => index > peakIndex && value > lowestFutureCumulative + 0.000001)
+    : -1;
+
+  const projectsAtPeak = report.rows
+    .map((row) => {
+      const source = report.projects.find((project) => project.projectId === row.projectId);
+      const paidBeforeForProject = Number(source?.paidBeforeSchedule) || 0;
+      const monthlyNetToGroupPeak = peakIndex >= 0
+        ? row.values.slice(0, peakIndex + 1).reduce((sum, value) => sum + value, 0)
+        : 0;
+      const capitalAtGroupPeak = paidBeforeForProject - monthlyNetToGroupPeak;
+
+      return {
+        projectId: row.projectId,
+        name: row.name,
+        sourceKind: row.sourceKind,
+        paidBefore: paidBeforeForProject,
+        monthlyNetToGroupPeak,
+        capitalAtGroupPeak,
+        shareOfGroupPeak: peakCapital > 0 ? capitalAtGroupPeak / peakCapital : 0,
+      };
+    })
+    .sort((left, right) => right.capitalAtGroupPeak - left.capitalAtGroupPeak);
+
+  return {
+    paidBefore,
+    remainingNewFunding,
+    peakCapital,
+    peakMonthDate: peakIndex >= 0 ? report.monthDates[peakIndex] || null : null,
+    firstRecoveryMonthDate: firstRecoveryIndex >= 0 ? report.monthDates[firstRecoveryIndex] || null : null,
+    totalSpend,
+    totalReceipts,
+    recycledCash,
+    closingNet,
+    projectsAtPeak,
   };
 }
 
@@ -138,6 +229,8 @@ export function buildUnifiedGroupLiquidity(
     return {
       monthDate,
       total,
+      spend: report.debitTotals[index] || 0,
+      receipts: report.creditTotals[index] || 0,
       required: Math.max(-total, 0),
       returned: Math.max(total, 0),
       netFunding: Math.max(-total, 0) - Math.max(total, 0),
