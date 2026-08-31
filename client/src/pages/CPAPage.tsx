@@ -2805,8 +2805,10 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 // ---- Main Page ------------------------------------------------------------
 
 export default function CPAPage() {
-  const initialScopeProjectId = Number(new URLSearchParams(window.location.search).get("scopeProjectId"));
-  const [screen, setScreen] = useState<Screen>(Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : "home");
+  const initialParams = new URLSearchParams(window.location.search);
+  const initialScopeProjectId = Number(initialParams.get("scopeProjectId"));
+  const initialSettings = initialParams.get("settings") === "1";
+  const [screen, setScreen] = useState<Screen>(Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");

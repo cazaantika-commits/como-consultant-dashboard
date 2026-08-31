@@ -9,6 +9,7 @@ const router = readFileSync(`${root}/server/routers/consultantRequirements.ts`, 
 const offerRouter = readFileSync(`${root}/server/routers/offerReader.ts`, "utf8");
 const comparisonRouter = readFileSync(`${root}/server/routers/financialOfferComparison.ts`, "utf8");
 const gapMigration = readFileSync(`${root}/drizzle/0068_consultant_offer_gap_overrides.sql`, "utf8");
+const encyclopediaMigration = readFileSync(`${root}/drizzle/0072_final_design_scope_encyclopedia.sql`, "utf8");
 const component = readFileSync(`${root}/client/src/components/consultant/ConsultantRequirementsReference.tsx`, "utf8");
 const offerReviewScreen = readFileSync(`${root}/client/src/pages/OfferReaderScreen.tsx`, "utf8");
 const commandCenterScreen = readFileSync(`${root}/client/src/pages/CommandCenterPage.tsx`, "utf8");
@@ -26,10 +27,32 @@ describe("consultant requirements reference safeguards", () => {
     expect(router).toContain("defaultEnabled");
     expect(router).toContain("defaultGapValueAed");
     expect(router).toContain("pricingBasis");
-    expect(component).toContain("المكتبة الشاملة لنطاق التصميم والإشراف");
-    expect(component).toContain("دون إضافة أو تغيير");
+    expect(component).toContain("الموسوعة الشاملة لنطاق التصميم والإشراف");
+    expect(component).toContain("الاسم الإنجليزي الرسمي وشرح المعنى بالعربية");
     expect(component).not.toContain("reference.create");
     expect(component).not.toContain("reference.update");
+  });
+
+  it("publishes exactly the approved 42-item design encyclopedia without touching project or supervision records", () => {
+    const approvedRows = encyclopediaMigration.match(/^\s+\(\d+, '[A-Z0-9_]+',/gm) ?? [];
+    const executableSql = encyclopediaMigration.replace(/--.*$/gm, "");
+    expect(approvedRows).toHaveLength(42);
+    expect(encyclopediaMigration).toContain("Lead Consultant / Architect of Record");
+    expect(encyclopediaMigration).toContain("Tenant''s Handbook — Structural and MEP Technical Guidelines");
+    expect(executableSql).not.toMatch(/UPDATE\s+project_consultant_requirements/i);
+    expect(executableSql).not.toMatch(/DELETE\s+FROM\s+project_consultant_requirements/i);
+    expect(executableSql).not.toMatch(/UPDATE\s+cpa_supervision_roles/i);
+    expect(executableSql).not.toMatch(/INSERT\s+INTO\s+cpa_supervision_roles/i);
+  });
+
+  it("shows the approved Settings columns and omits the minimum-scope column", () => {
+    expect(component).toContain("الرقم");
+    expect(component).toContain("الرمز");
+    expect(component).toContain("الاسم الإنجليزي الرسمي");
+    expect(component).toContain("الشرح العربي للمعنى");
+    expect(component).not.toContain("الحد الأدنى الواضح للنطاق");
+    expect(component).toContain("DesignEncyclopediaTable");
+    expect(component).toContain("SupervisionReferenceTable");
   });
 
   it("creates project copies and revisions without writing over the approved comparison basis", () => {

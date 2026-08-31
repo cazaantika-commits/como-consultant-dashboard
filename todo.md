@@ -1644,3 +1644,10 @@
 - [x] Analyze the provided ARTIC Schedule of Design Fees for all plots and adopt its verified structure as an independent editable model for every consultant project without inventing scope items
 - [x] Map ARTIC scope and fee entries to the existing comprehensive library and preserve project-to-project isolation when initializing or editing each project's model
 - [x] Keep each ARTIC-derived project scope fully editable for selection, duration, and gap value, and use the owner's saved revision as the official comparison baseline
+- [x] Compare ARTEC's 18 primary design disciplines with the current 40-item design library, distinguishing direct matches, sub-items, additional items, and missing mappings before changing project scopes
+- [x] Present alternative structures for the final comprehensive scope and obtain the owner's decision before applying any further ARTEC scope migration
+- [x] Reinspect the correct ARTEC source page in Extract[6].pdf and compare it with the prior schedule and current library before making any scope decision or system change
+- [x] Propose the final comprehensive design-only matrix for projects of any size, with every service independently selectable and with supervision, laws, insurance, and contractual clauses excluded
+- [x] Issue the final renumbered design-scope encyclopedia using the correct ARTEC matrix, excluding owner-direct items 1-4 and optional LEED/WELL certification, with Lead Consultant/AOR retained as an independent service
+- [x] Apply the approved 42-item design encyclopedia in Consultant Settings using only number, code, official English name, and Arabic meaning explanation, with no minimum-scope column and no change to the supervision library
+- [x] Record the owner's scope decision: keep MEP, Telecom, ICT, AV, IT, ELV, SIRA, and BIM Management as separate selectable comprehensive-library items, with Low Current treated as the ELV alias rather than a duplicate item

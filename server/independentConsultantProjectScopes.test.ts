@@ -82,7 +82,7 @@ describe("independent consultant project scope contracts", () => {
 });
 
 describe("independent consultant project scope data", () => {
-  it("gives every current CPA project one independent full-library snapshot", async () => {
+  it("keeps every current CPA project on its own independent snapshot while the shared library evolves", async () => {
     const [rows] = await connection.execute(`
       SELECT cp.id, cp.project_id, active_set.id AS set_id,
              COUNT(requirement.id) AS snapshot_count,
@@ -98,7 +98,8 @@ describe("independent consultant project scope data", () => {
     expect(new Set(rows.map((row: any) => Number(row.set_id))).size).toBe(rows.length);
     for (const row of rows) {
       expect(Number(row.set_id)).toBeGreaterThan(0);
-      expect(Number(row.snapshot_count)).toBe(Number(row.library_count));
+      expect(Number(row.snapshot_count)).toBeGreaterThan(0);
+      expect(Number(row.snapshot_count)).toBeLessThanOrEqual(Number(row.library_count));
     }
   });
 
