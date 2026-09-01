@@ -360,10 +360,10 @@ export function buildSalesResultFromSavedPlan(
         : undefined;
       const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
         || buildForSaleMonthlyUnits
-        || (scenario === "build_for_sale" && Array.isArray(parsed.salesDistribution)
+        || ((scenario === "build_for_sale" || scenario === "joint_venture_land_for_units") && Array.isArray(parsed.salesDistribution)
           ? parsed.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
           : undefined);
-      const hasSavedSalesResult = scenario === "build_for_sale"
+      const hasSavedSalesResult = scenario === "build_for_sale" || scenario === "joint_venture_land_for_units"
         ? Array.isArray(parsed.actualCashInflow) || Array.isArray(parsed.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
         : Array.isArray(parsed.escrowData) && Array.isArray(parsed.salesDistribution);
       if (hasSavedSalesResult) {
@@ -377,7 +377,7 @@ export function buildSalesResultFromSavedPlan(
         // months. If Settings later changes the design or construction duration,
         // keep the saved receipt weights but move their post-completion window
         // to the current project end instead of leaving it at the retired end.
-        if (scenario === "build_for_sale" && normalizedCashInflow.length > 0) {
+        if ((scenario === "build_for_sale" || scenario === "joint_venture_land_for_units") && normalizedCashInflow.length > 0) {
           const currentDesignMonths = getProjectMarketingTiming(project).designMonths;
           const currentConstructionMonths = Math.max(1, Number(project?.constructionMonths ?? plan.constructionMonths ?? 0));
           const savedDesignMonths = Math.max(0, Number(plan.designMonths ?? currentDesignMonths));
@@ -386,12 +386,12 @@ export function buildSalesResultFromSavedPlan(
           const currentProjectEnd = currentDesignMonths + currentConstructionMonths;
 
           if (savedProjectEnd !== currentProjectEnd) {
-            const savedPostCompletionReceipts = normalizedCashInflow
+            const savedPostCompletionReceipts: number[] = normalizedCashInflow
               .slice(savedProjectEnd)
               .map((amount: unknown) => Math.max(0, Number(amount) || 0));
             if (savedPostCompletionReceipts.some((amount) => amount > 0)) {
               actualCashInflow = new Array(currentProjectEnd + savedPostCompletionReceipts.length).fill(0);
-              savedPostCompletionReceipts.forEach((amount, index) => {
+              savedPostCompletionReceipts.forEach((amount: number, index: number) => {
                 actualCashInflow[currentProjectEnd + index] = amount;
               });
             }

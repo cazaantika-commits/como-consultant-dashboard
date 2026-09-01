@@ -488,6 +488,15 @@ export interface ProjectCosts {
   revenueRes?: number;
   revenueRet?: number;
   revenueOff?: number;
+  grossRevenueRes?: number;
+  grossRevenueCommercial?: number;
+  grossTotalRevenue?: number;
+  landOwnerResidentialSharePct?: number;
+  landOwnerResidentialValue?: number;
+  landOwnerCommercialValue?: number;
+  landOwnerTotalValue?: number;
+  developerResidentialRevenue?: number;
+  developerCommercialRevenue?: number;
   totalRevenue: number;
   totalCosts?: number;
 }

@@ -98,7 +98,7 @@ export default function BateekhaPage({ mode = "standard", testCpaProjectId }: Ba
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const financingScenario = (projectQuery.data as any)?.financingScenario;
-  const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" ? financingScenario : undefined;
+  const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" || financingScenario === "joint_venture_land_for_units" ? financingScenario : undefined;
 
   useEffect(() => {
     setActiveTab((currentTab) => currentTab ? getFallbackFinancialStudiesTab(currentTab, projectType) : null);
@@ -165,7 +165,7 @@ export default function BateekhaPage({ mode = "standard", testCpaProjectId }: Ba
               </div>
               {isTestMode ? <span className="inline-flex w-fit items-center rounded-full border border-violet-200 bg-white px-4 py-2 text-xs font-black text-violet-700">غير رسمي · لا يدخل في التقارير</span> : <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>}
             </div>
-            {selectedProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
+            {selectedProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "joint_venture_land_for_units" ? "Joint Venture — أرض مقابل وحدات" : projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
           </section>
 
           <div className="mb-4 flex items-center justify-between gap-4"><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-teal-500" /><h3 className="text-lg font-black text-slate-900">كل الدراسات</h3></div>{!selectedProjectId && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">اختر مشروعًا لفتح بطاقات المشروع</span>}</div>

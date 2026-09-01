@@ -31,11 +31,16 @@ import {
   normalizeFlexiblePaymentPlan,
   type FlexiblePaymentPlan,
 } from "@/lib/flexiblePaymentPlan";
+import {
+  calculateDeveloperRevenueShare,
+  getJointVentureTerms,
+  isJointVentureLandForUnits,
+} from "@/lib/jointVentureLandForUnits";
 
 // ═══════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════
-export type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan" | "build_for_sale" | "build_for_rent" | "rental";
+export type Scenario = "offplan_escrow" | "offplan_construction" | "no_offplan" | "build_for_sale" | "build_for_rent" | "rental" | "joint_venture_land_for_units";
 export type Funder = "investor" | "escrow" | "split";
 
 export interface CostRow {
@@ -539,7 +544,8 @@ const DEF_PRICES = { studio: 0, res1: 1550, res2: 1500, res2Maid: 0, res3: 1450,
 export function buildPricingUnits(project: any, inputs: ProjectInputs) {
   const p = project;
   const countKeys = ["studioCount", "residential1brCount", "residential2brCount", "residential2brMaidCount", "residential3brCount", "residential3brMaidCount", "villaCount", "townhouseCount", "retailSmallCount", "retailMediumCount", "retailLargeCount", "officeSmallCount", "officeMediumCount", "officeLargeCount"];
-  const isBuildForSale = p?.financingScenario === "build_for_sale";
+  const isJointVenture = isJointVentureLandForUnits(p?.financingScenario);
+  const isBuildForSale = p?.financingScenario === "build_for_sale" || isJointVenture;
   // Build-for-sale uses the user-entered unit distribution exactly, including an
   // explicit all-zero distribution. Legacy Off-Plan fallback behavior is retained.
   const hasSavedCounts = isBuildForSale
@@ -563,7 +569,7 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
   let cOS = Number(p?.officeSmallCount) || 0;
   let cOM = Number(p?.officeMediumCount) || 0;
   let cOL = Number(p?.officeLargeCount) || 0;
-  if (!hasSavedCounts) {
+  if (!hasSavedCounts && !isJointVenture) {
     const sellRes = inputs.gfaResidential * inputs.efficiencyResidential;
     const sellRet = inputs.gfaRetail * inputs.efficiencyRetail;
     const sellOff = inputs.gfaOffice * inputs.efficiencyOffice;
@@ -623,8 +629,20 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const projectFormulas = calculateProjectFormulas(i, r);
 
   const pricingUnits = buildPricingUnits(projectData || {}, i);
-  const pricingFormulas = calculatePricingFormulas(pricingUnits);
-  const costs = calculateCosts(projectFormulas, pricingFormulas, i, r);
+  const grossPricingFormulas = calculatePricingFormulas(pricingUnits);
+  const revenueShare = calculateDeveloperRevenueShare(
+    grossPricingFormulas,
+    scenario,
+    getJointVentureTerms(projectData),
+  );
+  const pricingFormulas = {
+    ...grossPricingFormulas,
+    revenueResidential: revenueShare.developerResidentialRevenue,
+    revenueRetail: revenueShare.developerRetailRevenue,
+    revenueOffice: revenueShare.developerOfficeRevenue,
+    totalRevenue: revenueShare.developerTotalRevenue,
+  };
+  const costs = calculateCosts(projectFormulas, grossPricingFormulas, i, r);
 
   const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalRevenue, totalUnits } = pricingFormulas;
@@ -638,7 +656,8 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   const isScenario2 = scenario === "offplan_construction";
   const isScenario3 = scenario === "no_offplan";
-  const isBuildForSale = scenario === "build_for_sale";
+  const isJointVenture = isJointVentureLandForUnits(scenario);
+  const isBuildForSale = scenario === "build_for_sale" || isJointVenture;
   const isBuildForRent = scenario === "build_for_rent";
   const isScenario4 = scenario === "rental" || scenario === "build_for_rent";
 
@@ -715,45 +734,60 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // ═════════════════════════════════════════════
   const rows: CostRow[] = [];
 
-  // ─── الأرض (مدفوعة — لا توزيع) ───
-  rows.push({
-    label: "سعر الأرض",
-    totalCost: landPrice,
-    investorAmount: landPrice,
-    paid: landPrice,
-    unpaid: 0,
-    funder: "investor",
-    section: "الأرض",
-    designMonths: emptyDesign(),
-    constructionMonths: emptyConstruction(),
-    postConstructionMonths: emptyPost(),
-  });
+  // ─── الأرض ───
+  if (isJointVenture) {
+    rows.push({
+      label: "مساهمة مالك الأرض — أرض مقابل وحدات (غير نقدية)",
+      totalCost: 0,
+      investorAmount: 0,
+      paid: 0,
+      unpaid: 0,
+      funder: "investor",
+      section: "الأرض",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+      postConstructionMonths: emptyPost(),
+    });
+  } else {
+    rows.push({
+      label: "سعر الأرض",
+      totalCost: landPrice,
+      investorAmount: landPrice,
+      paid: landPrice,
+      unpaid: 0,
+      funder: "investor",
+      section: "الأرض",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+      postConstructionMonths: emptyPost(),
+    });
 
-  rows.push({
-    label: "رسوم تسجيل الأرض",
-    totalCost: landRegistration,
-    investorAmount: landRegistration,
-    paid: landRegistration,
-    unpaid: 0,
-    funder: "investor",
-    section: "الأرض",
-    designMonths: emptyDesign(),
-    constructionMonths: emptyConstruction(),
-    postConstructionMonths: emptyPost(),
-  });
+    rows.push({
+      label: "رسوم تسجيل الأرض",
+      totalCost: landRegistration,
+      investorAmount: landRegistration,
+      paid: landRegistration,
+      unpaid: 0,
+      funder: "investor",
+      section: "الأرض",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+      postConstructionMonths: emptyPost(),
+    });
 
-  rows.push({
-    label: "عمولة وسيط الأرض",
-    totalCost: landBroker,
-    investorAmount: landBroker,
-    paid: landBroker,
-    unpaid: 0,
-    funder: "investor",
-    section: "الأرض",
-    designMonths: emptyDesign(),
-    constructionMonths: emptyConstruction(),
-    postConstructionMonths: emptyPost(),
-  });
+    rows.push({
+      label: "عمولة وسيط الأرض",
+      totalCost: landBroker,
+      investorAmount: landBroker,
+      paid: landBroker,
+      unpaid: 0,
+      funder: "investor",
+      section: "الأرض",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+      postConstructionMonths: emptyPost(),
+    });
+  }
 
   // ─── أتعاب التصاميم (توزيع حسب المراحل) ───
   const designFeeDistribution = distributeDesignFee(costs.designFee, designDuration, phaseTiming.stages);
@@ -1323,7 +1357,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   }
 
   // ─── أتعاب المطور: البناء للبيع من الإيراد، والبناء للتأجير من تكلفة الإنشاء ───
-  {
+  if (!isJointVenture) {
     const devFeeDesign = emptyDesign();
     const devFeeConstruction = emptyConstruction();
     const totalDevFee = costs.developerFee;
@@ -1551,7 +1585,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       }
     }
     rows.push({
-      label: "إيرادات المبيعات",
+      label: isJointVenture ? "إيراد حصة المطور من المبيعات" : "إيرادات المبيعات",
       totalCost: totalRevenue,
       investorAmount: totalRevenue,
       paid: 0,
@@ -1818,7 +1852,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       postConstructionMonths: developerShares.slice(designDuration + constructionDuration),
       isProfitAllocation: true,
     });
-  } else if (isScenario3 || isBuildForSale) {
+  } else if ((isScenario3 || isBuildForSale) && !isJointVenture) {
     // Direct sale receipts pay broker commission first, then restore the
     // investor's spending. Only the remaining surplus is profit.
     const salesRevenueRow = rows.find(row => row.label === "إيرادات المبيعات");

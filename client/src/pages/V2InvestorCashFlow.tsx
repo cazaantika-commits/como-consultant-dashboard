@@ -103,13 +103,13 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const feasibilityInvestorProfit = useMemo<number | null>(() => {
     const costs = calculateProjectCosts(projectQuery.data);
     if (!costs) return null;
-    const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent"
+    const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent" || scenario === "joint_venture_land_for_units"
       ? data.rows
         .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
         .reduce((sum, row) => sum + row.totalCost, 0)
-      : costs.totalCosts;
+      : costs.totalCosts ?? 0;
     const projectProfit = costs.totalRevenue - feasibilityTotalCosts;
-    const comoShare = projectProfit > 0 ? projectProfit * 0.15 : 0;
+    const comoShare = scenario !== "joint_venture_land_for_units" && projectProfit > 0 ? projectProfit * 0.15 : 0;
     return projectProfit - comoShare;
   }, [data.rows, projectQuery.data, scenario]);
   const feasibilityDifference = feasibilityInvestorProfit === null ? null : profit - feasibilityInvestorProfit;

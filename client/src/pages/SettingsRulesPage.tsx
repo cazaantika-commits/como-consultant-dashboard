@@ -244,9 +244,10 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const reraAuditorQuarterlyFee = configurableRates.find((rate) => rate.id === "reraAuditorQuarterlyFee")?.value ?? 3500;
   const reraInspectionQuarterlyFee = configurableRates.find((rate) => rate.id === "reraInspectionQuarterlyFee")?.value ?? 15020;
   const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
-  const isBuildForSale = projectType === "build_for_sale";
+  const isJointVenture = projectType === "joint_venture_land_for_units";
+  const isBuildForSale = projectType === "build_for_sale" || isJointVenture;
   const isBuildForRent = projectType === "build_for_rent";
-  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
+  const isNoOffPlanType = isBuildForSale || isBuildForRent;
   const visibleProjectPhases = projectPhases.filter((phase) => isFinancialStudiesSettingsItemVisible(phase.id, projectType));
   const visibleConfigurableRates = configurableRates
     .filter((rate) => isFinancialStudiesSettingsItemVisible(rate.id, projectType))
@@ -256,7 +257,9 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const visibleInvestorRules = INVESTOR_RULES
     .filter((rule) => isFinancialStudiesSettingsItemVisible(rule.id, projectType))
     .filter((rule) => !(isBuildForRent && rule.id === "marketing"))
+    .filter((rule) => !isJointVenture || !["landBroker", "landRegistration", "developerFees", "developerProfitShare"].includes(rule.id))
     .map((rule) => {
+      if (isJointVenture && rule.id === "landPrice") return { ...rule, label: "مساهمة مالك الأرض", timing: "الأرض مقابل حصة من الوحدات السكنية — مساهمة غير نقدية لا تدخل في رأس مال المطور", type: "غير نقدية" };
       if (isBuildForRent) {
         if (rule.id === "govFees10") return { ...rule, label: "رسوم الجهات الحكومية", timing: "10% عند اكتمال التصميم التخطيطي + 45% عند 80% إنجاز الإنشاء + 45% عند 90%", type: "موزعة" };
         if (rule.id === "sortingFees") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
@@ -278,7 +281,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
       if (rule.id === "nocDeveloper") return { ...rule, timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" };
       if (rule.id === "reraUnitReg") return { ...rule, label: "تسجيل الوحدات — دائرة الأراضي والأملاك", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء (عدد الوحدات × الرسم المحدد)", type: "محسوبة" };
       if (rule.id === "marketing") return { ...rule, timing: "نسبة التسويق المحددة من القيمة التقديرية للمبيعات — موزعة وفق بداية ومدة تسويق البناء للبيع", type: "من الإعدادات" };
-      if (rule.id === "developerFees") return { ...rule, timing: "1% من القيمة التقديرية للمبيعات موزعة على التصميم + 2% موزعة على الإنشاء — تُدفع من المستثمر", type: "موزعة" };
+      if (rule.id === "developerFees") return { ...rule, timing: isJointVenture ? "نسبة أتعاب المطور من إيراد حصة المطور، موزعة على التصميم والإنشاء" : "1% من القيمة التقديرية للمبيعات موزعة على التصميم + 2% موزعة على الإنشاء — تُدفع من المستثمر", type: "موزعة" };
       if (rule.id === "developerProfitShare") return { ...rule, timing: "تُدفع بعد تحصيل آخر مبيعات مباشرة، وفق حصة المطور المعتمدة من الربح", type: "مرتبطة بالأرباح" };
       return rule;
     });

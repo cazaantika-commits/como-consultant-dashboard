@@ -171,13 +171,15 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
     );
   }
 
-  if (scenario === "no_offplan" || scenario === "build_for_sale" || scenario === "build_for_rent") {
+  if (scenario === "no_offplan" || scenario === "build_for_sale" || scenario === "build_for_rent" || scenario === "joint_venture_land_for_units") {
     return (
       <div className="min-h-[320px] bg-gray-50 p-6" dir="rtl">
         <div className="mx-auto max-w-xl rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center shadow-sm">
           <h1 className="text-base font-bold text-amber-950">حساب الضمان غير منطبق</h1>
           <p className="mt-3 text-sm leading-7 text-amber-900">
-            هذا المشروع من نوع البناء للبيع؛ لذلك يمول المستثمر الإنشاء مباشرة وتدخل حصيلة بيع الوحدات إلى حسابه بعد الإنجاز، من دون حساب ضمان.
+            {scenario === "joint_venture_land_for_units"
+              ? "هذا المشروع Joint Venture — الأرض مقابل وحدات؛ الأرض مساهمة غير نقدية، ويمول المطور المصاريف مباشرة وتدخل حصيلة حصته من السكني وكامل التجاري إلى حسابه، من دون حساب ضمان."
+              : "هذا المشروع من نوع البناء للبيع؛ لذلك يمول المستثمر الإنشاء مباشرة وتدخل حصيلة بيع الوحدات إلى حسابه بعد الإنجاز، من دون حساب ضمان."}
           </p>
         </div>
       </div>

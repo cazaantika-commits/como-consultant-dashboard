@@ -13,6 +13,11 @@ import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { isFinancialStudiesGeneralInputVisible } from "@/lib/financialStudiesNavigation";
 import { formatFullNumber, unformatNumberInput } from "@/lib/numberFormat";
+import {
+  getJointVentureTerms,
+  isJointVentureLandForUnits,
+  saveJointVentureTerms,
+} from "@/lib/jointVentureLandForUnits";
 
 const ALL_FIELDS = [
   { key: "plotAreaSqft", label: "مساحة الأرض", unit: "قدم²", type: "number" },
@@ -28,6 +33,8 @@ const ALL_FIELDS = [
   { key: "saleableResidentialPct", label: "نسبة بيع سكني", unit: "%", type: "number", defaultValue: "95" },
   { key: "saleableRetailPct", label: "نسبة بيع تجزئة", unit: "%", type: "number", defaultValue: "97" },
   { key: "saleableOfficesPct", label: "نسبة بيع مكاتب", unit: "%", type: "number", defaultValue: "95" },
+  { key: "landOwnerResidentialSharePct", label: "حصة مالك الأرض من السكني", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true },
+  { key: "landOwnerCommercialSharePct", label: "حصة مالك الأرض من التجاري", unit: "%", type: "number", defaultValue: "0", jointVentureOnly: true },
   { key: "agentCommissionLandPct", label: "عمولة وسيط الأرض", unit: "%", type: "number", defaultValue: "1" },
   { key: "designFeePct", label: "أتعاب التصميم (%)", unit: "%", type: "number", defaultValue: "1.8" },
   { key: "designFeeFixed", label: "أتعاب التصميم (مقطوع)", unit: "درهم", type: "number" },
@@ -87,7 +94,13 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         else if (f.defaultValue) data[f.key] = f.defaultValue;
       });
       data.financingScenario = p.financingScenario || "offplan_escrow";
+      if (isJointVentureLandForUnits(data.financingScenario)) {
+        const terms = getJointVentureTerms(p);
+        data.landOwnerResidentialSharePct = String(terms.landOwnerResidentialSharePct);
+        data.landOwnerCommercialSharePct = String(terms.landOwnerCommercialSharePct);
+      }
       if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
+      if (data.financingScenario === "joint_venture_land_for_units") data.developerFeePct = "0";
       if (data.financingScenario === "build_for_rent") {
         data.buildForRentDeveloperFeeDesignRate = String(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
         data.buildForRentDeveloperFeeSupervisionRate = String(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
@@ -107,6 +120,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
     try {
       const payload: any = { id: selectedProjectId };
       ALL_FIELDS.forEach(f => {
+        if ((f as any).jointVentureOnly) return;
         if ((f as any).buildForRentOnly) return;
         if ((f as any).computed) return;
         if (formData[f.key] === undefined || formData[f.key] === "") return;
@@ -118,6 +132,15 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         }
       });
       payload.financingScenario = formData.financingScenario || "offplan_escrow";
+      if (isJointVentureLandForUnits(payload.financingScenario)) {
+        payload.constructionScheduleJson = saveJointVentureTerms(
+          (projectQuery.data as any)?.constructionScheduleJson,
+          {
+            landOwnerResidentialSharePct: Number(formData.landOwnerResidentialSharePct ?? 35),
+            landOwnerCommercialSharePct: Number(formData.landOwnerCommercialSharePct ?? 0),
+          },
+        );
+      }
       if (payload.financingScenario === "build_for_rent") {
         let schedule: any = {};
         try { schedule = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}"); } catch {}
@@ -170,15 +193,18 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
 
   const isBuildForSale = formData.financingScenario === "build_for_sale";
   const isBuildForRent = formData.financingScenario === "build_for_rent";
-  const isIndependentType = isBuildForSale || isBuildForRent;
+  const isJointVenture = isJointVentureLandForUnits(formData.financingScenario);
+  const isIndependentType = isBuildForSale || isBuildForRent || isJointVenture;
   const visibleFields = (isIndependentType
     ? ALL_FIELDS.filter((field) => {
+        if ((field as any).jointVentureOnly) return isJointVenture;
         if (isBuildForRent && (field as any).buildForRentOnly) return true;
         if ((field as any).buildForRentOnly) return false;
-        if (isBuildForRent && field.key === "developerFeePct") return false;
+        if ((isBuildForRent || isJointVenture) && field.key === "developerFeePct") return false;
         return isFinancialStudiesGeneralInputVisible(field.key, formData.financingScenario);
       })
-    : ALL_FIELDS.filter((field) => !(field as any).buildForRentOnly))
+    : ALL_FIELDS.filter((field) => !(field as any).buildForRentOnly && !(field as any).jointVentureOnly))
+    .filter((field) => !isJointVenture || (field.key !== "landPrice" && field.key !== "agentCommissionLandPct"))
     .filter((field) => !hideDocumentFields || !DOCUMENT_DERIVED_FIELD_KEYS.has(field.key));
   const columnSize = Math.ceil(visibleFields.length / 3);
   const col1 = visibleFields.slice(0, columnSize);
@@ -192,7 +218,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         const hint = (field as any).hint;
         const displayLabel = isBuildForRent && (field as any).buildForRentOnly
           ? field.label
-          : isIndependentType && field.key === "developerFeePct"
+          : isBuildForSale && field.key === "developerFeePct"
           ? "أتعاب المطور (1% تصميم + 2% تنفيذ)"
           : field.label;
         const displayValue = field.key === "reraAuditReportFee"
@@ -239,6 +265,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
             <option value="offplan_escrow">أوف بلان</option>
             <option value="build_for_sale">بناء للبيع</option>
             <option value="build_for_rent">بناء للتأجير</option>
+            <option value="joint_venture_land_for_units">Joint Venture — الأرض مقابل وحدات</option>
           </select>
         </label>
         <span className="text-[11px] text-blue-700 font-medium">مدة التصاميم: {designTiming.designMonths} شهر <span className="text-gray-400">(من الإعدادات والقواعد)</span></span>
@@ -266,6 +293,11 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       {isBuildForRent && (
         <div className="mb-3 rounded-xl border border-indigo-300 border-r-4 border-r-indigo-500 bg-indigo-50/80 px-4 py-2 text-[12px] text-indigo-900">
           <span className="font-semibold">قواعد البناء للتأجير:</span> لا توجد مبيعات أو تسويق أو عمولات أو إيرادات في هذه المرحلة، ولا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور قابلة للتعديل: 1.5% في التصميم و2.5% في الإشراف من تكلفة الإنشاء.
+        </div>
+      )}
+      {isJointVenture && (
+        <div className="mb-3 rounded-xl border border-violet-300 border-r-4 border-r-violet-600 bg-violet-50/80 px-4 py-2 text-[12px] text-violet-950">
+          <span className="font-semibold">نموذج الأرض مقابل وحدات:</span> الأرض مساهمة غير نقدية ولا تدخل ضمن رأس المال المدفوع. تُخصم حصة مالك الأرض من المساحة السكنية القابلة للبيع، بينما يبقى التجاري كاملًا للمطور عندما تكون حصته 0%.
         </div>
       )}
 

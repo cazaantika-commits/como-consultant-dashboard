@@ -105,7 +105,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   }, [designPayments]);
 
   const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
-  const isBuildForSale = projectType === "build_for_sale";
+  const isBuildForSale = projectType === "build_for_sale" || projectType === "joint_venture_land_for_units";
   const sharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
   const marketingPrepLead = sharedTiming.marketingPrepMonths;
   const reraLead = sharedTiming.reraApprovalMonths;

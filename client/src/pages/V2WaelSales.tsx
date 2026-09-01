@@ -141,7 +141,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     { enabled: !!selectedProjectId && !!user }
   );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
-  const isBuildForSale = scenario === "build_for_sale";
+  const isBuildForSale = scenario === "build_for_sale" || scenario === "joint_venture_land_for_units";
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -234,7 +234,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
       if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
       if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
-      if (p.financingScenario === "build_for_sale") {
+      if (p.financingScenario === "build_for_sale" || p.financingScenario === "joint_venture_land_for_units") {
         try {
           const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
           const savedRate = Number(savedRates.buildForSaleMarketingRate ?? 1);

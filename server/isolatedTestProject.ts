@@ -115,13 +115,14 @@ export async function ensureIsolatedTestProject(userId: number): Promise<Isolate
     const inserted = await db.execute(sql`
       INSERT INTO projects
         (userId, name, is_test_project, description, plotNumber, permittedUse,
-         notes, financingScenario, preConMonths, constructionMonths, handoverMonths)
+         notes, financingScenario, preConMonths, constructionMonths, handoverMonths, constructionScheduleJson)
       VALUES
         (${userId}, 'المشروع التجريبي المعزول', 1,
          'بيئة مستقلة لتجربة جميع بطاقات المشروع دون الدخول في القوائم أو التقارير الرسمية',
          'TEST-LAB', 'يُحدد أثناء التجربة',
          'هذا السجل للتجربة فقط ولا يمثل مشروعًا رسميًا',
-         'offplan_escrow', 6, 24, 2)
+         'joint_venture_land_for_units', NULL, NULL, NULL,
+         '{"settings":{"jointVenture":{"landOwnerResidentialSharePct":35,"landOwnerCommercialSharePct":0}}}')
     `);
     projectId = Number((inserted[0] as any).insertId);
   }

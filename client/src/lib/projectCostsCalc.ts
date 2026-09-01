@@ -11,6 +11,7 @@ import {
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { buildPricingUnits } from "@/lib/investorCashFlowEngine";
 import { calculatePricingFormulas, dbProjectToInputs } from "@/lib/projectData";
+import { calculateDeveloperRevenueShare, getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
 
 /**
  * Calculate all project costs from raw data.
@@ -30,6 +31,11 @@ export function calculateProjectCosts(
   const mo = marketOverview || p;
   const cp = competitionPricing || p;
   const activeScenario = scenario || (cp?.activeScenario || "base") as "optimistic" | "base" | "conservative";
+  const financingScenario = p.financingScenario || "offplan_escrow";
+  const isBuildForSale = financingScenario === "build_for_sale";
+  const isBuildForRent = financingScenario === "build_for_rent";
+  const isJointVenture = isJointVentureLandForUnits(financingScenario);
+  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent || isJointVenture;
 
   const landPrice = parseFloat(p.landPrice || "0");
   const agentCommissionLandPct = parseFloat(p.agentCommissionLandPct || "0");
@@ -44,14 +50,14 @@ export function calculateProjectCosts(
   const escrowAccountFee = parseFloat(p.escrowAccountFee || "0");
   const bankFees = parseFloat(p.bankFees || "0");
 
-  const designFeePct = parseFloat(p.designFeePct ?? "2");
+  const designFeePct = parseFloat(p.designFeePct ?? (isJointVenture ? "0" : "2"));
   const designFeeFixed = parseFloat(p.designFeeFixed || "0");
-  const supervisionFeePct = parseFloat(p.supervisionFeePct ?? "2");
+  const supervisionFeePct = parseFloat(p.supervisionFeePct ?? (isJointVenture ? "0" : "2"));
   const supervisionFeeFixed = parseFloat(p.supervisionFeeFixed || "0");
-  const separationFeePerM2 = parseFloat(p.separationFeePerSqft ?? "40");
-  const salesCommissionPct = parseFloat(p.salesCommissionPct ?? "5");
-  const marketingPct = parseFloat(p.marketingPct ?? "2");
-  const developerFeePct = parseFloat(p.developerFeePct ?? "5");
+  const separationFeePerM2 = parseFloat(p.separationFeePerSqft ?? (isJointVenture ? "0" : "40"));
+  const salesCommissionPct = parseFloat(p.salesCommissionPct ?? (isJointVenture ? "0" : "5"));
+  const marketingPct = parseFloat(p.marketingPct ?? (isJointVenture ? "0" : "2"));
+  const developerFeePct = parseFloat(p.developerFeePct ?? (isJointVenture ? "0" : "5"));
 
   const bua = manualBuaSqft;
   const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
@@ -60,9 +66,9 @@ export function calculateProjectCosts(
   const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
   const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
-  const saleableResPct = parseFloat(p.saleableResidentialPct ?? "95") / 100;
-  const saleableRetPct = parseFloat(p.saleableRetailPct ?? "97") / 100;
-  const saleableOffPct = parseFloat(p.saleableOfficesPct ?? "95") / 100;
+  const saleableResPct = parseFloat(p.saleableResidentialPct ?? (isJointVenture ? "0" : "95")) / 100;
+  const saleableRetPct = parseFloat(p.saleableRetailPct ?? (isJointVenture ? "0" : "97")) / 100;
+  const saleableOffPct = parseFloat(p.saleableOfficesPct ?? (isJointVenture ? "0" : "95")) / 100;
   const saleableRes = gfaResSqft * saleableResPct;
   const saleableRet = gfaRetSqft * saleableRetPct;
   const saleableOff = gfaOffSqft * saleableOffPct;
@@ -90,10 +96,12 @@ export function calculateProjectCosts(
   // Simple: count × area × price (same as buildPricingUnits + calculatePricingFormulas)
   // This ensures V2Feasibility shows the SAME revenue as ProjectCardOffplanPage and V2InvestorCashFlow
   const sharedPricing = calculatePricingFormulas(buildPricingUnits(p, dbProjectToInputs(p)));
-  const revenueRes = sharedPricing.revenueResidential;
-  const revenueRet = sharedPricing.revenueRetail;
-  const revenueOff = sharedPricing.revenueOffice;
-  const calculatedRevenue = sharedPricing.totalRevenue;
+  const jointVentureTerms = getJointVentureTerms(p);
+  const revenueShare = calculateDeveloperRevenueShare(sharedPricing, p.financingScenario, jointVentureTerms);
+  const revenueRes = revenueShare.developerResidentialRevenue;
+  const revenueRet = revenueShare.developerRetailRevenue;
+  const revenueOff = revenueShare.developerOfficeRevenue;
+  const calculatedRevenue = revenueShare.developerTotalRevenue;
 
   // CALCULATED COSTS (using corrected formulas from new engine)
   const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
@@ -102,30 +110,26 @@ export function calculateProjectCosts(
   const designFee = designFeeFixed > 0 ? designFeeFixed : constructionCost * (designFeePct / 100);
   const supervisionFee = supervisionFeeFixed > 0 ? supervisionFeeFixed : constructionCost * (supervisionFeePct / 100);
   const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
-  const financingScenario = p.financingScenario || "offplan_escrow";
-  const isBuildForSale = financingScenario === "build_for_sale";
-  const isBuildForRent = financingScenario === "build_for_rent";
-  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   const separationFee = isBuildForRent ? 0 : totalGfaSqft * separationFeePerM2;
   const surveyorFees = parseFloat(p.surveyorFees || "0");
-  const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || 12000;
+  const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || (isJointVenture ? 0 : 12000);
 
-  let buildForSaleMarketingRate = 1;
+  let buildForSaleMarketingRate = isJointVenture ? 0 : 1;
   let buildForRentDeveloperFeeDesignRate = 1.5;
   let buildForRentDeveloperFeeSupervisionRate = 2.5;
-  let reraUnitRegistrationFee = 520;
+  let reraUnitRegistrationFee = isJointVenture ? 0 : 520;
   try {
     const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
-    buildForSaleMarketingRate = Number(savedRates.buildForSaleMarketingRate ?? 1);
+    buildForSaleMarketingRate = Number(savedRates.buildForSaleMarketingRate ?? (isJointVenture ? 0 : 1));
     buildForRentDeveloperFeeDesignRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
     buildForRentDeveloperFeeSupervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
     const configuredUnitRate = Number(savedRates.reraUnitRegistrationFee);
     if (Number.isFinite(configuredUnitRate)) reraUnitRegistrationFee = configuredUnitRate;
   } catch { /* use the approved 1% default */ }
-  const effectiveDeveloperFeePct = isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
+  const effectiveDeveloperFeePct = isJointVenture ? 0 : isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
   const effectiveMarketingPct = isBuildForRent ? 0 : isBuildForSale ? buildForSaleMarketingRate : marketingPct;
-  const developerFee = isBuildForRent
+  const developerFee = isJointVenture ? 0 : isBuildForRent
     ? constructionCost * ((buildForRentDeveloperFeeDesignRate + buildForRentDeveloperFeeSupervisionRate) / 100)
     : calculatedRevenue * (effectiveDeveloperFeePct / 100);
   const salesCommission = isBuildForRent ? 0 : calculatedRevenue * (salesCommissionPct / 100);
@@ -151,12 +155,15 @@ export function calculateProjectCosts(
     : isBuildForSale
     ? computedReraUnitRegFee + developerNocFee
     : computedReraUnitRegFee + reraProjectRegFee + developerNocFee + escrowAccountFee + bankFees + computedReraAuditReportFee + computedReraInspectionFee;
-  const totalCosts = landPrice + agentCommissionLand + landRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
+  const cashLandPrice = isJointVenture ? 0 : landPrice;
+  const cashLandCommission = isJointVenture ? 0 : agentCommissionLand;
+  const cashLandRegistration = isJointVenture ? 0 : landRegistration;
+  const totalCosts = cashLandPrice + cashLandCommission + cashLandRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
 
   return {
-    landPrice,
-    agentCommissionLand,
-    landRegistration,
+    landPrice: cashLandPrice,
+    agentCommissionLand: cashLandCommission,
+    landRegistration: cashLandRegistration,
     soilTestFee,
     topographicSurveyFee,
     officialBodiesFees,
@@ -180,6 +187,15 @@ export function calculateProjectCosts(
     revenueRes: isBuildForRent ? 0 : revenueRes,
     revenueRet: isBuildForRent ? 0 : revenueRet,
     revenueOff: isBuildForRent ? 0 : revenueOff,
+    grossRevenueRes: isBuildForRent ? 0 : revenueShare.grossResidentialRevenue,
+    grossRevenueCommercial: isBuildForRent ? 0 : revenueShare.grossCommercialRevenue,
+    grossTotalRevenue: isBuildForRent ? 0 : revenueShare.grossTotalRevenue,
+    landOwnerResidentialSharePct: isJointVenture ? jointVentureTerms.landOwnerResidentialSharePct : 0,
+    landOwnerResidentialValue: isBuildForRent ? 0 : revenueShare.landOwnerResidentialValue,
+    landOwnerCommercialValue: isBuildForRent ? 0 : revenueShare.landOwnerCommercialValue,
+    landOwnerTotalValue: isBuildForRent ? 0 : revenueShare.landOwnerTotalValue,
+    developerResidentialRevenue: isBuildForRent ? 0 : revenueShare.developerResidentialRevenue,
+    developerCommercialRevenue: isBuildForRent ? 0 : revenueShare.developerCommercialRevenue,
     totalRevenue,
     totalCosts,
   };
