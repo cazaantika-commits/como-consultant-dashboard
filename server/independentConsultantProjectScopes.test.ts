@@ -8,6 +8,7 @@ const requirementsRouter = readFileSync(`${root}/server/routers/consultantRequir
 const cpaPage = readFileSync(`${root}/client/src/pages/CPAPage.tsx`, "utf8");
 const projectScopeComponent = readFileSync(`${root}/client/src/components/consultant/ProjectConsultantRequirements.tsx`, "utf8");
 const migration = readFileSync(`${root}/drizzle/0073_design_only_project_scope_snapshots.sql`, "utf8");
+const projectDraftsMigration = readFileSync(`${root}/drizzle/0075_project_design_scope_recommendations.sql`, "utf8");
 
 let connection: mysql.Connection;
 
@@ -49,7 +50,7 @@ describe("independent design-only project scope contracts", () => {
     expect(cpaRouter).toContain("getFullReport");
   });
 
-  it("uses a non-destructive revision migration and never updates offers, supervision teams, or evaluation results", () => {
+  it("uses non-destructive scope migrations and never updates offers, supervision teams, or evaluation results", () => {
     expect(migration).toContain("DESIGN_SCOPE_ENCYCLOPEDIA_V1");
     expect(migration).toContain("INSERT INTO project_consultant_requirement_sets");
     expect(migration).toContain("INSERT INTO project_consultant_requirements");
@@ -57,6 +58,9 @@ describe("independent design-only project scope contracts", () => {
     expect(migration).not.toMatch(/UPDATE\s+cpa_project_consultants/i);
     expect(migration).not.toMatch(/UPDATE\s+cpa_consultant_supervision_team/i);
     expect(migration).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
+    expect(projectDraftsMigration).not.toMatch(/UPDATE\s+cpa_project_consultants/i);
+    expect(projectDraftsMigration).not.toMatch(/UPDATE\s+cpa_consultant_supervision_team/i);
+    expect(projectDraftsMigration).not.toMatch(/UPDATE\s+cpa_evaluation_results/i);
   });
 });
 
@@ -70,7 +74,7 @@ describe("independent design-only project scope data", () => {
              COUNT(DISTINCT requirement.requirement_group) AS group_count
       FROM cpa_projects cp
       JOIN project_consultant_requirement_sets active_set
-        ON active_set.project_id = cp.project_id AND active_set.status = 'DRAFT'
+        ON active_set.project_id = cp.project_id AND active_set.status IN ('DRAFT', 'APPROVED')
        AND active_set.notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%'
       LEFT JOIN project_consultant_requirements requirement ON requirement.requirement_set_id = active_set.id
       GROUP BY cp.id, cp.project_id, active_set.id
@@ -94,7 +98,7 @@ describe("independent design-only project scope data", () => {
              SUM(CASE WHEN requirement.code = 'CCTV_SIRA' THEN 1 ELSE 0 END) AS combined_count
       FROM project_consultant_requirement_sets active_set
       JOIN project_consultant_requirements requirement ON requirement.requirement_set_id = active_set.id
-      WHERE active_set.status = 'DRAFT'
+      WHERE active_set.status IN ('DRAFT', 'APPROVED')
         AND active_set.notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%'
       GROUP BY active_set.project_id
       ORDER BY active_set.project_id
@@ -112,7 +116,7 @@ describe("independent design-only project scope data", () => {
       SELECT requirement.code, requirement.workstream, requirement.requirement_group
       FROM project_consultant_requirement_sets active_set
       JOIN project_consultant_requirements requirement ON requirement.requirement_set_id = active_set.id
-      WHERE active_set.status = 'DRAFT'
+      WHERE active_set.status IN ('DRAFT', 'APPROVED')
         AND active_set.notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%'
         AND (
           requirement.workstream <> 'DESIGN'
@@ -139,27 +143,35 @@ describe("independent design-only project scope data", () => {
     }
   });
 
-  it("carries forward only documented design selections as an editable starting point", async () => {
+  it("stores the owner-approved Majan scope and assisted editable drafts with the expected selections", async () => {
     const [rows] = await connection.execute(`
-      SELECT cp.plot_number,
+      SELECT cp.plot_number, active_set.status, active_set.notes,
              SUM(CASE WHEN requirement.is_required = 1 THEN 1 ELSE 0 END) AS selected_count
       FROM cpa_projects cp
       JOIN project_consultant_requirement_sets active_set
-        ON active_set.project_id = cp.project_id AND active_set.status = 'DRAFT'
+        ON active_set.project_id = cp.project_id AND active_set.status IN ('DRAFT', 'APPROVED')
        AND active_set.notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%'
       JOIN project_consultant_requirements requirement ON requirement.requirement_set_id = active_set.id
-      GROUP BY cp.plot_number
+      GROUP BY cp.plot_number, active_set.status, active_set.notes
       ORDER BY cp.plot_number
     `) as any;
     const expected: Record<string, number> = {
-      "6457956": 22,
-      "6457879": 22,
-      "3260885": 12,
-      "6185392": 19,
-      "6182776": 12,
-      "6180578": 10,
+      "6457956": 39,
+      "6457879": 36,
+      "3260885": 34,
+      "6185392": 38,
+      "6182776": 34,
+      "6180578": 26,
     };
     expect(rows).toHaveLength(6);
     for (const row of rows) expect(Number(row.selected_count)).toBe(expected[String(row.plot_number)]);
+
+    const majan = rows.find((row: any) => String(row.plot_number) === "6457879");
+    expect(majan.status).toBe("APPROVED");
+    expect(String(majan.notes)).toContain("OWNER_APPROVED_MAJAN_SCOPE_V1");
+    for (const row of rows.filter((entry: any) => String(entry.plot_number) !== "6457879")) {
+      expect(row.status).toBe("DRAFT");
+      expect(String(row.notes)).toContain("ASSISTED_SCOPE_DRAFT_V1");
+    }
   });
 });
