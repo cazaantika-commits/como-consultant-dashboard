@@ -8,6 +8,23 @@ export type IsolatedTestProject = {
   name: string;
   isTestProject: number;
   cpaProjectId: number | null;
+  financingScenario: string;
+  plotNumber: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type TestProjectFinancingScenario =
+  | "joint_venture_land_for_units"
+  | "offplan_escrow"
+  | "offplan_construction"
+  | "build_for_sale"
+  | "build_for_rent";
+
+export type CreateIsolatedTestProjectInput = {
+  name: string;
+  financingScenario: TestProjectFinancingScenario;
+  landOwnerSharePct?: number;
 };
 
 async function rows<T>(db: Db, query: ReturnType<typeof sql>): Promise<T[]> {
@@ -15,30 +32,48 @@ async function rows<T>(db: Db, query: ReturnType<typeof sql>): Promise<T[]> {
   return (result[0] as unknown as T[]) ?? [];
 }
 
-export async function getIsolatedTestProject(userId: number): Promise<IsolatedTestProject | null> {
+function mapTestProject(row: any): IsolatedTestProject {
+  return {
+    id: Number(row.id),
+    name: String(row.name),
+    isTestProject: Number(row.isTestProject),
+    cpaProjectId: row.cpaProjectId == null ? null : Number(row.cpaProjectId),
+    financingScenario: String(row.financingScenario || "offplan_escrow"),
+    plotNumber: row.plotNumber == null ? null : String(row.plotNumber),
+    createdAt: row.createdAt == null ? null : String(row.createdAt),
+    updatedAt: row.updatedAt == null ? null : String(row.updatedAt),
+  };
+}
+
+export async function listIsolatedTestProjects(userId: number): Promise<IsolatedTestProject[]> {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return [];
 
   const result = await rows<any>(db, sql`
     SELECT p.id,
            p.name,
            p.is_test_project AS isTestProject,
-           cp.id AS cpaProjectId
+           p.financingScenario,
+           p.plotNumber,
+           p.createdAt,
+           p.updatedAt,
+           (SELECT MIN(cp.id) FROM cpa_projects cp WHERE cp.project_id = p.id) AS cpaProjectId
     FROM projects p
-    LEFT JOIN cpa_projects cp ON cp.project_id = p.id
     WHERE p.userId = ${userId}
       AND p.is_test_project = 1
-    ORDER BY p.id ASC
-    LIMIT 1
+    ORDER BY p.updatedAt DESC, p.id DESC
   `);
 
-  if (!result[0]) return null;
-  return {
-    id: Number(result[0].id),
-    name: String(result[0].name),
-    isTestProject: Number(result[0].isTestProject),
-    cpaProjectId: result[0].cpaProjectId == null ? null : Number(result[0].cpaProjectId),
-  };
+  return result.map(mapTestProject);
+}
+
+export async function getIsolatedTestProject(userId: number, projectId?: number): Promise<IsolatedTestProject | null> {
+  const projects = await listIsolatedTestProjects(userId);
+  const selected = projectId == null
+    ? projects[projects.length - 1]
+    : projects.find((project) => project.id === projectId);
+
+  return selected || null;
 }
 
 async function ensureDesignScope(db: Db, projectId: number) {
@@ -149,19 +184,11 @@ export async function ensureIsolatedTestProject(userId: number): Promise<Isolate
   let projectId = testProject?.id ?? null;
 
   if (!projectId) {
-    const inserted = await db.execute(sql`
-      INSERT INTO projects
-        (userId, name, is_test_project, description, plotNumber, permittedUse,
-         notes, financingScenario, preConMonths, constructionMonths, handoverMonths, constructionScheduleJson)
-      VALUES
-        (${userId}, 'المشروع التجريبي المعزول', 1,
-         'بيئة مستقلة لتجربة جميع بطاقات المشروع دون الدخول في القوائم أو التقارير الرسمية',
-         'TEST-LAB', 'يُحدد أثناء التجربة',
-         'هذا السجل للتجربة فقط ولا يمثل مشروعًا رسميًا',
-         'joint_venture_land_for_units', NULL, NULL, NULL,
-         '{"settings":{"jointVenture":{"landOwnerProjectSharePct":35,"landOwnerResidentialSharePct":35,"landOwnerCommercialSharePct":35,"developmentLicenseCost":0,"waelLicenseRegistrationCost":0,"landOwnerLicenseRegistrationCost":0,"landOwnerUnitsRegistrationFeePct":4}}}')
-    `);
-    projectId = Number((inserted[0] as any).insertId);
+    return createIsolatedTestProject(userId, {
+      name: "المشروع التجريبي المعزول",
+      financingScenario: "joint_venture_land_for_units",
+      landOwnerSharePct: 35,
+    });
   }
 
   await ensureJointVentureOffPlanTerms(db, projectId);
@@ -185,4 +212,102 @@ export async function ensureIsolatedTestProject(userId: number): Promise<Isolate
   testProject = await getIsolatedTestProject(userId);
   if (!testProject) throw new Error("تعذر تهيئة المشروع التجريبي");
   return testProject;
+}
+
+export async function createIsolatedTestProject(
+  userId: number,
+  input: CreateIsolatedTestProjectInput,
+): Promise<IsolatedTestProject> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const name = input.name.trim();
+  if (!name) throw new Error("اسم المشروع التجريبي مطلوب");
+  const scenario = input.financingScenario;
+  const rawShare = Number(input.landOwnerSharePct ?? 35);
+  const landOwnerSharePct = Number.isFinite(rawShare) ? Math.max(0, Math.min(100, rawShare)) : 35;
+  const schedule = scenario === "joint_venture_land_for_units"
+    ? {
+        settings: {
+          jointVenture: {
+            landOwnerProjectSharePct: landOwnerSharePct,
+            landOwnerResidentialSharePct: landOwnerSharePct,
+            landOwnerCommercialSharePct: landOwnerSharePct,
+            developmentLicenseCost: 0,
+            waelLicenseRegistrationCost: 0,
+            landOwnerLicenseRegistrationCost: 0,
+            landOwnerUnitsRegistrationFeePct: 4,
+          },
+        },
+      }
+    : { settings: {} };
+
+  const inserted = await db.execute(sql`
+    INSERT INTO projects
+      (userId, name, is_test_project, description, plotNumber, permittedUse,
+       notes, financingScenario, preConMonths, constructionMonths, handoverMonths,
+       marketingPrepMonths, reraLeadMonths, startDate, constructionScheduleJson)
+    VALUES
+      (${userId}, ${name}, 1,
+       'بيئة مستقلة لتجربة جميع بطاقات المشروع دون الدخول في القوائم أو التقارير الرسمية',
+       NULL, NULL,
+       'هذا السجل للتجربة فقط ولا يمثل مشروعًا رسميًا',
+       ${scenario}, NULL, NULL, NULL, NULL, NULL, NULL,
+       ${JSON.stringify(schedule)})
+  `);
+  const projectId = Number((inserted[0] as any).insertId);
+  if (!projectId) throw new Error("تعذر إنشاء المشروع التجريبي");
+
+  await db.execute(sql`
+    UPDATE projects
+    SET developerFeePct = NULL,
+        saleableResidentialPct = NULL,
+        saleableRetailPct = NULL,
+        saleableOfficesPct = NULL,
+        studioArea = NULL,
+        residential1brArea = NULL,
+        residential2brArea = NULL,
+        residential2brMaidArea = NULL,
+        residential3brArea = NULL,
+        residential3brMaidArea = NULL,
+        villaArea = NULL,
+        townhouseArea = NULL,
+        retailSmallArea = NULL,
+        retailMediumArea = NULL,
+        retailLargeArea = NULL,
+        officeSmallArea = NULL,
+        officeMediumArea = NULL,
+        officeLargeArea = NULL,
+        studioPrice = NULL,
+        residential1brPrice = NULL,
+        residential2brPrice = NULL,
+        residential2brMaidPrice = NULL,
+        residential3brPrice = NULL,
+        residential3brMaidPrice = NULL,
+        villaPrice = NULL,
+        townhousePrice = NULL,
+        retailSmallPrice = NULL,
+        retailMediumPrice = NULL,
+        retailLargePrice = NULL,
+        officeSmallPrice = NULL,
+        officeMediumPrice = NULL,
+        officeLargePrice = NULL
+    WHERE id = ${projectId} AND userId = ${userId} AND is_test_project = 1
+  `);
+
+  await db.execute(sql`
+    INSERT INTO cpa_projects
+      (project_id, plot_number, location, project_type, description,
+       bua_sqft, construction_cost_per_sqft, duration_months, status)
+    VALUES
+      (${projectId}, ${`TEST-${projectId}`}, 'بيئة تجريبية معزولة', 'OTHER',
+       'مشروع تجريبي لا يدخل في تقييمات أو تقارير المشاريع الرسمية',
+       0, 0, 0, 'ACTIVE')
+  `);
+
+  await ensureDesignScope(db, projectId);
+  await ensureJointVentureOffPlanTerms(db, projectId);
+  const created = await getIsolatedTestProject(userId, projectId);
+  if (!created) throw new Error("تعذر قراءة المشروع التجريبي بعد إنشائه");
+  return created;
 }

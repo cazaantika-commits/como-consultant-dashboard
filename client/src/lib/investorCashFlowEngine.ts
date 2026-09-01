@@ -635,6 +635,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     grossPricingFormulas,
     scenario,
     jointVentureTerms,
+    {
+      residential: projectFormulas.sellableResidential,
+      retail: projectFormulas.sellableRetail,
+      office: projectFormulas.sellableOffice,
+    },
   );
   const pricingFormulas = {
     ...grossPricingFormulas,

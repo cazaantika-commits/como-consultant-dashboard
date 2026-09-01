@@ -29,7 +29,7 @@ describe("isolated test project contract", () => {
     expect(migration).not.toMatch(/DELETE\s+FROM/i);
   });
 
-  it("creates one reusable empty project with the same CPA project and 43-item design scope", () => {
+  it("creates reusable empty projects with an independent CPA project and 43-item design scope", () => {
     expect(service).toContain("ISOLATED_TEST_PROJECT");
     expect(service).toContain("is_test_project = 1");
     expect(service).toContain("INSERT INTO projects");
@@ -40,13 +40,23 @@ describe("isolated test project contract", () => {
     expect(service).not.toContain("pricePerSqft:");
     expect(service).not.toContain("landPrice:");
     expect(service).not.toContain("constructionCost:");
+    expect(service).toContain("listIsolatedTestProjects");
+    expect(service).toContain("createIsolatedTestProject");
+    expect(service).toContain("ORDER BY p.updatedAt DESC, p.id DESC");
+    expect(service).toContain("WHERE id = ${projectId} AND userId = ${userId} AND is_test_project = 1");
   });
 
   it("exposes a dedicated authenticated entry and reuses the real project cards", () => {
     expect(projectsRouter).toContain("getTestProject");
     expect(projectsRouter).toContain("ensureTestProject");
+    expect(projectsRouter).toContain("listTestProjects");
+    expect(projectsRouter).toContain("createTestProject");
+    expect(projectsRouter).toContain("getTestProjectById");
     expect(testPage).toContain('<BateekhaPage');
     expect(testPage).toContain('mode="test"');
+    expect(testPage).toContain("إنشاء مشروع تجريبي جديد");
+    expect(testPage).toContain("projectId=");
+    expect(testPage).toContain("حصة مالك الأرض (%)");
     expect(app).toContain('<Route path="/test-project" component={TestProjectPage} />');
     expect(home).toContain('path: "/test-project"');
     expect(home).toContain("المشروع التجريبي");

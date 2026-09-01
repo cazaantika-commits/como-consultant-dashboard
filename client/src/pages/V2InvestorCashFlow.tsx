@@ -90,6 +90,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const isJointVenture = scenario === "joint_venture_land_for_units";
   const hasFinancialInputs = totalRevenue > 0
     && isJointVentureFinancialResultReady(projectQuery.data, plansQuery.data?.[0]);
+  const projectCosts = useMemo(() => calculateProjectCosts(projectQuery.data), [projectQuery.data]);
 
   // ─── Build flat monthly arrays for each row ────────────────────────────
   const getRowValues = (row: CostRow): number[] => [
@@ -105,7 +106,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const profit = totalCredit - totalDebit;
   const capital = useMemo(() => calculateInvestorCapitalSummary(data), [data]);
   const feasibilityInvestorProfit = useMemo<number | null>(() => {
-    const costs = calculateProjectCosts(projectQuery.data);
+    const costs = projectCosts;
     if (!costs) return null;
     if (!hasFinancialInputs) return null;
     if (scenario === "joint_venture_land_for_units") {
@@ -119,7 +120,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
     const projectProfit = costs.totalRevenue - feasibilityTotalCosts;
     const comoShare = projectProfit > 0 ? projectProfit * 0.15 : 0;
     return projectProfit - comoShare;
-  }, [data.rows, projectQuery.data, scenario, hasFinancialInputs]);
+  }, [data.rows, projectCosts, scenario, hasFinancialInputs]);
   const feasibilityDifference = feasibilityInvestorProfit === null ? null : profit - feasibilityInvestorProfit;
   const reconcilesWithFeasibility = feasibilityDifference !== null && Math.abs(feasibilityDifference) < 0.001;
   const matrixStart = formatDate(monthDates[0] || "");
@@ -197,6 +198,29 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
           </div>
         </div>
       </div>
+
+      {isJointVenture && (
+        <section className="border-b border-violet-200 bg-violet-50/70 px-5 py-3">
+          <div className="mx-auto grid max-w-full gap-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
+            <div className="rounded-xl border border-violet-100 bg-white px-3 py-2">
+              <p className="text-[10px] font-black text-violet-800">حصة المالك السكنية</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{fmt(projectCosts?.landOwnerResidentialArea || 0)} قدم² × {fmt(projectCosts?.residentialAveragePricePerSqft || 0)} درهم/قدم²</p>
+            </div>
+            <div className="rounded-xl border border-violet-100 bg-white px-3 py-2">
+              <p className="text-[10px] font-black text-violet-800">حصة المالك التجارية</p>
+              <p className="mt-1 text-xs font-bold text-slate-800">{fmt(projectCosts?.landOwnerCommercialArea || 0)} قدم² × {fmt(projectCosts?.commercialAveragePricePerSqft || 0)} درهم/قدم²</p>
+            </div>
+            <div className="rounded-xl border border-violet-100 bg-white px-3 py-2">
+              <p className="text-[10px] font-black text-violet-800">إجمالي قيمة حصة المالك</p>
+              <p className="mt-1 text-xs font-black tabular-nums text-violet-950">{fmt(projectCosts?.landOwnerTotalValue || 0)} درهم</p>
+            </div>
+            <div className="rounded-xl bg-violet-800 px-4 py-2 text-white">
+              <p className="text-[10px] font-bold text-violet-100">مصروف وائل عند الإنجاز ({projectCosts?.landOwnerUnitsRegistrationFeePct ?? 4}%)</p>
+              <p className="mt-1 text-sm font-black tabular-nums">{fmt(projectCosts?.landOwnerUnitsRegistrationCost || 0)} درهم</p>
+            </div>
+          </div>
+        </section>
+      )}
 
 
 

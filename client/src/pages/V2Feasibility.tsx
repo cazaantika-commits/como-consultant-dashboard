@@ -269,7 +269,23 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                 <div className="space-y-1">
                   {isJointVenture ? <>
                     <Row label="القيمة الإجمالية لكل الوحدات" value={fmt(grossTotalRevenue)} pct={100} color="text-slate-700" />
-                    <Row label={`حصة صاحب الأرض من جميع الوحدات (${jointVentureTerms.landOwnerResidentialSharePct}%)`} value={fmt(landOwnerTotalValue)} pct={grossTotalRevenue > 0 ? (landOwnerTotalValue / grossTotalRevenue * 100) : 0} color="text-violet-700" />
+                    <Row label={`حصة صاحب الأرض من المساحة القابلة للبيع (${jointVentureTerms.landOwnerProjectSharePct}%)`} value={fmt(landOwnerTotalValue)} pct={grossTotalRevenue > 0 ? (landOwnerTotalValue / grossTotalRevenue * 100) : 0} color="text-violet-700" />
+                    <div className="my-2 grid gap-2 rounded-xl border border-violet-200 bg-violet-50/60 p-3 sm:grid-cols-2">
+                      <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-violet-100">
+                        <p className="text-[10px] font-black text-violet-800">السكني — أساس حصة المالك</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-700">{fmt(costs?.landOwnerResidentialArea || 0)} قدم² × {fmt(costs?.residentialAveragePricePerSqft || 0)} درهم/قدم²</p>
+                        <p className="mt-1 text-xs font-black text-violet-900">القيمة: {fmt(costs?.landOwnerResidentialValue || 0)} درهم</p>
+                      </div>
+                      <div className="rounded-lg bg-white px-3 py-2 ring-1 ring-violet-100">
+                        <p className="text-[10px] font-black text-violet-800">التجاري — أساس حصة المالك</p>
+                        <p className="mt-1 text-[11px] font-bold text-slate-700">{fmt(costs?.landOwnerCommercialArea || 0)} قدم² × {fmt(costs?.commercialAveragePricePerSqft || 0)} درهم/قدم²</p>
+                        <p className="mt-1 text-xs font-black text-violet-900">القيمة: {fmt(costs?.landOwnerCommercialValue || 0)} درهم</p>
+                      </div>
+                      <div className="sm:col-span-2 flex flex-col justify-between gap-1 rounded-lg border border-violet-200 bg-violet-100/70 px-3 py-2 sm:flex-row sm:items-center">
+                        <span className="text-[11px] font-black text-violet-900">رسوم التسجيل عند الإنجاز = 4% × إجمالي قيمة حصة المالك</span>
+                        <span className="text-sm font-black tabular-nums text-violet-950">{fmt(costs?.landOwnerUnitsRegistrationCost || 0)} درهم</span>
+                      </div>
+                    </div>
                     <Row label="إيراد المطور من السكني" value={fmt(revRes)} pct={grossTotalRevenue > 0 ? (revRes / grossTotalRevenue * 100) : 0} color="text-teal-700" />
                     <Row label="إيراد المطور من التجاري" value={fmt(revRet + revOff)} pct={grossTotalRevenue > 0 ? ((revRet + revOff) / grossTotalRevenue * 100) : 0} color="text-teal-700" />
                     <TotalRow label="إجمالي إيراد المطور" value={fmt(totalRevenue)} bgColor="bg-teal-50" textColor="text-teal-800" />

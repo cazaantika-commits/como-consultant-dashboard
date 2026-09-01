@@ -140,6 +140,46 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
     expect(agreement.totalAgreementCosts).toBe(371_000);
   });
 
+  it("calculates the owner allocation from saleable area and weighted price per sqft, never from unit count", () => {
+    const terms = getJointVentureTerms({
+      constructionScheduleJson: saveJointVentureTerms("{}", { landOwnerProjectSharePct: 30 }),
+    });
+    const result = calculateJointVentureRevenueShare({
+      grossResidentialRevenue: 9_000_000,
+      grossRetailRevenue: 3_000_000,
+      grossOfficeRevenue: 0,
+      pricedResidentialArea: 6_000,
+      pricedRetailArea: 1_000,
+      pricedOfficeArea: 0,
+      saleableResidentialArea: 8_000,
+      saleableRetailArea: 1_200,
+      saleableOfficeArea: 0,
+      terms,
+    });
+    const agreement = calculateJointVentureAgreementCosts(result.landOwnerTotalValue, terms);
+
+    expect(result.calculationBasis).toBe("saleable_area_weighted_price");
+    expect(result.residentialAveragePricePerSqft).toBe(1_500);
+    expect(result.retailAveragePricePerSqft).toBe(3_000);
+    expect(result.landOwnerResidentialArea).toBe(2_400);
+    expect(result.landOwnerCommercialArea).toBe(360);
+    expect(result.landOwnerResidentialValue).toBe(3_600_000);
+    expect(result.landOwnerCommercialValue).toBe(1_080_000);
+    expect(result.landOwnerTotalValue).toBe(4_680_000);
+    expect(result.developerResidentialArea).toBe(5_600);
+    expect(result.developerCommercialArea).toBe(840);
+    expect(result.developerTotalRevenue).toBe(10_920_000);
+    expect(agreement.landOwnerUnitsRegistrationCost).toBe(187_200);
+  });
+
+  it("keeps the landowner percentage independent in each project JSON", () => {
+    const projectOne = saveJointVentureTerms("{}", { landOwnerProjectSharePct: 35 });
+    const projectTwo = saveJointVentureTerms("{}", { landOwnerProjectSharePct: 30 });
+
+    expect(getJointVentureTerms({ constructionScheduleJson: projectOne }).landOwnerProjectSharePct).toBe(35);
+    expect(getJointVentureTerms({ constructionScheduleJson: projectTwo }).landOwnerProjectSharePct).toBe(30);
+  });
+
   it("treats land as non-cash, routes developer-share sales through off-plan escrow, and excludes COMO profit share", () => {
     const paymentPlanJson = JSON.stringify({
       version: 2,
@@ -245,10 +285,12 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
 
     expect(isFinancialStudiesTabVisible("escrow", "joint_venture_land_for_units")).toBe(true);
     expect(projectRouter).toContain('"joint_venture_land_for_units"');
-    expect(isolatedProject).toContain('"landOwnerProjectSharePct":35');
-    expect(isolatedProject).toContain('"landOwnerCommercialSharePct":35');
-    expect(isolatedProject).toContain('"landOwnerUnitsRegistrationFeePct":4');
-    expect(feasibility).toContain("حصة صاحب الأرض من جميع الوحدات");
+    expect(isolatedProject).toContain("landOwnerProjectSharePct: landOwnerSharePct");
+    expect(isolatedProject).toContain("landOwnerCommercialSharePct: landOwnerSharePct");
+    expect(isolatedProject).toContain("landOwnerUnitsRegistrationFeePct: 4");
+    expect(feasibility).toContain("حصة صاحب الأرض من المساحة القابلة للبيع");
+    expect(feasibility).toContain("residentialAveragePricePerSqft");
+    expect(feasibility).toContain("commercialAveragePricePerSqft");
     expect(feasibility).toContain("ربح / خسارة المطور");
     expect(timeline).toContain('const isBuildForSale = projectType === "build_for_sale";');
     expect(timeline).toContain("مؤشر وائل المحفوظ في صفحة المبيعات");

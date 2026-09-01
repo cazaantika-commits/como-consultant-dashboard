@@ -347,6 +347,11 @@ export function calculatePricingFormulas(units: PricingUnit[]) {
   const revenueOffice = office.reduce((s, u) => s + u.count * u.area * u.price, 0);
   const totalRevenue = revenueResidential + revenueRetail + revenueOffice;
 
+  const areaResidential = residential.reduce((s, u) => s + u.count * u.area, 0);
+  const areaRetail = retail.reduce((s, u) => s + u.count * u.area, 0);
+  const areaOffice = office.reduce((s, u) => s + u.count * u.area, 0);
+  const totalAreaUsed = areaResidential + areaRetail + areaOffice;
+
   const totalUnits = units.reduce((s, u) => s + u.count, 0);
 
   // حساب المواقف
@@ -358,8 +363,6 @@ export function calculatePricingFormulas(units: PricingUnit[]) {
   const parkingOffice = office.reduce((s, u) => s + u.count * Math.ceil(u.area / 500), 0);
   const totalParking = parkingResidential + parkingRetail + parkingOffice;
 
-  const totalAreaUsed = units.reduce((s, u) => s + u.count * u.area, 0);
-
   return {
     revenueResidential,
     revenueRetail,
@@ -370,6 +373,9 @@ export function calculatePricingFormulas(units: PricingUnit[]) {
     parkingResidential,
     parkingRetail,
     parkingOffice,
+    areaResidential,
+    areaRetail,
+    areaOffice,
     totalAreaUsed,
   };
 }
@@ -385,15 +391,24 @@ export function calculateCosts(
 ) {
   const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalUnits } = pricingFormulas;
-  const revenueShare = calculateDeveloperRevenueShare(pricingFormulas, rates.projectType, {
-    landOwnerProjectSharePct: rates.landOwnerResidentialSharePct,
-    landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
-    landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
-    developmentLicenseCost: rates.developmentLicenseCost,
-    waelLicenseRegistrationCost: rates.waelLicenseRegistrationCost,
-    landOwnerLicenseRegistrationCost: rates.landOwnerLicenseRegistrationCost,
-    landOwnerUnitsRegistrationFeePct: rates.landOwnerUnitsRegistrationFeePct,
-  });
+  const revenueShare = calculateDeveloperRevenueShare(
+    pricingFormulas,
+    rates.projectType,
+    {
+      landOwnerProjectSharePct: rates.landOwnerResidentialSharePct,
+      landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
+      landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
+      developmentLicenseCost: rates.developmentLicenseCost,
+      waelLicenseRegistrationCost: rates.waelLicenseRegistrationCost,
+      landOwnerLicenseRegistrationCost: rates.landOwnerLicenseRegistrationCost,
+      landOwnerUnitsRegistrationFeePct: rates.landOwnerUnitsRegistrationFeePct,
+    },
+    {
+      residential: projectFormulas.sellableResidential,
+      retail: projectFormulas.sellableRetail,
+      office: projectFormulas.sellableOffice,
+    },
+  );
   const totalRevenue = revenueShare.developerTotalRevenue;
   const jointVentureAgreementCosts = calculateJointVentureAgreementCosts(
     revenueShare.landOwnerTotalValue,

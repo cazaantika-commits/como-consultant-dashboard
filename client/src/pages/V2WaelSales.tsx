@@ -68,7 +68,7 @@ import {
 } from "@/lib/flexiblePaymentPlan";
 import { buildPaymentCalendar, buyerDueCalendar, expandPaymentCalendarEntries } from "@/lib/paymentPlanCalendar";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
-import { getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
+import { calculateDeveloperRevenueShare, getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
 import { getJointVentureInputReadiness, hasApprovedWaelSalesIndicator } from "@/lib/jointVentureInputReadiness";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -330,10 +330,33 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     }),
     [unitData]
   );
-  const grossTotalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
+  const currentPricingFormulas = useMemo(() => calculatePricingFormulas(unitRevenues.map((unit) => ({
+    name: unit.name,
+    category: unit.category as "residential" | "retail" | "office",
+    area: unit.area,
+    price: unit.price,
+    count: unit.count,
+  }))), [unitRevenues]);
+  const currentProjectFormulas = useMemo(() => {
+    if (!projectQuery.data) return null;
+    const p = projectQuery.data as any;
+    return calculateProjectFormulas(dbProjectToInputs(p), dbProjectToRates(p));
+  }, [projectQuery.data]);
+  const currentRevenueShare = useMemo(() => calculateDeveloperRevenueShare(
+    currentPricingFormulas,
+    scenario,
+    jointVentureTerms,
+    currentProjectFormulas ? {
+      residential: currentProjectFormulas.sellableResidential,
+      retail: currentProjectFormulas.sellableRetail,
+      office: currentProjectFormulas.sellableOffice,
+    } : undefined,
+  ), [currentPricingFormulas, scenario, jointVentureTerms, currentProjectFormulas]);
+  const pricingMixRevenue = currentPricingFormulas.totalRevenue;
+  const grossTotalRevenue = currentRevenueShare.grossTotalRevenue;
   const grossTotalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
   const developerShare = isJointVenture ? (1 - jointVentureTerms.landOwnerProjectSharePct / 100) : 1;
-  const totalRevenue = grossTotalRevenue * developerShare;
+  const totalRevenue = currentRevenueShare.developerTotalRevenue;
   const totalUnits = isJointVenture ? Math.round(grossTotalUnits * developerShare) : grossTotalUnits;
   const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
   const activeUnitRevenues = unitRevenues.filter((unit) => unit.count > 0);
@@ -1133,7 +1156,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         </td>
                         <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
-                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{pricingMixRevenue > 0 ? ((u.total / pricingMixRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
                     ))}</>}
                     {activeRetailUnits.length > 0 && <><tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-orange-700 bg-orange-50/60 border-b border-orange-100">تجزئة</td></tr>
@@ -1153,7 +1176,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         </td>
                         <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
-                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{pricingMixRevenue > 0 ? ((u.total / pricingMixRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
                     ))}</>}
                     {activeOfficeUnits.length > 0 && <><tr><td colSpan={7} className="px-2 py-0.5 text-[10px] font-bold text-teal-700 bg-teal-50/60 border-b border-teal-100">مكاتب</td></tr>
@@ -1173,7 +1196,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                         </td>
                         <td className="px-2 py-0.5 text-center font-mono text-gray-700">{fmtFull(u.totalArea)}</td>
                         <td className="px-2 py-0.5 text-center font-mono font-medium text-emerald-700">{fmt(u.total)}</td>
-                        <td className="px-2 py-0.5 text-center text-gray-500">{totalRevenue > 0 ? ((u.total / totalRevenue) * 100).toFixed(1) : 0}%</td>
+                        <td className="px-2 py-0.5 text-center text-gray-500">{pricingMixRevenue > 0 ? ((u.total / pricingMixRevenue) * 100).toFixed(1) : 0}%</td>
                       </tr>
                     ))}</>}
                   </tbody>
@@ -1184,7 +1207,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       <td className="px-2 py-1" />
                       <td className="px-2 py-1" />
                       <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmtFull(totalArea)}</td>
-                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmt(totalRevenue)}</td>
+                      <td className="px-2 py-1 text-center font-mono font-bold text-teal-800">{fmt(pricingMixRevenue)}</td>
                       <td className="px-2 py-1 text-center font-bold text-teal-800">100%</td>
                     </tr>
                   </tfoot>

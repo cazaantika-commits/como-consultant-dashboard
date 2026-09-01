@@ -33,7 +33,7 @@ const ALL_FIELDS = [
   { key: "saleableResidentialPct", label: "نسبة بيع سكني", unit: "%", type: "number", defaultValue: "95" },
   { key: "saleableRetailPct", label: "نسبة بيع تجزئة", unit: "%", type: "number", defaultValue: "97" },
   { key: "saleableOfficesPct", label: "نسبة بيع مكاتب", unit: "%", type: "number", defaultValue: "95" },
-  { key: "landOwnerProjectSharePct", label: "حصة مالك الأرض من جميع الوحدات", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true },
+  { key: "landOwnerProjectSharePct", label: "حصة مالك الأرض من المساحة القابلة للبيع", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true, hint: "تُحفظ لكل مشروع مستقل وتُطبق على المساحة السكنية والتجارية القابلة للبيع؛ حصة وائل = 100% ناقص هذه النسبة" },
   { key: "developmentLicenseCost", label: "رخصة التطوير العقاري للاتفاق", unit: "درهم", type: "number", jointVentureOnly: true },
   { key: "waelLicenseRegistrationCost", label: "تسجيل وائل في رخصة التطوير", unit: "درهم", type: "number", jointVentureOnly: true },
   { key: "landOwnerLicenseRegistrationCost", label: "تسجيل صاحب الأرض في الرخصة", unit: "درهم", type: "number", jointVentureOnly: true },
@@ -321,7 +321,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       )}
       {isJointVenture && (
         <div className="mb-3 rounded-xl border border-violet-300 border-r-4 border-r-violet-600 bg-violet-50/80 px-4 py-2 text-[12px] text-violet-950">
-          <span className="font-semibold">Joint Venture Off-Plan:</span> صاحب الأرض يقدّم الأرض ويحصل على النسبة المحددة من جميع الوحدات السكنية والتجارية. يبيع وائل حصته أثناء الإنشاء عبر خطة الدفع وحساب الضمان. مصاريف الرخصة والتسجيل تُدخل هنا، بينما أتعاب الوساطة العقارية وميزانية التسويق تُحددان من صفحة مبيعات وائل.
+          <span className="font-semibold">Joint Venture Off-Plan:</span> صاحب الأرض يقدّم الأرض ويحصل على النسبة المحددة من المساحة السكنية والتجارية القابلة للبيع. يبيع وائل المساحة المتبقية أثناء الإنشاء عبر خطة الدفع وحساب الضمان. مصاريف الرخصة والتسجيل تُدخل هنا، بينما أتعاب الوساطة العقارية وميزانية التسويق تُحددان من صفحة مبيعات وائل.
         </div>
       )}
 

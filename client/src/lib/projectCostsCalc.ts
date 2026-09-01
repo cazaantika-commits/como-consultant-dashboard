@@ -97,7 +97,16 @@ export function calculateProjectCosts(
   // This ensures V2Feasibility shows the SAME revenue as ProjectCardOffplanPage and V2InvestorCashFlow
   const sharedPricing = calculatePricingFormulas(buildPricingUnits(p, dbProjectToInputs(p)));
   const jointVentureTerms = getJointVentureTerms(p);
-  const revenueShare = calculateDeveloperRevenueShare(sharedPricing, p.financingScenario, jointVentureTerms);
+  const revenueShare = calculateDeveloperRevenueShare(
+    sharedPricing,
+    p.financingScenario,
+    jointVentureTerms,
+    {
+      residential: saleableRes,
+      retail: saleableRet,
+      office: saleableOff,
+    },
+  );
   const jointVentureAgreementCosts = calculateJointVentureAgreementCosts(
     revenueShare.landOwnerTotalValue,
     jointVentureTerms,
@@ -199,8 +208,24 @@ export function calculateProjectCosts(
     grossRevenueRes: isBuildForRent ? 0 : revenueShare.grossResidentialRevenue,
     grossRevenueCommercial: isBuildForRent ? 0 : revenueShare.grossCommercialRevenue,
     grossTotalRevenue: isBuildForRent ? 0 : revenueShare.grossTotalRevenue,
+    saleableResidentialArea: revenueShare.saleableResidentialArea,
+    saleableRetailArea: revenueShare.saleableRetailArea,
+    saleableOfficeArea: revenueShare.saleableOfficeArea,
+    saleableCommercialArea: revenueShare.saleableCommercialArea,
+    residentialAveragePricePerSqft: revenueShare.residentialAveragePricePerSqft,
+    retailAveragePricePerSqft: revenueShare.retailAveragePricePerSqft,
+    officeAveragePricePerSqft: revenueShare.officeAveragePricePerSqft,
+    commercialAveragePricePerSqft: revenueShare.commercialAveragePricePerSqft,
     landOwnerResidentialSharePct: isJointVenture ? jointVentureTerms.landOwnerResidentialSharePct : 0,
     landOwnerCommercialSharePct: isJointVenture ? jointVentureTerms.landOwnerCommercialSharePct : 0,
+    landOwnerResidentialArea: revenueShare.landOwnerResidentialArea,
+    landOwnerRetailArea: revenueShare.landOwnerRetailArea,
+    landOwnerOfficeArea: revenueShare.landOwnerOfficeArea,
+    landOwnerCommercialArea: revenueShare.landOwnerCommercialArea,
+    developerResidentialArea: revenueShare.developerResidentialArea,
+    developerRetailArea: revenueShare.developerRetailArea,
+    developerOfficeArea: revenueShare.developerOfficeArea,
+    developerCommercialArea: revenueShare.developerCommercialArea,
     landOwnerResidentialValue: isBuildForRent ? 0 : revenueShare.landOwnerResidentialValue,
     landOwnerCommercialValue: isBuildForRent ? 0 : revenueShare.landOwnerCommercialValue,
     landOwnerTotalValue: isBuildForRent ? 0 : revenueShare.landOwnerTotalValue,

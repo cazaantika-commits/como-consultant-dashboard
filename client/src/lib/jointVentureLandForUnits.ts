@@ -125,24 +125,108 @@ export function calculateJointVentureRevenueShare(input: {
   grossRetailRevenue: number;
   grossOfficeRevenue: number;
   terms: JointVentureTerms;
+  saleableResidentialArea?: number;
+  saleableRetailArea?: number;
+  saleableOfficeArea?: number;
+  pricedResidentialArea?: number;
+  pricedRetailArea?: number;
+  pricedOfficeArea?: number;
 }) {
   const residentialRate = input.terms.landOwnerResidentialSharePct / 100;
   const commercialRate = input.terms.landOwnerCommercialSharePct / 100;
-  const grossCommercialRevenue = input.grossRetailRevenue + input.grossOfficeRevenue;
-  const landOwnerResidentialValue = input.grossResidentialRevenue * residentialRate;
-  const landOwnerCommercialValue = grossCommercialRevenue * commercialRate;
-  const developerResidentialRevenue = input.grossResidentialRevenue - landOwnerResidentialValue;
-  const developerRetailRevenue = input.grossRetailRevenue * (1 - commercialRate);
-  const developerOfficeRevenue = input.grossOfficeRevenue * (1 - commercialRate);
+  const hasExplicitAreaBasis = [
+    input.saleableResidentialArea,
+    input.saleableRetailArea,
+    input.saleableOfficeArea,
+    input.pricedResidentialArea,
+    input.pricedRetailArea,
+    input.pricedOfficeArea,
+  ].some((value) => value !== undefined);
+  const nonNegative = (value: unknown) => Math.max(0, Number(value) || 0);
+  const weightedAveragePrice = (revenue: number, pricedArea: number) => pricedArea > 0 ? revenue / pricedArea : 0;
+
+  const pricedResidentialArea = nonNegative(input.pricedResidentialArea);
+  const pricedRetailArea = nonNegative(input.pricedRetailArea);
+  const pricedOfficeArea = nonNegative(input.pricedOfficeArea);
+  const saleableResidentialArea = hasExplicitAreaBasis ? nonNegative(input.saleableResidentialArea) : 0;
+  const saleableRetailArea = hasExplicitAreaBasis ? nonNegative(input.saleableRetailArea) : 0;
+  const saleableOfficeArea = hasExplicitAreaBasis ? nonNegative(input.saleableOfficeArea) : 0;
+  const residentialAveragePricePerSqft = hasExplicitAreaBasis
+    ? weightedAveragePrice(input.grossResidentialRevenue, pricedResidentialArea)
+    : 0;
+  const retailAveragePricePerSqft = hasExplicitAreaBasis
+    ? weightedAveragePrice(input.grossRetailRevenue, pricedRetailArea)
+    : 0;
+  const officeAveragePricePerSqft = hasExplicitAreaBasis
+    ? weightedAveragePrice(input.grossOfficeRevenue, pricedOfficeArea)
+    : 0;
+
+  const grossResidentialRevenue = hasExplicitAreaBasis
+    ? saleableResidentialArea * residentialAveragePricePerSqft
+    : input.grossResidentialRevenue;
+  const grossRetailRevenue = hasExplicitAreaBasis
+    ? saleableRetailArea * retailAveragePricePerSqft
+    : input.grossRetailRevenue;
+  const grossOfficeRevenue = hasExplicitAreaBasis
+    ? saleableOfficeArea * officeAveragePricePerSqft
+    : input.grossOfficeRevenue;
+  const grossCommercialRevenue = grossRetailRevenue + grossOfficeRevenue;
+  const saleableCommercialArea = saleableRetailArea + saleableOfficeArea;
+  const commercialAveragePricePerSqft = saleableCommercialArea > 0
+    ? grossCommercialRevenue / saleableCommercialArea
+    : 0;
+  const landOwnerResidentialArea = saleableResidentialArea * residentialRate;
+  const landOwnerRetailArea = saleableRetailArea * commercialRate;
+  const landOwnerOfficeArea = saleableOfficeArea * commercialRate;
+  const landOwnerCommercialArea = landOwnerRetailArea + landOwnerOfficeArea;
+  const developerResidentialArea = saleableResidentialArea - landOwnerResidentialArea;
+  const developerRetailArea = saleableRetailArea - landOwnerRetailArea;
+  const developerOfficeArea = saleableOfficeArea - landOwnerOfficeArea;
+  const developerCommercialArea = developerRetailArea + developerOfficeArea;
+
+  const landOwnerResidentialValue = hasExplicitAreaBasis
+    ? landOwnerResidentialArea * residentialAveragePricePerSqft
+    : grossResidentialRevenue * residentialRate;
+  const landOwnerRetailValue = hasExplicitAreaBasis
+    ? landOwnerRetailArea * retailAveragePricePerSqft
+    : grossRetailRevenue * commercialRate;
+  const landOwnerOfficeValue = hasExplicitAreaBasis
+    ? landOwnerOfficeArea * officeAveragePricePerSqft
+    : grossOfficeRevenue * commercialRate;
+  const landOwnerCommercialValue = landOwnerRetailValue + landOwnerOfficeValue;
+  const developerResidentialRevenue = grossResidentialRevenue - landOwnerResidentialValue;
+  const developerRetailRevenue = grossRetailRevenue - landOwnerRetailValue;
+  const developerOfficeRevenue = grossOfficeRevenue - landOwnerOfficeValue;
   const developerCommercialRevenue = developerRetailRevenue + developerOfficeRevenue;
   const developerTotalRevenue = developerResidentialRevenue + developerCommercialRevenue;
-  const grossTotalRevenue = input.grossResidentialRevenue + grossCommercialRevenue;
+  const grossTotalRevenue = grossResidentialRevenue + grossCommercialRevenue;
 
   return {
-    grossResidentialRevenue: input.grossResidentialRevenue,
+    calculationBasis: hasExplicitAreaBasis ? "saleable_area_weighted_price" as const : "gross_revenue_share" as const,
+    grossResidentialRevenue,
+    grossRetailRevenue,
+    grossOfficeRevenue,
     grossCommercialRevenue,
     grossTotalRevenue,
+    saleableResidentialArea,
+    saleableRetailArea,
+    saleableOfficeArea,
+    saleableCommercialArea,
+    residentialAveragePricePerSqft,
+    retailAveragePricePerSqft,
+    officeAveragePricePerSqft,
+    commercialAveragePricePerSqft,
+    landOwnerResidentialArea,
+    landOwnerRetailArea,
+    landOwnerOfficeArea,
+    landOwnerCommercialArea,
+    developerResidentialArea,
+    developerRetailArea,
+    developerOfficeArea,
+    developerCommercialArea,
     landOwnerResidentialValue,
+    landOwnerRetailValue,
+    landOwnerOfficeValue,
     landOwnerCommercialValue,
     landOwnerTotalValue: landOwnerResidentialValue + landOwnerCommercialValue,
     developerResidentialRevenue,
@@ -159,16 +243,48 @@ export function calculateDeveloperRevenueShare(
     revenueRetail: number;
     revenueOffice: number;
     totalRevenue: number;
+    areaResidential?: number;
+    areaRetail?: number;
+    areaOffice?: number;
   },
   projectType: string,
   terms: JointVentureTerms,
+  saleableAreas?: {
+    residential: number;
+    retail: number;
+    office: number;
+  },
 ) {
   if (!isJointVentureLandForUnits(projectType)) {
+    const pricedResidentialArea = Math.max(0, Number(pricing.areaResidential) || 0);
+    const pricedRetailArea = Math.max(0, Number(pricing.areaRetail) || 0);
+    const pricedOfficeArea = Math.max(0, Number(pricing.areaOffice) || 0);
     return {
+      calculationBasis: "gross_revenue_share" as const,
       grossResidentialRevenue: pricing.revenueResidential,
+      grossRetailRevenue: pricing.revenueRetail,
+      grossOfficeRevenue: pricing.revenueOffice,
       grossCommercialRevenue: pricing.revenueRetail + pricing.revenueOffice,
       grossTotalRevenue: pricing.totalRevenue,
+      saleableResidentialArea: pricedResidentialArea,
+      saleableRetailArea: pricedRetailArea,
+      saleableOfficeArea: pricedOfficeArea,
+      saleableCommercialArea: pricedRetailArea + pricedOfficeArea,
+      residentialAveragePricePerSqft: pricedResidentialArea > 0 ? pricing.revenueResidential / pricedResidentialArea : 0,
+      retailAveragePricePerSqft: pricedRetailArea > 0 ? pricing.revenueRetail / pricedRetailArea : 0,
+      officeAveragePricePerSqft: pricedOfficeArea > 0 ? pricing.revenueOffice / pricedOfficeArea : 0,
+      commercialAveragePricePerSqft: pricedRetailArea + pricedOfficeArea > 0 ? (pricing.revenueRetail + pricing.revenueOffice) / (pricedRetailArea + pricedOfficeArea) : 0,
+      landOwnerResidentialArea: 0,
+      landOwnerRetailArea: 0,
+      landOwnerOfficeArea: 0,
+      landOwnerCommercialArea: 0,
+      developerResidentialArea: pricedResidentialArea,
+      developerRetailArea: pricedRetailArea,
+      developerOfficeArea: pricedOfficeArea,
+      developerCommercialArea: pricedRetailArea + pricedOfficeArea,
       landOwnerResidentialValue: 0,
+      landOwnerRetailValue: 0,
+      landOwnerOfficeValue: 0,
       landOwnerCommercialValue: 0,
       landOwnerTotalValue: 0,
       developerResidentialRevenue: pricing.revenueResidential,
@@ -183,6 +299,12 @@ export function calculateDeveloperRevenueShare(
     grossRetailRevenue: pricing.revenueRetail,
     grossOfficeRevenue: pricing.revenueOffice,
     terms,
+    saleableResidentialArea: saleableAreas?.residential,
+    saleableRetailArea: saleableAreas?.retail,
+    saleableOfficeArea: saleableAreas?.office,
+    pricedResidentialArea: pricing.areaResidential,
+    pricedRetailArea: pricing.areaRetail,
+    pricedOfficeArea: pricing.areaOffice,
   });
 }
 

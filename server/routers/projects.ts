@@ -11,7 +11,12 @@ import {
   getProjectFinancialData,
   getProjectEvaluationScores,
 } from "../db";
-import { ensureIsolatedTestProject, getIsolatedTestProject } from "../isolatedTestProject";
+import {
+  createIsolatedTestProject,
+  ensureIsolatedTestProject,
+  getIsolatedTestProject,
+  listIsolatedTestProjects,
+} from "../isolatedTestProject";
 
 // Shared Zod schema for all Fact Sheet fields
 const factSheetFields = {
@@ -193,7 +198,7 @@ export const projectsRouter = router({
     return getAllProjects();
   }),
 
-  // One directly accessible sandbox project. It never appears in the official list.
+  // Backward-compatible access to the original sandbox project.
   getTestProject: publicProcedure.query(({ ctx }) => {
     if (!ctx.user) throw new Error("Unauthorized");
     return getIsolatedTestProject(ctx.user.id);
@@ -203,6 +208,37 @@ export const projectsRouter = router({
     if (!ctx.user) throw new Error("Unauthorized");
     return ensureIsolatedTestProject(ctx.user.id);
   }),
+
+  // Permanent test laboratory: multiple independent projects, all excluded from
+  // official project lists and company-wide financial/operational aggregations.
+  listTestProjects: publicProcedure.query(({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    return listIsolatedTestProjects(ctx.user.id);
+  }),
+
+  getTestProjectById: publicProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      return getIsolatedTestProject(ctx.user.id, input.id);
+    }),
+
+  createTestProject: publicProcedure
+    .input(z.object({
+      name: z.string().trim().min(1).max(255),
+      financingScenario: z.enum([
+        "joint_venture_land_for_units",
+        "offplan_escrow",
+        "offplan_construction",
+        "build_for_sale",
+        "build_for_rent",
+      ]),
+      landOwnerSharePct: z.number().min(0).max(100).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      return createIsolatedTestProject(ctx.user.id, input);
+    }),
 
   // List with summary stats (consultant count, financial summary, fact sheet completeness)
   listWithStats: publicProcedure.query(async ({ ctx }) => {

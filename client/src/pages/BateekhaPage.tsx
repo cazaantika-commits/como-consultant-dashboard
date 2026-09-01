@@ -88,10 +88,13 @@ function TabContent({ tabId }: { tabId: TabId }) {
 
 type BateekhaPageProps = {
   mode?: "standard" | "test";
+  testProjectId?: number;
+  testProjectName?: string;
   testCpaProjectId?: number | null;
+  onExitTestProject?: () => void;
 };
 
-export default function BateekhaPage({ mode = "standard", testCpaProjectId }: BateekhaPageProps = {}) {
+export default function BateekhaPage({ mode = "standard", testProjectId, testProjectName, testCpaProjectId, onExitTestProject }: BateekhaPageProps = {}) {
   const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const { user } = useAuth();
@@ -126,7 +129,7 @@ export default function BateekhaPage({ mode = "standard", testCpaProjectId }: Ba
   // project so the project picker never makes the three consolidated reports vanish.
   // Project-specific cards remain disabled until the project is selected.
   const isTestMode = mode === "test";
-  const basePath = isTestMode ? "/test-project" : "/bateekha";
+  const basePath = isTestMode && testProjectId ? `/test-project?projectId=${testProjectId}` : isTestMode ? "/test-project" : "/bateekha";
   const visibleTabs = TABS.filter((tab) =>
     isFinancialStudiesTabVisible(tab.id, projectType) && (!isTestMode || tab.projectScoped)
   );
@@ -136,7 +139,10 @@ export default function BateekhaPage({ mode = "standard", testCpaProjectId }: Ba
     // change the query string. Update local state as the click happens rather
     // than waiting for a pathname change that may never occur.
     setActiveTab(tab.id);
-    navigate(withReturnPath(`${basePath}?tab=${tab.id}`, basePath));
+    const tabPath = isTestMode && testProjectId
+      ? `/test-project?projectId=${testProjectId}&tab=${tab.id}`
+      : `${basePath}?tab=${tab.id}`;
+    navigate(withReturnPath(tabPath, basePath));
   };
 
   const returnFromTab = () => {
@@ -150,7 +156,8 @@ export default function BateekhaPage({ mode = "standard", testCpaProjectId }: Ba
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-teal-700"><ArrowRight className="h-4 w-4" />الرئيسية</button>
           <span className="h-5 w-px bg-slate-200" />
-          <div className="flex items-center gap-2"><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-white ${isTestMode ? "bg-violet-600" : "bg-teal-600"}`}>{isTestMode ? <FlaskConical className="h-3.5 w-3.5" /> : <Layers3 className="h-3.5 w-3.5" />}</span><h1 className="text-sm font-bold text-slate-900">{isTestMode ? "المشروع التجريبي المعزول" : "الدراسات والتخطيط المالي"}</h1></div>
+          <div className="flex items-center gap-2"><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-white ${isTestMode ? "bg-violet-600" : "bg-teal-600"}`}>{isTestMode ? <FlaskConical className="h-3.5 w-3.5" /> : <Layers3 className="h-3.5 w-3.5" />}</span><h1 className="text-sm font-bold text-slate-900">{isTestMode ? testProjectName || "المشروع التجريبي المعزول" : "الدراسات والتخطيط المالي"}</h1></div>
+          {isTestMode && onExitTestProject && <button type="button" onClick={onExitTestProject} className="mr-auto rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-black text-violet-800 hover:bg-violet-100">مختبر المشاريع</button>}
         </div>
       </header>
 
