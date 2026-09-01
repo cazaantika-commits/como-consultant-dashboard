@@ -964,7 +964,7 @@ export const commandCenterRouter = router({
       // Get platform context. Financial answers use an explicit read-only source
       // tool below, rather than a prompt-only summary or an alternative formula.
       const [projectsList, consultantsList, recentItems, cashFlowReport, commandCenterSnapshot] = await Promise.all([
-        db.select({ id: projects.id, name: projects.name }).from(projects).limit(20),
+        db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.isTestProject, 0)).limit(20),
         db.select({ id: consultants.id, name: consultants.name, specialization: consultants.specialization }).from(consultants).limit(30),
         db.select().from(commandCenterItems).where(eq(commandCenterItems.itemStatus, "active")).orderBy(desc(commandCenterItems.createdAt)).limit(10),
         loadUnifiedGroupCashFlowSource(),
@@ -1137,7 +1137,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       if (!db) return { total: 0, completed: 0, inProgress: 0, delayed: 0, notStarted: 0, onHold: 0, projects: [] };
       
       const allMilestones = await db.select().from(projectMilestones);
-      const allProjects = await db.select({ id: projects.id, name: projects.name }).from(projects);
+      const allProjects = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.isTestProject, 0));
       const projectMap = Object.fromEntries(allProjects.map(p => [p.id, p.name]));
       
       const total = allMilestones.length;
@@ -1407,7 +1407,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const db = await getDb();
       if (!db) return [];
       
-      const allProjects = await db.select().from(projects);
+      const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
       const allPc = await db.select().from(projectConsultants);
       const allConsultants = await db.select().from(consultants);
       
@@ -1517,7 +1517,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       await verifyToken(input.token);
       const db = await getDb();
       if (!db) return [];
-      const allProjects = await db.select().from(projects);
+      const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
       const allCpaProjects = await db.select().from(cpaProjects);
       const allPc = await db.select().from(projectConsultants);
       const allConsultants = await db.select().from(consultants);

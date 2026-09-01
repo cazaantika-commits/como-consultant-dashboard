@@ -553,13 +553,15 @@ export const lifecycleRouter = router({
 
     // Import projects table to get project names
     const { projects } = await import("../../drizzle/schema");
-    const projectsList = await db.select({ id: projects.id, name: projects.name }).from(projects);
+    const projectsList = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.isTestProject, 0));
+    const officialProjectIds = new Set(projectsList.map((project) => project.id));
 
     const overdueItems: string[] = [];
     const upcomingItems: string[] = [];
 
     for (const inst of instances) {
       if (!inst.plannedDueDate) continue;
+      if (!officialProjectIds.has(inst.projectId)) continue;
       const dueMs = new Date(inst.plannedDueDate).getTime();
       const service = services.find((s) => s.serviceCode === inst.serviceCode);
       const stage = stages.find((s) => s.stageCode === service?.stageCode);
@@ -622,10 +624,14 @@ export const lifecycleRouter = router({
       const services = await db.select().from(lifecycleServices);
       const stages = await db.select().from(lifecycleStages);
       const { projects } = await import("../../drizzle/schema");
-      const projectsList = await db.select({ id: projects.id, name: projects.name }).from(projects);
+      const projectsList = await db.select({ id: projects.id, name: projects.name })
+        .from(projects)
+        .where(input.projectId ? eq(projects.id, input.projectId) : eq(projects.isTestProject, 0));
+      const visibleProjectIds = new Set(projectsList.map((project) => project.id));
 
       const alerts = instances
         .filter((inst) => {
+          if (!visibleProjectIds.has(inst.projectId)) return false;
           if (!inst.plannedDueDate) return false;
           const dueMs = new Date(inst.plannedDueDate).getTime();
           return dueMs <= sevenDaysMs; // overdue or within 7 days

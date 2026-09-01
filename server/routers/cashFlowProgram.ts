@@ -779,11 +779,11 @@ export const cashFlowProgramRouter = router({
     if (allCfProjects.length === 0) return null;
 
     // Read from projects table (single source of truth) to override startDate/durations
-    const allMainProjects = await db.select().from(projects);
+    const allMainProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
     for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
 
-    const allProjects = allCfProjects.map(cfp => {
+    const allProjects = allCfProjects.filter((cfp) => !cfp.projectId || mainProjectMap.has(cfp.projectId)).map(cfp => {
       const mp = cfp.projectId ? mainProjectMap.get(cfp.projectId) : null;
       return {
         ...cfp,
@@ -2102,12 +2102,12 @@ export const cashFlowProgramRouter = router({
       if (allCfProjects.length === 0) return null;
 
       // Read from projects table (single source of truth) to override startDate/durations
-      const allMainProjects = await db.select().from(projects);
+      const allMainProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
       const mainProjectMap = new Map<number, typeof allMainProjects[0]>();
       for (const mp of allMainProjects) mainProjectMap.set(mp.id, mp);
 
       // Merge: use projects table values as primary source
-      const allProjects = allCfProjects.map(cfp => {
+      const allProjects = allCfProjects.filter((cfp) => !cfp.projectId || mainProjectMap.has(cfp.projectId)).map(cfp => {
         const mp = cfp.projectId ? mainProjectMap.get(cfp.projectId) : null;
         return {
           ...cfp,
@@ -2364,7 +2364,7 @@ export const cashFlowProgramRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       // Get all projects for this user
-      const allProjects = await db.select().from(projects);
+      const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
       // Get existing CF projects for this user
       const existingCf = await db.select().from(cfProjects);
       const existingProjectIds = new Set(existingCf.map(p => p.projectId));
@@ -2593,7 +2593,7 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return [];
     // Source projects from the projects table (البطاقة) directly
-    const allProjects = await db.select().from(projects);
+    const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     if (allProjects.length === 0) return [];
     // Also get cfProjects for startDate / durations lookup
     const allCfProjs = await db.select().from(cfProjects);
@@ -2878,7 +2878,8 @@ export const cashFlowProgramRouter = router({
     const db = await getDb();
     if (!db) return {};
     const rows = await db.select({ id: projects.id, financingScenario: projects.financingScenario })
-      .from(projects);
+      .from(projects)
+      .where(eq(projects.isTestProject, 0));
     const result: Record<number, string> = {};
     for (const row of rows) {
       result[row.id] = row.financingScenario ?? 'offplan_escrow';
@@ -2886,4 +2887,3 @@ export const cashFlowProgramRouter = router({
     return result;
   }),
 });
-

@@ -22,7 +22,7 @@ export const officialDocumentsRouter = router({
       id: projects.id,
       areaCode: projects.areaCode,
       plotNumber: projects.plotNumber,
-    }).from(projects);
+    }).from(projects).where(eq(projects.isTestProject, 0));
 
     const byKey = new Map<number | string, number>();
     for (const project of allProjects) {

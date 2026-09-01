@@ -381,7 +381,7 @@ async function getPlatformState(): Promise<string> {
 
   let state = "";
   try {
-    const projectList = await db.select().from(projects);
+    const projectList = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     state += `المشاريع (${projectList.length}):\n${projectList.map(p => `- ID:${p.id} ${p.name}`).join("\n")}\n\n`;
   } catch {}
 

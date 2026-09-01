@@ -188,10 +188,10 @@ export const contractsRouter = router({
         : [];
       
       const projectsList = projectIds.length > 0
-        ? await db.select().from(projects)
+        ? await db.select().from(projects).where(eq(projects.isTestProject, 0))
         : [];
 
-      return contracts.map(c => ({
+      return contracts.filter(c => projectsList.some(p => p.id === c.projectId)).map(c => ({
         ...c,
         contractType: types.find(t => t.id === c.contractTypeId),
         project: projectsList.find(p => p.id === c.projectId),

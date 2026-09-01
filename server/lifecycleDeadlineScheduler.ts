@@ -12,7 +12,7 @@ import {
   lifecycleStages,
   projects,
 } from "../drizzle/schema";
-import { and, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { notifyOwner } from "./_core/notification";
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
@@ -47,13 +47,16 @@ async function runDeadlineCheck(): Promise<void> {
     const stages = await db.select().from(lifecycleStages);
     const projectsList = await db
       .select({ id: projects.id, name: projects.name })
-      .from(projects);
+      .from(projects)
+      .where(eq(projects.isTestProject, 0));
+    const officialProjectIds = new Set(projectsList.map((project) => project.id));
 
     const overdueItems: string[] = [];
     const upcomingItems: string[] = [];
 
     for (const inst of instances) {
       if (!inst.plannedDueDate) continue;
+      if (!officialProjectIds.has(inst.projectId)) continue;
       const dueMs = new Date(inst.plannedDueDate).getTime();
       const service = services.find((s) => s.serviceCode === inst.serviceCode);
       const stage = stages.find((s) => s.stageCode === service?.stageCode);

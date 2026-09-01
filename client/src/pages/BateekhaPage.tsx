@@ -13,6 +13,8 @@ import { default as Landmark } from "lucide-react/dist/esm/icons/landmark.js";
 import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
 import { default as WalletCards } from "lucide-react/dist/esm/icons/wallet-cards.js";
 import { default as Layers3 } from "lucide-react/dist/esm/icons/layers-3.js";
+import { default as Users } from "lucide-react/dist/esm/icons/users.js";
+import { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.js";
 import { useProjectContext } from "@/contexts/ProjectContext";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -84,7 +86,12 @@ function TabContent({ tabId }: { tabId: TabId }) {
   }
 }
 
-export default function BateekhaPage() {
+type BateekhaPageProps = {
+  mode?: "standard" | "test";
+  testCpaProjectId?: number | null;
+};
+
+export default function BateekhaPage({ mode = "standard", testCpaProjectId }: BateekhaPageProps = {}) {
   const [location, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const { user } = useAuth();
@@ -118,47 +125,58 @@ export default function BateekhaPage() {
   // Portfolio reports are company-wide reports. They stay visible after choosing a
   // project so the project picker never makes the three consolidated reports vanish.
   // Project-specific cards remain disabled until the project is selected.
-  const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));
+  const isTestMode = mode === "test";
+  const basePath = isTestMode ? "/test-project" : "/bateekha";
+  const visibleTabs = TABS.filter((tab) =>
+    isFinancialStudiesTabVisible(tab.id, projectType) && (!isTestMode || tab.projectScoped)
+  );
   const selectTab = (tab: (typeof TABS)[number]) => {
     if (tab.projectScoped && !selectedProjectId) return;
     // Wouter tracks the pathname while these reports share `/bateekha` and only
     // change the query string. Update local state as the click happens rather
     // than waiting for a pathname change that may never occur.
     setActiveTab(tab.id);
-    navigate(withReturnPath(`/bateekha?tab=${tab.id}`, "/bateekha"));
+    navigate(withReturnPath(`${basePath}?tab=${tab.id}`, basePath));
   };
 
   const returnFromTab = () => {
     setActiveTab(null);
-    navigate(resolveReturnPath(window.location.search, "/bateekha"));
+    navigate(resolveReturnPath(window.location.search, basePath));
   };
 
   return (
-    <div className="financial-studies-language min-h-screen bg-[#f8fafc]" dir="rtl">
+    <div className="financial-studies-language min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f8fafc]" dir="rtl">
       <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur-sm">
         <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 sm:px-6">
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-teal-700"><ArrowRight className="h-4 w-4" />الرئيسية</button>
           <span className="h-5 w-px bg-slate-200" />
-          <div className="flex items-center gap-2"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-600 text-white"><Layers3 className="h-3.5 w-3.5" /></span><h1 className="text-sm font-bold text-slate-900">الدراسات والتخطيط المالي</h1></div>
+          <div className="flex items-center gap-2"><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-white ${isTestMode ? "bg-violet-600" : "bg-teal-600"}`}>{isTestMode ? <FlaskConical className="h-3.5 w-3.5" /> : <Layers3 className="h-3.5 w-3.5" />}</span><h1 className="text-sm font-bold text-slate-900">{isTestMode ? "المشروع التجريبي المعزول" : "الدراسات والتخطيط المالي"}</h1></div>
         </div>
       </header>
 
       {!activeTab ? (
-        <main className="mx-auto max-w-[1720px] px-4 py-7 sm:px-6">
-          <section className="fs-card fs-card-teal mb-6 overflow-hidden shadow-sm">
+        <main className="mx-auto w-full max-w-[1720px] px-4 py-7 sm:px-6">
+          <section className={`fs-card mb-6 overflow-hidden shadow-sm ${isTestMode ? "border-violet-200 bg-violet-50/40" : "fs-card-teal"}`}>
             <div className="grid gap-4 p-4 md:grid-cols-[1fr_auto] md:items-center md:px-5">
               <div>
-                <p className="text-[11px] font-black tracking-wide text-teal-700">الدراسات والتخطيط المالي</p>
-                <h2 className="mt-1 text-xl font-black text-slate-900">اختر المشروع مرة واحدة</h2>
-                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">بعدها تفتح كل بطاقات المشروع نفسه، وزر العودة يعيدك إلى الخطوة السابقة فعلًا.</p>
+                <p className={`text-[11px] font-black tracking-wide ${isTestMode ? "text-violet-700" : "text-teal-700"}`}>{isTestMode ? "بيئة اختبار مستقلة" : "الدراسات والتخطيط المالي"}</p>
+                <h2 className="mt-1 text-xl font-black text-slate-900">{isTestMode ? "جرّب كل بطاقات المشروع بأمان" : "اختر المشروع مرة واحدة"}</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{isTestMode ? "أي بيانات تدخلها هنا تبقى داخل المشروع التجريبي، ولا تظهر في قوائم المشاريع أو مركز القيادة أو المحافظ والتقارير المجمعة." : "بعدها تفتح كل بطاقات المشروع نفسه، وزر العودة يعيدك إلى الخطوة السابقة فعلًا."}</p>
               </div>
-              <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>
+              {isTestMode ? <span className="inline-flex w-fit items-center rounded-full border border-violet-200 bg-white px-4 py-2 text-xs font-black text-violet-700">غير رسمي · لا يدخل في التقارير</span> : <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>}
             </div>
             {selectedProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
           </section>
 
           <div className="mb-4 flex items-center justify-between gap-4"><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-teal-500" /><h3 className="text-lg font-black text-slate-900">كل الدراسات</h3></div>{!selectedProjectId && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">اختر مشروعًا لفتح بطاقات المشروع</span>}</div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {isTestMode && testCpaProjectId && (
+              <button type="button" onClick={() => navigate(`/consultant-proposals?scopeProjectId=${testCpaProjectId}&returnTo=${encodeURIComponent(basePath)}`)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
+                <span className="absolute inset-x-0 top-0 h-1 bg-violet-600" />
+                <span><span className="block text-[15px] font-black text-slate-900">نطاق التصميم والعروض</span><span className="mt-1 block text-[10px] font-bold text-violet-700">نفس مسار المكاتب الاستشارية</span></span>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-violet-600 text-white shadow-sm"><Users className="h-6 w-6" /></span>
+              </button>
+            )}
             {visibleTabs.map((tab, index) => {
               const Icon = tab.icon;
               const tone = TONES[index % TONES.length];

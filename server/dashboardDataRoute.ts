@@ -65,7 +65,7 @@ async function buildDataFromStructuredTables(): Promise<any> {
 
   // Get all projects
   const [projectRows] = (await db.execute(
-    sql`SELECT id, name, bua, pricePerSqft FROM projects`
+    sql`SELECT id, name, bua, pricePerSqft FROM projects WHERE is_test_project = 0`
   )) as any[];
 
   // Get all project-consultant relationships with consultant names
@@ -199,7 +199,7 @@ router.get("/projects", async (_req, res) => {
     if (!db) return res.json([]);
 
     const [projectRows] = (await db.execute(
-      sql`SELECT id, name FROM projects ORDER BY id`
+      sql`SELECT id, name FROM projects WHERE is_test_project = 0 ORDER BY id`
     )) as any[];
 
     const [pcRows] = (await db.execute(

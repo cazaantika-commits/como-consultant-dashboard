@@ -53,6 +53,7 @@ import { default as Eye } from "lucide-react/dist/esm/icons/eye.js";
 import { default as EyeOff } from "lucide-react/dist/esm/icons/eye-off.js";
 import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
 import { default as Home } from "lucide-react/dist/esm/icons/house.js";
+import { useLocation } from "wouter";
 import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
 import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
 import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
@@ -2694,12 +2695,22 @@ export default function CPAPage() {
   const initialParams = new URLSearchParams(window.location.search);
   const initialScopeProjectId = Number(initialParams.get("scopeProjectId"));
   const initialSettings = initialParams.get("settings") === "1";
+  const returnTo = initialParams.get("returnTo");
+  const [, navigate] = useLocation();
   const [screen, setScreen] = useState<Screen>(Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
 
-  function goHome() { setScreen("home"); setSelectedProjectId(null); setSelectedPcId(null); }
+  function goHome() {
+    setSelectedProjectId(null);
+    setSelectedPcId(null);
+    if (returnTo) {
+      navigate(returnTo);
+      return;
+    }
+    setScreen("home");
+  }
   function goProject(id: number) { setSelectedProjectId(id); setScreen("project-detail"); }
   function goScopeSetup(id: number) { setSelectedProjectId(id); setScreen("project-requirements"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }

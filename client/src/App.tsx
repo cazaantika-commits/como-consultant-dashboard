@@ -88,6 +88,7 @@ import ProjectLaunchGatePage from "./pages/ProjectLaunchGatePage";
 import ProjectReferencePage from "./pages/ProjectReferencePage";
 import ConsultantAppointmentPackPage from "./pages/ConsultantAppointmentPackPage";
 import ContractDeliverablesPage from "./pages/ContractDeliverablesPage";
+import TestProjectPage from "./pages/TestProjectPage";
 
 function Router() {
   return (
@@ -169,6 +170,7 @@ function Router() {
       <Route path="/v2/timeline" component={V2Timeline} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
+      <Route path="/test-project" component={TestProjectPage} />
       <Route path="/project-launch" component={ProjectLaunchGatePage} />
       <Route path="/project-reference" component={ProjectReferencePage} />
       <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />

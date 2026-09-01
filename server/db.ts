@@ -93,7 +93,10 @@ export async function getUserByOpenId(openId: string) {
 export async function getUserProjects(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(projects).where(eq(projects.userId, userId));
+  return await db.select().from(projects).where(and(
+    eq(projects.userId, userId),
+    eq(projects.isTestProject, 0),
+  ));
 }
 
 export async function getProjectById(projectId: number, userId?: number) {
@@ -428,7 +431,7 @@ export async function upsertConsultantDetail(consultantId: number, data: Partial
 export async function getAllProjects() {
   const db = await getDb();
   if (!db) return [];
-  return await db.select().from(projects);
+  return await db.select().from(projects).where(eq(projects.isTestProject, 0));
 }
 
 // Get all consultants (no user filter - for portal)

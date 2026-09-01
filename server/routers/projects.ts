@@ -11,6 +11,7 @@ import {
   getProjectFinancialData,
   getProjectEvaluationScores,
 } from "../db";
+import { ensureIsolatedTestProject, getIsolatedTestProject } from "../isolatedTestProject";
 
 // Shared Zod schema for all Fact Sheet fields
 const factSheetFields = {
@@ -189,6 +190,17 @@ export const projectsRouter = router({
   list: publicProcedure.query(({ ctx }) => {
     if (!ctx.user) return [];
     return getAllProjects();
+  }),
+
+  // One directly accessible sandbox project. It never appears in the official list.
+  getTestProject: publicProcedure.query(({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    return getIsolatedTestProject(ctx.user.id);
+  }),
+
+  ensureTestProject: publicProcedure.mutation(({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    return ensureIsolatedTestProject(ctx.user.id);
   }),
 
   // List with summary stats (consultant count, financial summary, fact sheet completeness)

@@ -27,7 +27,7 @@ export const sectionStatusRouter = router({
     const allProjects = await db.select({
       id: projects.id,
       name: projects.name,
-    }).from(projects);
+    }).from(projects).where(eq(projects.isTestProject, 0));
 
     if (allProjects.length === 0) {
       return { projects: [], totalProjects: 0 };

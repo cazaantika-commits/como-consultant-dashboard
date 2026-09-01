@@ -210,7 +210,7 @@ export const projectLaunchGateRouter = router({
 
       const today = new Date().toISOString().slice(0, 10);
       const [projectRows, profileRows, evidenceRows, approvedMarketRows, activeStageRows, plannedServiceRows, proposalRows, activeContractRows, taskRows, meetingRows] = await Promise.all([
-        db.select().from(projects),
+        db.select().from(projects).where(eq(projects.isTestProject, 0)),
         db.select({ projectId: projectMarketSearchProfiles.projectId }).from(projectMarketSearchProfiles),
         db.select({ projectId: projectMarketEvidence.projectId }).from(projectMarketEvidence).where(eq(projectMarketEvidence.verificationStatus, "verified")),
         db.select({ projectId: marketDecisionApprovals.projectId }).from(marketDecisionApprovals).where(eq(marketDecisionApprovals.decisionStatus, "approved")),

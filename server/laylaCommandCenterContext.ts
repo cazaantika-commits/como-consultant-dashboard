@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 type SnapshotProject = { id: number; name: string };
 
@@ -42,7 +42,9 @@ function findProjectId(projects: SnapshotProject[], requested?: string) {
 export async function loadLaylaCommandCenterSnapshot(db: any, member: { memberId: string; role: string }, schema: any): Promise<LaylaCommandCenterSnapshot> {
   const pendingStatuses = ["new", "pending_wael", "pending_sheikh", "needs_revision"];
   const [projectRows, changeRows, committeeRows, evaluationRows, evaluationSessionRows, paymentRows, requestRows, taskRows, meetingRows, milestoneRows, kpiRows, itemRows] = await Promise.all([
-    db.select({ id: schema.projects.id, name: schema.projects.name }).from(schema.projects),
+    db.select({ id: schema.projects.id, name: schema.projects.name })
+      .from(schema.projects)
+      .where(eq(schema.projects.isTestProject, 0)),
     db.select().from(schema.projectChangeRequests).orderBy(desc(schema.projectChangeRequests.createdAt)).limit(40),
     db.select().from(schema.committeeDecisions).orderBy(desc(schema.committeeDecisions.updatedAt)).limit(25),
     db.select().from(schema.evaluationApprovals).orderBy(desc(schema.evaluationApprovals.updatedAt)).limit(50),

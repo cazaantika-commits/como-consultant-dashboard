@@ -239,7 +239,7 @@ export const generalRequestsRouter = router({
   // ── Get projects list (for dropdown) ────────────────────────────────────────
   getProjects: protectedProcedure.query(async () => {
     const db = await getDb();
-    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(asc(projects.name));
+    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.isTestProject, 0)).orderBy(asc(projects.name));
     return rows;
   }),
 

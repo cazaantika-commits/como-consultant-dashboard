@@ -90,7 +90,7 @@ export async function loadUnifiedGroupCashFlowSource() {
   if (!db) return null;
 
   const [allProjects, allPlans] = await Promise.all([
-    db.select().from(projects),
+    db.select().from(projects).where(eq(projects.isTestProject, 0)),
     db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
   ]);
   const newestPlanByProject = new Map<number, typeof allPlans[number]>();
@@ -1316,7 +1316,7 @@ export const cashFlowSettingsRouter = router({
     if (!db) return [];
 
     // Single-owner dashboard: ALWAYS fetch ALL projects without any userId filter.
-    const allProjects = await db.select().from(projects);
+    const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     if (allProjects.length === 0) return [];
 
     const today = new Date();
@@ -1890,7 +1890,7 @@ export const cashFlowSettingsRouter = router({
     const db = await getDb();
     if (!db) return [];
     // Single-owner dashboard: ALWAYS fetch ALL projects without any userId filter.
-    const allProjects = await db.select().from(projects);
+    const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     if (allProjects.length === 0) return [];
 
     const scenarioList: Scenario[] = ["offplan_escrow", "offplan_construction", "no_offplan"];
@@ -2437,7 +2437,7 @@ export const cashFlowSettingsRouter = router({
     const db = await getDb();
     if (!db) return null;
 
-    const allProjects = await db.select().from(projects);
+    const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
     if (!allProjects.length) return null;
 
     // Scenario 4 projects (rental - no revenue)
@@ -2605,7 +2605,7 @@ export const cashFlowSettingsRouter = router({
     if (!db) return [];
 
     const [allProjects, allPlans] = await Promise.all([
-      db.select().from(projects),
+      db.select().from(projects).where(eq(projects.isTestProject, 0)),
       db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
     ]);
     const newestPlanByProject = new Map<number, typeof allPlans[number]>();
@@ -2657,7 +2657,7 @@ export const cashFlowSettingsRouter = router({
     const db = await getDb();
     if (!db) throw new Error("DB not available");
     const [allProjects, allPlans] = await Promise.all([
-      db.select().from(projects),
+      db.select().from(projects).where(eq(projects.isTestProject, 0)),
       db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
     ]);
     const projectIdsWithPlans = new Set(allPlans.map((plan) => plan.projectId));
@@ -2722,7 +2722,7 @@ export const cashFlowSettingsRouter = router({
     if (!db) return [];
 
     const [allProjects, allPlans] = await Promise.all([
-      db.select().from(projects),
+      db.select().from(projects).where(eq(projects.isTestProject, 0)),
       db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
     ]);
     const newestPlanByProject = new Map<number, typeof allPlans[number]>();

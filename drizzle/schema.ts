@@ -1101,6 +1101,7 @@ export const projects = mysqlTable("projects", {
 	id: int().autoincrement().notNull(),
 	userId: int().notNull().references(() => users.id),
 	name: varchar({ length: 255 }).notNull(),
+	isTestProject: tinyint('is_test_project').notNull().default(0),
 	description: text(),
 	bua: int(),
 	pricePerSqft: int(),

@@ -1575,7 +1575,7 @@ async function getPlatformContext(agent: AgentType): Promise<string> {
 
     // Run ALL DB queries in parallel instead of sequentially
     const [projectList, consultantList, feesList, scoresList, meetingsList, tasksList, knowledgeList] = await Promise.all([
-      db.select().from(projects).limit(10).catch(() => []),
+      db.select().from(projects).where(eq(projects.isTestProject, 0)).limit(10).catch(() => []),
       db.select().from(consultants).limit(15).catch(() => []),
       ["alina", "farouq", "joelle"].includes(agent) ? db.select().from(financialData).limit(20).catch(() => []) : Promise.resolve([]),
       ["farouq", "khaled", "alina", "joelle", "baz"].includes(agent) ? db.select().from(evaluationScores).limit(10).catch(() => []) : Promise.resolve([]),

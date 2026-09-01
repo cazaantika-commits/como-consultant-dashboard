@@ -41,7 +41,7 @@ export const internalMessagesRouter = router({
       if (!db) return [];
       try {
         const result = await db.execute(
-          sql`SELECT id, name FROM projects ORDER BY name ASC`
+          sql`SELECT id, name FROM projects WHERE is_test_project = 0 ORDER BY name ASC`
         );
         const rows = (result[0] as unknown as any[]) || [];
         return rows.map((r: any) => ({ id: r.id, name: r.name }));

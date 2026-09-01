@@ -1313,7 +1313,7 @@ async function _executeToolInternal(
     switch (toolName) {
       // --- READ ---
       case "list_projects": {
-        const result = await db.select().from(projects);
+        const result = await db.select().from(projects).where(eq(projects.isTestProject, 0));
         if (result.length === 0) return JSON.stringify({ message: "لا توجد مشاريع مسجلة", data: [] });
         return JSON.stringify({
           message: `${result.length} مشروع مسجل`,
@@ -2001,7 +2001,10 @@ async function _executeToolInternal(
         const q = args.query;
         const searchResults: any = { query: q };
         // Search projects
-        const matchedProjects = await db.select().from(projects).where(sql`${projects.name} LIKE ${`%${q}%`} OR ${projects.description} LIKE ${`%${q}%`}`).limit(5);
+        const matchedProjects = await db.select().from(projects).where(and(
+          eq(projects.isTestProject, 0),
+          sql`(${projects.name} LIKE ${`%${q}%`} OR ${projects.description} LIKE ${`%${q}%`})`
+        )).limit(5);
         if (matchedProjects.length > 0) searchResults.projects = matchedProjects.map(p => ({ id: p.id, name: p.name, description: p.description }));
         // Search consultants
         const matchedConsultants = await db.select().from(consultants).where(sql`${consultants.name} LIKE ${`%${q}%`} OR ${consultants.email} LIKE ${`%${q}%`}`).limit(5);

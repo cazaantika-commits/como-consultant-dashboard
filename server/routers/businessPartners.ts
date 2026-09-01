@@ -893,7 +893,7 @@ export const paymentRequestsRouter = router({
   // -- Helper queries for dropdowns --
   getProjects: protectedProcedure.query(async () => {
     const db = await getDb();
-    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).orderBy(projects.name);
+    const rows = await db.select({ id: projects.id, name: projects.name }).from(projects).where(eq(projects.isTestProject, 0)).orderBy(projects.name);
     return rows;
   }),
 

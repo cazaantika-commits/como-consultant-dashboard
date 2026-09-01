@@ -19,7 +19,8 @@ export const riskDashboardRouter = router({
         community: projects.community,
         projectType: projects.projectType,
       })
-        .from(projects);
+        .from(projects)
+        .where(eq(projects.isTestProject, 0));
 
       const projectIds = userProjects.map(p => p.id);
       if (projectIds.length === 0) return { projects: [], summary: null };
@@ -216,6 +217,7 @@ export const riskDashboardRouter = router({
         .from(projectRiskScores)
         .innerJoin(projects, eq(projectRiskScores.projectId, projects.id))
         .where(and(
+          eq(projects.isTestProject, 0),
           sql`${projectRiskScores.riskLevel} IN ('high', 'critical')`
         ))
         .orderBy(desc(projectRiskScores.pmriScore))

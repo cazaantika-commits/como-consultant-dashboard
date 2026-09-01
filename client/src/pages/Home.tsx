@@ -66,6 +66,7 @@ import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.j
 import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
 import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
 import { default as Wallet } from "lucide-react/dist/esm/icons/wallet.js";
+import { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.js";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
@@ -433,6 +434,7 @@ export default function Home() {
     { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services" },
     { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services", ownerOnly: true },
     { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", layer: "services", ownerOnly: true },
+    { id: "tool-test-project", label: "المشروع التجريبي", icon: FlaskConical, path: "/test-project", borderColor: "#7c3aed", iconBg: "linear-gradient(135deg, #7c3aed, #6d28d9)", shadow: "rgba(124, 58, 237, 0.25)", layer: "services", ownerOnly: true },
   ];
 
   /* -- Sorted arrays based on saved order -- */

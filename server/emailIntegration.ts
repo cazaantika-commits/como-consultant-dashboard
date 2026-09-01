@@ -787,7 +787,10 @@ async function updatePlatformFromAnalysis(analysis: FarouqAnalysis, email: Email
     // 2. Find or create project
     if (analysis.projectMentioned && analysis.projectMentioned !== "N/A" && analysis.projectMentioned !== "غير محدد") {
       let existingProjects = await db.select().from(projects)
-        .where(like(projects.name, "%" + analysis.projectMentioned.substring(0, 15) + "%")).limit(1);
+        .where(and(
+          eq(projects.isTestProject, 0),
+          like(projects.name, "%" + analysis.projectMentioned.substring(0, 15) + "%")
+        )).limit(1);
 
       let projectId: number;
       if (existingProjects.length > 0) {

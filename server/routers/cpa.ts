@@ -872,9 +872,10 @@ export const cpaRouter = router({
                       ORDER BY current_set.revision_no DESC, current_set.id DESC LIMIT 1
                     )
                       AND pr.is_required = 1) as scope_item_count
-            FROM cpa_projects cp
-            JOIN projects p ON p.id = cp.project_id
-            ORDER BY cp.created_at DESC`
+	            FROM cpa_projects cp
+	            JOIN projects p ON p.id = cp.project_id
+	            WHERE p.is_test_project = 0
+	            ORDER BY cp.created_at DESC`
       );
     }),
 
@@ -1824,8 +1825,9 @@ export const cpaRouter = router({
         estimatedConstructionPricePerSqft AS construction_cost_per_sqft,
         permittedUse        AS permitted_use,
         areaCode            AS area_code
-      FROM projects
-      ORDER BY name`
+	      FROM projects
+	      WHERE is_test_project = 0
+	      ORDER BY name`
     );
   }),
 });
