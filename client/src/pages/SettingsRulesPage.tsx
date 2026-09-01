@@ -245,7 +245,7 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const reraInspectionQuarterlyFee = configurableRates.find((rate) => rate.id === "reraInspectionQuarterlyFee")?.value ?? 15020;
   const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
   const isJointVenture = projectType === "joint_venture_land_for_units";
-  const isBuildForSale = projectType === "build_for_sale" || isJointVenture;
+  const isBuildForSale = projectType === "build_for_sale";
   const isBuildForRent = projectType === "build_for_rent";
   const isNoOffPlanType = isBuildForSale || isBuildForRent;
   const visibleProjectPhases = projectPhases.filter((phase) => isFinancialStudiesSettingsItemVisible(phase.id, projectType));
@@ -289,6 +289,14 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
     visibleInvestorRules.push(
       { id: "surveyorAsbuilt", label: "رسوم المساح (As-Built)", timing: "دفعة واحدة — الشهر قبل الأخير من الإنشاء", type: "دفعة واحدة" },
       { id: "salesCommissionDirect", label: "عمولة المبيعات", timing: "5% من كل تحصيل بيع مباشر — تُدفع بالتوازي بعد تحصيل كامل قيمة الوحدة", type: "مرتبطة بالمبيعات" },
+    );
+  }
+  if (isJointVenture) {
+    visibleInvestorRules.push(
+      { id: "jointVentureDevelopmentLicense", label: "رخصة التطوير العقاري للاتفاق", timing: "تُدفع في بداية المشروع من وائل وخارج حساب الضمان", type: "قيمة مدخلة" },
+      { id: "jointVentureWaelRegistration", label: "تسجيل وائل في رخصة التطوير", timing: "تُدفع في بداية المشروع من وائل وخارج حساب الضمان", type: "قيمة مدخلة" },
+      { id: "jointVentureLandOwnerRegistration", label: "تسجيل صاحب الأرض في رخصة التطوير", timing: "تُدفع في بداية المشروع من وائل وخارج حساب الضمان", type: "قيمة مدخلة" },
+      { id: "jointVentureOwnerUnitsRegistration", label: "تسجيل حصة صاحب الأرض عند الإنجاز", timing: "4% × قيمة وحدات صاحب الأرض — تُدفع من وائل عند الإنجاز وخارج حساب الضمان", type: "محسوبة" },
     );
   }
   const escrowRules = ESCROW_RULES.map((rule) => {

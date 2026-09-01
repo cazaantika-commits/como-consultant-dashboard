@@ -50,7 +50,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const project = projectQuery.data;
   const scenario = ((project as any)?.financingScenario || "offplan_escrow") as Scenario;
   const isJointVenture = isJointVentureLandForUnits(scenario);
-  const isBuildForSale = scenario === "build_for_sale" || isJointVenture;
+  const isBuildForSale = scenario === "build_for_sale";
   const isBuildForRent = scenario === "build_for_rent";
   const costs = project ? calculateProjectCosts(project) : null;
   const designDuration = getProjectDesignTiming(project).designMonths;
@@ -95,7 +95,11 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const investorReturnOnCapital = capital.requiredCapital > 0 ? (investorProfit / capital.requiredCapital) * 100 : 0;
   const capitalCommittedPct = capital.requiredCapital > 0 ? Math.min(100, (capital.paidCapital / capital.requiredCapital) * 100) : 0;
   const investorOutcomePositive = investorProfit >= 0 && projectMarginOnCost >= 0;
-  const hasFinancialInputs = totalRevenue > 0 || totalCosts > 0;
+  const hasFinancialInputs = totalRevenue > 0
+    && Number((project as any)?.manualBuaSqft || 0) > 0
+    && Number((project as any)?.estimatedConstructionPricePerSqft || 0) > 0
+    && Number((project as any)?.constructionMonths || 0) > 0
+    && Boolean((project as any)?.startDate);
   const displayedOutcome = hasFinancialInputs ? fmtM(investorProfit) : "—";
 
   // Revenue breakdown
@@ -103,7 +107,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const revRet = costs?.revenueRet || 0;
   const revOff = costs?.revenueOff || 0;
   const jointVentureTerms = getJointVentureTerms(project);
-  const landOwnerResidentialValue = costs?.landOwnerResidentialValue || 0;
+  const landOwnerTotalValue = costs?.landOwnerTotalValue || 0;
   const grossRevenueRes = costs?.grossRevenueRes || revRes;
   const grossTotalRevenue = costs?.grossTotalRevenue || totalRevenue;
 
@@ -212,14 +216,14 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <div className="mt-3 grid gap-3 lg:grid-cols-2">
                     <RatioDecisionCard
                       label={isJointVenture ? "ربح المطور على إجمالي تكلفته" : "هامش ربح المشروع على التكلفة الكلية"}
-                      value={totalCosts > 0 ? fmtPct(projectMarginOnCost) : "—"}
+                      value={hasFinancialInputs && totalCosts > 0 ? fmtPct(projectMarginOnCost) : "—"}
                       formula={`${fmtM(profit)} ربح ÷ ${fmtM(totalCosts)} تكلفة`}
                       explanation={isJointVenture ? "بعد حصة مالك الأرض وجميع المصاريف" : "يقيس اقتصاديات المشروع قبل حصة كومو"}
                       tone="teal"
                     />
                     <RatioDecisionCard
                       label={isJointVenture ? "عائد المطور على رأس المال المستخدم" : "عائد المستثمر على رأس المال المستخدم"}
-                      value={capital.requiredCapital > 0 ? fmtPct(investorReturnOnCapital) : "—"}
+                      value={hasFinancialInputs && capital.requiredCapital > 0 ? fmtPct(investorReturnOnCapital) : "—"}
                       formula={`${fmtM(investorProfit)} صافي ربح ÷ ${fmtM(capital.requiredCapital)} رأس مال`}
                       explanation={isJointVenture ? "ربح المطور على ذروة السيولة المطلوبة" : "بعد حصة كومو وعلى ذروة رأس المال المطلوبة"}
                       tone="amber"
@@ -232,9 +236,9 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                       <span className="text-[11px] text-slate-500">القيمة القصوى المطلوبة من تدفقات المستثمر</span>
                     </div>
                     <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                      <CapitalFact label="المطلوب عند الذروة" value={fmtM(capital.requiredCapital)} tone="slate" />
-                      <CapitalFact label="تم دفعه" value={fmtM(capital.paidCapital)} tone="slate" />
-                      <CapitalFact label="المتبقي للتمويل" value={fmtM(capital.remainingCapital)} tone="amber" />
+                      <CapitalFact label="المطلوب عند الذروة" value={hasFinancialInputs ? fmtM(capital.requiredCapital) : "—"} tone="slate" />
+                      <CapitalFact label="تم دفعه" value={hasFinancialInputs ? fmtM(capital.paidCapital) : "—"} tone="slate" />
+                      <CapitalFact label="المتبقي للتمويل" value={hasFinancialInputs ? fmtM(capital.remainingCapital) : "—"} tone="amber" />
                     </div>
                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-white" aria-label="نسبة رأس المال المدفوع من رأس المال المطلوب">
                       <div className="h-full rounded-full bg-gradient-to-l from-amber-500 to-cyan-500" style={{ width: `${capitalCommittedPct}%` }} />
@@ -264,8 +268,8 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
               {!isBuildForRent && <SectionCard title={isJointVenture ? "توزيع قيمة البيع بين المالك والمطور" : "الإيرادات"} icon={<TrendingUp className="w-3.5 h-3.5 text-white" />} gradient="from-teal-600 to-teal-800" borderColor="border-teal-200/60">
                 <div className="space-y-1">
                   {isJointVenture ? <>
-                    <Row label="القيمة الإجمالية للسكني" value={fmt(grossRevenueRes)} pct={grossTotalRevenue > 0 ? (grossRevenueRes / grossTotalRevenue * 100) : 0} color="text-slate-700" />
-                    <Row label={`حصة مالك الأرض من السكني (${jointVentureTerms.landOwnerResidentialSharePct}%)`} value={fmt(landOwnerResidentialValue)} pct={grossTotalRevenue > 0 ? (landOwnerResidentialValue / grossTotalRevenue * 100) : 0} color="text-violet-700" />
+                    <Row label="القيمة الإجمالية لكل الوحدات" value={fmt(grossTotalRevenue)} pct={100} color="text-slate-700" />
+                    <Row label={`حصة صاحب الأرض من جميع الوحدات (${jointVentureTerms.landOwnerResidentialSharePct}%)`} value={fmt(landOwnerTotalValue)} pct={grossTotalRevenue > 0 ? (landOwnerTotalValue / grossTotalRevenue * 100) : 0} color="text-violet-700" />
                     <Row label="إيراد المطور من السكني" value={fmt(revRes)} pct={grossTotalRevenue > 0 ? (revRes / grossTotalRevenue * 100) : 0} color="text-teal-700" />
                     <Row label="إيراد المطور من التجاري" value={fmt(revRet + revOff)} pct={grossTotalRevenue > 0 ? ((revRet + revOff) / grossTotalRevenue * 100) : 0} color="text-teal-700" />
                     <TotalRow label="إجمالي إيراد المطور" value={fmt(totalRevenue)} bgColor="bg-teal-50" textColor="text-teal-800" />
@@ -289,6 +293,13 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     <Row label="سعر الأرض" value={fmt(costs?.landPrice || 0)} pct={totalCosts > 0 ? ((costs?.landPrice || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                     <Row label="عمولة وسيط الأرض" value={fmt(costs?.agentCommissionLand || 0)} pct={totalCosts > 0 ? ((costs?.agentCommissionLand || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                     <Row label="رسوم تسجيل الأرض (4%)" value={fmt(costs?.landRegistration || 0)} pct={totalCosts > 0 ? ((costs?.landRegistration || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                  </>}
+                  {isJointVenture && <>
+                    <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">اتفاق الشراكة والتسجيل</div>
+                    <Row label="رخصة التطوير العقاري للاتفاق" value={fmt(costs?.developmentLicenseCost || 0)} pct={totalCosts > 0 ? ((costs?.developmentLicenseCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                    <Row label="تسجيل وائل في رخصة التطوير" value={fmt(costs?.waelLicenseRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.waelLicenseRegistrationCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                    <Row label="تسجيل صاحب الأرض في الرخصة" value={fmt(costs?.landOwnerLicenseRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.landOwnerLicenseRegistrationCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
+                    <Row label={`تسجيل وحدات صاحب الأرض عند الإنجاز (${costs?.landOwnerUnitsRegistrationFeePct || 4}%)`} value={fmt(costs?.landOwnerUnitsRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.landOwnerUnitsRegistrationCost || 0) / totalCosts * 100) : 0} color="text-violet-700" />
                   </>}
                   {/* التصاميم والدراسات */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">التصاميم والدراسات</div>
@@ -357,12 +368,12 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <div className="grid grid-cols-2 gap-2 text-center">
                     <div className="rounded-md bg-gray-50 px-2 py-1.5">
                       <p className="text-[9px] text-gray-500">هامش ربح المشروع على التكلفة</p>
-                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(projectMarginOnCost)}</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{hasFinancialInputs ? fmtPct(projectMarginOnCost) : "—"}</p>
                       <p className="mt-0.5 text-[8px] text-gray-400">{isJointVenture ? "بعد حصة مالك الأرض" : "قبل حصة كومو"}</p>
                     </div>
                     <div className="rounded-md bg-gray-50 px-2 py-1.5">
                       <p className="text-[9px] text-gray-500">{isJointVenture ? "عائد المطور على رأس المال" : "عائد المستثمر على رأس المال"}</p>
-                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{fmtPct(investorReturnOnCapital)}</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5">{hasFinancialInputs ? fmtPct(investorReturnOnCapital) : "—"}</p>
                       <p className="mt-0.5 text-[8px] text-gray-400">{isJointVenture ? "على ذروة السيولة المطلوبة" : "بعد حصة كومو"}</p>
                     </div>
                   </div>
@@ -370,7 +381,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
               </SectionCard>}
 
               {/* ═══ SCENARIO COMPARISON ═══ */}
-              {!isBuildForRent && <SectionCard title="مقارنة السيناريوهات" icon={<Layers className="w-3.5 h-3.5 text-white" />} gradient="from-indigo-600 to-violet-700" borderColor="border-indigo-200/60">
+              {!isBuildForRent && (!isJointVenture || hasFinancialInputs) && <SectionCard title="مقارنة السيناريوهات" icon={<Layers className="w-3.5 h-3.5 text-white" />} gradient="from-indigo-600 to-violet-700" borderColor="border-indigo-200/60">
                 <div className="overflow-hidden rounded-lg border border-gray-100">
                   <table className="w-full text-[10px]">
                     <thead>
@@ -416,7 +427,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <DetailRow label="المنطقة" value={(project as any).community || project.areaCode || "—"} />
                   <DetailRow label="مساحة الأرض" value={project.plotAreaSqft ? `${fmt(parseFloat(project.plotAreaSqft))} قدم²` : "—"} />
                   <DetailRow label="مساحة البناء (BUA)" value={project.manualBuaSqft ? `${fmt(parseFloat(project.manualBuaSqft))} قدم²` : "—"} />
-                  <DetailRow label={isJointVenture ? "مقابل الأرض" : "سعر الأرض"} value={isJointVenture ? `${jointVentureTerms.landOwnerResidentialSharePct}% من المساحة السكنية القابلة للبيع` : project.landPrice ? `${fmt(parseFloat(project.landPrice))} AED` : "—"} />
+                  <DetailRow label={isJointVenture ? "مقابل الأرض" : "سعر الأرض"} value={isJointVenture ? `${jointVentureTerms.landOwnerResidentialSharePct}% من جميع الوحدات السكنية والتجارية` : project.landPrice ? `${fmt(parseFloat(project.landPrice))} AED` : "—"} />
                   <DetailRow label="تكلفة الإنشاء/قدم²" value={project.estimatedConstructionPricePerSqft ? `${parseFloat(project.estimatedConstructionPricePerSqft).toFixed(0)} AED` : "—"} />
                   <DetailRow label="مدة التصاميم" value={isJointVenture && !project.preConMonths ? "—" : `${designDuration} شهر`} />
                   <DetailRow label="مدة الإنشاء" value={project.constructionMonths ? `${project.constructionMonths} شهر` : "—"} />
@@ -436,7 +447,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     project.financingScenario === 'offplan_escrow' ? 'أوف بلان + ضمان' :
                     project.financingScenario === 'offplan_construction' ? 'أوف بلان + بناء' :
                     project.financingScenario === 'no_offplan' ? 'بدون أوف بلان' :
-                    project.financingScenario === 'joint_venture_land_for_units' ? 'Joint Venture — الأرض مقابل وحدات' :
+                    project.financingScenario === 'joint_venture_land_for_units' ? 'Joint Venture Off-Plan — الأرض مقابل وحدات' :
                     project.financingScenario === 'build_for_sale' ? 'بناء للبيع' :
                     project.financingScenario === 'build_for_rent' ? 'بناء للتأجير' :
                     project.financingScenario || "—"
@@ -453,7 +464,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <AreaRow label="GFA مكاتب" value={gfaOffSqft > 0 ? `${fmt(gfaOffSqft)} قدم²` : "—"} />
                   <div className="border-t border-gray-100 pt-1.5">
                     <AreaRow label="إجمالي GFA" value={(gfaResSqft + gfaRetSqft + gfaOffSqft) > 0 ? `${fmt(gfaResSqft + gfaRetSqft + gfaOffSqft)} قدم²` : "—"} bold />
-                    {isJointVenture && <AreaRow label="حصة مالك الأرض من السكني" value={jointVentureAreas.landOwnerResidentialArea > 0 ? `${fmt(jointVentureAreas.landOwnerResidentialArea)} قدم²` : "—"} />}
+                    {isJointVenture && <AreaRow label="حصة صاحب الأرض من جميع الوحدات" value={(jointVentureAreas.landOwnerResidentialArea + jointVentureAreas.landOwnerCommercialArea) > 0 ? `${fmt(jointVentureAreas.landOwnerResidentialArea + jointVentureAreas.landOwnerCommercialArea)} قدم²` : "—"} />}
                     <AreaRow label={isJointVenture ? "المساحة المتاحة للمطور" : "القابل للبيع"} value={totalSellableSqft > 0 ? `${fmt(totalSellableSqft)} قدم²` : "—"} bold />
                   </div>
                 </div>
@@ -462,18 +473,18 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
               <SectionCard title="رأس المال المطلوب" icon={<Briefcase className="w-3.5 h-3.5 text-white" />} gradient="from-amber-500 to-amber-700" borderColor="border-amber-200/60">
                 <div className="space-y-2.5">
                   <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
-                    <p className="text-[10px] font-bold text-amber-900">السيولة القصوى التي يحتاجها المستثمر</p>
-                    <p className="text-lg font-black text-amber-900 tabular-nums mt-1" dir="ltr">{fmt(capital.requiredCapital)} AED</p>
-                    <p className="text-[9px] text-amber-700 mt-1">تصل الذروة في {capital.peakMonthDate || "—"}</p>
+                    <p className="text-[10px] font-bold text-amber-900">السيولة القصوى التي يحتاجها {isJointVenture ? "وائل" : "المستثمر"}</p>
+                    <p className="text-lg font-black text-amber-900 tabular-nums mt-1" dir="ltr">{hasFinancialInputs ? fmt(capital.requiredCapital) : "—"} AED</p>
+                    <p className="text-[9px] text-amber-700 mt-1">{hasFinancialInputs ? `تصل الذروة في ${capital.peakMonthDate || "—"}` : "تظهر بعد اكتمال التسعير والتكلفة والجدول الزمني"}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
                       <p className="text-[9px] text-slate-500">مدفوع حتى الآن</p>
-                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{fmt(capital.paidCapital)} AED</p>
+                      <p className="text-sm font-black text-slate-800 tabular-nums mt-0.5" dir="ltr">{hasFinancialInputs ? fmt(capital.paidCapital) : "—"} AED</p>
                     </div>
                     <div className="rounded-md border border-amber-200 bg-amber-50/60 px-2.5 py-2">
                       <p className="text-[9px] text-amber-700">المتبقي للتمويل</p>
-                      <p className="text-sm font-black text-amber-900 tabular-nums mt-0.5" dir="ltr">{fmt(capital.remainingCapital)} AED</p>
+                      <p className="text-sm font-black text-amber-900 tabular-nums mt-0.5" dir="ltr">{hasFinancialInputs ? fmt(capital.remainingCapital) : "—"} AED</p>
                     </div>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-slate-100 flex" title="توزيع رأس المال بين المدفوع والمتبقي">
@@ -482,8 +493,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   </div>
                   <p className="text-[8px] leading-relaxed text-gray-500">
                     {isBuildForRent || isBuildForSale
-                      ? `لا يوجد حساب ضمان في ${isJointVenture ? "Joint Venture — الأرض مقابل وحدات" : isBuildForSale ? "البناء للبيع" : "البناء للتأجير"}؛ رأس المال المطلوب يمثل ${isJointVenture ? "مصروفات المطور فقط، والأرض مساهمة غير نقدية" : "مصروفات المستثمر فقط"}.`
-                      : "يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر."}
+                      ? `لا يوجد حساب ضمان في ${isBuildForSale ? "البناء للبيع" : "البناء للتأجير"}؛ رأس المال المطلوب يمثل مصروفات المستثمر فقط.`
+                      : isJointVenture
+                        ? "يشمل رأس مال وائل مصروفاته المباشرة وإيداع الضمان ومصاريف الاتفاق والتسجيل، بينما الأرض مساهمة غير نقدية."
+                        : "يشمل هذا الرقم إيداع حساب الضمان، لأنه سيولة يلتزم بها المستثمر."}
                   </p>
                 </div>
               </SectionCard>

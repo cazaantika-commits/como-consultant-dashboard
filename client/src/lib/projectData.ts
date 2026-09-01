@@ -1,6 +1,7 @@
 
 import { getProjectDesignTiming } from "@/lib/projectTiming";
 import {
+  calculateJointVentureAgreementCosts,
   calculateDeveloperRevenueShare,
   getJointVentureTerms,
   isJointVentureLandForUnits,
@@ -49,6 +50,10 @@ export interface ProjectRates {
   projectType: "offplan" | "build_for_sale" | "build_for_rent" | "rental" | "joint_venture_land_for_units";
   landOwnerResidentialSharePct: number;
   landOwnerCommercialSharePct: number;
+  developmentLicenseCost: number;
+  waelLicenseRegistrationCost: number;
+  landOwnerLicenseRegistrationCost: number;
+  landOwnerUnitsRegistrationFeePct: number;
   buildForSaleMarketingStartMonthsBeforeCompletion: number;
   buildForSaleMarketingDurationMonths: number;
   landRegistration: number;
@@ -114,6 +119,10 @@ export const RATES: ProjectRates = {
   projectType: "offplan",
   landOwnerResidentialSharePct: 0,
   landOwnerCommercialSharePct: 0,
+  developmentLicenseCost: 0,
+  waelLicenseRegistrationCost: 0,
+  landOwnerLicenseRegistrationCost: 0,
+  landOwnerUnitsRegistrationFeePct: 4,
   buildForSaleMarketingStartMonthsBeforeCompletion: 1,
   buildForSaleMarketingDurationMonths: 3,
   landRegistration: 0.04,
@@ -195,7 +204,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
   const isBuildForSale = dbProject.financingScenario === "build_for_sale";
   const isBuildForRent = dbProject.financingScenario === "build_for_rent";
   const isJointVenture = isJointVentureLandForUnits(dbProject.financingScenario);
-  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent || isJointVenture;
+  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   const jointVentureTerms = getJointVentureTerms(dbProject);
   let savedRates: Record<string, unknown> = {};
   try {
@@ -204,9 +213,9 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
   const designPct = parseFloat(dbProject.designFeePct || '0') || (isJointVenture ? 0 : 1.8);
   const supervisionPct = parseFloat(dbProject.supervisionFeePct || '0') || (isJointVenture ? 0 : 2);
   const salesPct = parseFloat(dbProject.salesCommissionPct || '0') || (isJointVenture ? 0 : 5);
-  const marketingPct = isBuildForRent ? 0 : (isBuildForSale || isJointVenture)
-    ? Number(savedRates.buildForSaleMarketingRate ?? (isJointVenture ? 0 : 1))
-    : (parseFloat(dbProject.marketingPct || '0') || 2);
+  const marketingPct = isBuildForRent ? 0 : isBuildForSale
+    ? Number(savedRates.buildForSaleMarketingRate ?? 1)
+    : (parseFloat(dbProject.marketingPct || '0') || (isJointVenture ? 0 : 2));
   const buildForRentDeveloperFeeDesignPct = isBuildForRent
     ? Number(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5)
     : 1;
@@ -224,6 +233,10 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     projectType: isJointVenture ? "joint_venture_land_for_units" : isBuildForSale ? "build_for_sale" : isBuildForRent ? "build_for_rent" : dbProject.financingScenario === "rental" ? "rental" : "offplan",
     landOwnerResidentialSharePct: isJointVenture ? jointVentureTerms.landOwnerResidentialSharePct : 0,
     landOwnerCommercialSharePct: isJointVenture ? jointVentureTerms.landOwnerCommercialSharePct : 0,
+    developmentLicenseCost: isJointVenture ? jointVentureTerms.developmentLicenseCost : 0,
+    waelLicenseRegistrationCost: isJointVenture ? jointVentureTerms.waelLicenseRegistrationCost : 0,
+    landOwnerLicenseRegistrationCost: isJointVenture ? jointVentureTerms.landOwnerLicenseRegistrationCost : 0,
+    landOwnerUnitsRegistrationFeePct: isJointVenture ? jointVentureTerms.landOwnerUnitsRegistrationFeePct : 0,
     buildForSaleMarketingStartMonthsBeforeCompletion: Math.max(0, Number(savedRates.buildForSaleMarketingStartMonthsBeforeCompletion ?? 1)),
     buildForSaleMarketingDurationMonths: Math.max(1, Number(savedRates.buildForSaleMarketingDurationMonths ?? 3)),
     landRegistration: 0.04,
@@ -375,8 +388,23 @@ export function calculateCosts(
   const revenueShare = calculateDeveloperRevenueShare(pricingFormulas, rates.projectType, {
     landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
     landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
+    developmentLicenseCost: rates.developmentLicenseCost,
+    waelLicenseRegistrationCost: rates.waelLicenseRegistrationCost,
+    landOwnerLicenseRegistrationCost: rates.landOwnerLicenseRegistrationCost,
+    landOwnerUnitsRegistrationFeePct: rates.landOwnerUnitsRegistrationFeePct,
   });
   const totalRevenue = revenueShare.developerTotalRevenue;
+  const jointVentureAgreementCosts = calculateJointVentureAgreementCosts(
+    revenueShare.landOwnerTotalValue,
+    {
+      landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
+      landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
+      developmentLicenseCost: rates.developmentLicenseCost,
+      waelLicenseRegistrationCost: rates.waelLicenseRegistrationCost,
+      landOwnerLicenseRegistrationCost: rates.landOwnerLicenseRegistrationCost,
+      landOwnerUnitsRegistrationFeePct: rates.landOwnerUnitsRegistrationFeePct,
+    },
+  );
 
   // ─── بنود التكاليف (نفس ترتيب البطاقة) ───
   const designFee = constructionCost * rates.designFee;
@@ -386,7 +414,7 @@ export function calculateCosts(
   const salesCommission = totalRevenue * rates.salesCommission;
   const marketing = totalRevenue * rates.marketingRate;
   const isJointVenture = rates.projectType === "joint_venture_land_for_units";
-  const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent" || isJointVenture;
+  const isIndependentNoOffPlan = rates.projectType === "build_for_sale" || rates.projectType === "build_for_rent";
   const isBuildForRent = rates.projectType === "build_for_rent";
   const sortingFee = isBuildForRent ? 0 : rawSortingFee;
   const reraUnits = isBuildForRent ? 0 : rawReraUnits;
@@ -406,12 +434,12 @@ export function calculateCosts(
     ? cashLandPrice + cashLandRegistration + cashLandBroker + designFee + supervisionFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
       sortingFee + (isBuildForRent ? 0 : inputs.nocSale) + reraUnits + effectiveMarketing + developerFee +
-      effectiveSalesCommission + inputs.surveyorFee + constructionInvestor
-    : landPrice + landRegistration + landBroker + designFee +
+      effectiveSalesCommission + inputs.surveyorFee + constructionInvestor + jointVentureAgreementCosts.totalAgreementCosts
+    : cashLandPrice + cashLandRegistration + cashLandBroker + designFee +
       inputs.soilTest + inputs.topography + inputs.communityFee + govFeesInvestor +
       sortingFee + inputs.nocSale + inputs.reraProjectReg + reraUnits +
       inputs.escrowAccountFee + inputs.bankFees + marketing + developerFee +
-      inputs.surveyorDwgFee + constructionInvestor;
+      inputs.surveyorDwgFee + constructionInvestor + jointVentureAgreementCosts.totalAgreementCosts;
   // ─── إجمالي الضمان (نفس معادلة البطاقة بالضبط) ───
   const totalEscrow = isIndependentNoOffPlan ? 0 : supervisionFee + govFeesEscrow + salesCommission +
     inputs.reraAuditorReport + inputs.reraInspection + inputs.surveyorFee + constructionEscrow;
@@ -439,6 +467,7 @@ export function calculateCosts(
     totalCosts,
     profit,
     margin,
+    ...jointVentureAgreementCosts,
     ...revenueShare,
   };
 }

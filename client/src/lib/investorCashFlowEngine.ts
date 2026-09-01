@@ -545,15 +545,15 @@ export function buildPricingUnits(project: any, inputs: ProjectInputs) {
   const p = project;
   const countKeys = ["studioCount", "residential1brCount", "residential2brCount", "residential2brMaidCount", "residential3brCount", "residential3brMaidCount", "villaCount", "townhouseCount", "retailSmallCount", "retailMediumCount", "retailLargeCount", "officeSmallCount", "officeMediumCount", "officeLargeCount"];
   const isJointVenture = isJointVentureLandForUnits(p?.financingScenario);
-  const isBuildForSale = p?.financingScenario === "build_for_sale" || isJointVenture;
+  const requiresExplicitCounts = p?.financingScenario === "build_for_sale" || isJointVenture;
   // Build-for-sale uses the user-entered unit distribution exactly, including an
   // explicit all-zero distribution. Legacy Off-Plan fallback behavior is retained.
-  const hasSavedCounts = isBuildForSale
+  const hasSavedCounts = requiresExplicitCounts
     ? countKeys.some((key) => p?.[key] !== undefined && p?.[key] !== null)
     : countKeys.some((key) => Number(p?.[key]) > 0);
   const valueOrDefault = (key: string, fallback: number) => {
     const value = p?.[key];
-    return value === undefined || value === null || value === "" ? fallback : Number(value);
+    return value === undefined || value === null || value === "" ? (isJointVenture ? 0 : fallback) : Number(value);
   };
   const cStudio = Number(p?.studioCount) || 0;
   let c1 = Number(p?.residential1brCount) || 0;
@@ -619,7 +619,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     reraInspectionQuarterlyFee: savedReraFees.inspectionPerPayment,
   };
   const baseInputs: ProjectInputs = projectData ? dbProjectToInputs(projectData) : PROJECT_INPUTS;
-  const quarterlyPaymentCount = Math.ceil(Math.max(1, Number(baseInputs.constructionMonths || savedReraFees.constructionMonths)) / 3);
+  const quarterlyPaymentCount = Math.ceil(Math.max(1, Number(baseInputs.constructionDuration || savedReraFees.constructionMonths)) / 3);
   const i: ProjectInputs = {
     ...baseInputs,
     reraAuditorReport: tr.reraAuditorQuarterlyFee * quarterlyPaymentCount,
@@ -630,10 +630,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
   const pricingUnits = buildPricingUnits(projectData || {}, i);
   const grossPricingFormulas = calculatePricingFormulas(pricingUnits);
+  const jointVentureTerms = getJointVentureTerms(projectData);
   const revenueShare = calculateDeveloperRevenueShare(
     grossPricingFormulas,
     scenario,
-    getJointVentureTerms(projectData),
+    jointVentureTerms,
   );
   const pricingFormulas = {
     ...grossPricingFormulas,
@@ -657,9 +658,12 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   const isScenario2 = scenario === "offplan_construction";
   const isScenario3 = scenario === "no_offplan";
   const isJointVenture = isJointVentureLandForUnits(scenario);
-  const isBuildForSale = scenario === "build_for_sale" || isJointVenture;
+  const isBuildForSale = scenario === "build_for_sale";
   const isBuildForRent = scenario === "build_for_rent";
   const isScenario4 = scenario === "rental" || scenario === "build_for_rent";
+  const developerSalesUnits = isJointVenture
+    ? totalUnits * (1 - jointVentureTerms.landOwnerResidentialSharePct / 100)
+    : totalUnits;
 
   // Post-construction months:
   // All scenarios: 13 months post-construction
@@ -714,14 +718,14 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // ─── Generate default salesResult when not provided or empty (for offplan scenarios) ───
   // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
   const hasValidSalesData = salesResult && salesResult.escrowData && salesResult.escrowData.length > 0 && salesResult.escrowData.some(e => e.income > 0);
-  if (!hasValidSalesData && !isScenario3 && !isScenario4 && !isBuildForSale && totalUnits > 0 && totalRevenue > 0) {
+  if (!hasValidSalesData && !isScenario3 && !isScenario4 && !isBuildForSale && developerSalesUnits > 0 && totalRevenue > 0) {
     salesResult = {
       ...buildDefaultOffPlanSalesResult({
         totalRevenue,
-        totalUnits,
+        totalUnits: developerSalesUnits,
         salesStartMonth: phaseTiming.salesStartMonth,
         constructionStartMonth: phaseTiming.constructionStartMonth,
-        constructionMonths: i.constructionMonths,
+        constructionMonths: i.constructionDuration,
         projectEndMonth: phaseTiming.projectEndMonth,
       }),
       // Preserve marketing timing weights from an existing marketing-only payload.
@@ -748,6 +752,28 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       constructionMonths: emptyConstruction(),
       postConstructionMonths: emptyPost(),
     });
+
+    const agreementCosts = [
+      ["رخصة التطوير العقاري لاتفاق الشراكة", costs.developmentLicenseCost],
+      ["تسجيل وائل في رخصة التطوير", costs.waelLicenseRegistrationCost],
+      ["تسجيل صاحب الأرض في رخصة التطوير", costs.landOwnerLicenseRegistrationCost],
+    ] as const;
+    for (const [label, amount] of agreementCosts) {
+      const agreementDesign = emptyDesign();
+      agreementDesign[0] = amount;
+      rows.push({
+        label,
+        totalCost: amount,
+        investorAmount: amount,
+        paid: 0,
+        unpaid: amount,
+        funder: "investor",
+        section: "اتفاق الشراكة والتسجيل",
+        designMonths: agreementDesign,
+        constructionMonths: emptyConstruction(),
+        postConstructionMonths: emptyPost(),
+      });
+    }
   } else {
     rows.push({
       label: "سعر الأرض",
@@ -1198,7 +1224,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const paymentPlan = salesResult.paymentPlan;
       const triggerPct = tr.salesCommissionTriggerPct; // 20%
       const commPct = r.salesCommission; // e.g. 0.05
-      const avgUnitPrice = totalUnits > 0 ? totalRevenue / totalUnits : 0;
+      const avgUnitPrice = developerSalesUnits > 0 ? totalRevenue / developerSalesUnits : 0;
       const constructionEndMonth = designDuration + constructionDuration - 1;
       
       for (const entry of salesResult.escrowData) {
@@ -1216,7 +1242,13 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
           : [];
         if (receiptEvents.length === 0) {
           // Legacy plans without paymentPlanJson retain a transparent fallback.
-          receiptEvents.push({ month: saleMonth, pct: salesResult.ppDownPct || 10 });
+          receiptEvents.push({
+            month: saleMonth,
+            pct: salesResult.ppDownPct || 10,
+            recipient: "escrow",
+            stageId: "legacy-down-payment",
+            stageLabel: "دفعة الحجز",
+          });
         }
 
         let cumulativeReceiptsPct = 0;
@@ -1563,6 +1595,23 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
 
+  if (isJointVenture) {
+    const finalRegistrationPost = emptyPost();
+    finalRegistrationPost[0] = costs.landOwnerUnitsRegistrationCost;
+    rows.push({
+      label: `تسجيل حصة صاحب الأرض عند الإنجاز (${costs.landOwnerUnitsRegistrationFeePct}%)`,
+      totalCost: costs.landOwnerUnitsRegistrationCost,
+      investorAmount: costs.landOwnerUnitsRegistrationCost,
+      paid: 0,
+      unpaid: costs.landOwnerUnitsRegistrationCost,
+      funder: "investor",
+      section: "اتفاق الشراكة والتسجيل",
+      designMonths: emptyDesign(),
+      constructionMonths: emptyConstruction(),
+      postConstructionMonths: finalRegistrationPost,
+    });
+  }
+
   // Pre-compute revenue variables for S1/S2 (needed by profit share section)
   let directRevenue = 0;
   let escrowLiquidation = 0;
@@ -1641,7 +1690,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       // This is an inventory schedule, not a revenue-minus-receipts balancing plug.
       const salesChannels = calculateOffplanSalesChannels({
         totalRevenue,
-        totalUnits,
+        totalUnits: developerSalesUnits,
         salesDistribution: salesResult.salesDistribution,
         offplanPct: salesResult.offplanPct,
       });
@@ -1808,7 +1857,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   }
 
   // ─── حصة المطور من فائض التحصيلات الفعلية (15%) ───
-  if (!isScenario3 && !isScenario4 && !isBuildForSale) {
+  if (!isScenario3 && !isScenario4 && !isBuildForSale && !isJointVenture) {
     const totalProjectMonths = designDuration + constructionDuration + postDuration;
     const valuesForRow = (row: CostRow) => [
       ...row.designMonths,

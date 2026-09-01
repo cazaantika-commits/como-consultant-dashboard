@@ -12,6 +12,7 @@ import {
   calendarEntriesFromPlan,
   expandPaymentCalendarEntries,
 } from "./paymentPlanCalendar";
+import { getJointVentureTerms, isJointVentureLandForUnits } from "./jointVentureLandForUnits";
 
 export interface DefaultOffPlanSalesInput {
   totalRevenue: number;
@@ -116,7 +117,11 @@ export function rebuildOffPlanSalesResultsFromPaymentPlan({
 
   const paymentPlan = normalizeFlexiblePaymentPlan(JSON.parse(paymentPlanJson));
   const timing = getProjectMarketingTiming(project);
-  const totalUnits = getSavedProjectUnitCount(project);
+  const grossTotalUnits = getSavedProjectUnitCount(project);
+  const jointVentureTerms = getJointVentureTerms(project);
+  const totalUnits = isJointVentureLandForUnits(project?.financingScenario)
+    ? grossTotalUnits * (1 - jointVentureTerms.landOwnerResidentialSharePct / 100)
+    : grossTotalUnits;
   const offPlanUnits = Math.min(totalUnits, Math.max(0, Math.round(totalUnits * Math.min(100, Math.max(0, offplanPct)) / 100)));
   const salesMonths = Math.max(1, timing.projectEndMonth - timing.salesStartMonth + 1);
   const salesDistribution = distributeUnitsAcrossSalesWindow({
@@ -360,10 +365,10 @@ export function buildSalesResultFromSavedPlan(
         : undefined;
       const resolvedBuildForSaleUnits = parsedBuildForSaleUnits
         || buildForSaleMonthlyUnits
-        || ((scenario === "build_for_sale" || scenario === "joint_venture_land_for_units") && Array.isArray(parsed.salesDistribution)
+        || (scenario === "build_for_sale" && Array.isArray(parsed.salesDistribution)
           ? parsed.salesDistribution.map((value: unknown) => Math.max(0, Number(value) || 0))
           : undefined);
-      const hasSavedSalesResult = scenario === "build_for_sale" || scenario === "joint_venture_land_for_units"
+      const hasSavedSalesResult = scenario === "build_for_sale"
         ? Array.isArray(parsed.actualCashInflow) || Array.isArray(parsed.salesDistribution) || Array.isArray(parsedBuildForSaleUnits)
         : Array.isArray(parsed.escrowData) && Array.isArray(parsed.salesDistribution);
       if (hasSavedSalesResult) {
@@ -377,7 +382,7 @@ export function buildSalesResultFromSavedPlan(
         // months. If Settings later changes the design or construction duration,
         // keep the saved receipt weights but move their post-completion window
         // to the current project end instead of leaving it at the retired end.
-        if ((scenario === "build_for_sale" || scenario === "joint_venture_land_for_units") && normalizedCashInflow.length > 0) {
+        if (scenario === "build_for_sale" && normalizedCashInflow.length > 0) {
           const currentDesignMonths = getProjectMarketingTiming(project).designMonths;
           const currentConstructionMonths = Math.max(1, Number(project?.constructionMonths ?? plan.constructionMonths ?? 0));
           const savedDesignMonths = Math.max(0, Number(plan.designMonths ?? currentDesignMonths));

@@ -86,6 +86,14 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
 
   const totalMonths = designDuration + constructionDuration + postDuration;
   const projectName = projectQuery.data?.name || "—";
+  const isJointVenture = scenario === "joint_venture_land_for_units";
+  const hasFinancialInputs = !isJointVenture || (
+    totalRevenue > 0
+    && Number((projectQuery.data as any)?.manualBuaSqft || 0) > 0
+    && Number((projectQuery.data as any)?.estimatedConstructionPricePerSqft || 0) > 0
+    && Number((projectQuery.data as any)?.constructionMonths || 0) > 0
+    && Boolean((projectQuery.data as any)?.startDate)
+  );
 
   // ─── Build flat monthly arrays for each row ────────────────────────────
   const getRowValues = (row: CostRow): number[] => [
@@ -103,7 +111,8 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const feasibilityInvestorProfit = useMemo<number | null>(() => {
     const costs = calculateProjectCosts(projectQuery.data);
     if (!costs) return null;
-    const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent" || scenario === "joint_venture_land_for_units"
+    if (!hasFinancialInputs) return null;
+    const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent"
       ? data.rows
         .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
         .reduce((sum, row) => sum + row.totalCost, 0)
@@ -111,7 +120,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
     const projectProfit = costs.totalRevenue - feasibilityTotalCosts;
     const comoShare = scenario !== "joint_venture_land_for_units" && projectProfit > 0 ? projectProfit * 0.15 : 0;
     return projectProfit - comoShare;
-  }, [data.rows, projectQuery.data, scenario]);
+  }, [data.rows, projectQuery.data, scenario, hasFinancialInputs]);
   const feasibilityDifference = feasibilityInvestorProfit === null ? null : profit - feasibilityInvestorProfit;
   const reconcilesWithFeasibility = feasibilityDifference !== null && Math.abs(feasibilityDifference) < 0.001;
   const matrixStart = formatDate(monthDates[0] || "");
@@ -172,16 +181,16 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
               <ArrowRight className="w-4 h-4" />العودة إلى الصفحة السابقة
             </button>}
             <div className="min-w-0">
-              <h1 className="text-base font-extrabold text-slate-950">التدفقات النقدية للمستثمر</h1>
+              <h1 className="text-base font-extrabold text-slate-950">{isJointVenture ? "التدفقات النقدية لوائل" : "التدفقات النقدية للمستثمر"}</h1>
               <p className="text-xs font-medium text-slate-600 truncate">{projectName}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <div className="hidden items-center gap-3 text-xs 2xl:flex">
-              <span className="text-amber-700 font-semibold">رأس المال عند الذروة: {fmt(capital.requiredCapital)}</span>
-              <span className="text-red-600 font-semibold">إجمالي المدفوعات: {fmt(totalDebit)}</span>
-              <span className="text-green-600 font-semibold">مستلم للمستثمر: {fmt(totalCredit)}</span>
-              <span className="text-blue-700 font-bold">الربح: {fmt(profit)}</span>
+              <span className="text-amber-700 font-semibold">رأس المال عند الذروة: {hasFinancialInputs ? fmt(capital.requiredCapital) : "—"}</span>
+              <span className="text-red-600 font-semibold">إجمالي المدفوعات: {hasFinancialInputs ? fmt(totalDebit) : "—"}</span>
+              <span className="text-green-600 font-semibold">مستلم {isJointVenture ? "لوائل" : "للمستثمر"}: {hasFinancialInputs ? fmt(totalCredit) : "—"}</span>
+              <span className="text-blue-700 font-bold">الربح: {hasFinancialInputs ? fmt(profit) : "—"}</span>
             </div>
             <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold">
               <Download className="w-3.5 h-3.5" /> تصدير
@@ -205,16 +214,16 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
           <aside className="fs-card fs-card-violet p-5 text-slate-900">
             <div className="flex items-center gap-2 text-xs font-semibold text-violet-700">
               <WalletCards className="h-4 w-4 text-violet-600" />
-              موقف المستثمر — مباشر
+              {isJointVenture ? "موقف وائل — مباشر" : "موقف المستثمر — مباشر"}
             </div>
-            <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{fmt(profit)}</p>
+            <p className="mt-3 text-3xl font-bold tracking-tight tabular-nums">{hasFinancialInputs ? fmt(profit) : "—"}</p>
             <p className="mt-1 text-xs text-slate-600">صافي النتيجة المتوقعة بعد جميع التدفقات</p>
             <div className="mt-5 border-t border-violet-200 pt-4">
               <div className="flex items-start gap-2">
                 <TrendingDown className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" />
                 <div>
                   <p className="text-xs font-semibold text-slate-700">أعلى ضغط تمويلي</p>
-                  <p className="mt-1 text-lg font-bold tabular-nums text-rose-700">{fmt(Math.abs(deepestFundingPoint.value))}</p>
+                <p className="mt-1 text-lg font-bold tabular-nums text-rose-700">{hasFinancialInputs ? fmt(Math.abs(deepestFundingPoint.value)) : "—"}</p>
                   <p className="text-[11px] text-slate-600">{deepestFundingPoint.index >= 0 ? monthCaption(deepestFundingPoint.index) : "لا يوجد عجز تراكمي"}</p>
                 </div>
               </div>
@@ -234,32 +243,32 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               <div className="fs-card fs-card-amber p-3">
                 <p className="text-xs font-semibold text-amber-700">رأس المال المطلوب عند الذروة</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-amber-950">{fmt(capital.requiredCapital)}</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-amber-950">{hasFinancialInputs ? fmt(capital.requiredCapital) : "—"}</p>
                 <p className="mt-1 text-[11px] text-amber-700">أقصى سيولة مطلوبة قبل استرداد الأموال</p>
               </div>
               <div className="fs-card p-3">
                 <p className="text-xs font-semibold text-slate-700">مدفوع سابقًا</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-slate-950">{fmt(capital.paidCapital)}</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-slate-950">{hasFinancialInputs ? fmt(capital.paidCapital) : "—"}</p>
                 <p className="mt-1 text-[11px] text-slate-600">ضمن رأس المال المطلوب</p>
               </div>
               <div className="fs-card fs-card-blue p-3">
                 <p className="text-xs font-semibold text-blue-700">المتبقي للتمويل</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-blue-950">{fmt(capital.remainingCapital)}</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-blue-950">{hasFinancialInputs ? fmt(capital.remainingCapital) : "—"}</p>
                 <p className="mt-1 text-[11px] text-blue-700">حتى الوصول إلى ذروة السيولة</p>
               </div>
               <div className="fs-card fs-card-rose p-3">
-                <p className="text-xs font-semibold text-rose-700">إجمالي مدفوعات المستثمر طوال المشروع</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{fmt(totalDebit)}</p>
+                <p className="text-xs font-semibold text-rose-700">إجمالي مدفوعات {isJointVenture ? "وائل" : "المستثمر"} طوال المشروع</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-rose-950">{hasFinancialInputs ? fmt(totalDebit) : "—"}</p>
                 <p className="mt-1 text-[11px] text-rose-700">ليست رأس المال؛ تشمل مدفوعات بعد بدء الاسترداد</p>
               </div>
               <div className="fs-card fs-card-emerald p-3">
-                <p className="text-xs font-semibold text-emerald-700">إجمالي ما يستلمه المستثمر</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{fmt(totalCredit)}</p>
+                <p className="text-xs font-semibold text-emerald-700">إجمالي ما يستلمه {isJointVenture ? "وائل" : "المستثمر"}</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-950">{hasFinancialInputs ? fmt(totalCredit) : "—"}</p>
                 <p className="mt-1 text-[11px] text-emerald-700">أول استلام: {firstReceiptIndex >= 0 ? monthCaption(firstReceiptIndex) : "—"}</p>
               </div>
               <div className="fs-card fs-card-cyan p-3">
-                <p className="text-xs font-semibold text-cyan-700">صافي ربح المستثمر</p>
-                <p className="mt-2 text-2xl font-bold tabular-nums text-cyan-950">{fmt(profit)}</p>
+                <p className="text-xs font-semibold text-cyan-700">صافي ربح {isJointVenture ? "وائل" : "المستثمر"}</p>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-cyan-950">{hasFinancialInputs ? fmt(profit) : "—"}</p>
                 <p className={`mt-1 text-[11px] font-bold ${feasibilityDifference === null ? "text-slate-500" : reconcilesWithFeasibility ? "text-emerald-700" : "text-rose-700"}`}>
                   {feasibilityDifference === null
                     ? "اختر مشروعًا لإجراء المطابقة"

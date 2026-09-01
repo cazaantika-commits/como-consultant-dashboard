@@ -104,6 +104,42 @@ async function ensureDesignScope(db: Db, projectId: number) {
   return setId;
 }
 
+async function ensureJointVentureOffPlanTerms(db: Db, projectId: number) {
+  const projectRows = await rows<any>(db, sql`
+    SELECT financingScenario, constructionScheduleJson
+    FROM projects
+    WHERE id = ${projectId} AND is_test_project = 1
+    LIMIT 1
+  `);
+  const project = projectRows[0];
+  if (!project || project.financingScenario !== "joint_venture_land_for_units") return;
+
+  let schedule: any = {};
+  try { schedule = JSON.parse(project.constructionScheduleJson || "{}") || {}; } catch { schedule = {}; }
+  schedule.settings ||= {};
+  const previous = schedule.settings.jointVenture || {};
+  const rawShare = Number(previous.landOwnerProjectSharePct ?? previous.landOwnerResidentialSharePct ?? 35);
+  const projectShare = Number.isFinite(rawShare) ? Math.max(0, Math.min(100, rawShare)) : 35;
+  schedule.settings.jointVenture = {
+    ...previous,
+    landOwnerProjectSharePct: projectShare,
+    landOwnerResidentialSharePct: projectShare,
+    landOwnerCommercialSharePct: projectShare,
+    developmentLicenseCost: Math.max(0, Number(previous.developmentLicenseCost) || 0),
+    waelLicenseRegistrationCost: Math.max(0, Number(previous.waelLicenseRegistrationCost) || 0),
+    landOwnerLicenseRegistrationCost: Math.max(0, Number(previous.landOwnerLicenseRegistrationCost) || 0),
+    landOwnerUnitsRegistrationFeePct: Number.isFinite(Number(previous.landOwnerUnitsRegistrationFeePct))
+      ? Math.max(0, Math.min(100, Number(previous.landOwnerUnitsRegistrationFeePct)))
+      : 4,
+  };
+
+  await db.execute(sql`
+    UPDATE projects
+    SET constructionScheduleJson = ${JSON.stringify(schedule)}
+    WHERE id = ${projectId} AND is_test_project = 1
+  `);
+}
+
 export async function ensureIsolatedTestProject(userId: number): Promise<IsolatedTestProject> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -122,10 +158,12 @@ export async function ensureIsolatedTestProject(userId: number): Promise<Isolate
          'TEST-LAB', 'يُحدد أثناء التجربة',
          'هذا السجل للتجربة فقط ولا يمثل مشروعًا رسميًا',
          'joint_venture_land_for_units', NULL, NULL, NULL,
-         '{"settings":{"jointVenture":{"landOwnerResidentialSharePct":35,"landOwnerCommercialSharePct":0}}}')
+         '{"settings":{"jointVenture":{"landOwnerProjectSharePct":35,"landOwnerResidentialSharePct":35,"landOwnerCommercialSharePct":35,"developmentLicenseCost":0,"waelLicenseRegistrationCost":0,"landOwnerLicenseRegistrationCost":0,"landOwnerUnitsRegistrationFeePct":4}}}')
     `);
     projectId = Number((inserted[0] as any).insertId);
   }
+
+  await ensureJointVentureOffPlanTerms(db, projectId);
 
   const cpaRows = await rows<any>(db, sql`
     SELECT id FROM cpa_projects WHERE project_id = ${projectId} ORDER BY id ASC LIMIT 1

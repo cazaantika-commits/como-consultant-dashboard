@@ -492,11 +492,19 @@ export interface ProjectCosts {
   grossRevenueCommercial?: number;
   grossTotalRevenue?: number;
   landOwnerResidentialSharePct?: number;
+  landOwnerCommercialSharePct?: number;
   landOwnerResidentialValue?: number;
   landOwnerCommercialValue?: number;
   landOwnerTotalValue?: number;
   developerResidentialRevenue?: number;
   developerCommercialRevenue?: number;
+  developmentLicenseCost?: number;
+  waelLicenseRegistrationCost?: number;
+  landOwnerLicenseRegistrationCost?: number;
+  initialAgreementCosts?: number;
+  landOwnerUnitsRegistrationFeePct?: number;
+  landOwnerUnitsRegistrationCost?: number;
+  totalAgreementCosts?: number;
   totalRevenue: number;
   totalCosts?: number;
 }

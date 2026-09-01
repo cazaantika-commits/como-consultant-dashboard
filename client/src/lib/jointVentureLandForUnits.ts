@@ -3,11 +3,19 @@ export const JOINT_VENTURE_LAND_FOR_UNITS = "joint_venture_land_for_units" as co
 export type JointVentureTerms = {
   landOwnerResidentialSharePct: number;
   landOwnerCommercialSharePct: number;
+  developmentLicenseCost: number;
+  waelLicenseRegistrationCost: number;
+  landOwnerLicenseRegistrationCost: number;
+  landOwnerUnitsRegistrationFeePct: number;
 };
 
 export const DEFAULT_JOINT_VENTURE_TERMS: JointVentureTerms = {
   landOwnerResidentialSharePct: 35,
-  landOwnerCommercialSharePct: 0,
+  landOwnerCommercialSharePct: 35,
+  developmentLicenseCost: 0,
+  waelLicenseRegistrationCost: 0,
+  landOwnerLicenseRegistrationCost: 0,
+  landOwnerUnitsRegistrationFeePct: 4,
 };
 
 export function clampSharePct(value: unknown, fallback: number): number {
@@ -30,12 +38,19 @@ export function getJointVentureTerms(project: any): JointVentureTerms {
 
   return {
     landOwnerResidentialSharePct: clampSharePct(
-      stored.landOwnerResidentialSharePct,
+      stored.landOwnerProjectSharePct ?? stored.landOwnerResidentialSharePct,
       DEFAULT_JOINT_VENTURE_TERMS.landOwnerResidentialSharePct,
     ),
     landOwnerCommercialSharePct: clampSharePct(
-      stored.landOwnerCommercialSharePct,
+      stored.landOwnerProjectSharePct ?? stored.landOwnerResidentialSharePct ?? stored.landOwnerCommercialSharePct,
       DEFAULT_JOINT_VENTURE_TERMS.landOwnerCommercialSharePct,
+    ),
+    developmentLicenseCost: Math.max(0, Number(stored.developmentLicenseCost) || 0),
+    waelLicenseRegistrationCost: Math.max(0, Number(stored.waelLicenseRegistrationCost) || 0),
+    landOwnerLicenseRegistrationCost: Math.max(0, Number(stored.landOwnerLicenseRegistrationCost) || 0),
+    landOwnerUnitsRegistrationFeePct: clampSharePct(
+      stored.landOwnerUnitsRegistrationFeePct,
+      DEFAULT_JOINT_VENTURE_TERMS.landOwnerUnitsRegistrationFeePct,
     ),
   };
 }
@@ -51,19 +66,54 @@ export function saveJointVentureTerms(
     stored = {};
   }
   stored.settings ||= {};
+  const previous = getJointVentureTerms({ constructionScheduleJson: JSON.stringify(stored) });
+  const normalizedShare = clampSharePct(
+    terms.landOwnerResidentialSharePct ?? terms.landOwnerCommercialSharePct,
+    previous.landOwnerResidentialSharePct,
+  );
   stored.settings.jointVenture = {
-    ...getJointVentureTerms({ constructionScheduleJson: JSON.stringify(stored) }),
+    ...previous,
     ...terms,
-    landOwnerResidentialSharePct: clampSharePct(
-      terms.landOwnerResidentialSharePct,
-      getJointVentureTerms({ constructionScheduleJson: JSON.stringify(stored) }).landOwnerResidentialSharePct,
-    ),
-    landOwnerCommercialSharePct: clampSharePct(
-      terms.landOwnerCommercialSharePct,
-      getJointVentureTerms({ constructionScheduleJson: JSON.stringify(stored) }).landOwnerCommercialSharePct,
+    landOwnerProjectSharePct: normalizedShare,
+    landOwnerResidentialSharePct: normalizedShare,
+    landOwnerCommercialSharePct: normalizedShare,
+    developmentLicenseCost: Math.max(0, Number(terms.developmentLicenseCost ?? previous.developmentLicenseCost) || 0),
+    waelLicenseRegistrationCost: Math.max(0, Number(terms.waelLicenseRegistrationCost ?? previous.waelLicenseRegistrationCost) || 0),
+    landOwnerLicenseRegistrationCost: Math.max(0, Number(terms.landOwnerLicenseRegistrationCost ?? previous.landOwnerLicenseRegistrationCost) || 0),
+    landOwnerUnitsRegistrationFeePct: clampSharePct(
+      terms.landOwnerUnitsRegistrationFeePct,
+      previous.landOwnerUnitsRegistrationFeePct,
     ),
   };
   return JSON.stringify(stored);
+}
+
+export function calculateJointVentureAgreementCosts(
+  landOwnerUnitsValue: number,
+  terms: JointVentureTerms,
+) {
+  const developmentLicenseCost = Math.max(0, terms.developmentLicenseCost);
+  const waelLicenseRegistrationCost = Math.max(0, terms.waelLicenseRegistrationCost);
+  const landOwnerLicenseRegistrationCost = Math.max(0, terms.landOwnerLicenseRegistrationCost);
+  const initialAgreementCosts = developmentLicenseCost
+    + waelLicenseRegistrationCost
+    + landOwnerLicenseRegistrationCost;
+  const landOwnerUnitsRegistrationFeePct = clampSharePct(
+    terms.landOwnerUnitsRegistrationFeePct,
+    DEFAULT_JOINT_VENTURE_TERMS.landOwnerUnitsRegistrationFeePct,
+  );
+  const landOwnerUnitsRegistrationCost = Math.max(0, landOwnerUnitsValue)
+    * landOwnerUnitsRegistrationFeePct / 100;
+
+  return {
+    developmentLicenseCost,
+    waelLicenseRegistrationCost,
+    landOwnerLicenseRegistrationCost,
+    initialAgreementCosts,
+    landOwnerUnitsRegistrationFeePct,
+    landOwnerUnitsRegistrationCost,
+    totalAgreementCosts: initialAgreementCosts + landOwnerUnitsRegistrationCost,
+  };
 }
 
 export function calculateJointVentureRevenueShare(input: {
@@ -134,11 +184,11 @@ export function calculateDeveloperRevenueShare(
 
 export function calculateJointVentureAreaShare(project: any, terms: JointVentureTerms) {
   const saleableResidentialArea = Math.max(0, Number(project?.gfaResidentialSqft || 0))
-    * clampSharePct(project?.saleableResidentialPct, 95) / 100;
+    * clampSharePct(project?.saleableResidentialPct, 0) / 100;
   const saleableRetailArea = Math.max(0, Number(project?.gfaRetailSqft || 0))
-    * clampSharePct(project?.saleableRetailPct, 97) / 100;
+    * clampSharePct(project?.saleableRetailPct, 0) / 100;
   const saleableOfficeArea = Math.max(0, Number(project?.gfaOfficesSqft || 0))
-    * clampSharePct(project?.saleableOfficesPct, 95) / 100;
+    * clampSharePct(project?.saleableOfficesPct, 0) / 100;
   const landOwnerResidentialArea = saleableResidentialArea * terms.landOwnerResidentialSharePct / 100;
   const commercialArea = saleableRetailArea + saleableOfficeArea;
   const landOwnerCommercialArea = commercialArea * terms.landOwnerCommercialSharePct / 100;

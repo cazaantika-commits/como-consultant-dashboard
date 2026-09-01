@@ -11,7 +11,7 @@ import {
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { buildPricingUnits } from "@/lib/investorCashFlowEngine";
 import { calculatePricingFormulas, dbProjectToInputs } from "@/lib/projectData";
-import { calculateDeveloperRevenueShare, getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
+import { calculateDeveloperRevenueShare, calculateJointVentureAgreementCosts, getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
 
 /**
  * Calculate all project costs from raw data.
@@ -35,7 +35,7 @@ export function calculateProjectCosts(
   const isBuildForSale = financingScenario === "build_for_sale";
   const isBuildForRent = financingScenario === "build_for_rent";
   const isJointVenture = isJointVentureLandForUnits(financingScenario);
-  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent || isJointVenture;
+  const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
 
   const landPrice = parseFloat(p.landPrice || "0");
   const agentCommissionLandPct = parseFloat(p.agentCommissionLandPct || "0");
@@ -98,6 +98,10 @@ export function calculateProjectCosts(
   const sharedPricing = calculatePricingFormulas(buildPricingUnits(p, dbProjectToInputs(p)));
   const jointVentureTerms = getJointVentureTerms(p);
   const revenueShare = calculateDeveloperRevenueShare(sharedPricing, p.financingScenario, jointVentureTerms);
+  const jointVentureAgreementCosts = calculateJointVentureAgreementCosts(
+    revenueShare.landOwnerTotalValue,
+    jointVentureTerms,
+  );
   const revenueRes = revenueShare.developerResidentialRevenue;
   const revenueRet = revenueShare.developerRetailRevenue;
   const revenueOff = revenueShare.developerOfficeRevenue;
@@ -158,7 +162,7 @@ export function calculateProjectCosts(
   const cashLandPrice = isJointVenture ? 0 : landPrice;
   const cashLandCommission = isJointVenture ? 0 : agentCommissionLand;
   const cashLandRegistration = isJointVenture ? 0 : landRegistration;
-  const totalCosts = cashLandPrice + cashLandCommission + cashLandRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory;
+  const totalCosts = cashLandPrice + cashLandCommission + cashLandRegistration + soilTestFee + topographicSurveyFee + officialBodiesFees + designFee + supervisionFee + separationFee + constructionCost + computedCommunityFees + surveyorFees + (isIndependentNoOffPlan ? 0 : surveyorDwgFees) + developerFee + salesCommission + marketingCost + totalRegulatory + jointVentureAgreementCosts.totalAgreementCosts;
 
   return {
     landPrice: cashLandPrice,
@@ -172,6 +176,7 @@ export function calculateProjectCosts(
     separationFee,
     constructionCost,
     communityFees: computedCommunityFees,
+    contingencies: 0,
     surveyorFees,
     surveyorDwgFees: isIndependentNoOffPlan ? 0 : surveyorDwgFees,
     developerFee,
@@ -191,11 +196,13 @@ export function calculateProjectCosts(
     grossRevenueCommercial: isBuildForRent ? 0 : revenueShare.grossCommercialRevenue,
     grossTotalRevenue: isBuildForRent ? 0 : revenueShare.grossTotalRevenue,
     landOwnerResidentialSharePct: isJointVenture ? jointVentureTerms.landOwnerResidentialSharePct : 0,
+    landOwnerCommercialSharePct: isJointVenture ? jointVentureTerms.landOwnerCommercialSharePct : 0,
     landOwnerResidentialValue: isBuildForRent ? 0 : revenueShare.landOwnerResidentialValue,
     landOwnerCommercialValue: isBuildForRent ? 0 : revenueShare.landOwnerCommercialValue,
     landOwnerTotalValue: isBuildForRent ? 0 : revenueShare.landOwnerTotalValue,
     developerResidentialRevenue: isBuildForRent ? 0 : revenueShare.developerResidentialRevenue,
     developerCommercialRevenue: isBuildForRent ? 0 : revenueShare.developerCommercialRevenue,
+    ...jointVentureAgreementCosts,
     totalRevenue,
     totalCosts,
   };

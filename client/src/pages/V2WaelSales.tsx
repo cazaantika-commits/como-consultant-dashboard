@@ -68,6 +68,7 @@ import {
 } from "@/lib/flexiblePaymentPlan";
 import { buildPaymentCalendar, buyerDueCalendar, expandPaymentCalendarEntries } from "@/lib/paymentPlanCalendar";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
+import { getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, Cell,
@@ -141,7 +142,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     { enabled: !!selectedProjectId && !!user }
   );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
-  const isBuildForSale = scenario === "build_for_sale" || scenario === "joint_venture_land_for_units";
+  const isBuildForSale = scenario === "build_for_sale";
+  const isJointVenture = isJointVentureLandForUnits(scenario);
+  const jointVentureTerms = useMemo(() => getJointVentureTerms(projectQuery.data), [projectQuery.data]);
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -234,7 +237,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       if (p.salesCommissionPct) setCommissionPct(Number(p.salesCommissionPct));
       if (p.marketingPrepMonths) setMarketingPrepLead(Number(p.marketingPrepMonths));
       if (p.reraLeadMonths) setReraLead(Number(p.reraLeadMonths));
-      if (p.financingScenario === "build_for_sale" || p.financingScenario === "joint_venture_land_for_units") {
+      if (p.financingScenario === "build_for_sale") {
         try {
           const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
           const savedRate = Number(savedRates.buildForSaleMarketingRate ?? 1);
@@ -317,8 +320,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     }),
     [unitData]
   );
-  const totalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
-  const totalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
+  const grossTotalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
+  const grossTotalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
+  const developerShare = isJointVenture ? (1 - jointVentureTerms.landOwnerResidentialSharePct / 100) : 1;
+  const totalRevenue = grossTotalRevenue * developerShare;
+  const totalUnits = grossTotalUnits * developerShare;
   const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
   const activeUnitRevenues = unitRevenues.filter((unit) => unit.count > 0);
   const activeResidentialUnits = activeUnitRevenues.filter((unit) => unit.category === "residential");
@@ -326,7 +332,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const activeOfficeUnits = activeUnitRevenues.filter((unit) => unit.category === "office");
 
   // ─── Computed: Full Costs from Feasibility ─────────────────────────────────
-  const constructionCostPerSqft = projectQuery.data ? Number((projectQuery.data as any).estimatedConstructionPricePerSqft) || 400 : 400;
+  const constructionCostPerSqft = projectQuery.data
+    ? Number((projectQuery.data as any).estimatedConstructionPricePerSqft) || (isJointVenture ? 0 : 400)
+    : 0;
   const constructionCost = totalArea * constructionCostPerSqft;
   const marketingCost = totalRevenue * (marketingPct / 100);
   const totalChannelPct = Object.values(channelPcts).reduce((sum, value) => sum + value, 0);

@@ -65,7 +65,7 @@ export function isFinancialStudiesTabVisible(
   tabId: FinancialStudiesTabId,
   projectType?: string | null,
 ): boolean {
-  if (projectType === "build_for_sale" || projectType === "joint_venture_land_for_units") return !BUILD_FOR_SALE_HIDDEN_TABS.includes(tabId);
+  if (projectType === "build_for_sale") return !BUILD_FOR_SALE_HIDDEN_TABS.includes(tabId);
   if (projectType === "build_for_rent") return !BUILD_FOR_RENT_HIDDEN_TABS.includes(tabId);
   return true;
 }
@@ -81,7 +81,7 @@ export function isFinancialStudiesGeneralInputVisible(
   fieldKey: string,
   projectType?: string | null,
 ): boolean {
-  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent" || projectType === "joint_venture_land_for_units";
+  const isNoOffPlanType = projectType === "build_for_sale" || projectType === "build_for_rent";
   return !isNoOffPlanType
     || !BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS.includes(fieldKey as typeof BUILD_FOR_SALE_HIDDEN_GENERAL_INPUT_KEYS[number]);
 }
@@ -91,7 +91,7 @@ export function isFinancialStudiesSettingsItemVisible(
   itemId: string,
   projectType?: string | null,
 ): boolean {
-  if (projectType === "build_for_sale" || projectType === "joint_venture_land_for_units") {
+  if (projectType === "build_for_sale") {
     return !OFFPLAN_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof OFFPLAN_ONLY_SETTINGS_ITEM_IDS[number])
       && !BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS.includes(itemId as typeof BUILD_FOR_RENT_ONLY_SETTINGS_ITEM_IDS[number]);
   }

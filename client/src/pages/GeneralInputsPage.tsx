@@ -33,8 +33,11 @@ const ALL_FIELDS = [
   { key: "saleableResidentialPct", label: "نسبة بيع سكني", unit: "%", type: "number", defaultValue: "95" },
   { key: "saleableRetailPct", label: "نسبة بيع تجزئة", unit: "%", type: "number", defaultValue: "97" },
   { key: "saleableOfficesPct", label: "نسبة بيع مكاتب", unit: "%", type: "number", defaultValue: "95" },
-  { key: "landOwnerResidentialSharePct", label: "حصة مالك الأرض من السكني", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true },
-  { key: "landOwnerCommercialSharePct", label: "حصة مالك الأرض من التجاري", unit: "%", type: "number", defaultValue: "0", jointVentureOnly: true },
+  { key: "landOwnerProjectSharePct", label: "حصة مالك الأرض من جميع الوحدات", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true },
+  { key: "developmentLicenseCost", label: "رخصة التطوير العقاري للاتفاق", unit: "درهم", type: "number", jointVentureOnly: true },
+  { key: "waelLicenseRegistrationCost", label: "تسجيل وائل في رخصة التطوير", unit: "درهم", type: "number", jointVentureOnly: true },
+  { key: "landOwnerLicenseRegistrationCost", label: "تسجيل صاحب الأرض في الرخصة", unit: "درهم", type: "number", jointVentureOnly: true },
+  { key: "landOwnerUnitsRegistrationFeePct", label: "تسجيل وحدات صاحب الأرض عند الإنجاز", unit: "% من قيمة حصته", type: "number", defaultValue: "4", jointVentureOnly: true },
   { key: "agentCommissionLandPct", label: "عمولة وسيط الأرض", unit: "%", type: "number", defaultValue: "1" },
   { key: "designFeePct", label: "أتعاب التصميم (%)", unit: "%", type: "number", defaultValue: "1.8" },
   { key: "designFeeFixed", label: "أتعاب التصميم (مقطوع)", unit: "درهم", type: "number" },
@@ -91,13 +94,16 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       ALL_FIELDS.forEach(f => {
         const val = p[f.key];
         if (val != null && val !== "") data[f.key] = String(val);
-        else if (f.defaultValue) data[f.key] = f.defaultValue;
+        else if (f.defaultValue && !isJointVentureLandForUnits(p.financingScenario)) data[f.key] = f.defaultValue;
       });
       data.financingScenario = p.financingScenario || "offplan_escrow";
       if (isJointVentureLandForUnits(data.financingScenario)) {
         const terms = getJointVentureTerms(p);
-        data.landOwnerResidentialSharePct = String(terms.landOwnerResidentialSharePct);
-        data.landOwnerCommercialSharePct = String(terms.landOwnerCommercialSharePct);
+        data.landOwnerProjectSharePct = String(terms.landOwnerResidentialSharePct);
+        data.developmentLicenseCost = terms.developmentLicenseCost > 0 ? String(terms.developmentLicenseCost) : "";
+        data.waelLicenseRegistrationCost = terms.waelLicenseRegistrationCost > 0 ? String(terms.waelLicenseRegistrationCost) : "";
+        data.landOwnerLicenseRegistrationCost = terms.landOwnerLicenseRegistrationCost > 0 ? String(terms.landOwnerLicenseRegistrationCost) : "";
+        data.landOwnerUnitsRegistrationFeePct = String(terms.landOwnerUnitsRegistrationFeePct);
       }
       if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
       if (data.financingScenario === "joint_venture_land_for_units") data.developerFeePct = "0";
@@ -136,8 +142,12 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         payload.constructionScheduleJson = saveJointVentureTerms(
           (projectQuery.data as any)?.constructionScheduleJson,
           {
-            landOwnerResidentialSharePct: Number(formData.landOwnerResidentialSharePct ?? 35),
-            landOwnerCommercialSharePct: Number(formData.landOwnerCommercialSharePct ?? 0),
+            landOwnerResidentialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
+            landOwnerCommercialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
+            developmentLicenseCost: Number(formData.developmentLicenseCost || 0),
+            waelLicenseRegistrationCost: Number(formData.waelLicenseRegistrationCost || 0),
+            landOwnerLicenseRegistrationCost: Number(formData.landOwnerLicenseRegistrationCost || 0),
+            landOwnerUnitsRegistrationFeePct: Number(formData.landOwnerUnitsRegistrationFeePct ?? 4),
           },
         );
       }
@@ -160,8 +170,19 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
 
   const computed = useMemo(() => {
     const mockDb: any = {};
-    ALL_FIELDS.forEach(f => { mockDb[f.key] = formData[f.key] || f.defaultValue || ""; });
+    const isJointVenture = isJointVentureLandForUnits(formData.financingScenario);
+    ALL_FIELDS.forEach(f => { mockDb[f.key] = formData[f.key] || (isJointVenture ? "" : f.defaultValue || ""); });
     mockDb.constructionScheduleJson = (projectQuery.data as any)?.constructionScheduleJson;
+    if (isJointVenture) {
+      mockDb.constructionScheduleJson = saveJointVentureTerms(mockDb.constructionScheduleJson, {
+        landOwnerResidentialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
+        landOwnerCommercialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
+        developmentLicenseCost: Number(formData.developmentLicenseCost || 0),
+        waelLicenseRegistrationCost: Number(formData.waelLicenseRegistrationCost || 0),
+        landOwnerLicenseRegistrationCost: Number(formData.landOwnerLicenseRegistrationCost || 0),
+        landOwnerUnitsRegistrationFeePct: Number(formData.landOwnerUnitsRegistrationFeePct ?? 4),
+      });
+    }
     if (formData.financingScenario === "build_for_rent") {
       let schedule: any = {};
       try { schedule = JSON.parse(mockDb.constructionScheduleJson || "{}"); } catch {}
@@ -265,7 +286,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
             <option value="offplan_escrow">أوف بلان</option>
             <option value="build_for_sale">بناء للبيع</option>
             <option value="build_for_rent">بناء للتأجير</option>
-            <option value="joint_venture_land_for_units">Joint Venture — الأرض مقابل وحدات</option>
+            <option value="joint_venture_land_for_units">Joint Venture Off-Plan — الأرض مقابل وحدات</option>
           </select>
         </label>
         <span className="text-[11px] text-blue-700 font-medium">مدة التصاميم: {designTiming.designMonths} شهر <span className="text-gray-400">(من الإعدادات والقواعد)</span></span>
@@ -297,7 +318,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       )}
       {isJointVenture && (
         <div className="mb-3 rounded-xl border border-violet-300 border-r-4 border-r-violet-600 bg-violet-50/80 px-4 py-2 text-[12px] text-violet-950">
-          <span className="font-semibold">نموذج الأرض مقابل وحدات:</span> الأرض مساهمة غير نقدية ولا تدخل ضمن رأس المال المدفوع. تُخصم حصة مالك الأرض من المساحة السكنية القابلة للبيع، بينما يبقى التجاري كاملًا للمطور عندما تكون حصته 0%.
+          <span className="font-semibold">Joint Venture Off-Plan:</span> صاحب الأرض يقدّم الأرض ويحصل على النسبة المحددة من جميع الوحدات السكنية والتجارية. يبيع وائل حصته أثناء الإنشاء عبر خطة الدفع وحساب الضمان، وتظهر مصاريف الرخصة والتسجيل ضمن رأس ماله خارج الضمان.
         </div>
       )}
 
