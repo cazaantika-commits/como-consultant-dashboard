@@ -25,7 +25,9 @@ describe("Construction Plan execution canvas", () => {
   });
 
   it("retains the financial save contract and auditable payment details", () => {
-    expect(source).toContain("constructionScheduleJson: JSON.stringify({ mobilizationPct, monthlyProgress, curveType })");
+    expect(source).toContain("mergeProjectScheduleJson");
+    expect(source).toContain("constructionScheduleJson: mergeProjectScheduleJson(project?.constructionScheduleJson");
+    expect(source).not.toContain("constructionScheduleJson: JSON.stringify({ mobilizationPct, monthlyProgress, curveType })");
     expect(source).toContain("تفاصيل دفعات المقاول للتدقيق");
     expect(source).toContain("إطلاق احتجاز قادم");
   });

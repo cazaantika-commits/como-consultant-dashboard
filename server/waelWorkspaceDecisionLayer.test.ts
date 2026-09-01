@@ -67,13 +67,11 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('aria-hidden="true" className="hidden overflow-hidden rounded-[22px] border border-slate-800 bg-[#101b2d]');
   });
 
-  it("uses a compact pricing ledger with one editable price field per unit type", () => {
+  it("uses compact visible pricing cards with one editable price field per unit type", () => {
     expect(workspaceSource).toContain('data-testid="unit-pricing-card"');
-    expect(workspaceSource).toContain('pricing-ledger-grid');
-    expect(workspaceSource).toContain('pricing-ledger-row');
-    expect(workspaceSource).toContain('borderRightColor: unit.color');
-    expect(workspaceSource).toContain('سعر القدم² — قابل للتعديل');
-    expect(workspaceSource).toContain('إيراد النوع');
+    expect(workspaceSource).toContain('سعر القدم² — اكتب الرقم مباشرة');
+    expect(workspaceSource).toContain('updateUnit(unit.id, "price"');
+    expect(workspaceSource).toContain('fmt(unit.total)');
   });
 
   it("uses distinct full-card pastel backgrounds rather than repetitive white interiors", () => {
@@ -91,7 +89,7 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain('الأشهر {pageStart + 1}–{Math.min(pageStart + monthsPerPage, salesMonths)}');
     expect(workspaceSource).toContain('salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage)');
     expect(workspaceSource).toContain("MARKETING_CHANNELS.map((channel)");
-    expect(workspaceSource).toContain("من 6 بنود");
+    expect(workspaceSource).toContain("القنوات لا تتجاوز 100%");
     expect(workspaceSource).toContain('data-testid="unified-month-card"');
     expect(workspaceSource).toContain("رصيد الإسكرو");
     expect(workspaceSource).toContain("monthlyEscrowBalance");
@@ -103,7 +101,8 @@ describe("Wael professional decision workspace", () => {
     expect(workspaceSource).toContain("return `${monthNames[offset % 12]} ${startYear + Math.floor(offset / 12)}`");
     expect(workspaceSource).toContain('data-testid="unified-month-card"');
     expect(workspaceSource).toContain('const monthlyCollection = cashRow?.cashInflow ?? 0');
-    expect(workspaceSource).toContain('const monthlyEscrowBalance = isBuildForSale ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null');
+    expect(workspaceSource).toContain('const monthlyEscrowBalance = isBuildForSale || !hasCompleteFinancialModel ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null');
+    expect(workspaceSource).toContain('monthlyEscrowBalance === null ? "بانتظار التكلفة"');
     expect(workspaceSource).toContain('calculateEscrowMonthlyBalance');
     expect(workspaceSource).toContain('قيمة بيع متوقعة');
     expect(workspaceSource).toContain('رصيد الإسكرو');

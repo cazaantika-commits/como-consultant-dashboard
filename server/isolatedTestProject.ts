@@ -120,6 +120,7 @@ async function ensureJointVentureOffPlanTerms(db: Db, projectId: number) {
   const previous = schedule.settings.jointVenture || {};
   const rawShare = Number(previous.landOwnerProjectSharePct ?? previous.landOwnerResidentialSharePct ?? 35);
   const projectShare = Number.isFinite(rawShare) ? Math.max(0, Math.min(100, rawShare)) : 35;
+
   schedule.settings.jointVenture = {
     ...previous,
     landOwnerProjectSharePct: projectShare,

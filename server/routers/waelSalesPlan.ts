@@ -212,7 +212,7 @@ export const waelSalesPlanRouter = router({
         )).limit(1);
         if (!currentPlan || !project) throw new Error("Payment plan or project not found");
 
-        const isOffPlan = ["offplan_escrow", "offplan_construction"].includes(String(project.financingScenario || ""));
+        const isOffPlan = ["offplan_escrow", "offplan_construction", "joint_venture_land_for_units"].includes(String(project.financingScenario || ""));
         const canRebuild = isOffPlan
           && getSavedProjectUnitCount(project) > 0
           && Number(currentPlan.totalRevenue) > 0;
@@ -231,6 +231,7 @@ export const waelSalesPlanRouter = router({
             paymentPlanJson: input.paymentPlanJson,
             salesAbsorptionJson: rebuilt?.salesAbsorptionJson ?? currentPlan.salesAbsorptionJson,
             resultsJson: rebuilt?.resultsJson ?? null,
+            offplanPct: project.financingScenario === "joint_venture_land_for_units" ? 100 : currentPlan.offplanPct,
             status: "draft",
           })
           .where(and(

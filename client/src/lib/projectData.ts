@@ -244,7 +244,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     designFee: designPct / 100,
     supervisionFee: supervisionPct / 100,
     sortingFeePerSqft: sortingPerSqft,
-    reraUnitFee: Number(savedRates.reraUnitRegistrationFee ?? (isJointVenture ? 0 : 520)),
+    reraUnitFee: Number(savedRates.reraUnitRegistrationFee ?? 520),
     developerFeeRate: developerPct / 100,
     developerFeeDesign: isBuildForRent ? buildForRentDeveloperFeeDesignPct / 100 : 0.01,
     developerFeeOffplan: isIndependentNoOffPlan ? 0 : 0.01,
@@ -386,6 +386,7 @@ export function calculateCosts(
   const { landPrice, landRegistration, landBroker, constructionCost, gfaTotal } = projectFormulas;
   const { totalUnits } = pricingFormulas;
   const revenueShare = calculateDeveloperRevenueShare(pricingFormulas, rates.projectType, {
+    landOwnerProjectSharePct: rates.landOwnerResidentialSharePct,
     landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
     landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
     developmentLicenseCost: rates.developmentLicenseCost,
@@ -397,6 +398,7 @@ export function calculateCosts(
   const jointVentureAgreementCosts = calculateJointVentureAgreementCosts(
     revenueShare.landOwnerTotalValue,
     {
+      landOwnerProjectSharePct: rates.landOwnerResidentialSharePct,
       landOwnerResidentialSharePct: rates.landOwnerResidentialSharePct,
       landOwnerCommercialSharePct: rates.landOwnerCommercialSharePct,
       developmentLicenseCost: rates.developmentLicenseCost,

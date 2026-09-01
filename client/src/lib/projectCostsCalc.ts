@@ -121,7 +121,7 @@ export function calculateProjectCosts(
   let buildForSaleMarketingRate = isJointVenture ? 0 : 1;
   let buildForRentDeveloperFeeDesignRate = 1.5;
   let buildForRentDeveloperFeeSupervisionRate = 2.5;
-  let reraUnitRegistrationFee = isJointVenture ? 0 : 520;
+  let reraUnitRegistrationFee = 520;
   try {
     const savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
     buildForSaleMarketingRate = Number(savedRates.buildForSaleMarketingRate ?? (isJointVenture ? 0 : 1));
@@ -144,9 +144,13 @@ export function calculateProjectCosts(
   const totalUnits = sharedPricing.totalUnits;
   const computedReraUnitRegFee = totalUnits > 0 ? totalUnits * reraUnitRegistrationFee : reraUnitRegFee;
   const designDuration = getProjectDesignTiming(p).designMonths;
+  const hasJointVentureTimeline = Boolean(p.startDate) && Number(p.constructionMonths) > 0;
+  const communityDuration = isJointVenture && !hasJointVentureTimeline
+    ? 0
+    : designDuration + Math.max(0, Number(p.constructionMonths) || (isJointVenture ? 0 : 16));
   const communitySchedule = calculateCommunityFeeSchedule(
     totalGfaSqft,
-    designDuration + parseInt(p.constructionMonths || "16"),
+    communityDuration,
     getProjectCommunityFeeSettings(p),
   );
   const computedCommunityFees = communitySchedule.total;

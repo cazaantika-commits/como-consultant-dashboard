@@ -9,8 +9,13 @@ import {
   saveJointVentureTerms,
 } from "../client/src/lib/jointVentureLandForUnits";
 import { computeInvestorCashFlow } from "../client/src/lib/investorCashFlowEngine";
+import { calculateInvestorMonthlyNet } from "../client/src/lib/investorCashFlowNet";
 import { calculateProjectCosts } from "../client/src/lib/projectCostsCalc";
 import { isFinancialStudiesTabVisible } from "../client/src/lib/financialStudiesNavigation";
+import {
+  buildSalesResultFromSavedPlan,
+  rebuildOffPlanSalesResultsFromPaymentPlan,
+} from "../client/src/lib/salesPlanCashFlow";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -103,7 +108,7 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
   });
 
   it("normalizes legacy separate shares and applies one changed percentage to both categories", () => {
-    const legacy = JSON.stringify({ settings: { jointVenture: { landOwnerResidentialSharePct: 35, landOwnerCommercialSharePct: 0 } } });
+    const legacy = JSON.stringify({ settings: { jointVenture: { landOwnerResidentialSharePct: 35, landOwnerCommercialSharePct: 0, sourceIntegrityResetVersion: 1 } } });
     expect(getJointVentureTerms({ constructionScheduleJson: legacy }).landOwnerCommercialSharePct).toBe(35);
 
     const revisedJson = saveJointVentureTerms(legacy, { landOwnerResidentialSharePct: 25 });
@@ -118,6 +123,7 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
 
     expect(revisedTerms.landOwnerResidentialSharePct).toBe(25);
     expect(revisedTerms.landOwnerCommercialSharePct).toBe(25);
+    expect(JSON.parse(revisedJson).settings.jointVenture.sourceIntegrityResetVersion).toBe(1);
     expect(areas.landOwnerResidentialArea).toBe(2_500);
     expect(areas.landOwnerCommercialArea).toBe(500);
     expect(revenues.landOwnerTotalValue).toBe(3_500_000);
@@ -135,9 +141,30 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
   });
 
   it("treats land as non-cash, routes developer-share sales through off-plan escrow, and excludes COMO profit share", () => {
-    const result = computeInvestorCashFlow(project, "joint_venture_land_for_units");
+    const paymentPlanJson = JSON.stringify({
+      version: 2,
+      stages: [
+        { id: "booking", label: "دفعة الحجز", trigger: "sale", percentage: 100, recipient: "escrow" },
+      ],
+    });
+    const rebuilt = rebuildOffPlanSalesResultsFromPaymentPlan({
+      project,
+      totalRevenue: 9_100_000,
+      offplanPct: 65,
+      salesAbsorptionJson: JSON.stringify({ mode: "auto", speed: 50, template: "bell" }),
+      paymentPlanJson,
+    });
+    const salesResult = buildSalesResultFromSavedPlan({
+      offplanPct: 65,
+      paymentPlanJson,
+      salesAbsorptionJson: rebuilt.salesAbsorptionJson,
+      resultsJson: rebuilt.resultsJson,
+    }, project, "joint_venture_land_for_units");
+    const result = computeInvestorCashFlow(project, "joint_venture_land_for_units", undefined, salesResult);
 
     expect(result.totalRevenue).toBe(9_100_000);
+    expect(salesResult?.offplanPct).toBe(100);
+    expect(salesResult?.salesDistribution.reduce((sum, units) => sum + units, 0)).toBe(8);
     expect(result.rows.some((row) => row.label === "سعر الأرض")).toBe(false);
     expect(result.rows.some((row) => row.label.includes("مساهمة مالك الأرض") && row.totalCost === 0)).toBe(true);
     expect(result.rows.some((row) => row.label.includes("إيداع حساب الضمان") && row.isTransfer)).toBe(true);
@@ -145,10 +172,25 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
     expect(result.rows.some((row) => row.label.includes("تصفية حساب الضمان"))).toBe(true);
     expect(result.rows.some((row) => row.label.includes("أتعاب المطور"))).toBe(false);
     expect(result.rows.some((row) => row.label.includes("حصة كومو"))).toBe(false);
+    expect(result.rows.some((row) => row.label.includes("تحصيلات مبيعات مباشرة بعد الإنجاز"))).toBe(false);
     expect(result.usedSalesResult?.escrowData.some((entry) => entry.income > 0)).toBe(true);
     const firstEscrowReceipt = result.usedSalesResult?.actualEscrowCashInflow?.findIndex((amount) => amount > 0) ?? -1;
     expect(firstEscrowReceipt).toBeGreaterThanOrEqual(0);
     expect(firstEscrowReceipt).toBeLessThan(result.designDuration + result.constructionDuration);
+    const costs = calculateProjectCosts(project)!;
+    const monthlyNet = calculateInvestorMonthlyNet(result, salesResult);
+    const investorDebits = monthlyNet.paidBeforeSchedule + monthlyNet.debitTotals.reduce((sum, amount) => sum + amount, 0);
+    const investorCredits = monthlyNet.creditTotals.reduce((sum, amount) => sum + amount, 0);
+    expect(result.grandTotalCost).toBeCloseTo(costs.totalCosts ?? 0, 6);
+    expect(investorCredits - investorDebits).toBeCloseTo(costs.totalRevenue - (costs.totalCosts ?? 0), 6);
+  });
+
+  it("does not invent a sales schedule when Wael has not saved his sales indicator", () => {
+    const result = computeInvestorCashFlow(project, "joint_venture_land_for_units");
+
+    expect(result.usedSalesResult).toBeUndefined();
+    expect(result.rows.some((row) => row.label.includes("تحصيلات مبيعات مباشرة بعد الإنجاز"))).toBe(false);
+    expect(result.rows.some((row) => row.isRevenue && row.totalCost > 0)).toBe(false);
   });
 
   it("charges all JV agreement rows to Wael outside escrow and reconciles engine cost with feasibility", () => {
@@ -198,6 +240,8 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
     const projectRouter = fs.readFileSync(path.join(ROOT, "server/routers/projects.ts"), "utf8");
     const isolatedProject = fs.readFileSync(path.join(ROOT, "server/isolatedTestProject.ts"), "utf8");
     const feasibility = fs.readFileSync(path.join(ROOT, "client/src/pages/V2Feasibility.tsx"), "utf8");
+    const timeline = fs.readFileSync(path.join(ROOT, "client/src/pages/TimelinePage.tsx"), "utf8");
+    const salesRouter = fs.readFileSync(path.join(ROOT, "server/routers/waelSalesPlan.ts"), "utf8");
 
     expect(isFinancialStudiesTabVisible("escrow", "joint_venture_land_for_units")).toBe(true);
     expect(projectRouter).toContain('"joint_venture_land_for_units"');
@@ -206,5 +250,11 @@ describe("Joint Venture Off-Plan — land for all-unit share", () => {
     expect(isolatedProject).toContain('"landOwnerUnitsRegistrationFeePct":4');
     expect(feasibility).toContain("حصة صاحب الأرض من جميع الوحدات");
     expect(feasibility).toContain("ربح / خسارة المطور");
+    expect(timeline).toContain('const isBuildForSale = projectType === "build_for_sale";');
+    expect(timeline).toContain("مؤشر وائل المحفوظ في صفحة المبيعات");
+    expect(timeline).toContain("لا توجد مدد أو تواريخ مفترضة لهذا المشروع التجريبي");
+    expect(salesRouter).toContain('"joint_venture_land_for_units"');
+    expect(isolatedProject).not.toContain("DELETE FROM wael_sales_plans");
+    expect(isolatedProject).not.toContain("manualBuaSqft = NULL");
   });
 });

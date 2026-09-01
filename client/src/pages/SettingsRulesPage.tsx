@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_DESIGN_PAYMENT_STAGES, type DesignPaymentStage } from "@/lib/projectTiming";
 import { isFinancialStudiesSettingsItemVisible } from "@/lib/financialStudiesNavigation";
+import { mergeProjectScheduleJson } from "@/lib/projectScheduleJson";
 import { default as Settings } from "lucide-react/dist/esm/icons/settings.js";
 import { default as Save } from "lucide-react/dist/esm/icons/save.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
@@ -119,7 +120,7 @@ const ESCROW_RULES = [
   { id: "govFees45b", label: "رسوم الجهات الحكومية (45%)", timing: "عند 90% إنجاز الإنشاء", type: "دفعة واحدة" },
   { id: "reraAuditor", label: "تقرير مدقق ريرا", timing: "3,500 درهم لكل دفعة — كل 3 أشهر من بداية الإنشاء حتى نهايته", type: "ربع سنوية" },
   { id: "reraInspection", label: "فحص ريرا", timing: "15,020 درهم لكل دفعة — كل 3 أشهر من بداية الإنشاء حتى نهايته", type: "ربع سنوية" },
-  { id: "salesCommission", label: "عمولة المبيعات", timing: "نسبة العمولة × مبيعات كل شهر — تُصرف فقط عندما يسدد المشتري 20% من سعر الوحدة (حسب خطة الدفع) — تُدفع من حساب الضمان", type: "مرتبطة بالمبيعات" },
+  { id: "salesCommission", label: "أتعاب الوساطة العقارية للمبيعات", timing: "النسبة التي يحددها وائل × قيمة الوحدات المباعة — تُصرف فقط عندما يسدد المشتري 20% من سعر الوحدة حسب خطة الدفع — وتُدفع من حساب الضمان", type: "من صفحة مبيعات وائل" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -201,18 +202,18 @@ export default function SettingsRulesPage({ embedded }: { embedded?: boolean } =
   const handleSave = useCallback(() => {
     if (!selectedProjectId) return;
     const existingJson = (projectQuery.data as any)?.constructionScheduleJson;
-    let existing: any = {};
-    if (existingJson) { try { existing = JSON.parse(existingJson); } catch {} }
-    existing.settings = {
-      projectPhases: Object.fromEntries(projectPhases.map((ph) => [ph.id, { durationMonths: ph.durationMonths, startOffsetMonths: ph.startOffsetMonths }])),
-      designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
-      configurableRates: Object.fromEntries(configurableRates.map((r) => [r.id, r.value])),
-      directPostCompletionSales: {
-        startMonth: directSalesStartMonth,
-        installmentCount: directSalesInstallmentCount,
+    const constructionScheduleJson = mergeProjectScheduleJson(existingJson, {
+      settings: {
+        projectPhases: Object.fromEntries(projectPhases.map((ph) => [ph.id, { durationMonths: ph.durationMonths, startOffsetMonths: ph.startOffsetMonths }])),
+        designPayments: Object.fromEntries(designPayments.map((r) => [r.id, { pct: r.pct, durationWeeks: r.durationWeeks }])),
+        configurableRates: Object.fromEntries(configurableRates.map((r) => [r.id, r.value])),
+        directPostCompletionSales: {
+          startMonth: directSalesStartMonth,
+          installmentCount: directSalesInstallmentCount,
+        },
       },
-    };
-    updateProject.mutate({ id: selectedProjectId, constructionScheduleJson: JSON.stringify(existing) } as any);
+    });
+    updateProject.mutate({ id: selectedProjectId, constructionScheduleJson } as any);
     setHasChanges(false);
   }, [selectedProjectId, projectPhases, designPayments, configurableRates, directSalesStartMonth, directSalesInstallmentCount, projectQuery.data, updateProject]);
 

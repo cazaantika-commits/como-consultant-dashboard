@@ -156,8 +156,8 @@ export function getProjectReraQuarterlyFeeSettings(project: any) {
     ? Math.max(0, Number(project?.constructionMonths ?? 0))
     : Math.max(1, Number(project?.constructionMonths ?? 30));
   const paymentCount = constructionMonths > 0 ? Math.ceil(constructionMonths / 3) : 0;
-  const auditorPerPayment = Math.max(0, Number(savedRates?.reraAuditorQuarterlyFee ?? (isJointVenture ? 0 : 3500)));
-  const inspectionPerPayment = Math.max(0, Number(savedRates?.reraInspectionQuarterlyFee ?? (isJointVenture ? 0 : 15020)));
+  const auditorPerPayment = Math.max(0, Number(savedRates?.reraAuditorQuarterlyFee ?? 3500));
+  const inspectionPerPayment = Math.max(0, Number(savedRates?.reraInspectionQuarterlyFee ?? 15020));
 
   return {
     constructionMonths,

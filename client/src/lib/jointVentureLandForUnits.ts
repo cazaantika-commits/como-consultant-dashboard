@@ -1,6 +1,7 @@
 export const JOINT_VENTURE_LAND_FOR_UNITS = "joint_venture_land_for_units" as const;
 
 export type JointVentureTerms = {
+  landOwnerProjectSharePct: number;
   landOwnerResidentialSharePct: number;
   landOwnerCommercialSharePct: number;
   developmentLicenseCost: number;
@@ -10,6 +11,7 @@ export type JointVentureTerms = {
 };
 
 export const DEFAULT_JOINT_VENTURE_TERMS: JointVentureTerms = {
+  landOwnerProjectSharePct: 35,
   landOwnerResidentialSharePct: 35,
   landOwnerCommercialSharePct: 35,
   developmentLicenseCost: 0,
@@ -36,15 +38,15 @@ export function getJointVentureTerms(project: any): JointVentureTerms {
     stored = {};
   }
 
+  const landOwnerProjectSharePct = clampSharePct(
+    stored.landOwnerProjectSharePct ?? stored.landOwnerResidentialSharePct ?? stored.landOwnerCommercialSharePct,
+    DEFAULT_JOINT_VENTURE_TERMS.landOwnerProjectSharePct,
+  );
+
   return {
-    landOwnerResidentialSharePct: clampSharePct(
-      stored.landOwnerProjectSharePct ?? stored.landOwnerResidentialSharePct,
-      DEFAULT_JOINT_VENTURE_TERMS.landOwnerResidentialSharePct,
-    ),
-    landOwnerCommercialSharePct: clampSharePct(
-      stored.landOwnerProjectSharePct ?? stored.landOwnerResidentialSharePct ?? stored.landOwnerCommercialSharePct,
-      DEFAULT_JOINT_VENTURE_TERMS.landOwnerCommercialSharePct,
-    ),
+    landOwnerProjectSharePct,
+    landOwnerResidentialSharePct: landOwnerProjectSharePct,
+    landOwnerCommercialSharePct: landOwnerProjectSharePct,
     developmentLicenseCost: Math.max(0, Number(stored.developmentLicenseCost) || 0),
     waelLicenseRegistrationCost: Math.max(0, Number(stored.waelLicenseRegistrationCost) || 0),
     landOwnerLicenseRegistrationCost: Math.max(0, Number(stored.landOwnerLicenseRegistrationCost) || 0),
@@ -66,12 +68,14 @@ export function saveJointVentureTerms(
     stored = {};
   }
   stored.settings ||= {};
+  const existingTerms = stored.settings.jointVenture || {};
   const previous = getJointVentureTerms({ constructionScheduleJson: JSON.stringify(stored) });
   const normalizedShare = clampSharePct(
-    terms.landOwnerResidentialSharePct ?? terms.landOwnerCommercialSharePct,
-    previous.landOwnerResidentialSharePct,
+    terms.landOwnerProjectSharePct ?? terms.landOwnerResidentialSharePct ?? terms.landOwnerCommercialSharePct,
+    previous.landOwnerProjectSharePct,
   );
   stored.settings.jointVenture = {
+    ...existingTerms,
     ...previous,
     ...terms,
     landOwnerProjectSharePct: normalizedShare,

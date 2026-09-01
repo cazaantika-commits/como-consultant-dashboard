@@ -718,7 +718,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // ─── Generate default salesResult when not provided or empty (for offplan scenarios) ───
   // This ensures commission distribution and revenue inflows work even without a saved V2WaelSales plan
   const hasValidSalesData = salesResult && salesResult.escrowData && salesResult.escrowData.length > 0 && salesResult.escrowData.some(e => e.income > 0);
-  if (!hasValidSalesData && !isScenario3 && !isScenario4 && !isBuildForSale && developerSalesUnits > 0 && totalRevenue > 0) {
+  if (!hasValidSalesData && !isScenario3 && !isScenario4 && !isBuildForSale && !isJointVenture && developerSalesUnits > 0 && totalRevenue > 0) {
     salesResult = {
       ...buildDefaultOffPlanSalesResult({
         totalRevenue,
@@ -903,7 +903,10 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   });
 
   // ─── رسوم المجتمع (من إعدادات المشروع) ───
-  const communityTotalMonths = designDuration + constructionDuration;
+  const hasJointVentureTimeline = Boolean(i.startDate) && constructionDuration > 0;
+  const communityTotalMonths = isJointVenture && !hasJointVentureTimeline
+    ? 0
+    : designDuration + constructionDuration;
   const communitySchedule = calculateCommunityFeeSchedule(
     gfaTotal || 0,
     communityTotalMonths,
@@ -1284,7 +1287,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
 
     if (commTotal > 0) {
       rows.push({
-        label: "عمولة المبيعات",
+        label: isJointVenture ? "أتعاب الوساطة العقارية لبيع حصة وائل" : "عمولة المبيعات",
         totalCost: commTotal,
         investorAmount: 0,
         paid: 0,
@@ -1692,9 +1695,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         totalRevenue,
         totalUnits: developerSalesUnits,
         salesDistribution: salesResult.salesDistribution,
-        offplanPct: salesResult.offplanPct,
+        offplanPct: isJointVenture ? 100 : salesResult.offplanPct,
       });
-      if (salesChannels.unsoldDirectRevenue > 0) {
+      if (!isJointVenture && salesChannels.unsoldDirectRevenue > 0) {
         const directSalesStartMonth = Math.max(1, Math.min(postDuration, salesResult.directSalesStartMonth ?? 4));
         const directSalesInstallmentCount = Math.max(1, Math.min(postDuration - directSalesStartMonth + 1, salesResult.directSalesInstallmentCount ?? 6));
         const directRevenuePerMonth = salesChannels.unsoldDirectRevenue / directSalesInstallmentCount;
@@ -1708,33 +1711,37 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       const directRevenueConstruction = directReceiptsByMonth.slice(designDuration, designDuration + constructionDuration);
       const directRevenuePost = directReceiptsByMonth.slice(designDuration + constructionDuration);
       directRevenue = directReceiptsByMonth.reduce((sum, amount) => sum + amount, 0);
-      rows.push({
-        label: "تحصيلات مبيعات مباشرة بعد الإنجاز",
-        totalCost: directRevenue,
-        investorAmount: directRevenue,
-        paid: 0,
-        unpaid: directRevenue,
-        funder: "investor",
-        section: "الإيرادات",
-        designMonths: directRevenueDesign,
-        constructionMonths: directRevenueConstruction,
-        postConstructionMonths: directRevenuePost,
-        isRevenue: true,
-      });
+      if (!isJointVenture) {
+        rows.push({
+          label: "تحصيلات مبيعات مباشرة بعد الإنجاز",
+          totalCost: directRevenue,
+          investorAmount: directRevenue,
+          paid: 0,
+          unpaid: directRevenue,
+          funder: "investor",
+          section: "الإيرادات",
+          designMonths: directRevenueDesign,
+          constructionMonths: directRevenueConstruction,
+          postConstructionMonths: directRevenuePost,
+          isRevenue: true,
+        });
+      }
       const directSalesCommissionByMonth = directCommissionReceiptsByMonth.map((receipt) => receipt * r.salesCommission);
       const directSalesCommission = directSalesCommissionByMonth.reduce((sum, amount) => sum + amount, 0);
-      rows.push({
-        label: "عمولة مبيعات مباشرة بعد الإنجاز",
-        totalCost: directSalesCommission,
-        investorAmount: directSalesCommission,
-        paid: 0,
-        unpaid: directSalesCommission,
-        funder: "investor",
-        section: "المبيعات والتسويق",
-        designMonths: directSalesCommissionByMonth.slice(0, designDuration),
-        constructionMonths: directSalesCommissionByMonth.slice(designDuration, designDuration + constructionDuration),
-        postConstructionMonths: directSalesCommissionByMonth.slice(designDuration + constructionDuration),
-      });
+      if (!isJointVenture) {
+        rows.push({
+          label: "عمولة مبيعات مباشرة بعد الإنجاز",
+          totalCost: directSalesCommission,
+          investorAmount: directSalesCommission,
+          paid: 0,
+          unpaid: directSalesCommission,
+          funder: "investor",
+          section: "المبيعات والتسويق",
+          designMonths: directSalesCommissionByMonth.slice(0, designDuration),
+          constructionMonths: directSalesCommissionByMonth.slice(designDuration, designDuration + constructionDuration),
+          postConstructionMonths: directSalesCommissionByMonth.slice(designDuration + constructionDuration),
+        });
+      }
 
       // ─── تحويلا الضمان من الرصيد الفعلي للحركات المنشأة أعلاه ───
       const valuesForRow = (row: CostRow) => [
@@ -1789,7 +1796,7 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
         postConstructionMonths: escrowRetPost,
         isRevenue: true,
       });
-    } else {
+    } else if (!isJointVenture) {
       // ─── Fallback: simplified revenue (no salesResult) ───
       directRevenue = totalRevenue * 0.20;
       const revenuePost = emptyPost();
@@ -1938,11 +1945,16 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
   // ═══════════════════════════════════════════
   const expenseRows = rows.filter(r => !r.isRevenue);
   const revenueRows = rows.filter(r => r.isRevenue);
+  const jointVentureExpenseRows = expenseRows.filter((row) => !row.isTransfer && !row.isProfitAllocation);
 
-  const grandTotalCost = (isScenario3 || isScenario4 || isBuildForSale)
+  const grandTotalCost = isJointVenture
+    ? jointVentureExpenseRows.reduce((sum, row) => sum + row.totalCost, 0)
+    : (isScenario3 || isScenario4 || isBuildForSale)
     ? expenseRows.reduce((s, r) => s + r.investorAmount, 0)
     : costs.totalCosts;
-  const grandInvestor = (isScenario3 || isScenario4 || isBuildForSale)
+  const grandInvestor = isJointVenture
+    ? jointVentureExpenseRows.reduce((sum, row) => sum + row.investorAmount, 0)
+    : (isScenario3 || isScenario4 || isBuildForSale)
     ? expenseRows.reduce((s, r) => s + r.investorAmount, 0)
     : costs.totalInvestor;
   const grandPaid = expenseRows.reduce((s, r) => s + r.paid, 0);

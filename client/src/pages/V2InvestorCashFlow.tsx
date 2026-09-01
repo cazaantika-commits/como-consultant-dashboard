@@ -19,6 +19,7 @@ import {
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { calculateInvestorMonthlyNet } from "@/lib/investorCashFlowNet";
 import { calculateProjectCosts } from "@/lib/projectCostsCalc";
+import { isJointVentureFinancialResultReady } from "@/lib/jointVentureInputReadiness";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 import { resolveReturnPath } from "@/lib/returnNavigation";
@@ -87,13 +88,8 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const totalMonths = designDuration + constructionDuration + postDuration;
   const projectName = projectQuery.data?.name || "—";
   const isJointVenture = scenario === "joint_venture_land_for_units";
-  const hasFinancialInputs = !isJointVenture || (
-    totalRevenue > 0
-    && Number((projectQuery.data as any)?.manualBuaSqft || 0) > 0
-    && Number((projectQuery.data as any)?.estimatedConstructionPricePerSqft || 0) > 0
-    && Number((projectQuery.data as any)?.constructionMonths || 0) > 0
-    && Boolean((projectQuery.data as any)?.startDate)
-  );
+  const hasFinancialInputs = totalRevenue > 0
+    && isJointVentureFinancialResultReady(projectQuery.data, plansQuery.data?.[0]);
 
   // ─── Build flat monthly arrays for each row ────────────────────────────
   const getRowValues = (row: CostRow): number[] => [
@@ -112,13 +108,16 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
     const costs = calculateProjectCosts(projectQuery.data);
     if (!costs) return null;
     if (!hasFinancialInputs) return null;
+    if (scenario === "joint_venture_land_for_units") {
+      return data.totalRevenue - data.grandTotalCost;
+    }
     const feasibilityTotalCosts = scenario === "build_for_sale" || scenario === "build_for_rent"
       ? data.rows
         .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
         .reduce((sum, row) => sum + row.totalCost, 0)
       : costs.totalCosts ?? 0;
     const projectProfit = costs.totalRevenue - feasibilityTotalCosts;
-    const comoShare = scenario !== "joint_venture_land_for_units" && projectProfit > 0 ? projectProfit * 0.15 : 0;
+    const comoShare = projectProfit > 0 ? projectProfit * 0.15 : 0;
     return projectProfit - comoShare;
   }, [data.rows, projectQuery.data, scenario, hasFinancialInputs]);
   const feasibilityDifference = feasibilityInvestorProfit === null ? null : profit - feasibilityInvestorProfit;
@@ -285,14 +284,14 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
                 <span className="text-[11px] text-slate-500">أحمر = تمويل مطلوب · أخضر = تدفق عائد</span>
               </div>
               <div className="mt-3 flex h-12 items-end gap-px" aria-label="نبض صافي التدفق الشهري">
-                {netFlow.map((value, index) => {
+                {hasFinancialInputs ? netFlow.map((value, index) => {
                   const height = Math.max(8, Math.round((Math.abs(value) / pulseScale) * 100));
                   return (
                     <div key={index} className="group relative flex h-full flex-1 items-end" title={`${monthCaption(index)}: ${fmt(value)}`}>
                       <div className={`w-full rounded-t-sm ${value >= 0 ? "bg-emerald-400" : "bg-rose-400"}`} style={{ height: `${height}%` }} />
                     </div>
                   );
-                })}
+                }) : <p className="m-auto text-[11px] font-bold text-amber-700">بانتظار اكتمال تكلفة المشروع</p>}
               </div>
               <div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>{monthCaption(0)}</span><span>{monthCaption(totalMonths - 1)}</span></div>
             </div>
@@ -308,9 +307,9 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
             <p className="mt-0.5 text-[11px] text-slate-500">{matrixStart} — {matrixEnd} · تحرّك داخل الجدول مع بقاء الأشهر والبنود ثابتة</p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-[11px] tabular-nums">
-            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2"><span className="block text-rose-700">المطلوب</span><strong className="text-rose-950">{fmt(matrixSummary.debit)}</strong></div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="block text-emerald-700">المستلم</span><strong className="text-emerald-950">{fmt(matrixSummary.credit)}</strong></div>
-            <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2"><span className="block text-cyan-700">الصافي</span><strong className="text-cyan-950">{fmt(matrixSummary.net)}</strong></div>
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2"><span className="block text-rose-700">المطلوب</span><strong className="text-rose-950">{hasFinancialInputs ? fmt(matrixSummary.debit) : "—"}</strong></div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2"><span className="block text-emerald-700">المستلم</span><strong className="text-emerald-950">{hasFinancialInputs ? fmt(matrixSummary.credit) : "—"}</strong></div>
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2"><span className="block text-cyan-700">الصافي</span><strong className="text-cyan-950">{hasFinancialInputs ? fmt(matrixSummary.net) : "—"}</strong></div>
           </div>
         </div>
       </section>
@@ -437,7 +436,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
               <td className="min-w-[88px] border-s border-amber-400 bg-amber-100 px-1 py-2 text-center tabular-nums font-extrabold text-red-700">{paidBeforeSchedule > 0 ? `-${fmt(paidBeforeSchedule)}` : "-"}</td>
               {netFlow.map((v, i) => (
                 <td key={i} className={`border-s border-cyan-200 px-1 py-2 text-center tabular-nums font-extrabold ${v >= 0 ? "text-emerald-800" : "text-red-700"}`}>
-                  {fmt(v)}
+                  {hasFinancialInputs ? fmt(v) : "—"}
                 </td>
               ))}
             </tr>
@@ -450,7 +449,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
               <td className="min-w-[88px] border-s border-amber-400 bg-amber-100 px-1 py-2 text-center tabular-nums font-extrabold text-red-700">{paidBeforeSchedule > 0 ? `-${fmt(paidBeforeSchedule)}` : "-"}</td>
               {cumulative.map((v, i) => (
                 <td key={i} className={`border-s border-violet-200 px-1 py-2 text-center tabular-nums font-extrabold ${v >= 0 ? "text-emerald-800" : "text-red-700"}`}>
-                  {fmt(v)}
+                  {hasFinancialInputs ? fmt(v) : "—"}
                 </td>
               ))}
             </tr>

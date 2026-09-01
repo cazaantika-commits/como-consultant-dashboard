@@ -169,6 +169,7 @@ describe("waelSalesPlan.save", () => {
       paymentPlanJson: '{"version":2,"calendarEntries":[{"id":"booking"}]}',
       salesAbsorptionJson: "rebuilt-absorption",
       resultsJson: "rebuilt-results",
+      offplanPct: 100,
       status: "draft",
     });
     expect(mockedRebuild).toHaveBeenCalledTimes(1);

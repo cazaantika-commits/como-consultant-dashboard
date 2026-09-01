@@ -5,6 +5,7 @@ import {
   getProjectDesignTiming,
   getMarketingTimelineWindow,
   getProjectMarketingTiming,
+  getProjectReraQuarterlyFeeSettings,
   getSalesTimelineWindow,
 } from "../client/src/lib/projectTiming";
 
@@ -184,5 +185,21 @@ describe("Project-relative phase dependencies", () => {
     expect(timing.reraStartMonth).toBe(4);
     expect(timing.salesStartMonth).toBe(7);
     expect(timing.constructionStartMonth).toBe(7);
+  });
+});
+
+describe("Joint Venture RERA settings", () => {
+  it("uses the same visible default quarterly rates shown in Settings when no override is saved", () => {
+    const fees = getProjectReraQuarterlyFeeSettings({
+      financingScenario: "joint_venture_land_for_units",
+      constructionMonths: 17,
+      constructionScheduleJson: JSON.stringify({ settings: {} }),
+    });
+
+    expect(fees.paymentCount).toBe(6);
+    expect(fees.auditorPerPayment).toBe(3_500);
+    expect(fees.inspectionPerPayment).toBe(15_020);
+    expect(fees.auditorTotal).toBe(21_000);
+    expect(fees.inspectionTotal).toBe(90_120);
   });
 });

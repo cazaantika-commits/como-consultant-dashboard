@@ -88,11 +88,18 @@ function distributeUnitsAcrossSalesWindow({
     );
   }
   const rawTotal = raw.reduce((sum, value) => sum + value, 0) || 1;
-  const distribution = raw.map((value) => Math.max(1, Math.round((value / rawTotal) * target)));
-  if (distribution.length > 0) {
-    distribution[Math.floor(distribution.length / 2)] += target - distribution.reduce((sum, value) => sum + value, 0);
-  }
-  return distribution.map((value) => Math.max(0, value));
+  const exact = raw.map((value) => (value / rawTotal) * target);
+  const distribution = exact.map((value) => Math.floor(value));
+  let remainder = target - distribution.reduce((sum, value) => sum + value, 0);
+  exact
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+    .forEach(({ index }) => {
+      if (remainder <= 0) return;
+      distribution[index] += 1;
+      remainder -= 1;
+    });
+  return distribution;
 }
 
 export function rebuildOffPlanSalesResultsFromPaymentPlan({
@@ -120,9 +127,12 @@ export function rebuildOffPlanSalesResultsFromPaymentPlan({
   const grossTotalUnits = getSavedProjectUnitCount(project);
   const jointVentureTerms = getJointVentureTerms(project);
   const totalUnits = isJointVentureLandForUnits(project?.financingScenario)
-    ? grossTotalUnits * (1 - jointVentureTerms.landOwnerResidentialSharePct / 100)
+    ? Math.round(grossTotalUnits * (1 - jointVentureTerms.landOwnerProjectSharePct / 100))
     : grossTotalUnits;
-  const offPlanUnits = Math.min(totalUnits, Math.max(0, Math.round(totalUnits * Math.min(100, Math.max(0, offplanPct)) / 100)));
+  const effectiveOffPlanPct = isJointVentureLandForUnits(project?.financingScenario)
+    ? 100
+    : Math.min(100, Math.max(0, offplanPct));
+  const offPlanUnits = Math.min(totalUnits, Math.max(0, Math.round(totalUnits * effectiveOffPlanPct / 100)));
   const salesMonths = Math.max(1, timing.projectEndMonth - timing.salesStartMonth + 1);
   const salesDistribution = distributeUnitsAcrossSalesWindow({
     totalUnits: offPlanUnits,
@@ -411,7 +421,7 @@ export function buildSalesResultFromSavedPlan(
           actualCashInflow,
           actualEscrowCashInflow: Array.isArray(parsed.actualEscrowCashInflow) ? parsed.actualEscrowCashInflow : undefined,
           actualInvestorCashInflow: Array.isArray(parsed.actualInvestorCashInflow) ? parsed.actualInvestorCashInflow : undefined,
-          offplanPct: Number(plan.offplanPct ?? 80),
+          offplanPct: isJointVentureLandForUnits(project?.financingScenario) ? 100 : Number(plan.offplanPct ?? 80),
           directSalesStartMonth,
           directSalesInstallmentCount,
           buildForSaleMonthlyUnits: resolvedBuildForSaleUnits,

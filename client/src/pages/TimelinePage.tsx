@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEFAULT_DESIGN_PAYMENT_STAGES, getBuildForSaleSalesTimelineWindow, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
+import { hasApprovedWaelSalesIndicator } from "@/lib/jointVentureInputReadiness";
+import { deriveJointVentureTimelineFromSavedPlan } from "@/lib/jointVentureTimeline";
 import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
 import { default as Palette } from "lucide-react/dist/esm/icons/palette.js";
 import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
@@ -53,7 +55,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   });
 
   // ─── State ─────────────────────────────────────────────────────────────────
-  const [constructionMonths, setConstructionMonths] = useState(30);
+  const [constructionMonths, setConstructionMonths] = useState(0);
   const [projectStartDate, setProjectStartDate] = useState("");
   const [hasChanges, setHasChanges] = useState(false);
   const [designPayments, setDesignPayments] = useState(DEFAULT_DESIGN_PAYMENT_STAGES);
@@ -62,8 +64,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   useEffect(() => {
     if (projectQuery.data) {
       const p = projectQuery.data as any;
-      if (p.constructionMonths) setConstructionMonths(Number(p.constructionMonths));
-      if (p.startDate) setProjectStartDate(String(p.startDate));
+      setConstructionMonths(p.constructionMonths ? Number(p.constructionMonths) : 0);
+      setProjectStartDate(p.startDate ? String(p.startDate) : "");
       // Load design payments from constructionScheduleJson
       if (p.constructionScheduleJson) {
         try {
@@ -95,7 +97,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
 
   // ─── Computed ──────────────────────────────────────────────────────────────
   const totalDesignWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
-  const totalDesignMonths = Math.ceil(totalDesignWeeks / 4.33);
+  const designMonthsFromStages = Math.ceil(totalDesignWeeks / 4.33);
   const designPaymentTotal = designPayments.reduce((s, d) => s + d.pct, 0);
 
   const schematicCompletionMonth = useMemo(() => {
@@ -105,10 +107,45 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   }, [designPayments]);
 
   const projectType = (projectQuery.data as any)?.financingScenario as string | undefined;
-  const isBuildForSale = projectType === "build_for_sale" || projectType === "joint_venture_land_for_units";
-  const sharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
-  const marketingPrepLead = sharedTiming.marketingPrepMonths;
-  const reraLead = sharedTiming.reraApprovalMonths;
+  const isBuildForSale = projectType === "build_for_sale";
+  const isJointVenture = projectType === "joint_venture_land_for_units";
+  const isIsolatedJointVenture = Boolean((projectQuery.data as any)?.isTestProject) && isJointVenture;
+  const activePlan = (plansQuery.data?.[0] ?? null) as any;
+  const hasSavedWaelIndicator = hasApprovedWaelSalesIndicator(activePlan);
+  const savedScheduleSettings = useMemo(() => {
+    try { return JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}")?.settings || {}; }
+    catch { return {}; }
+  }, [projectQuery.data]);
+  const hasDetailedDesignSchedule = Boolean(
+    savedScheduleSettings.designPayments
+    && typeof savedScheduleSettings.designPayments === "object"
+    && Object.keys(savedScheduleSettings.designPayments).length > 0,
+  );
+  const totalDesignMonths = isIsolatedJointVenture && !hasDetailedDesignSchedule
+    ? Math.max(0, Number(activePlan?.designMonths) || 0)
+    : designMonthsFromStages;
+  const hasExplicitTimelineInputs = useMemo(() => {
+    if (!isIsolatedJointVenture) return true;
+    const project = projectQuery.data as any;
+    return Boolean(project?.startDate)
+      && Number(project?.constructionMonths) > 0
+      && totalDesignMonths > 0
+      && hasSavedWaelIndicator;
+  }, [isIsolatedJointVenture, projectQuery.data, totalDesignMonths, hasSavedWaelIndicator]);
+  const defaultSharedTiming = useMemo(() => getProjectMarketingTiming(projectQuery.data), [projectQuery.data]);
+  const marketingPrepLead = defaultSharedTiming.marketingPrepMonths;
+  const reraLead = defaultSharedTiming.reraApprovalMonths;
+  const sharedTiming = useMemo(() => {
+    if (!isIsolatedJointVenture || !activePlan) return defaultSharedTiming;
+    return deriveJointVentureTimelineFromSavedPlan({
+      plan: activePlan,
+      fallback: defaultSharedTiming,
+      designMonths: totalDesignMonths,
+      constructionMonths,
+      marketingPrepMonths: marketingPrepLead,
+      reraLeadMonths: reraLead,
+    });
+  }, [isIsolatedJointVenture, activePlan, defaultSharedTiming, totalDesignMonths, constructionMonths, marketingPrepLead, reraLead]);
   const timeline = useMemo(() => ({
     designEnd: sharedTiming.designMonths,
     materialsStart: sharedTiming.materialsStartMonth,
@@ -171,10 +208,16 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   }, [plansQuery.data, timeline.projectEnd]);
   const displayProjectEnd = isBuildForSale
     ? Math.max(timeline.projectEnd, buildForSaleMarketingWindow.endMonth, buildForSaleSalesWindow.endMonth)
-    : timeline.projectEnd;
+    : isJointVenture
+      ? Math.max(timeline.projectEnd, activityWindows.marketing.endMonth, activityWindows.sales.endMonth)
+      : timeline.projectEnd;
   const visibleProjectPhases = isBuildForSale
     ? PROJECT_PHASES.filter((phase) => BUILD_FOR_SALE_PHASE_IDS.has(phase.id))
-    : PROJECT_PHASES;
+    : PROJECT_PHASES.filter((phase) => {
+        if (phase.id === "marketing") return activityWindows.marketing.hasSavedActivity;
+        if (phase.id === "sales") return activityWindows.sales.hasSavedActivity;
+        return true;
+      });
 
   // ─── Save ──────────────────────────────────────────────────────────────────
   const handleSave = useCallback(() => {
@@ -221,7 +264,20 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
           <Card><CardContent className="py-12 text-center"><Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600" /></CardContent></Card>
         )}
 
-        {selectedProjectId && !projectQuery.isLoading && (
+        {selectedProjectId && !projectQuery.isLoading && !hasExplicitTimelineInputs && (
+          <Card className="border-2 border-amber-300 bg-amber-50">
+            <CardContent className="py-10 text-center">
+              <Calendar className="mx-auto h-9 w-9 text-amber-700" />
+              <h2 className="mt-3 text-base font-black text-slate-900">البرنامج الزمني غير مكتمل</h2>
+              <p className="mx-auto mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-700">
+                أدخل تاريخ بداية المشروع ومدد التصميم ومراحل إجراءات الأوف بلان ومدة الإنشاء أولًا. بعد ذلك يظهر توقيت البيع فقط من مؤشر وائل المحفوظ في صفحة المبيعات، وتظهر التحصيلات وفق خطة سداد المشترين وحساب الضمان.
+              </p>
+              <p className="mt-2 text-xs font-bold text-amber-800">لا توجد مدد أو تواريخ مفترضة لهذا المشروع التجريبي.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedProjectId && !projectQuery.isLoading && hasExplicitTimelineInputs && (
           <>
             {/* SECTION 1: PROJECT PHASES TIMELINE */}
             <section className="fs-card fs-card-blue overflow-hidden border-2 border-slate-300">
@@ -313,24 +369,24 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                     <span className="text-[10px] text-gray-500">تسويق البناء للبيع:</span>
                     <Badge className="fs-pill fs-pill-rose text-[9px]">{buildForSaleMarketing.durationMonths} أشهر بدءًا قبل {buildForSaleMarketing.startMonthsBeforeCompletion} شهر من الإنجاز</Badge>
                   </div>}
-                  <div className="flex items-center gap-1.5 mr-4">
+                  {hasDetailedDesignSchedule && <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نقطة الانطلاق (اكتمال المخططات التخطيطية):</span>
                     <Badge className="fs-pill fs-pill-blue text-[9px]">شهر {schematicCompletionMonth}</Badge>
-                  </div>
+                  </div>}
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق التسويق:</span>
-                    <Badge className="fs-pill fs-pill-rose text-[9px]">{isBuildForSale ? "إعدادات البناء للبيع" : activityWindows.marketing.hasSavedActivity ? "صفحة التسويق" : "توقع افتراضي"}</Badge>
+                    <Badge className="fs-pill fs-pill-rose text-[9px]">{isBuildForSale ? "إعدادات البناء للبيع" : activityWindows.marketing.hasSavedActivity ? "خطة التسويق المحفوظة" : "بانتظار خطة التسويق"}</Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mr-4">
                     <span className="text-[10px] text-gray-500">نطاق البيع:</span>
-                    <Badge className="fs-pill fs-pill-emerald text-[9px]">{isBuildForSale ? buildForSaleSalesWindow.hasSavedActivity ? "خطة البيع المباشر" : "البيع المباشر بعد الإنجاز" : activityWindows.sales.hasSavedActivity ? "خطة المبيعات" : "توقع افتراضي"}</Badge>
+                    <Badge className="fs-pill fs-pill-emerald text-[9px]">{isBuildForSale ? buildForSaleSalesWindow.hasSavedActivity ? "خطة البيع المباشر" : "البيع المباشر بعد الإنجاز" : activityWindows.sales.hasSavedActivity ? "مؤشر وائل المحفوظ في صفحة المبيعات" : "بانتظار اعتماد مؤشر وائل"}</Badge>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* SECTION 2: CONSULTANT DESIGN PHASES SCHEDULE */}
-            <section className="fs-card fs-card-violet overflow-hidden border-2 border-slate-300">
+            {(!isJointVenture || hasDetailedDesignSchedule) ? <section className="fs-card fs-card-violet overflow-hidden border-2 border-slate-300">
               <div className="flex items-center gap-2 border-b-2 border-slate-300 bg-blue-50 px-3 py-2">
                 <Palette className="w-3.5 h-3.5 text-blue-700" />
                 <h2 className="text-[11px] font-bold text-blue-800">مراحل التصميم واستحقاق الاستشاري</h2>
@@ -377,7 +433,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
                   </p>
                 </div>
               </div>
-            </section>
+            </section> : <Card className="border-2 border-blue-200 bg-blue-50"><CardContent className="py-5 text-center"><Palette className="mx-auto h-7 w-7 text-blue-700" /><p className="mt-2 text-sm font-black text-slate-900">مدة التصميم المعتمدة في خطة وائل: {totalDesignMonths} أشهر</p><p className="mt-1 text-xs font-semibold text-slate-600">لم تُحفظ بعد مدد مراحل الاستشاري التفصيلية؛ لذلك لا يعرض النظام توزيعًا أسبوعيًا أو استحقاقات افتراضية.</p></CardContent></Card>}
           </>
         )}
       </div>

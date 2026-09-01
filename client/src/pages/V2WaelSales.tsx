@@ -69,6 +69,7 @@ import {
 import { buildPaymentCalendar, buyerDueCalendar, expandPaymentCalendarEntries } from "@/lib/paymentPlanCalendar";
 import { clampMarketingDistributionToStart, getMarketingTimelineWindow, getProjectMarketingTiming, getSalesTimelineWindow } from "@/lib/projectTiming";
 import { getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
+import { getJointVentureInputReadiness, hasApprovedWaelSalesIndicator } from "@/lib/jointVentureInputReadiness";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip as ReTooltip, ResponsiveContainer, Cell,
@@ -145,6 +146,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   const isBuildForSale = scenario === "build_for_sale";
   const isJointVenture = isJointVentureLandForUnits(scenario);
   const jointVentureTerms = useMemo(() => getJointVentureTerms(projectQuery.data), [projectQuery.data]);
+  const inputReadiness = useMemo(() => getJointVentureInputReadiness(projectQuery.data), [projectQuery.data]);
+  const hasSavedJointVentureSalesIndicator = useMemo(
+    () => hasApprovedWaelSalesIndicator(plansQuery.data?.[0]),
+    [plansQuery.data],
+  );
+  const hasIncompleteJointVentureInputs = inputReadiness.applies
+    && !inputReadiness.salesWorkspaceReady
+    && !hasSavedJointVentureSalesIndicator;
+  const hasCompleteFinancialModel = !inputReadiness.applies || inputReadiness.financialModelReady;
   const updateProject = trpc.projects.update.useMutation({
     onSuccess: () => { projectQuery.refetch(); toast({ title: "تم حفظ التسعير ✓" }); },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
@@ -262,7 +272,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       hydratedPlanIdRef.current = plan.id;
       const marketingTiming = getProjectMarketingTiming(projectQuery.data);
       setPlanId(plan.id);
-      if (plan.offplanPct) setOffPlan(plan.offplanPct);
+      setOffPlan(isJointVenture ? 100 : (Number(plan.offplanPct) || 80));
 
       if (plan.salesAbsorptionJson) {
         try {
@@ -310,7 +320,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       setHasPlanChanges(false);
       setHasMarketingChanges(false);
     }
-  }, [plansQuery.data, projectQuery.data, planId]);
+  }, [plansQuery.data, projectQuery.data, planId, isJointVenture]);
 
   // ─── Computed: Revenue ────────────────────────────────────────────────────
   const unitRevenues = useMemo(
@@ -322,9 +332,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   );
   const grossTotalRevenue = unitRevenues.reduce((s, u) => s + u.total, 0);
   const grossTotalUnits = unitRevenues.reduce((s, u) => s + u.count, 0);
-  const developerShare = isJointVenture ? (1 - jointVentureTerms.landOwnerResidentialSharePct / 100) : 1;
+  const developerShare = isJointVenture ? (1 - jointVentureTerms.landOwnerProjectSharePct / 100) : 1;
   const totalRevenue = grossTotalRevenue * developerShare;
-  const totalUnits = grossTotalUnits * developerShare;
+  const totalUnits = isJointVenture ? Math.round(grossTotalUnits * developerShare) : grossTotalUnits;
   const totalArea = unitRevenues.reduce((s, u) => s + u.totalArea, 0);
   const activeUnitRevenues = unitRevenues.filter((unit) => unit.count > 0);
   const activeResidentialUnits = activeUnitRevenues.filter((unit) => unit.category === "residential");
@@ -414,13 +424,15 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       });
 
   // ─── Computed: Sales Distribution ─────────────────────────────────────────
-  const offPlanUnits = isBuildForSale ? totalUnits : Math.round((totalUnits * offPlan) / 100);
+  const effectiveOffPlanPct = isJointVenture ? 100 : offPlan;
+  const offPlanUnits = isBuildForSale ? Math.round(totalUnits) : Math.round((totalUnits * effectiveOffPlanPct) / 100);
   const salesDistribution = useMemo(() => {
     if (salesMode === "manual" && manualUnits.length === salesMonths) {
       return manualUnits.map((value) => Math.max(0, Math.round(Number(value) || 0)));
     }
     const n = salesMonths;
     if (n <= 0) return [];
+    if (offPlanUnits <= 0) return new Array(n).fill(0);
     let raw: number[];
     if (curveTemplate === "fast") {
       raw = Array.from({ length: n }, (_, i) => Math.exp(-i / (n * 0.3)));
@@ -433,10 +445,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       const sigma = n / (3 + (speed / 100) * 3);
       raw = Array.from({ length: n }, (_, i) => Math.exp(-0.5 * Math.pow((i - mid + n / 2) / sigma, 2)));
     }
-    const sum = raw.reduce((a, b) => a + b, 0);
-    const scaled = raw.map((v) => Math.max(1, Math.round((v / sum) * offPlanUnits)));
-    const diff = offPlanUnits - scaled.reduce((a, b) => a + b, 0);
-    if (diff !== 0 && scaled.length > 0) scaled[Math.floor(n / 2)] += diff;
+    const sum = raw.reduce((a, b) => a + b, 0) || 1;
+    const exact = raw.map((value) => (value / sum) * offPlanUnits);
+    const scaled = exact.map((value) => Math.floor(value));
+    let remainder = offPlanUnits - scaled.reduce((a, b) => a + b, 0);
+    exact
+      .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+      .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+      .forEach(({ index }) => {
+        if (remainder <= 0) return;
+        scaled[index] += 1;
+        remainder -= 1;
+      });
     return scaled;
   }, [salesMonths, offPlanUnits, speed, salesMode, manualUnits, curveTemplate]);
   const totalSold = salesDistribution.reduce((a, b) => a + b, 0);
@@ -592,11 +612,11 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       actualEscrowCashInflow,
       actualInvestorCashInflow,
       marketingMonthlyWeights: buildMarketingMonthlyWeights(marketingDistribution, timeline.marketingStart),
-      offplanPct: offPlan,
+      offplanPct: effectiveOffPlanPct,
       ppDownPct,
       paymentPlan,
     };
-  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, marketingDistribution, timeline.marketingStart, offPlan, ppDownPct, paymentPlan]);
+  }, [isBuildForSale, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, marketingDistribution, timeline.marketingStart, effectiveOffPlanPct, ppDownPct, paymentPlan]);
   const liveCashFlow = useMemo(
     () => computeInvestorCashFlow(liveProjectData, scenario, undefined, liveSalesResult),
     [liveProjectData, scenario, liveSalesResult],
@@ -701,7 +721,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
         totalRevenue,
         designMonths: timeline.designEnd,
         constructionMonths,
-        offplanPct: offPlan,
+        offplanPct: effectiveOffPlanPct,
         salesAbsorptionJson: JSON.stringify({
           ...existingAbsorption,
           mode: salesMode,
@@ -759,7 +779,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
       setHasUnitChanges(true);
       setHasPlanChanges(true);
     }
-  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, offPlan, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, paymentPlan, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, saveWorkspace, updateProject, plansQuery, projectQuery, isBuildForSale]);
+  }, [selectedProjectId, planId, unitData, marketingPct, commissionPct, totalRevenue, timeline.designEnd, timeline.marketingStart, constructionMonths, effectiveOffPlanPct, salesMode, speed, curveTemplate, manualUnits, ppDownPct, ppSecondPct, ppSecondAfterMonths, ppInstallmentPct, ppInstallmentEvery, ppHandoverPct, paymentPlan, marketingActualStart, marketingActualEnd, marketingDistribution, channelPcts, escrowData, salesDistribution, actualCashInflow, actualEscrowCashInflow, actualInvestorCashInflow, saveWorkspace, updateProject, plansQuery, projectQuery, isBuildForSale]);
 
   const updateUnit = (id: string, field: "count" | "area" | "price", value: number) => {
     setUnitData((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
@@ -884,12 +904,12 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             <div className="flex flex-wrap items-center gap-2.5">
               {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
               {!embedded && <Button size="sm" variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="h-10 gap-1.5 border-teal-200 bg-white px-3 text-teal-800 hover:bg-teal-50 hover:text-teal-900"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</Button>}
-              <Badge className={hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
-              <Button size="sm" onClick={handleSaveWorkspace} disabled={saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
+              <Badge className={hasIncompleteJointVentureInputs || hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasIncompleteJointVentureInputs ? "المدخلات غير مكتملة" : hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
+              <Button size="sm" onClick={handleSaveWorkspace} disabled={hasIncompleteJointVentureInputs || saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits || (isJointVenture && totalSold !== offPlanUnits)} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 اعتماد السيناريو
               </Button>
-              <Button size="sm" variant="outline" onClick={() => {
+              <Button size="sm" variant="outline" disabled={hasIncompleteJointVentureInputs} onClick={() => {
                 const headers = [["الشهر", "مبيعات الشهر", "التدفق النقدي", "إجمالي المبيعات التراكمي", "إجمالي النقد التراكمي"]];
                 const rows = cashInflowData.map(d => [d.month, Math.round(d.salesThisMonth), Math.round(d.cashInflow), Math.round(d.cumSales), Math.round(d.cumCash)]);
                 const projectName = (projectQuery.data as any)?.name || "مشروع";
@@ -916,8 +936,21 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
           <Card><CardContent className="py-12 text-center"><Loader2 className="w-8 h-8 mx-auto animate-spin text-blue-600" /><p className="text-gray-500 mt-2">جاري تحميل البيانات...</p></CardContent></Card>
         )}
 
+        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && hasIncompleteJointVentureInputs && (
+          <Card className="border-2 border-amber-300 bg-amber-50">
+            <CardContent className="py-10 text-center">
+              <Calendar className="mx-auto h-9 w-9 text-amber-700" />
+              <h2 className="mt-3 text-base font-black text-slate-900">لا يوجد سيناريو مبيعات بعد</h2>
+              <p className="mx-auto mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-700">
+                يبدأ مؤشر وائل بعد إدخال بيانات المشروع الفعلية. المطلوب حاليًا: {inputReadiness.missingLabels.join("، ")}.
+              </p>
+              <p className="mt-2 text-xs font-bold text-amber-800">بعد اكتمالها يوزع وائل 100% من حصته الحالية على أشهر البيع، ثم تُحسب دفعات المشترين وحركة حساب الضمان.</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Content */}
-        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && (
+        {selectedProjectId && !projectQuery.isLoading && projectQuery.data && !hasIncompleteJointVentureInputs && (
           <>
             <section className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
               <div className="min-w-0 space-y-4">
@@ -929,11 +962,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                     </div>
                     <p className="rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm">آخر تعديل: <span className="text-teal-700">{impactFocus}</span></p>
                   </div>
-                  <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                     <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4">
                       <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">هدف البيع</p><Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">{offPlanUnits} وحدة</Badge></div>
-                      <div className="mt-4 flex items-center gap-3"><Slider value={[offPlan]} onValueChange={([value]) => { setOffPlan(value); setSalesMode("auto"); setManualUnits([]); setHasPlanChanges(true); setImpactFocus("هدف البيع"); }} min={0} max={100} step={5} /><span className="min-w-14 text-left text-2xl font-black text-emerald-700">{offPlan}%</span></div>
-                      <p className="mt-3 text-[11px] text-slate-500">من أصل {totalUnits} وحدة قابلة للبيع</p>
+                      {isJointVenture ? (
+                        <div className="mt-4 rounded-xl border border-emerald-200 bg-white px-3 py-2">
+                          <p className="text-sm font-black text-emerald-800">100% من حصة وائل</p>
+                          <p className="mt-1 text-[11px] font-semibold text-slate-600">حصة وائل الحالية {Math.round(developerShare * 100)}% من جميع وحدات المشروع؛ يحدد مؤشر وائل أشهر بيعها.</p>
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex items-center gap-3"><Slider value={[offPlan]} onValueChange={([value]) => { setOffPlan(value); setSalesMode("auto"); setManualUnits([]); setHasPlanChanges(true); setImpactFocus("هدف البيع"); }} min={0} max={100} step={5} /><span className="min-w-14 text-left text-2xl font-black text-emerald-700">{offPlan}%</span></div>
+                      )}
+                      <p className="mt-3 text-[11px] text-slate-500">{offPlanUnits} وحدة هي كامل حصة وائل القابلة للبيع وفق نسبة الشراكة الحالية</p>
                     </div>
                     <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4">
                       <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">إيقاع البيع</p><span className="example-icon-tile example-icon-blue"><TrendingUp className="h-4 w-4" /></span></div>
@@ -946,6 +986,16 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       <div className="mt-3 grid grid-cols-2 gap-2"><Button type="button" variant="outline" className="h-9 border-amber-200 bg-white text-[11px] font-bold text-amber-800 hover:bg-amber-100" onClick={() => { adjustAllPrices(0.95); setImpactFocus("السعر"); }}>خفض 5%</Button><Button type="button" variant="outline" className="h-9 border-amber-300 bg-amber-100 text-[11px] font-bold text-amber-900 hover:bg-amber-200" onClick={() => { adjustAllPrices(1.05); setImpactFocus("السعر"); }}>رفع 5%</Button></div>
                     </div>
                     {isBuildForSale ? <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">تحصيل البيع</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><p className="mt-3 text-lg font-black text-indigo-800">دفعة كاملة عند بيع الوحدة</p><p className="mt-2 text-[11px] leading-5 text-slate-500">تبدأ المبيعات بعد الإنجاز، وتدخل حصيلة كل وحدة كاملة مباشرة إلى حساب المستثمر.</p></div> : <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white p-4"><div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">خطة تحصيل المشتري</p><span className="example-icon-tile example-icon-violet"><CreditCard className="h-4 w-4" /></span></div><div className="mt-3 grid grid-cols-2 gap-1.5">{([{ id: "early", label: "مبكرة" }, { id: "balanced", label: "متوازنة" }, { id: "handover", label: "تسليم" }, { id: "posthandover", label: "بعد التسليم 4 سنوات" }] as const).map((option) => <button key={option.id} type="button" onClick={() => { applyPaymentPreset(option.id); setImpactFocus("خطة التحصيل"); }} className="rounded-xl bg-white px-1 py-2 text-[10px] font-black text-indigo-700 ring-1 ring-indigo-100 transition hover:bg-indigo-100">{option.label}</button>)}</div><p className="mt-3 text-[11px] text-slate-500">مقدم {activeBookingPct}% · تسليم {activeHandoverPct}% · بعد التسليم {getPaymentPlanPostHandoverMonths(paymentPlan) || 0} شهر</p></div>}
+                    <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">أتعاب الوساطة العقارية</p><span className="text-sm font-black text-violet-700">{commissionPct}%</span></div>
+                      <Slider value={[commissionPct]} onValueChange={([value]) => { setCommissionPct(value); setHasUnitChanges(true); setHasPlanChanges(true); setImpactFocus("أتعاب الوساطة العقارية"); }} min={0} max={10} step={0.5} className="mt-4" />
+                      <p className="mt-3 text-[11px] font-semibold text-slate-500">{fmt(commissionCost)} AED{isJointVenture ? " على بيع حصة وائل فقط" : ""}</p>
+                    </div>
+                    <div className="rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-white p-4">
+                      <div className="flex items-center justify-between"><p className="text-xs font-bold text-slate-700">ميزانية التسويق</p><span className="text-sm font-black text-pink-700">{marketingPct}%</span></div>
+                      <Slider value={[marketingPct]} onValueChange={([value]) => { setMarketingPct(value); setHasMarketingChanges(true); setImpactFocus("ميزانية التسويق"); }} min={0} max={10} step={0.5} className="mt-4" />
+                      <p className="mt-3 text-[11px] font-semibold text-slate-500">{fmt(marketingCost)} AED{isJointVenture ? " على إيراد حصة وائل" : ""}</p>
+                    </div>
                   </div>
                 </section>
 
@@ -980,7 +1030,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
 
                 <section data-testid="sales-calendar-board" className="example-sales-calendar overflow-hidden rounded-[22px] border border-slate-300 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.07)]">
                   <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div><p className="text-[11px] font-bold text-blue-700">تقويم البيع المباشر</p><h2 className="mt-0.5 text-lg font-black text-slate-900">لوحة بيع {Math.min(20, salesMonths)} شهرًا</h2><p className="mt-1 text-xs text-slate-500">اكتب عدد الوحدات أو النسبة داخل البطاقة نفسها؛ الآخر يتزامن لحظيًا.</p></div>
+                    <div><p className="text-[11px] font-bold text-blue-700">{isBuildForSale ? "تقويم البيع المباشر" : "مؤشر توزيع مبيعات وائل"}</p><h2 className="mt-0.5 text-lg font-black text-slate-900">لوحة بيع {Math.min(20, salesMonths)} شهرًا</h2><p className="mt-1 text-xs text-slate-500">اكتب عدد الوحدات أو النسبة داخل البطاقة نفسها؛ هذا المؤشر يحدد توقيت البيع، ثم تُحسب تحصيلات خطة السداد وحركة حساب الضمان.</p></div>
                     {(() => { const monthsPerPage = 20; const maxPage = Math.max(0, Math.ceil(salesMonths / monthsPerPage) - 1); const page = Math.min(salesCalendarPage, maxPage); const pageStart = page * monthsPerPage; return <div className="flex items-center gap-2"><Button type="button" variant="outline" size="icon" aria-label="عرض أشهر البيع السابقة" disabled={page === 0} onClick={() => setSalesCalendarPage(Math.max(0, page - 1))} className="h-8 w-8 border-slate-300 bg-white text-slate-700 hover:bg-slate-100"><ChevronRight className="h-4 w-4" /></Button><span className="min-w-28 text-center text-sm font-black tabular-nums text-slate-800">الأشهر {pageStart + 1}–{Math.min(pageStart + monthsPerPage, salesMonths)}</span><Button type="button" variant="outline" size="icon" aria-label="عرض أشهر البيع التالية" disabled={page === maxPage} onClick={() => setSalesCalendarPage(Math.min(maxPage, page + 1))} className="h-8 w-8 border-slate-300 bg-white text-slate-700 hover:bg-slate-100"><ChevronLeft className="h-4 w-4" /></Button></div>; })()}
                   </div>
                   <div className="p-4 sm:p-5">
@@ -992,7 +1042,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                       const visibleMonths = salesDistribution.slice(pageStartIndex, pageStartIndex + monthsPerPage);
                       const monthNames = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
                       const maxUnitsInView = Math.max(...visibleMonths, 1);
-                      return <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const salesIndex = pageStartIndex + index; const startMonthIndex = projectStartDate ? Number(projectStartDate.split("-")[1]) - 1 : 0; const monthIndex = projectStartDate ? ((startMonthIndex + absoluteMonth - 1) % 12 + 12) % 12 : -1; const calendarYear = projectStartDate ? Number(projectStartDate.split("-")[0]) + Math.floor((startMonthIndex + absoluteMonth - 1) / 12) : null; const monthLabel = monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`; const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0); const percentage = offPlanUnits ? Math.round((selectedUnits / offPlanUnits) * 100) : 0; const cashRow = cashInflowData.find((row) => row.month === absoluteMonth); const monthlyCollection = cashRow?.cashInflow ?? 0; const monthlyEscrowBalance = isBuildForSale ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null; return <article key={absoluteMonth} data-testid="unified-month-card" className={`example-sales-month unified-sale-card rounded-xl border p-2 transition-all ${selectedUnits > 0 ? "border-emerald-300 bg-gradient-to-b from-white to-emerald-50/50 shadow-sm" : "border-slate-300 bg-slate-50/70"}`}><div className="flex items-start justify-between"><div><p className="text-xs font-black text-slate-800">{monthLabel}</p>{calendarYear && <p className="mt-0.5 text-[9px] font-black tabular-nums tracking-wide text-slate-500">{calendarYear}</p>}<p className="mt-0.5 text-[9px] font-semibold text-slate-500">شهر المشروع {absoluteMonth}</p></div><span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[9px] font-black text-white">{percentage}%</span></div><div className="mt-2 grid grid-cols-2 gap-1.5"><label><span className="mb-1 block text-[9px] font-bold text-slate-600">الوحدات</span><input aria-label={`وحدات ${monthLabel}`} type="number" min={0} max={offPlanUnits} value={selectedUnits} onChange={(event) => { updateSalesMonth(salesIndex, Number(event.target.value) || 0); setImpactFocus(`${monthLabel} — الوحدات`); }} className="h-9 w-full rounded-lg border border-slate-400 bg-white text-center text-base font-black text-emerald-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></label><label><span className="mb-1 block text-[9px] font-bold text-slate-600">النسبة</span><div className="relative"><input aria-label={`نسبة ${monthLabel}`} type="number" min={0} max={100} value={percentage} onChange={(event) => { updateSalesMonth(salesIndex, Math.round((Math.max(0, Number(event.target.value) || 0) / 100) * offPlanUnits)); setImpactFocus(`${monthLabel} — النسبة`); }} className="h-9 w-full rounded-lg border border-blue-300 bg-blue-50 text-center text-base font-black text-blue-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /><span className="pointer-events-none absolute left-2 top-2.5 text-xs font-black text-blue-500">%</span></div></label></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(100, Math.max(0, (selectedUnits / maxUnitsInView) * 100))}%` }} /></div><p className="mt-1 text-center text-[9px] font-semibold text-slate-600">{fmt(selectedUnits * avgUnitPrice)} AED قيمة بيع متوقعة</p><div className="mt-1.5 grid grid-cols-2 gap-1 border-t border-slate-200 pt-1.5"><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">التحصيل</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-blue-800">{fmt(monthlyCollection)} <span className="text-[7px]">AED</span></p></div><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">{isBuildForSale ? "استلام المستثمر" : "رصيد الإسكرو"}</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-emerald-800">{isBuildForSale ? fmt(monthlyCollection) : monthlyEscrowBalance === null ? "—" : fmt(monthlyEscrowBalance)} <span className="text-[7px]">AED</span></p></div></div></article>; })}</div>;
+                      return <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4 xl:grid-cols-5">{visibleMonths.map((units, index) => { const absoluteMonth = salesStartMonth + pageStartIndex + index; const salesIndex = pageStartIndex + index; const startMonthIndex = projectStartDate ? Number(projectStartDate.split("-")[1]) - 1 : 0; const monthIndex = projectStartDate ? ((startMonthIndex + absoluteMonth - 1) % 12 + 12) % 12 : -1; const calendarYear = projectStartDate ? Number(projectStartDate.split("-")[0]) + Math.floor((startMonthIndex + absoluteMonth - 1) / 12) : null; const monthLabel = monthIndex >= 0 ? monthNames[monthIndex] : `شهر ${absoluteMonth}`; const selectedUnits = Math.max(0, Number(manualUnits[salesIndex] ?? units ?? 0) || 0); const percentage = offPlanUnits ? Math.round((selectedUnits / offPlanUnits) * 100) : 0; const cashRow = cashInflowData.find((row) => row.month === absoluteMonth); const monthlyCollection = cashRow?.cashInflow ?? 0; const monthlyEscrowBalance = isBuildForSale || !hasCompleteFinancialModel ? null : sharedEscrowBalance?.cumulative[absoluteMonth - 1] ?? null; return <article key={absoluteMonth} data-testid="unified-month-card" className={`example-sales-month unified-sale-card rounded-xl border p-2 transition-all ${selectedUnits > 0 ? "border-emerald-300 bg-gradient-to-b from-white to-emerald-50/50 shadow-sm" : "border-slate-300 bg-slate-50/70"}`}><div className="flex items-start justify-between"><div><p className="text-xs font-black text-slate-800">{monthLabel}</p>{calendarYear && <p className="mt-0.5 text-[9px] font-black tabular-nums tracking-wide text-slate-500">{calendarYear}</p>}<p className="mt-0.5 text-[9px] font-semibold text-slate-500">شهر المشروع {absoluteMonth}</p></div><span className="rounded-md bg-slate-900 px-1.5 py-0.5 text-[9px] font-black text-white">{percentage}%</span></div><div className="mt-2 grid grid-cols-2 gap-1.5"><label><span className="mb-1 block text-[9px] font-bold text-slate-600">الوحدات</span><input aria-label={`وحدات ${monthLabel}`} type="number" min={0} max={offPlanUnits} value={selectedUnits} onChange={(event) => { updateSalesMonth(salesIndex, Number(event.target.value) || 0); setImpactFocus(`${monthLabel} — الوحدات`); }} className="h-9 w-full rounded-lg border border-slate-400 bg-white text-center text-base font-black text-emerald-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></label><label><span className="mb-1 block text-[9px] font-bold text-slate-600">النسبة</span><div className="relative"><input aria-label={`نسبة ${monthLabel}`} type="number" min={0} max={100} value={percentage} onChange={(event) => { updateSalesMonth(salesIndex, Math.round((Math.max(0, Number(event.target.value) || 0) / 100) * offPlanUnits)); setImpactFocus(`${monthLabel} — النسبة`); }} className="h-9 w-full rounded-lg border border-blue-300 bg-blue-50 text-center text-base font-black text-blue-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100" /><span className="pointer-events-none absolute left-2 top-2.5 text-xs font-black text-blue-500">%</span></div></label></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-400 transition-all" style={{ width: `${Math.min(100, Math.max(0, (selectedUnits / maxUnitsInView) * 100))}%` }} /></div><p className="mt-1 text-center text-[9px] font-semibold text-slate-600">{fmt(selectedUnits * avgUnitPrice)} AED قيمة بيع متوقعة</p><div className="mt-1.5 grid grid-cols-2 gap-1 border-t border-slate-200 pt-1.5"><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">التحصيل</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-blue-800">{fmt(monthlyCollection)} <span className="text-[7px]">AED</span></p></div><div className="rounded-md bg-white/75 px-1.5 py-1"><p className="text-[8px] font-bold text-slate-500">{isBuildForSale ? "استلام المستثمر" : "رصيد الإسكرو"}</p><p className="mt-0.5 text-[10px] font-black tabular-nums text-emerald-800">{isBuildForSale ? fmt(monthlyCollection) : monthlyEscrowBalance === null ? "بانتظار التكلفة" : fmt(monthlyEscrowBalance)} <span className="text-[7px]">AED</span></p></div></div></article>; })}</div>;
                     })()}
                   </div>
                 </section>
@@ -1016,7 +1066,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 </section>
                 <section data-testid="sales-live-impact" className="overflow-hidden rounded-[22px] border border-violet-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
                   <div className="bg-[radial-gradient(circle_at_100%_0%,rgba(196,181,253,0.34),transparent_48%),linear-gradient(115deg,#faf5ff,#ffffff_62%,#eff6ff)] px-5 py-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-bold text-violet-700">أثر القرار — مباشر</p><h2 className="mt-1 text-xl font-black text-slate-900">ما الذي تغيّر الآن؟</h2><p className="mt-1 text-xs leading-5 text-slate-600">يراقب {impactFocus} ويُحدّث دون انتظار الحفظ.</p></div><div className="rounded-xl border border-violet-200 bg-violet-50 p-2.5"><BarChart3 className="h-5 w-5 text-violet-700" /></div></div></div>
-                  <div className="space-y-3 p-4"><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5"><p className="text-[11px] font-bold text-emerald-800">إيراد السيناريو</p><p className="mt-2 text-2xl font-black tracking-tight tabular-nums text-emerald-800">{fmt(totalRevenue)}</p><p className="mt-1 text-[10px] font-semibold text-emerald-700">AED</p></div><div className="rounded-2xl border border-violet-200 bg-violet-50 p-3.5"><p className="text-[11px] font-bold text-violet-800">الربح المتوقع</p><p className={`mt-2 text-2xl font-black tracking-tight tabular-nums ${profit >= 0 ? "text-violet-800" : "text-red-700"}`}>{fmt(profit)}</p><p className="mt-1 text-[10px] font-semibold text-violet-700">AED</p></div></div><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-[11px] font-bold text-blue-800">أول تحصيل فعلي</p><div className="mt-2 flex items-end justify-between"><p className="text-2xl font-black text-slate-900">{firstCollection ? `شهر ${firstCollection.month}` : "—"}</p><p className="text-sm font-bold tabular-nums text-blue-800">{firstCollection ? `${fmt(firstCollection.cashInflow)} AED` : "لا تحصيل بعد"}</p></div></div>{!isBuildForSale && <div className={`rounded-2xl border p-4 ${hasDeficit ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}><p className="text-[11px] font-bold text-slate-700">أدنى رصيد في الإسكرو</p><div className="mt-2 flex items-end justify-between"><p className={`text-2xl font-black tabular-nums ${hasDeficit ? "text-red-700" : "text-emerald-800"}`}>{criticalMonth ? fmt(criticalMonth.balance) : "—"}</p><p className="text-sm font-bold text-slate-600">{criticalMonth ? `شهر ${criticalMonth.month}` : "لا توجد بيانات"}</p></div><p className={`mt-2 text-[11px] font-semibold ${hasDeficit ? "text-red-700" : "text-emerald-700"}`}>{hasDeficit ? "تنبيه: سيناريو البيع والتحصيل لا يغطي سحب الإسكرو في هذه النقطة." : "الرصيد لا يهبط إلى عجز وفق المدخلات الحالية."}</p></div>}<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between"><p className="text-[11px] font-bold text-slate-700">نبض الأشهر المؤثرة</p><span className="text-[10px] font-bold text-slate-500">بيع / تحصيل</span></div><div className="mt-3 flex h-20 items-end gap-1.5">{visibleImpactMonths.length > 0 ? visibleImpactMonths.map((row) => { const maxCash = Math.max(...visibleImpactMonths.map((item) => item.cashInflow), 1); return <div key={row.month} className="group relative flex flex-1 flex-col items-center justify-end"><span className="mb-1 text-[9px] font-bold text-blue-700 opacity-0 transition group-hover:opacity-100">{fmt(row.cashInflow)}</span><div className="w-full rounded-t-md bg-gradient-to-t from-blue-500 to-cyan-300" style={{ height: `${Math.max(10, (row.cashInflow / maxCash) * 100)}%` }} /><span className="mt-1 text-[9px] font-bold text-slate-600">{row.month}</span></div>; }) : <p className="w-full text-center text-xs text-slate-500">أدخل توزيع البيع لتظهر الأشهر المؤثرة.</p>}</div></div><p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-[11px] font-semibold text-slate-600">التفاصيل الموسعة تحت التقويم؛ هذا الملخص ثابت أثناء أي تعديل.</p></div>
+                  <div className="space-y-3 p-4"><div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5"><p className="text-[11px] font-bold text-emerald-800">إيراد السيناريو</p><p className="mt-2 text-2xl font-black tracking-tight tabular-nums text-emerald-800">{fmt(totalRevenue)}</p><p className="mt-1 text-[10px] font-semibold text-emerald-700">AED</p></div><div className="rounded-2xl border border-violet-200 bg-violet-50 p-3.5"><p className="text-[11px] font-bold text-violet-800">الربح المتوقع</p><p className={`mt-2 text-2xl font-black tracking-tight tabular-nums ${hasCompleteFinancialModel && profit < 0 ? "text-red-700" : "text-violet-800"}`}>{hasCompleteFinancialModel ? fmt(profit) : "—"}</p><p className="mt-1 text-[10px] font-semibold text-violet-700">{hasCompleteFinancialModel ? "AED" : "بانتظار تكلفة الإنشاء"}</p></div></div><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4"><p className="text-[11px] font-bold text-blue-800">أول تحصيل فعلي</p><div className="mt-2 flex items-end justify-between"><p className="text-2xl font-black text-slate-900">{firstCollection ? `شهر ${firstCollection.month}` : "—"}</p><p className="text-sm font-bold tabular-nums text-blue-800">{firstCollection ? `${fmt(firstCollection.cashInflow)} AED` : "لا تحصيل بعد"}</p></div></div>{!isBuildForSale && <div className={`rounded-2xl border p-4 ${hasCompleteFinancialModel && hasDeficit ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}`}><p className="text-[11px] font-bold text-slate-700">أدنى رصيد في الإسكرو</p><div className="mt-2 flex items-end justify-between"><p className={`text-2xl font-black tabular-nums ${hasCompleteFinancialModel && hasDeficit ? "text-red-700" : "text-amber-800"}`}>{hasCompleteFinancialModel && criticalMonth ? fmt(criticalMonth.balance) : "—"}</p><p className="text-sm font-bold text-slate-600">{hasCompleteFinancialModel && criticalMonth ? `شهر ${criticalMonth.month}` : "بانتظار تكلفة الإنشاء"}</p></div><p className={`mt-2 text-[11px] font-semibold ${hasCompleteFinancialModel && hasDeficit ? "text-red-700" : "text-amber-700"}`}>{hasCompleteFinancialModel ? (hasDeficit ? "تنبيه: سيناريو البيع والتحصيل لا يغطي سحب الإسكرو في هذه النقطة." : "الرصيد لا يهبط إلى عجز وفق المدخلات الحالية.") : "لن يُحسب رصيد الضمان قبل إدخال تكلفة الإنشاء الفعلية."}</p></div>}<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between"><p className="text-[11px] font-bold text-slate-700">نبض الأشهر المؤثرة</p><span className="text-[10px] font-bold text-slate-500">بيع / تحصيل</span></div><div className="mt-3 flex h-20 items-end gap-1.5">{visibleImpactMonths.length > 0 ? visibleImpactMonths.map((row) => { const maxCash = Math.max(...visibleImpactMonths.map((item) => item.cashInflow), 1); return <div key={row.month} className="group relative flex flex-1 flex-col items-center justify-end"><span className="mb-1 text-[9px] font-bold text-blue-700 opacity-0 transition group-hover:opacity-100">{fmt(row.cashInflow)}</span><div className="w-full rounded-t-md bg-gradient-to-t from-blue-500 to-cyan-300" style={{ height: `${Math.max(10, (row.cashInflow / maxCash) * 100)}%` }} /><span className="mt-1 text-[9px] font-bold text-slate-600">{row.month}</span></div>; }) : <p className="w-full text-center text-xs text-slate-500">أدخل توزيع البيع لتظهر الأشهر المؤثرة.</p>}</div></div><p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-center text-[11px] font-semibold text-slate-600">التفاصيل الموسعة تحت التقويم؛ هذا الملخص ثابت أثناء أي تعديل.</p></div>
                 </section>
               </aside>
             </section>
@@ -1236,19 +1286,19 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-600">عمولة المبيعات</span>
+                    <span className="text-[10px] text-gray-600">أتعاب الوساطة العقارية</span>
                     <span className="text-[10px] font-bold text-purple-700">{commissionPct}%</span>
                   </div>
-                  <Slider value={[commissionPct]} onValueChange={([v]) => { setCommissionPct(v); setHasUnitChanges(true); setHasPlanChanges(true); }} min={0} max={10} step={0.5} className="w-full" />
+                  <p className="mt-1 text-[9px] font-semibold text-gray-500">يُعدّل من شريط التحكم الرئيسي فقط</p>
                   <p className="text-[9px] text-gray-400">{fmtFull(Math.round(commissionCost))} AED</p>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-gray-600">نسبة البيع على الخارطة</span>
-                    <span className="text-[10px] font-bold text-emerald-700">{offPlan}%</span>
+                    <span className="text-[10px] text-gray-600">{isJointVenture ? "نطاق بيع حصة وائل" : "نسبة البيع على الخارطة"}</span>
+                    <span className="text-[10px] font-bold text-emerald-700">{isJointVenture ? `100% من حصة وائل (${Math.round(developerShare * 100)}% من المشروع)` : `${offPlan}%`}</span>
                   </div>
-                  <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />
-                  <p className="text-[9px] text-gray-400">{offPlanUnits} وحدة من {totalUnits}</p>
+                  {!isJointVenture && <Slider value={[offPlan]} onValueChange={([v]) => { setOffPlan(v); setHasPlanChanges(true); }} min={30} max={100} step={5} className="w-full" />}
+                  <p className="text-[9px] text-gray-400">{isJointVenture ? `${offPlanUnits} وحدة هي كامل حصة وائل وتُوزع حسب مؤشر البيع` : `${offPlanUnits} وحدة من ${totalUnits}`}</p>
                 </div>
               </div>
             </section>
@@ -1475,8 +1525,9 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
                 <span className="text-[9px] text-pink-700">الإنفاق هنا ينعكس مباشرة في الربح والتدفقات</span>
               </div>
               <div className="p-3 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2"><div className="flex justify-between text-[10px] font-medium"><span>ميزانية التسويق</span><span className="text-pink-700 font-bold">{marketingPct}%</span></div><Slider value={[marketingPct]} onValueChange={([value]) => { setMarketingPct(value); setHasMarketingChanges(true); }} min={0} max={10} step={0.5} className="mt-2" /><p className="mt-1 text-[9px] text-gray-500">{fmtFull(Math.round(marketingCost))} AED</p></div>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2"><div className="flex justify-between text-[10px] font-medium"><span>ميزانية التسويق{isJointVenture ? " لحصة وائل" : ""}</span><span className="text-pink-700 font-bold">{marketingPct}%</span></div><p className="mt-1 text-[9px] font-semibold text-gray-500">تُعدّل من شريط التحكم الرئيسي فقط</p><p className="mt-1 text-[9px] text-gray-500">{fmtFull(Math.round(marketingCost))} AED</p></div>
+                  <div className="rounded-lg border border-violet-100 bg-violet-50/30 p-2"><div className="flex justify-between text-[10px] font-medium"><span>أتعاب الوساطة العقارية{isJointVenture ? " لبيع حصة وائل" : ""}</span><span className="text-violet-700 font-bold">{commissionPct}%</span></div><p className="mt-1 text-[9px] font-semibold text-gray-500">تُعدّل من شريط التحكم الرئيسي فقط</p><p className="mt-1 text-[9px] text-gray-500">{fmtFull(Math.round(commissionCost))} AED</p></div>
                   <div className="rounded-lg border border-pink-100 bg-pink-50/30 p-2"><p className="text-[10px] font-medium">نهاية الحملة</p><div className="mt-1 flex items-center gap-1"><span className="text-[9px] text-gray-500">شهر {timeline.marketingStart} ←</span><input type="number" min={timeline.marketingStart} max={timeline.projectEnd} value={marketingActualEnd} onChange={(event) => { setMarketingActualStart(timeline.marketingStart); setMarketingActualEnd(Math.max(timeline.marketingStart, Math.min(timeline.projectEnd, Number(event.target.value) || timeline.projectEnd))); setHasMarketingChanges(true); }} className="h-6 w-14 border border-pink-300 rounded text-center text-[10px] font-bold text-pink-700" /></div><p className="mt-1 text-[8px] text-gray-500">البداية من قواعد المشروع؛ وائل يحدد الاستمرار.</p></div>
                   <div className="rounded-lg border border-emerald-100 bg-emerald-50/30 p-2">{(() => { const entered = Object.values(marketingDistribution).flat().reduce((sum, value) => sum + (value || 0), 0); const remaining = marketingCost - entered; return <><p className="text-[10px] font-medium">توزيع الميزانية</p><p className={`mt-1 text-[11px] font-bold ${Math.abs(remaining) < 100 ? "text-emerald-700" : "text-amber-700"}`}>{fmtFull(Math.round(entered))} / {fmtFull(Math.round(marketingCost))}</p><p className="text-[8px] text-gray-500">{Math.abs(remaining) < 100 ? "موزعة بالكامل" : `${remaining > 0 ? "متبقي" : "تجاوز"}: ${fmtFull(Math.abs(Math.round(remaining)))}`}</p></>; })()}</div>
                 </div>

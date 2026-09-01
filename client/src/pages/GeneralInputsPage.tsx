@@ -49,8 +49,9 @@ const ALL_FIELDS = [
   { key: "buildForRentDeveloperFeeSupervisionRate", label: "أتعاب المطور — الإشراف", unit: "% من تكلفة الإنشاء", type: "number", defaultValue: "2.5", buildForRentOnly: true },
   { key: "soilTestFee", label: "فحص التربة", unit: "درهم", type: "number", defaultValue: "45000" },
   { key: "topographicSurveyFee", label: "المسح الطبوغرافي", unit: "درهم", type: "number", defaultValue: "12000" },
+  { key: "surveyorDwgFees", label: "رسوم المسّاح (DWG)", unit: "درهم", type: "number", hint: "دفعة مباشرة من وائل في مرحلة تسجيل المشروع وإصدار ترخيص البيع" },
+  { key: "surveyorFees", label: "رسوم المسّاح (As-Built)", unit: "درهم", type: "number", hint: "تظهر في حساب الضمان قرب نهاية الإنشاء" },
 
-  { key: "communityFees", label: "رسوم المجتمع (محسوب تلقائياً)", unit: "درهم", type: "number", defaultValue: "80000", computed: true, hint: "= GFA × 0.25 × عدد الدفعات (من الإعدادات)" },
   { key: "officialBodiesFees", label: "رسوم الجهات الحكومية", unit: "درهم", type: "number", defaultValue: "7000000" },
   { key: "developerNocFee", label: "رسوم NOC المطور", unit: "درهم", type: "number", defaultValue: "10000" },
   { key: "reraProjectRegFee", label: "تسجيل المشروع (ريرا)", unit: "درهم", type: "number", defaultValue: "150000" },
@@ -142,6 +143,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         payload.constructionScheduleJson = saveJointVentureTerms(
           (projectQuery.data as any)?.constructionScheduleJson,
           {
+            landOwnerProjectSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
             landOwnerResidentialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
             landOwnerCommercialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
             developmentLicenseCost: Number(formData.developmentLicenseCost || 0),
@@ -175,6 +177,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
     mockDb.constructionScheduleJson = (projectQuery.data as any)?.constructionScheduleJson;
     if (isJointVenture) {
       mockDb.constructionScheduleJson = saveJointVentureTerms(mockDb.constructionScheduleJson, {
+        landOwnerProjectSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
         landOwnerResidentialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
         landOwnerCommercialSharePct: Number(formData.landOwnerProjectSharePct ?? 35),
         developmentLicenseCost: Number(formData.developmentLicenseCost || 0),
@@ -195,7 +198,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
     const inputs = dbProjectToInputs(mockDb);
     const rates = dbProjectToRates(mockDb);
     return calculateProjectFormulas(inputs, rates);
-  }, [formData]);
+  }, [formData, projectQuery.data]);
   const designTiming = useMemo(() => getProjectDesignTiming(projectQuery.data), [projectQuery.data]);
   const reraQuarterlyFees = useMemo(() => {
     const project = {
@@ -260,7 +263,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
               disabled={!isEditing || isComputed}
               className={`flex-1 h-[24px] px-2 text-[13px] rounded ${isComputed ? "bg-amber-50 text-amber-700 font-medium cursor-not-allowed" : !isEditing ? "bg-transparent text-gray-800 font-medium" : "bg-white border border-gray-300 text-gray-900 focus:border-teal-500 focus:ring-1 focus:ring-teal-500"}`}
               dir="ltr"
-              placeholder={field.defaultValue || "—"}
+              placeholder={isJointVenture ? "—" : field.defaultValue || "—"}
               title={isComputed ? hint : ""}
             />
             <span className="text-[11px] text-gray-400 w-[50px] text-left">{field.unit}</span>
@@ -318,7 +321,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       )}
       {isJointVenture && (
         <div className="mb-3 rounded-xl border border-violet-300 border-r-4 border-r-violet-600 bg-violet-50/80 px-4 py-2 text-[12px] text-violet-950">
-          <span className="font-semibold">Joint Venture Off-Plan:</span> صاحب الأرض يقدّم الأرض ويحصل على النسبة المحددة من جميع الوحدات السكنية والتجارية. يبيع وائل حصته أثناء الإنشاء عبر خطة الدفع وحساب الضمان، وتظهر مصاريف الرخصة والتسجيل ضمن رأس ماله خارج الضمان.
+          <span className="font-semibold">Joint Venture Off-Plan:</span> صاحب الأرض يقدّم الأرض ويحصل على النسبة المحددة من جميع الوحدات السكنية والتجارية. يبيع وائل حصته أثناء الإنشاء عبر خطة الدفع وحساب الضمان. مصاريف الرخصة والتسجيل تُدخل هنا، بينما أتعاب الوساطة العقارية وميزانية التسويق تُحددان من صفحة مبيعات وائل.
         </div>
       )}
 

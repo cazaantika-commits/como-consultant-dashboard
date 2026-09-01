@@ -85,6 +85,7 @@ const factSheetFields = {
   bankFees: z.string().optional(),
   communityFees: z.string().optional(),
   surveyorFees: z.string().optional(),
+  surveyorDwgFees: z.string().optional(),
   reraAuditReportFee: z.string().optional(),
   reraInspectionReportFee: z.string().optional(),
   reraProjectRegFee: z.string().optional(),

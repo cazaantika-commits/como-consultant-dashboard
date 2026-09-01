@@ -17,6 +17,7 @@ import { ProjectSelector } from "@/components/ProjectSelector";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { resolveReturnPath } from "@/lib/returnNavigation";
 import { calculateJointVentureAreaShare, getJointVentureTerms, isJointVentureLandForUnits } from "@/lib/jointVentureLandForUnits";
+import { isJointVentureFinancialResultReady } from "@/lib/jointVentureInputReadiness";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
 import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
@@ -80,8 +81,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const capital = useMemo(() => calculateInvestorCapitalSummary(cashFlow), [cashFlow]);
 
   // Computed values
-  const totalRevenue = costs?.totalRevenue || 0;
-  const totalCosts = (isBuildForSale || isBuildForRent)
+  const totalRevenue = isJointVenture ? cashFlow.totalRevenue : costs?.totalRevenue || 0;
+  const totalCosts = isJointVenture
+    ? cashFlow.grandTotalCost
+    : (isBuildForSale || isBuildForRent)
     ? cashFlow.rows
       .filter((row) => !row.isRevenue && !row.isTransfer && !row.label.includes("حصة كومو"))
       .reduce((sum, row) => sum + row.totalCost, 0)
@@ -96,10 +99,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const capitalCommittedPct = capital.requiredCapital > 0 ? Math.min(100, (capital.paidCapital / capital.requiredCapital) * 100) : 0;
   const investorOutcomePositive = investorProfit >= 0 && projectMarginOnCost >= 0;
   const hasFinancialInputs = totalRevenue > 0
-    && Number((project as any)?.manualBuaSqft || 0) > 0
-    && Number((project as any)?.estimatedConstructionPricePerSqft || 0) > 0
-    && Number((project as any)?.constructionMonths || 0) > 0
-    && Boolean((project as any)?.startDate);
+    && isJointVentureFinancialResultReady(project, plansQuery.data?.[0]);
   const displayedOutcome = hasFinancialInputs ? fmtM(investorProfit) : "—";
 
   // Revenue breakdown
@@ -188,12 +188,12 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     {isJointVenture ? "قرار المطور" : "قرار المستثمر"}
                   </div>
                   <p className="mt-3 text-xs font-medium text-slate-600">{isJointVenture ? "ربح أو خسارة المطور بعد حصة مالك الأرض والمصاريف" : "صافي عائدك المتوقع بعد حصة كومو"}</p>
-                  <p className={`mt-1 text-3xl font-black tracking-tight tabular-nums ${investorOutcomePositive ? "text-emerald-700" : "text-rose-700"}`} dir="ltr">{displayedOutcome} AED</p>
+                  <p className={`mt-1 text-3xl font-black tracking-tight tabular-nums ${!hasFinancialInputs ? "text-slate-500" : investorOutcomePositive ? "text-emerald-700" : "text-rose-700"}`} dir="ltr">{displayedOutcome} AED</p>
                   <p className="mt-1 text-[11px] text-slate-600">{totalMonths > 0 ? `مدة المشروع: ${totalMonths} شهرًا · ${totalYears.toFixed(1)} سنة` : "مدة المشروع: بانتظار إدخال الجدول الزمني"}</p>
                   <div className="mt-5 border-t border-violet-200 pt-4">
                     <p className="text-xs font-semibold text-slate-700">ذروة السيولة المطلوبة</p>
-                    <p className="mt-1 text-xl font-bold tabular-nums text-amber-700" dir="ltr">{capital.requiredCapital > 0 ? fmtM(capital.requiredCapital) : "—"} AED</p>
-                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600"><CalendarClock className="h-3 w-3" /> {capital.requiredCapital > 0 ? (capital.peakMonthDate || "يُحدَّد من تدفق المستثمر") : "يظهر بعد إدخال التكاليف والجدول الزمني"}</p>
+                    <p className="mt-1 text-xl font-bold tabular-nums text-amber-700" dir="ltr">{hasFinancialInputs && capital.requiredCapital > 0 ? fmtM(capital.requiredCapital) : "—"} AED</p>
+                    <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-600"><CalendarClock className="h-3 w-3" /> {hasFinancialInputs && capital.requiredCapital > 0 ? (capital.peakMonthDate || "يُحدَّد من تدفق المستثمر") : "يظهر بعد اكتمال تكلفة الإنشاء وبقية المدخلات"}</p>
                   </div>
                 </aside>
 
@@ -209,7 +209,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-3">
                     <DecisionMetric label={isJointVenture ? "إيراد حصة المطور" : "إيرادات البيع المعتمدة"} value={totalRevenue > 0 ? fmtM(totalRevenue) : "—"} tone="teal" detail={isJointVenture ? "بعد تخصيص حصة مالك الأرض" : "من صفحة التسعير فقط"} />
-                    <DecisionMetric label={isJointVenture ? "إجمالي تكلفة المطور" : "إجمالي تكلفة المشروع"} value={totalCosts > 0 ? fmtM(totalCosts) : "—"} tone="slate" detail="مدفوع ومستقبلي" />
+                    <DecisionMetric label={isJointVenture && !hasFinancialInputs ? "المصاريف المسجلة حتى الآن" : isJointVenture ? "إجمالي تكلفة المطور" : "إجمالي تكلفة المشروع"} value={totalCosts > 0 ? fmtM(totalCosts) : "—"} tone="slate" detail={hasFinancialInputs ? "مدفوع ومستقبلي" : "ليست إجمالي التكلفة قبل إدخال تكلفة الإنشاء"} />
                     <DecisionMetric label={isJointVenture ? "ربح / خسارة المطور" : "ربح المشروع قبل حصة كومو"} value={displayedOutcome} tone={profit >= 0 ? "violet" : "rose"} detail="الإيرادات ناقص إجمالي التكلفة" />
                   </div>
 
@@ -217,14 +217,14 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     <RatioDecisionCard
                       label={isJointVenture ? "ربح المطور على إجمالي تكلفته" : "هامش ربح المشروع على التكلفة الكلية"}
                       value={hasFinancialInputs && totalCosts > 0 ? fmtPct(projectMarginOnCost) : "—"}
-                      formula={`${fmtM(profit)} ربح ÷ ${fmtM(totalCosts)} تكلفة`}
+                      formula={hasFinancialInputs ? `${fmtM(profit)} ربح ÷ ${fmtM(totalCosts)} تكلفة` : "بانتظار اكتمال تكلفة المشروع"}
                       explanation={isJointVenture ? "بعد حصة مالك الأرض وجميع المصاريف" : "يقيس اقتصاديات المشروع قبل حصة كومو"}
                       tone="teal"
                     />
                     <RatioDecisionCard
                       label={isJointVenture ? "عائد المطور على رأس المال المستخدم" : "عائد المستثمر على رأس المال المستخدم"}
                       value={hasFinancialInputs && capital.requiredCapital > 0 ? fmtPct(investorReturnOnCapital) : "—"}
-                      formula={`${fmtM(investorProfit)} صافي ربح ÷ ${fmtM(capital.requiredCapital)} رأس مال`}
+                      formula={hasFinancialInputs ? `${fmtM(investorProfit)} صافي ربح ÷ ${fmtM(capital.requiredCapital)} رأس مال` : "بانتظار اكتمال تكلفة المشروع"}
                       explanation={isJointVenture ? "ربح المطور على ذروة السيولة المطلوبة" : "بعد حصة كومو وعلى ذروة رأس المال المطلوبة"}
                       tone="amber"
                     />
@@ -283,7 +283,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
               </SectionCard>}
 
               {/* Costs - كل بند مفصل */}
-              <SectionCard title="التكاليف" icon={<DollarSign className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200/60">
+              <SectionCard title={isJointVenture && !hasFinancialInputs ? "المصاريف المسجلة — التكلفة غير مكتملة" : "التكاليف"} icon={<DollarSign className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200/60">
                 <div className="space-y-0.5">
                   {/* الأرض */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1 pb-0.5 border-b border-gray-100">الأرض</div>
@@ -299,7 +299,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     <Row label="رخصة التطوير العقاري للاتفاق" value={fmt(costs?.developmentLicenseCost || 0)} pct={totalCosts > 0 ? ((costs?.developmentLicenseCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                     <Row label="تسجيل وائل في رخصة التطوير" value={fmt(costs?.waelLicenseRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.waelLicenseRegistrationCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
                     <Row label="تسجيل صاحب الأرض في الرخصة" value={fmt(costs?.landOwnerLicenseRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.landOwnerLicenseRegistrationCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />
-                    <Row label={`تسجيل وحدات صاحب الأرض عند الإنجاز (${costs?.landOwnerUnitsRegistrationFeePct || 4}%)`} value={fmt(costs?.landOwnerUnitsRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.landOwnerUnitsRegistrationCost || 0) / totalCosts * 100) : 0} color="text-violet-700" />
+                    <Row label={`تسجيل وحدات صاحب الأرض عند الإنجاز (${costs?.landOwnerUnitsRegistrationFeePct ?? 4}%)`} value={fmt(costs?.landOwnerUnitsRegistrationCost || 0)} pct={totalCosts > 0 ? ((costs?.landOwnerUnitsRegistrationCost || 0) / totalCosts * 100) : 0} color="text-violet-700" />
                   </>}
                   {/* التصاميم والدراسات */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">التصاميم والدراسات</div>
@@ -327,10 +327,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   {/* المبيعات */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">{isBuildForRent ? "أتعاب التطوير" : "المبيعات والتسويق"}</div>
                   {!isJointVenture && <Row label="أتعاب المطور" value={fmt(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  {!isBuildForRent && <Row label="عمولة المبيعات" value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
-                  {!isBuildForRent && <Row label="التسويق" value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label={isJointVenture ? "أتعاب الوساطة العقارية لبيع حصة وائل" : "عمولة المبيعات"} value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isBuildForRent && <Row label={isJointVenture ? "تسويق حصة وائل" : "التسويق"} value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* الإجمالي */}
-                  <TotalRow label="إجمالي التكاليف" value={fmt(totalCosts)} bgColor="bg-slate-100" textColor="text-slate-800" />
+                  <TotalRow label={isJointVenture && !hasFinancialInputs ? "إجمالي المصاريف المسجلة حتى الآن" : "إجمالي التكاليف"} value={fmt(totalCosts)} bgColor="bg-slate-100" textColor="text-slate-800" />
                 </div>
               </SectionCard>
 
@@ -343,7 +343,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                         <p className="text-[10px] font-bold text-slate-700">الربح الإجمالي للمشروع</p>
                         <p className="text-[9px] text-slate-500 mt-0.5">الإيرادات ناقص إجمالي التكاليف</p>
                       </div>
-                      <span className={`text-base font-black tabular-nums ${profit >= 0 ? 'text-slate-800' : 'text-red-700'}`} dir="ltr">{fmt(profit)} AED</span>
+                      <span className={`text-base font-black tabular-nums ${hasFinancialInputs && profit < 0 ? 'text-red-700' : 'text-slate-800'}`} dir="ltr">{hasFinancialInputs ? fmt(profit) : "—"} AED</span>
                     </div>
                   </div>
                   {!isJointVenture && <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-amber-100 pb-2 px-1">
@@ -362,7 +362,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                       <p className="text-[9px] text-teal-700 mt-0.5">{isJointVenture ? "بعد حصة مالك الأرض وجميع المصاريف" : "بعد خصم حصة كومو"}</p>
                         </div>
                       </div>
-                      <span className="text-lg font-black text-teal-800 tabular-nums" dir="ltr">{fmt(investorProfit)} AED</span>
+                      <span className="text-lg font-black text-teal-800 tabular-nums" dir="ltr">{hasFinancialInputs ? fmt(investorProfit) : "—"} AED</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-center">
@@ -439,7 +439,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                       : isBuildForSale ? "3% من الإيرادات (1% + 2%)"
                       : project.developerFeePct ? `${project.developerFeePct}%` : "—"}
                   />}
-                  <DetailRow label="عمولة المبيعات" value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
+                  <DetailRow label={isJointVenture ? "أتعاب الوساطة العقارية" : "عمولة المبيعات"} value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
                   <DetailRow label="أتعاب التصميم" value={project.designFeePct ? `${project.designFeePct}%` : "—"} />
                   <DetailRow label="أتعاب الإشراف" value={project.supervisionFeePct ? `${project.supervisionFeePct}%` : "—"} />
                   <DetailRow label="الملكية" value={project.ownershipType || "—"} />
@@ -488,8 +488,8 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     </div>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-slate-100 flex" title="توزيع رأس المال بين المدفوع والمتبقي">
-                    <div className="bg-slate-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.paidCapital / capital.requiredCapital) * 100 : 0}%` }} />
-                    <div className="bg-amber-500" style={{ width: `${capital.requiredCapital > 0 ? (capital.remainingCapital / capital.requiredCapital) * 100 : 0}%` }} />
+                    <div className="bg-slate-500" style={{ width: `${hasFinancialInputs && capital.requiredCapital > 0 ? (capital.paidCapital / capital.requiredCapital) * 100 : 0}%` }} />
+                    <div className="bg-amber-500" style={{ width: `${hasFinancialInputs && capital.requiredCapital > 0 ? (capital.remainingCapital / capital.requiredCapital) * 100 : 0}%` }} />
                   </div>
                   <p className="text-[8px] leading-relaxed text-gray-500">
                     {isBuildForRent || isBuildForSale
@@ -501,12 +501,12 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                 </div>
               </SectionCard>
 
-              <SectionCard title="تمويل تكلفة المشروع" icon={<Landmark className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200">
+              <SectionCard title={isJointVenture && !hasFinancialInputs ? "توزيع المصاريف المسجلة حتى الآن" : "تمويل تكلفة المشروع"} icon={<Landmark className="w-3.5 h-3.5 text-white" />} gradient="from-slate-600 to-slate-800" borderColor="border-slate-200">
                 <div className="space-y-2">
                   <div className="flex items-end justify-between border-b border-gray-100 pb-2">
                     <div>
-                      <p className="text-[10px] font-bold text-slate-700">إجمالي مصروفات المشروع</p>
-                      <p className="text-[9px] text-slate-500 mt-0.5">مطابق لإجمالي التكاليف في الدراسة</p>
+                      <p className="text-[10px] font-bold text-slate-700">{isJointVenture && !hasFinancialInputs ? "المصاريف المسجلة حتى الآن" : "إجمالي مصروفات المشروع"}</p>
+                      <p className="text-[9px] text-slate-500 mt-0.5">{isJointVenture && !hasFinancialInputs ? "توزيع مؤقت للمبالغ المحفوظة؛ لا يمثل التمويل النهائي" : "مطابق لإجمالي التكاليف في الدراسة"}</p>
                     </div>
                     <span className="text-sm font-black text-slate-800 tabular-nums" dir="ltr">{fmt(capital.totalProjectSpend)} AED</span>
                   </div>
@@ -553,7 +553,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-gray-600">تكلفة القدم² القابل للبيع</span>
-                      <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{costPerSaleableSqft > 0 ? `${costPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
+                      <span className="font-bold text-gray-800 tabular-nums" dir="ltr">{hasFinancialInputs && costPerSaleableSqft > 0 ? `${costPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
                     </div>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="text-gray-600">متوسط سعر البيع/قدم²</span>
@@ -561,7 +561,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     </div>
                     <div className="flex items-center justify-between text-[11px] bg-teal-50/60 rounded px-2 py-1 -mx-1">
                       <span className="font-bold text-teal-800">الربح لكل قدم²</span>
-                      <span className={`font-black tabular-nums ${profitPerSaleableSqft >= 0 ? 'text-teal-700' : 'text-red-700'}`} dir="ltr">{profitPerSaleableSqft !== 0 ? `${profitPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
+                      <span className={`font-black tabular-nums ${hasFinancialInputs && profitPerSaleableSqft < 0 ? 'text-red-700' : 'text-teal-700'}`} dir="ltr">{hasFinancialInputs && profitPerSaleableSqft !== 0 ? `${profitPerSaleableSqft.toFixed(0)} AED` : "—"}</span>
                     </div>
                   </div>
                 </SectionCard>

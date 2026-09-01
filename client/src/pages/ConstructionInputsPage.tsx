@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { Button } from "@/components/ui/button";
 import { formatFullNumber } from "@/lib/numberFormat";
+import { mergeProjectScheduleJson } from "@/lib/projectScheduleJson";
 import { default as Save } from "lucide-react/dist/esm/icons/save.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
@@ -146,7 +147,15 @@ export default function ConstructionInputsPage({ embedded }: { embedded?: boolea
   const nextRetention = paymentData.find(item => item.retention1Release > 0 || item.retention2Release > 0);
   const handleSave = () => {
     if (!selectedProjectId) return;
-    updateProject.mutate({ id: selectedProjectId, constructionMonths, constructionScheduleJson: JSON.stringify({ mobilizationPct, monthlyProgress, curveType }) });
+    updateProject.mutate({
+      id: selectedProjectId,
+      constructionMonths,
+      constructionScheduleJson: mergeProjectScheduleJson(project?.constructionScheduleJson, {
+        mobilizationPct,
+        monthlyProgress,
+        curveType,
+      }),
+    });
     setIsDirty(false);
   };
 

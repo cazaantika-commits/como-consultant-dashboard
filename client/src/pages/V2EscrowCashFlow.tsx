@@ -21,6 +21,7 @@ import { calculateEscrowMonthlyBalance } from "@/lib/escrowSettlement";
 import { formatFullNumber } from "@/lib/numberFormat";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
+import { getJointVentureInputReadiness, hasApprovedWaelSalesIndicator } from "@/lib/jointVentureInputReadiness";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -47,6 +48,13 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
     { enabled: !!selectedProjectId && !!user }
   );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
+  const inputReadiness = useMemo(() => getJointVentureInputReadiness(projectQuery.data), [projectQuery.data]);
+  const hasApprovedSalesIndicator = useMemo(
+    () => hasApprovedWaelSalesIndicator(plansQuery.data?.[0]),
+    [plansQuery.data],
+  );
+  const hasIncompleteJointVentureInputs = inputReadiness.applies
+    && (!inputReadiness.financialModelReady || !hasApprovedSalesIndicator);
 
   // One canonical saved-plan adapter keeps Escrow Cash Flow aligned with every
   // Sales, Settings, Investor Cash Flow, and Feasibility timing correction.
@@ -162,7 +170,7 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
   const hasEscrowDeficit = lowestWorkingBalance.value < 0;
 
   // ─── Loading state ─────────────────────────────────────────────────────
-  if (projectQuery.isLoading) {
+  if (projectQuery.isLoading || plansQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -179,6 +187,23 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
           <p className="mt-3 text-sm leading-7 text-amber-900">
             هذا المشروع من نوع البناء للبيع؛ لذلك يمول المستثمر الإنشاء مباشرة وتدخل حصيلة بيع الوحدات إلى حسابه بعد الإنجاز، من دون حساب ضمان.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (hasIncompleteJointVentureInputs) {
+    const missing = [...inputReadiness.missingLabels];
+    if (!hasApprovedSalesIndicator) missing.push("مؤشر توزيع المبيعات المعتمد من وائل");
+    return (
+      <div className="min-h-[320px] bg-gray-50 p-6" dir="rtl">
+        <div className="mx-auto max-w-3xl rounded-2xl border-2 border-amber-300 bg-amber-50 p-8 text-center shadow-sm">
+          <Landmark className="mx-auto h-9 w-9 text-amber-700" />
+          <h1 className="mt-3 text-base font-black text-slate-950">حساب الضمان بانتظار مدخلات المشروع</h1>
+          <p className="mt-3 text-sm font-semibold leading-7 text-slate-700">
+            لا يمكن عرض رصيد أو مصروفات أو تحصيلات أو تسويات قبل اكتمال: {Array.from(new Set(missing)).join("، ")}.
+          </p>
+          <p className="mt-2 text-xs font-bold text-amber-800">لن يستخدم النظام مددًا أو تكاليف أو تحصيلات افتراضية لهذا المشروع التجريبي.</p>
         </div>
       </div>
     );

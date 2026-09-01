@@ -29,9 +29,7 @@ function asPositiveWholeNumber(value: unknown, fallback: number): number {
 }
 
 export function getProjectCommunityFeeSettings(project: any): CommunityFeeSettings {
-  const defaults = project?.financingScenario === "joint_venture_land_for_units"
-    ? { ...DEFAULT_COMMUNITY_FEE_SETTINGS, ratePerSqft: 0 }
-    : DEFAULT_COMMUNITY_FEE_SETTINGS;
+  const defaults = DEFAULT_COMMUNITY_FEE_SETTINGS;
   try {
     const schedule = JSON.parse(project?.constructionScheduleJson || "{}");
     const rates = schedule?.settings?.configurableRates || {};
