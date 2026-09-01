@@ -2290,7 +2290,7 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
         <Separator orientation="vertical" className="h-5" />
         <div className="flex-1">
           <h2 className="font-bold text-lg">إعدادات النظام</h2>
-          <p className="text-sm text-muted-foreground">موسوعة نطاق التصميم ذات 42 بندًا وبيانات مكاتب الاستشاريين</p>
+          <p className="text-sm text-muted-foreground">موسوعة نطاق التصميم ذات 43 بندًا وبيانات مكاتب الاستشاريين</p>
         </div>
         <Button
           size="sm"

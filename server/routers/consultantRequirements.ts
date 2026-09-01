@@ -251,7 +251,7 @@ export const consultantRequirementsRouter = router({
           GROUP BY s.id, s.status
         `);
         if (!counts[0] || counts[0].status !== 'DRAFT') throw new Error("لا توجد مسودة نطاق قابلة للاعتماد");
-        if (Number(counts[0].design_count) !== 42 || Number(counts[0].non_design_count) !== 0) throw new Error("يجب أن يعتمد المشروع على موسوعة التصميم النهائية ذات 42 بندًا فقط");
+        if (Number(counts[0].design_count) !== 43 || Number(counts[0].non_design_count) !== 0) throw new Error("يجب أن يعتمد المشروع على موسوعة التصميم النهائية ذات 43 بندًا فقط");
         if (Number(counts[0].required_count) < 1) throw new Error("يلزم اختيار بند تصميم واحد على الأقل قبل الاعتماد");
         await db.execute(sql`UPDATE project_consultant_requirement_sets SET status = 'APPROVED', approved_at = CURRENT_TIMESTAMP WHERE id = ${input.setId}`);
         return { success: true };

@@ -6,6 +6,7 @@ const referenceMigration = readFileSync(`${root}/drizzle/0065_consultant_require
 const projectMigration = readFileSync(`${root}/drizzle/0066_project_consultant_requirement_sets.sql`, "utf8");
 const encyclopediaMigration = readFileSync(`${root}/drizzle/0072_final_design_scope_encyclopedia.sql`, "utf8");
 const cleanScopeMigration = readFileSync(`${root}/drizzle/0073_design_only_project_scope_snapshots.sql`, "utf8");
+const splitSecurityMigration = readFileSync(`${root}/drizzle/0074_split_cctv_and_sira_scope.sql`, "utf8");
 const requirementsRouter = readFileSync(`${root}/server/routers/consultantRequirements.ts`, "utf8");
 const offerRouter = readFileSync(`${root}/server/routers/offerReader.ts`, "utf8");
 const comparisonRouter = readFileSync(`${root}/server/routers/financialOfferComparison.ts`, "utf8");
@@ -16,7 +17,7 @@ const offerReviewScreen = readFileSync(`${root}/client/src/pages/OfferReaderScre
 const cpaPage = readFileSync(`${root}/client/src/pages/CPAPage.tsx`, "utf8");
 
 describe("clean consultant design-scope input safeguards", () => {
-  it("preserves the historical reference tables while publishing exactly the approved 42-item design encyclopedia", () => {
+  it("preserves the original 42-item encyclopedia migration and applies the approved CCTV/SIRA split as item 43", () => {
     expect(referenceMigration).toContain("CREATE TABLE IF NOT EXISTS consultant_requirement_reference_items");
     expect(referenceMigration).not.toMatch(/DELETE\s+FROM\s+cpa_/i);
     const approvedRows = encyclopediaMigration.match(/^\s+\(\d+, '[A-Z0-9_]+',/gm) ?? [];
@@ -24,12 +25,16 @@ describe("clean consultant design-scope input safeguards", () => {
     expect(approvedRows).toHaveLength(42);
     expect(encyclopediaMigration).toContain("Lead Consultant / Architect of Record");
     expect(encyclopediaMigration).toContain("Tenant''s Handbook — Structural and MEP Technical Guidelines");
+    expect(splitSecurityMigration).toContain("CCTV_SECURITY_DESIGN");
+    expect(splitSecurityMigration).toContain("SIRA_SUBMISSION");
+    expect(splitSecurityMigration).toContain("لا يشمل البند رسوم الجهة الحكومية التي يتحملها المالك");
+    expect(splitSecurityMigration).toContain("SET is_active = 0");
     expect(executableEncyclopediaSql).not.toMatch(/UPDATE\s+project_consultant_requirements/i);
   });
 
   it("shows a design-only encyclopedia with the approved columns and no legal or supervision section", () => {
     expect(component).toContain("الموسوعة الشاملة لنطاق التصميم");
-    expect(component).toContain("42 بند تصميم");
+    expect(component).toContain("43 بند تصميم");
     expect(component).toContain("الاسم الإنجليزي الرسمي");
     expect(component).toContain("الشرح العربي للمعنى");
     expect(component).toContain('item.workstream === "DESIGN"');
@@ -37,11 +42,11 @@ describe("clean consultant design-scope input safeguards", () => {
     expect(component).not.toContain("نطاق التصميم والإشراف");
   });
 
-  it("creates independent project snapshots from design rows only and approves only a complete 42-item source", () => {
+  it("creates independent project snapshots from design rows only and approves only a complete 43-item source", () => {
     expect(projectMigration).toContain("project_consultant_requirement_sets");
     expect(requirementsRouter).toContain("createFromReference");
     expect(requirementsRouter).toContain("workstream = 'DESIGN'");
-    expect(requirementsRouter).toContain('Number(counts[0].design_count) !== 42');
+    expect(requirementsRouter).toContain('Number(counts[0].design_count) !== 43');
     expect(requirementsRouter).toContain('Number(counts[0].non_design_count) !== 0');
     expect(projectScopeComponent).toContain("مختار من {requirements.length}");
     expect(projectScopeComponent).toContain("لا توجد تصنيفات مشاريع");

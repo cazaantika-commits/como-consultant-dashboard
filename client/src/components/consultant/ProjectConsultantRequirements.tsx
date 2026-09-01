@@ -74,7 +74,7 @@ export function ProjectConsultantRequirements({ projectId, projectName, onBack }
 
   if (!set) return (
     <div className="space-y-5" dir="rtl">
-      <Card className="border-sky-200 bg-sky-50/70 shadow-none"><CardContent className="p-5"><h2 className="font-bold text-slate-900">نطاق التصميم — {projectName}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">سيُنشأ لهذا المشروع نطاق مستقل من موسوعة التصميم النهائية ذات 42 بندًا. لا توجد تصنيفات مشاريع، ولا بنود قانونية أو إشرافية داخل هذه القائمة.</p><div className="mt-4 flex flex-wrap gap-2"><Button onClick={() => createMutation.mutate({ projectId })} disabled={createMutation.isPending} className="gap-1"><Copy className="h-4 w-4" />تهيئة نطاق التصميم</Button><Button variant="outline" onClick={onBack}>رجوع</Button></div></CardContent></Card>
+      <Card className="border-sky-200 bg-sky-50/70 shadow-none"><CardContent className="p-5"><h2 className="font-bold text-slate-900">نطاق التصميم — {projectName}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">سيُنشأ لهذا المشروع نطاق مستقل من موسوعة التصميم النهائية ذات 43 بندًا. لا توجد تصنيفات مشاريع، ولا بنود قانونية أو إشرافية داخل هذه القائمة.</p><div className="mt-4 flex flex-wrap gap-2"><Button onClick={() => createMutation.mutate({ projectId })} disabled={createMutation.isPending} className="gap-1"><Copy className="h-4 w-4" />تهيئة نطاق التصميم</Button><Button variant="outline" onClick={onBack}>رجوع</Button></div></CardContent></Card>
     </div>
   );
 
@@ -88,7 +88,7 @@ export function ProjectConsultantRequirements({ projectId, projectName, onBack }
               <Badge className={isDraft ? "border-amber-200 bg-white text-amber-800" : "border-emerald-200 bg-white text-emerald-800"}>{isDraft ? "قابل للتعديل" : "معتمد"}</Badge>
               {isFinalEncyclopedia && <Badge className="border-sky-200 bg-white text-sky-700">موسوعة التصميم النهائية</Badge>}
             </div>
-            <p className="mt-1 text-xs leading-5 text-slate-600">هذه نسخة مستقلة خاصة بمشروع {projectName}. اختر ما يحتاجه المشروع من البنود الـ42؛ لا يؤثر الحفظ في المكتبة أو في أي مشروع آخر.</p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">هذه نسخة مستقلة خاصة بمشروع {projectName}. اختر ما يحتاجه المشروع من البنود الـ43؛ لا يؤثر الحفظ في المكتبة أو في أي مشروع آخر.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="bg-white">{selectedIds.size} مختار من {requirements.length}</Badge>

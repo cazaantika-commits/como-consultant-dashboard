@@ -29,10 +29,10 @@ describe("independent design-only project scope contracts", () => {
     expect(cpaPage.slice(cpaPage.indexOf("function ProjectListScreen"), cpaPage.indexOf("function ProjectDetailScreen"))).not.toContain("فئة المبنى");
   });
 
-  it("allows independent selection and approval from the final 42-item design encyclopedia only", () => {
+  it("allows independent selection and approval from the final 43-item design encyclopedia only", () => {
     expect(requirementsRouter).toContain("saveSelection");
     expect(requirementsRouter).toContain("AND workstream = 'DESIGN'");
-    expect(requirementsRouter).toContain("موسوعة التصميم النهائية ذات 42 بندًا فقط");
+    expect(requirementsRouter).toContain("موسوعة التصميم النهائية ذات 43 بندًا فقط");
     expect(projectScopeComponent).toContain("نسخة مستقلة خاصة بمشروع");
     expect(projectScopeComponent).toContain("مختار من {requirements.length}");
     expect(projectScopeComponent).toContain("اعتماد نطاق التصميم");
@@ -61,7 +61,7 @@ describe("independent design-only project scope contracts", () => {
 });
 
 describe("independent design-only project scope data", () => {
-  it("keeps one current independent 42-row design snapshot for every CPA project", async () => {
+  it("keeps one current independent 43-row design snapshot for every CPA project", async () => {
     const [rows] = await connection.execute(`
       SELECT cp.id, cp.project_id, active_set.id AS set_id,
              COUNT(requirement.id) AS item_count,
@@ -79,10 +79,31 @@ describe("independent design-only project scope data", () => {
     expect(rows).toHaveLength(6);
     expect(new Set(rows.map((row: any) => Number(row.set_id))).size).toBe(rows.length);
     for (const row of rows) {
-      expect(Number(row.item_count)).toBe(42);
-      expect(Number(row.design_count)).toBe(42);
+      expect(Number(row.item_count)).toBe(43);
+      expect(Number(row.design_count)).toBe(43);
       expect(Number(row.non_design_count)).toBe(0);
       expect(Number(row.group_count)).toBe(5);
+    }
+  });
+
+  it("keeps CCTV design and SIRA approval as two independent items in every current project scope", async () => {
+    const [rows] = await connection.execute(`
+      SELECT active_set.project_id,
+             SUM(CASE WHEN requirement.code = 'CCTV_SECURITY_DESIGN' THEN 1 ELSE 0 END) AS cctv_count,
+             SUM(CASE WHEN requirement.code = 'SIRA_SUBMISSION' THEN 1 ELSE 0 END) AS sira_count,
+             SUM(CASE WHEN requirement.code = 'CCTV_SIRA' THEN 1 ELSE 0 END) AS combined_count
+      FROM project_consultant_requirement_sets active_set
+      JOIN project_consultant_requirements requirement ON requirement.requirement_set_id = active_set.id
+      WHERE active_set.status = 'DRAFT'
+        AND active_set.notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%'
+      GROUP BY active_set.project_id
+      ORDER BY active_set.project_id
+    `) as any;
+    expect(rows).toHaveLength(6);
+    for (const row of rows) {
+      expect(Number(row.cctv_count)).toBe(1);
+      expect(Number(row.sira_count)).toBe(1);
+      expect(Number(row.combined_count)).toBe(0);
     }
   });
 
@@ -131,11 +152,11 @@ describe("independent design-only project scope data", () => {
       ORDER BY cp.plot_number
     `) as any;
     const expected: Record<string, number> = {
-      "6457956": 21,
-      "6457879": 21,
-      "3260885": 11,
-      "6185392": 18,
-      "6182776": 11,
+      "6457956": 22,
+      "6457879": 22,
+      "3260885": 12,
+      "6185392": 19,
+      "6182776": 12,
       "6180578": 10,
     };
     expect(rows).toHaveLength(6);

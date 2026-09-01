@@ -78,7 +78,7 @@ export function ConsultantRequirementsReference() {
         <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck className="h-5 w-5 text-sky-700" />الموسوعة الشاملة لنطاق التصميم</div>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">42 بند تصميم مرتبة في خمس مجموعات. يختار كل مشروع ما يناسبه في نسخة مستقلة؛ ولا تحتوي هذه الموسوعة على بنود قانونية أو تعاقدية أو إشرافية.</p>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">43 بند تصميم مرتبة في خمس مجموعات. يختار كل مشروع ما يناسبه في نسخة مستقلة؛ ولا تحتوي هذه الموسوعة على بنود قانونية أو تعاقدية أو إشرافية.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge className="border-sky-200 bg-white text-sky-800">{designItems.length} بند تصميم</Badge>
