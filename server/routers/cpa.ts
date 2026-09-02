@@ -950,24 +950,53 @@ export const cpaRouter = router({
       .input(
         z.object({
           projectId: z.number(),
-          plotNumber: z.string(),
+          plotNumber: z.string().optional(),
           location: z.string().optional(),
           description: z.string().optional(),
-          buaSqft: z.number(),
-          constructionCostPerSqft: z.number(),
-          durationMonths: z.number(),
+          buaSqft: z.number().optional(),
+          constructionCostPerSqft: z.number().optional(),
+          durationMonths: z.number().optional(),
         })
       )
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        const systemRows = await qRows<any>(
+          db,
+          sql`SELECT id, plotNumber, areaCode, description,
+                     COALESCE(manualBuaSqft, bua, gfaSqft, 0) AS consultant_bua_sqft,
+                     COALESCE(estimatedConstructionPricePerSqft, 0) AS consultant_construction_cost_per_sqft,
+                     COALESCE(constructionMonths, 0) AS consultant_duration_months
+              FROM projects
+              WHERE id = ${input.projectId} AND is_test_project = 0
+              LIMIT 1`
+        );
+        const systemProject = systemRows[0];
+        if (!systemProject) throw new Error("المشروع الرسمي غير موجود أو لا يمكن فتح مسار استشاري له");
+
+        const existingRows = await qRows<any>(
+          db,
+          sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} ORDER BY id DESC LIMIT 1`
+        );
+        if (existingRows[0]?.id) {
+          const id = Number(existingRows[0].id);
+          const requirementSetId = await createBlankProjectRequirementSet(db, input.projectId);
+          return { id, requirementSetId, reused: true };
+        }
+
+        const plotNumber = input.plotNumber ?? String(systemProject.plotNumber ?? "—");
+        const location = input.location ?? systemProject.areaCode ?? null;
+        const description = input.description ?? systemProject.description ?? null;
+        const buaSqft = input.buaSqft ?? toNum(systemProject.consultant_bua_sqft);
+        const constructionCostPerSqft = input.constructionCostPerSqft ?? toNum(systemProject.consultant_construction_cost_per_sqft);
+        const durationMonths = input.durationMonths ?? toNum(systemProject.consultant_duration_months);
         const r = await db.execute(
           sql`INSERT INTO cpa_projects
                 (project_id, plot_number, location, description,
                  bua_sqft, construction_cost_per_sqft, duration_months)
-              VALUES (${input.projectId}, ${input.plotNumber}, ${input.location ?? null},
-                      ${input.description ?? null}, ${input.buaSqft}, ${input.constructionCostPerSqft},
-                      ${input.durationMonths})`
+              VALUES (${input.projectId}, ${plotNumber}, ${location},
+                      ${description}, ${buaSqft}, ${constructionCostPerSqft},
+                      ${durationMonths})`
         );
         const id = Number((r[0] as any).insertId);
         const requirementSetId = await createBlankProjectRequirementSet(db, input.projectId);

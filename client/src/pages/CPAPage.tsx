@@ -2,13 +2,8 @@
  * CPA -- Consultant Proposal Analysis
  * تحليل عروض الاستشاريين
  *
- * 6 screens:
- *  1. Project list (home)
- *  2. Project detail + consultant list
- *  3. Import JSON for a consultant
- *  4. Scope coverage review
- *  5. Evaluation results & ranking
- *  6. Settings (admin)
+ * المسار التشغيلي: مشروع رسمي → نطاق تصميم مستقل → عروض PDF ومراجعة المالك
+ * → مقارنة الفجوات والتقييم → قرار اللجنة → العقد والتسليمات.
  */
 
 import { useProjectContext } from "@/contexts/ProjectContext";
@@ -151,30 +146,19 @@ function ProjectListScreen({
   const [showCreate, setShowCreate] = useState(() => new URLSearchParams(window.location.search).get("create") === "1");
   const [form, setForm] = useState({
     projectId: "",
-    plotNumber: "",
-    location: "",
-    buaSqft: "",
-    constructionCostPerSqft: "",
-    durationMonths: "",
-    description: "",
   });
 
   const projects = projectsQuery.data ?? [];
   const sysProjects = sysProjectsQuery.data ?? [];
+  const selectedSystemProject = (sysProjects as any[]).find((project) => String(project.id) === form.projectId);
 
   function handleCreate() {
-    if (!form.projectId || !form.plotNumber || !form.buaSqft || !form.constructionCostPerSqft || !form.durationMonths) {
-      toast({ title: "يرجى ملء الحقول المطلوبة", variant: "destructive" });
+    if (!form.projectId) {
+      toast({ title: "اختر مشروعًا أولًا", variant: "destructive" });
       return;
     }
     createMutation.mutate({
       projectId: Number(form.projectId),
-      plotNumber: form.plotNumber,
-      location: form.location || undefined,
-      description: form.description || undefined,
-      buaSqft: Number(form.buaSqft),
-      constructionCostPerSqft: Number(form.constructionCostPerSqft),
-      durationMonths: Number(form.durationMonths),
     });
   }
 
@@ -197,8 +181,8 @@ function ProjectListScreen({
                 <Calculator className="w-7 h-7 text-sky-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white">التحليل المالي لعروض الاستشاريين</h1>
-                <p className="text-sky-300 text-sm mt-0.5">حساب التكلفة الحقيقية الإجمالية لكل استشاري</p>
+                <h1 className="text-2xl font-bold text-white">مسار اختيار وتعيين الاستشاريين</h1>
+                <p className="text-sky-300 text-sm mt-0.5">نطاق تصميم مستقل، عرض أصلي، مراجعة، مقارنة، ثم قرار اللجنة</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -217,7 +201,7 @@ function ProjectListScreen({
                 className="bg-sky-500 hover:bg-sky-400 text-white border-0"
               >
                 <Plus className="w-4 h-4 ml-1" />
-                مشروع جديد
+                ابدأ مسار مشروع
               </Button>
             </div>
           </div>
@@ -244,11 +228,11 @@ function ProjectListScreen({
       ) : projects.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-border rounded-2xl">
           <Calculator className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">لا توجد مشاريع تحليل بعد</p>
-          <p className="text-muted-foreground/60 text-sm mt-1">ابدأ بإنشاء مشروع تحليل جديد</p>
+          <p className="text-muted-foreground font-medium">لم يُفتح مسار استشاري لأي مشروع بعد</p>
+          <p className="text-muted-foreground/60 text-sm mt-1">اختر مشروعًا قائمًا لتبدأ من نطاق التصميم المستقل</p>
           <Button className="mt-4" onClick={() => setShowCreate(true)}>
             <Plus className="w-4 h-4 ml-1" />
-            إنشاء مشروع
+            ابدأ مسار مشروع
           </Button>
         </div>
       ) : (
@@ -297,7 +281,7 @@ function ProjectListScreen({
                       <Button size="sm" variant="outline" className="h-8 gap-1 border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onScopeSetup(project.id)}>
                         <Layers className="h-3.5 w-3.5" />فتح وتعديل نطاق المشروع
                       </Button>
-                      <Button size="sm" className="h-8 bg-sky-600 text-white hover:bg-sky-700" onClick={() => onSelectProject(project.id)}>فتح التحليل ←</Button>
+                      <Button size="sm" className="h-8 bg-sky-600 text-white hover:bg-sky-700" onClick={() => onSelectProject(project.id)}>فتح مسار المشروع ←</Button>
                     </div>
                   </div>
                 </CardContent>
@@ -313,30 +297,15 @@ function ProjectListScreen({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5 text-sky-600" />
-              إنشاء مشروع تحليل جديد
+              بدء مسار استشاري لمشروع قائم
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {/* Project selector — auto-fills all fields */}
             <div>
               <Label>المشروع *</Label>
               <Select
                 value={form.projectId}
-                onValueChange={(v) => {
-                  const sp = (sysProjects as any[]).find((p) => String(p.id) === v);
-                  if (!sp) { setForm({ ...form, projectId: v }); return; }
-                  const rawBua = sp.manual_bua_sqft ?? sp.gfa_sqft ?? sp.bua ?? "";
-                  const buaStr = rawBua ? String(Math.round(Number(rawBua))) : "";
-                  const constructionCost = sp.construction_cost_per_sqft ? String(Math.round(Number(sp.construction_cost_per_sqft))) : "";
-                  setForm({
-                    ...form,
-                    projectId: v,
-                    plotNumber: sp.plot_number ?? "",
-                    location: sp.area_code ?? "",
-                    buaSqft: buaStr,
-                    constructionCostPerSqft: constructionCost,
-                  });
-                }}
+                onValueChange={(projectId) => setForm({ projectId })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="اختر مشروعاً من النظام..." />
@@ -351,62 +320,22 @@ function ProjectListScreen({
               </Select>
             </div>
 
-            {/* Auto-filled summary — shown after project selected */}
-            {form.projectId && (
+            {selectedSystemProject && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 space-y-2 text-sm">
                 <p className="text-xs font-semibold text-emerald-700 flex items-center gap-1">
                   <CheckCircle className="w-3.5 h-3.5" />
-                  تم سحب البيانات تلقائياً من بطاقة المشروع
+                  سيتم ربط المسار ببطاقة المشروع الحالية
                 </p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <div><span className="text-muted-foreground">رقم القطعة: </span><strong>{form.plotNumber || "—"}</strong></div>
-                  <div><span className="text-muted-foreground">الموقع: </span><strong>{form.location || "—"}</strong></div>
-                  <div><span className="text-muted-foreground">BUA: </span><strong>{form.buaSqft ? Number(form.buaSqft).toLocaleString() + " قدم²" : "—"}</strong></div>
-                  <div><span className="text-muted-foreground">تكلفة الإنشاء: </span><strong>{form.constructionCostPerSqft ? form.constructionCostPerSqft + " AED/قدم²" : "—"}</strong></div>
-                  <div><span className="text-muted-foreground">مدة الإشراف: </span><strong>{form.durationMonths ? form.durationMonths + " شهر" : "تُدخل يدويًا"}</strong></div>
+                  <div><span className="text-muted-foreground">رقم القطعة: </span><strong>{selectedSystemProject.plotNumber ?? selectedSystemProject.plot_number ?? "—"}</strong></div>
+                  <div><span className="text-muted-foreground">الموقع: </span><strong>{selectedSystemProject.areaCode ?? selectedSystemProject.area_code ?? "—"}</strong></div>
                 </div>
+                <p className="border-t border-emerald-200 pt-2 text-xs leading-5 text-emerald-900">لا تُدخل هنا BUA أو تكلفة الإنشاء أو مدة الإشراف. هذه البيانات تقرأ من بطاقة المشروع عند توفرها، بينما الخطوة التالية هي اختيار واعتماد نطاق التصميم الخاص بهذا المشروع.</p>
               </div>
             )}
-
-            {/* Editable overrides */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>BUA (قدم مربع) *</Label>
-                <Input
-                  type="number"
-                  value={form.buaSqft}
-                  onChange={(e) => setForm({ ...form, buaSqft: e.target.value })}
-                  placeholder="مثال: 50000"
-                />
-              </div>
-              <div>
-                <Label>تكلفة الإنشاء / قدم² *</Label>
-                <Input type="number" value={form.constructionCostPerSqft} onChange={(e) => setForm({ ...form, constructionCostPerSqft: e.target.value })} placeholder="مثال: 350" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label>مدة الإشراف (شهر) *</Label>
-                <Input type="number" value={form.durationMonths} onChange={(e) => setForm({ ...form, durationMonths: e.target.value })} placeholder="تُحدد لهذا المشروع" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>رقم القطعة *</Label>
-                <Input value={form.plotNumber} onChange={(e) => setForm({ ...form, plotNumber: e.target.value })} placeholder="مثال: 123-456" />
-              </div>
-              <div>
-                <Label>الموقع</Label>
-                <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="دبي، الإمارات" />
-              </div>
-            </div>
-            <div>
-              <Label>تفاصيل المشروع</Label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="أدخل أي تفاصيل خاصة بهذا المشروع قبل اختيار نطاقه" className="min-h-20" />
-            </div>
             <div className="flex gap-2 pt-2">
               <Button className="flex-1" onClick={handleCreate} disabled={createMutation.isPending}>
-                {createMutation.isPending ? "جاري الإنشاء..." : "إنشاء المشروع"}
+                {createMutation.isPending ? "جاري فتح المسار..." : "فتح النطاق والمسار"}
               </Button>
               <Button variant="outline" onClick={() => setShowCreate(false)}>إلغاء</Button>
             </div>
@@ -482,6 +411,7 @@ function ProjectDetailScreen({
   const consultants = consultantsQuery.data ?? [];
   const masterList = masterQuery.data ?? [];
   const totalCost = project ? project.bua_sqft * project.construction_cost_per_sqft : 0;
+  const isDesignScopeApproved = project?.scope_status === "APPROVED";
 
   // Auto-run calculation when data is loaded but no results exist yet
   const [autoCalcTriggered, setAutoCalcTriggered] = useState(false);
@@ -635,6 +565,25 @@ function ProjectDetailScreen({
         </DialogContent>
       </Dialog>
 
+      <Card className="border-sky-200 bg-sky-50/40 shadow-none">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-extrabold text-sky-950">مسار هذا المشروع</p>
+              <p className="mt-1 text-xs leading-5 text-sky-900">ابدأ باعتماد نطاق التصميم، ثم أضف المكاتب وارفع عروضهم الأصلية، وبعد مراجعة المالك فقط تظهر المقارنة والتقييم ثم قرار اللجنة والعقد.</p>
+            </div>
+            {!isDesignScopeApproved && <Button size="sm" onClick={onProjectRequirements} className="shrink-0 bg-sky-700 hover:bg-sky-800"><Layers className="ml-1 h-3.5 w-3.5" />اعتماد نطاق التصميم أولًا</Button>}
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+            <div className={`rounded-lg border px-3 py-2 text-xs ${isDesignScopeApproved ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}><strong>1. نطاق التصميم</strong><p className="mt-1">{isDesignScopeApproved ? "معتمد" : "بانتظار الاعتماد"}</p></div>
+            <div className={`rounded-lg border px-3 py-2 text-xs ${consultants.length ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white text-slate-700"}`}><strong>2. المكاتب</strong><p className="mt-1">{consultants.length ? `${consultants.length} مكاتب مرتبطة` : "أضف المكاتب بعد النطاق"}</p></div>
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"><strong>3. العروض الأصلية</strong><p className="mt-1">PDF وتحليل ومراجعة مالك</p></div>
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"><strong>4. المقارنة والتقييم</strong><p className="mt-1">الأتعاب والفجوات والترتيب</p></div>
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700"><strong>5. القرار والعقد</strong><p className="mt-1">لجنة، تفاوض، ثم تسليمات</p></div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Project Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
@@ -661,17 +610,17 @@ function ProjectDetailScreen({
               الاستشاريون ({consultants.length})
             </CardTitle>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => setShowAdd(true)}>
+              <Button size="sm" variant="outline" onClick={() => setShowAdd(true)} disabled={!isDesignScopeApproved}>
                 <Plus className="w-3.5 h-3.5 ml-1" />
                 إضافة
               </Button>
-              {consultants.length > 0 && (
-                <Button
-                  size="sm"
-                  onClick={() => { setManualCalcRequested(true); evalMutation.mutate({ cpaProjectId: projectId }); }}
-                  disabled={evalMutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 min-w-[160px]"
-                >
+                  {consultants.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => { setManualCalcRequested(true); evalMutation.mutate({ cpaProjectId: projectId }); }}
+                      disabled={evalMutation.isPending || !isDesignScopeApproved}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 min-w-[160px]"
+                    >
                   {evalMutation.isPending ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 ml-1 animate-spin" />
@@ -689,6 +638,7 @@ function ProjectDetailScreen({
           </div>
         </CardHeader>
         <CardContent className="pt-0">
+          {!isDesignScopeApproved && <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">اعتمد نطاق التصميم الخاص بالمشروع أولًا. بعدها يصبح بإمكانك إضافة المكاتب ورفع عروضهم الأصلية؛ لا تُسجّل الأتعاب أو الفجوات قبل ذلك.</div>}
           {consultants.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -708,22 +658,9 @@ function ProjectDetailScreen({
                       <p className="text-xs text-muted-foreground mt-0.5">{c.consultant_code}</p>
                     </div>
                     <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-                      <Button size="sm" variant="outline" className="border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onOfferReader(c.id, c.trade_name || c.legal_name)}>
+                      <Button size="sm" variant="outline" disabled={!isDesignScopeApproved} className="border-violet-200 text-violet-700 hover:bg-violet-50" onClick={() => onOfferReader(c.id, c.trade_name || c.legal_name)}>
                         <FileSearch className="w-3.5 h-3.5 ml-1" />
                         قراءة العرض
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => onScopeReview(c.id, c.trade_name || c.legal_name)}>
-                        <Eye className="w-3.5 h-3.5 ml-1" />
-                        النطاق
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1 border-violet-200 text-violet-700 hover:bg-violet-50"
-                        onClick={() => onSupervisionReview(c.id, c.trade_name || c.legal_name)}
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        الإشراف
                       </Button>
                       <Button
                         size="sm"
@@ -2013,6 +1950,19 @@ function ResultsScreen({
                 <Eye className="w-3.5 h-3.5" />
                 تصدير التقرير
               </Button>
+              <Button
+                size="sm"
+                className="bg-violet-700 hover:bg-violet-800 text-white gap-1"
+                disabled={!Number((project as any)?.project_id)}
+                onClick={() => {
+                  const systemProjectId = Number((project as any)?.project_id);
+                  const returnTo = encodeURIComponent(`/consultant-proposals?cpaProjectId=${projectId}`);
+                  window.location.assign(`/committee-decision?projectId=${systemProjectId}&returnTo=${returnTo}`);
+                }}
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                متابعة قرار اللجنة
+              </Button>
             </>
           )}
         </div>
@@ -2694,10 +2644,11 @@ function SettingsScreen({ onBack }: { onBack: () => void }) {
 export default function CPAPage() {
   const initialParams = new URLSearchParams(window.location.search);
   const initialScopeProjectId = Number(initialParams.get("scopeProjectId"));
+  const initialCpaProjectId = Number(initialParams.get("cpaProjectId"));
   const initialSettings = initialParams.get("settings") === "1";
   const returnTo = initialParams.get("returnTo");
   const [, navigate] = useLocation();
-  const [screen, setScreen] = useState<Screen>(Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
+  const [screen, setScreen] = useState<Screen>(Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0 ? "project-detail" : Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
@@ -2723,10 +2674,12 @@ export default function CPAPage() {
   function goSettings() { setScreen("settings"); }
 
   useEffect(() => {
-    if (Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0) {
+    if (Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0) {
+      setSelectedProjectId(initialCpaProjectId);
+    } else if (Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0) {
       setSelectedProjectId(initialScopeProjectId);
     }
-  }, [initialScopeProjectId, setSelectedProjectId]);
+  }, [initialCpaProjectId, initialScopeProjectId, setSelectedProjectId]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -2735,7 +2688,7 @@ export default function CPAPage() {
         <div className={`mx-auto flex items-center gap-2 text-xs text-muted-foreground ${screen === 'truecost-report' ? 'max-w-[1600px]' : 'max-w-4xl'}`}>
           <button onClick={goHome} className="hover:text-foreground transition-colors flex items-center gap-1">
             <Home className="w-3 h-3" />
-            التحليل المالي
+            مسار الاستشاريين
           </button>
           {screen === "settings" && (
             <>

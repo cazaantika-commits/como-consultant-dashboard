@@ -65,11 +65,12 @@ const DECISION_BASIS_OPTIONS = [
 export default function CommitteeDecisionPage() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const requestedProjectId = new URLSearchParams(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search).get("projectId");
 
 
   // Data queries
   const projectsQuery = trpc.projects.list.useQuery();
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>(() => requestedProjectId && Number(requestedProjectId) > 0 ? requestedProjectId : "");
   const consultantsQuery = trpc.projects.getConsultants.useQuery(
     { projectId: Number(selectedProjectId) },
     { enabled: !!selectedProjectId }
@@ -273,7 +274,7 @@ export default function CommitteeDecisionPage() {
       <div className="bg-gradient-to-l from-slate-900 via-slate-800 to-slate-900 text-white">
         <div className="container py-8">
           <div className="flex items-center gap-4 mb-6">
-            <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-evaluation")}>
+            <Link href={resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/consultant-proposals")}>
               <Button variant="ghost" size="sm" className="text-white/70 hover:text-white hover:bg-white/10">
                 <ArrowLeft className="h-4 w-4 ml-2" />
                 العودة إلى الصفحة السابقة
@@ -747,18 +748,31 @@ export default function CommitteeDecisionPage() {
                       تحليل ما بعد القرار
                     </CardTitle>
                     {isConfirmed && (
-                      <Button
-                        onClick={handlePostDecisionAnalysis}
-                        disabled={postDecisionAiMut.isPending}
-                        className="bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        {postDecisionAiMut.isPending ? (
-                          <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                        ) : (
-                          <Brain className="h-4 w-4 ml-2" />
-                        )}
-                        {postDecisionAiMut.isPending ? "جاري التحليل..." : "تحليل القرار"}
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={handlePostDecisionAnalysis}
+                          disabled={postDecisionAiMut.isPending}
+                          className="bg-indigo-600 hover:bg-indigo-700"
+                        >
+                          {postDecisionAiMut.isPending ? (
+                            <Loader2 className="h-4 w-4 ml-2 animate-spin" />
+                          ) : (
+                            <Brain className="h-4 w-4 ml-2" />
+                          )}
+                          {postDecisionAiMut.isPending ? "جاري التحليل..." : "تحليل القرار"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                          onClick={() => {
+                            const returnTo = encodeURIComponent(`/committee-decision?projectId=${selectedProjectId}`);
+                            window.location.assign(`/contract-deliverables?projectId=${selectedProjectId}&returnTo=${returnTo}`);
+                          }}
+                        >
+                          <FileText className="h-4 w-4 ml-2" />
+                          سجل العقد والتسليمات
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardHeader>

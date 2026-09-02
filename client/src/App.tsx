@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Redirect, Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { CCAuthProvider } from "./contexts/CCAuthContext";
@@ -94,8 +94,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/consultant-dashboard" component={ConsultantDashboardPage} />
-      <Route path="/consultant-profiles" component={ConsultantProfilesPage} />
+      <Route path="/consultant-dashboard" component={() => <Redirect to="/consultant-portal" />} />
+      <Route path="/consultant-profiles" component={() => <Redirect to="/consultant-know" />} />
       <Route path="/consultant-profile/:id" component={ConsultantDetailPage} />
       <Route path="/drive" component={DriveBrowserPage} />
       <Route path="/tasks" component={TasksPage} />
@@ -117,9 +117,9 @@ function Router() {
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={CPAPage} />
       <Route path="/consultant-know" component={ConsultantKnowPage} />
-      <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
-      <Route path="/consultant-recommend" component={ConsultantRecommendPage} />
-      <Route path="/consultant-committee" component={ConsultantCommitteePage} />
+      <Route path="/consultant-evaluation" component={() => <Redirect to="/consultant-proposals" />} />
+      <Route path="/consultant-recommend" component={() => <Redirect to="/consultant-proposals" />} />
+      <Route path="/consultant-committee" component={() => <Redirect to="/consultant-proposals" />} />
       <Route path="/committee-decision" component={CommitteeDecisionPage} />
       <Route path="/model-stats" component={ModelStatsPage} />
       <Route path="/agent-assignments" component={AgentAssignmentsPage} />

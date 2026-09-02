@@ -56,7 +56,8 @@ describe("return navigation", () => {
   it("preserves the immediate source across approvals and consultant workflow pages", () => {
     expect(source("client/src/pages/PaymentRequests.tsx")).toContain('withReturnPath("/approval-settings", location)');
     expect(source("client/src/pages/ApprovalSettings.tsx")).toContain("resolveReturnPath(");
-    expect(source("client/src/pages/ConsultantPortalPage.tsx")).toContain('withReturnPath(item.href, "/consultant-portal")');
+    expect(source("client/src/pages/ConsultantPortalPage.tsx")).toContain('href="/consultant-proposals"');
+    expect(source("client/src/pages/ConsultantPortalPage.tsx")).toContain("مراجع مساندة");
     [
       "client/src/pages/ConsultantCommitteePage.tsx",
       "client/src/pages/ConsultantGuidePage.tsx",
