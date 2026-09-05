@@ -72,7 +72,7 @@ import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
 import NotificationBell from "@/components/NotificationBell";
 
-const SALWA_AVATAR_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663200809965/dKjNMGCYtHDQQPse.png";
+const SALWA_AVATAR_URL = "/manus-storage/layla-katya-black-suit_418b179b.webp";
 
 const AGENT_ICONS: Record<string, any> = {
   crown: Crown,
@@ -131,7 +131,7 @@ function QuickActionResult({
     <div className="mt-4 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200/40">
         <div className="flex items-center gap-2">
-          <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
+          <img src={SALWA_AVATAR_URL} alt="ليلى" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
           <span className="font-bold text-sm text-foreground">{title}</span>
         </div>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-200/30 transition-colors">
@@ -630,7 +630,7 @@ export default function Home() {
                 {/* Avatar - compact */}
                 <div className="relative shrink-0">
                   <div className="w-36 h-44 lg:w-40 lg:h-48 rounded-2xl overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
-                    <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover object-top" />
+                    <img src={SALWA_AVATAR_URL} alt="ليلى" className="w-full h-full object-cover object-top" />
                   </div>
                   <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
                     <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
@@ -640,7 +640,7 @@ export default function Home() {
                 {/* Info + Quick Actions */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">سلوى</h2>
+                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">ليلى</h2>
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
                       المنسقة الرئيسية
                     </span>
@@ -670,7 +670,7 @@ export default function Home() {
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/20 transition-all duration-200 hover:shadow-lg hover:from-amber-600 hover:to-amber-700 text-xs"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    تحدث مع سلوى
+                    تحدث مع ليلى
                     <ArrowLeft className="w-3 h-3" />
                   </button>
                 </div>
@@ -1018,7 +1018,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-foreground">فريق الوكلاء</h2>
-                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} وكيل متخصص تحت إشراف سلوى</p>
+                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} وكيل متخصص تحت إشراف ليلى</p>
                 </div>
               </div>
               <Button

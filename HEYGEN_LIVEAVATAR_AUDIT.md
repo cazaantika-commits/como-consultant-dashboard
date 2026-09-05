@@ -56,3 +56,5 @@ No API key, email address, account identifier, or response body containing perso
 - The Arabic production session visibly reached the avatar-rendering stage and exposed an Arabic language selector, then failed at session connection. The current implementation must therefore keep a graceful fallback and should not claim that Arabic LiveAvatar speech is production-ready until a compatible voice/session path is verified.
 
 - The `multi` language Embed rendered the selected Katya-in-black-suit avatar and reached `Connecting...`, but remained there during the follow-up view. It was not marked as a successful live session. This confirms visual rendering is reliable while production conversational connection remains blocked or delayed by the account/voice/session configuration.
+
+- A fresh Sandbox Embed using the same avatar/context and `default_language: ar` also rendered the avatar but remained at `Connecting...` after clicking Chat now. The issue is not limited to production credits; the current context/voice/session configuration still does not complete a live conversation in the browser test.
