@@ -464,6 +464,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
+  const [liveAvatarState, setLiveAvatarState] = useState<"idle" | "connecting">("idle");
   const [isLiveAvatarLoading, setIsLiveAvatarLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -507,6 +508,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
       stopLaylaBrowserVoice();
       setIsSpeaking(false);
       setLiveAvatarUrl(null);
+      setLiveAvatarState("idle");
     }
   }, [isOpen]);
 
@@ -633,6 +635,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const handleLiveAvatarToggle = async () => {
     if (liveAvatarUrl) {
       setLiveAvatarUrl(null);
+      setLiveAvatarState("idle");
       toast.info("تم إيقاف جلسة ليلى الحية");
       return;
     }
@@ -641,7 +644,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     try {
       const session = await createLiveAvatar.mutateAsync({ token, isSandbox: false });
       setLiveAvatarUrl(session.url);
-      toast.success("بدأت جلسة ليلى الحية");
+      setLiveAvatarState("connecting");
+      toast.success("بدأت محاولة تشغيل جلسة ليلى الحية");
     } catch (error) {
       console.error("[LiveAvatar] Failed to start Layla", error);
       toast.error("تعذر تشغيل ليلى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
@@ -727,7 +731,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           <div className="border-b border-amber-100 bg-slate-950 p-2">
             <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
               <span>ليلى — جلسة حية</span>
-              <span className="text-emerald-300">متصلة بالفيديو</span>
+              <span className="text-amber-200">جاري الاتصال...</span>
             </div>
             <div className="overflow-hidden rounded-xl bg-black shadow-inner">
               <iframe
@@ -737,7 +741,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
                 className="h-52 w-full border-0 sm:h-64"
               />
             </div>
-            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تظل المحادثة النصية في COMO هي مصدر الإجابات والأرقام المعتمدة.</p>
+            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تجري محاولة الاتصال بالفيديو؛ وتظل المحادثة النصية والصوتية في COMO هي مصدر الإجابات والأرقام المعتمدة.</p>
           </div>
         )}
 
