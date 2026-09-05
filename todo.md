@@ -1704,3 +1704,5 @@
 - [ ] Inspect the user's HeyGen subscription capabilities and available real-time avatar/session access, then select and test the most suitable live assistant avatar without hard-coding the current Layla identity or image.
 
 - [ ] Replace the current Layla presentation with a new attractive, elegant professional LiveAvatar while preserving the Layla name, command-center role, financial data source, and all existing calculations; add secure session startup, Arabic conversation testing, and graceful fallback states.
+
+- [x] Remove the rejected experimental avatar image from all visible Layla surfaces, restore the prior identity image temporarily without changing Layla's internal role or data sources, and verify no new avatar image remains in the preview.

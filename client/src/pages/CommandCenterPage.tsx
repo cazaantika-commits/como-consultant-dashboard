@@ -121,7 +121,7 @@ import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
 import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 import { playLaylaGeneratedAudio, stopLaylaGeneratedAudio } from "@/lib/laylaGeneratedAudio";
 
-const LAYLA_AVATAR_URL = "/manus-storage/layla-katya-black-suit_418b179b.webp";
+const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {

@@ -73,7 +73,7 @@ const agentDefaults: Record<AgentType, { name: string; title: string; descriptio
     title: "المساعدة التنفيذية ومركز القيادة",
     description: "تلخيص المعلومات الموثقة وتنسيق المتابعة التنفيذية",
     gradient: "from-amber-500 to-yellow-600",
-    avatar: "/manus-storage/layla-katya-black-suit_418b179b.webp"
+    avatar: "/manus-storage/layla-command-center-portrait_2ede5e10.jpg"
   },
   farouq: {
     name: "فاروق",
