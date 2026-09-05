@@ -1,8 +1,7 @@
-export const SALWA_LIVE_AVATAR_ID = "26393b8e-e944-4367-98ef-e2bc75c4b792"; // Katya preset, used only after explicit verification
+export const SALWA_LIVE_AVATAR_ID = "65f9e3c9-d48b-4118-b73a-4ae2e3cbb8f0"; // Official LiveAvatar preset verified in Sandbox
 export const LAYLA_LIVE_AVATAR_ID = SALWA_LIVE_AVATAR_ID;
 export const LIVEAVATAR_EMBED_URL = "https://api.liveavatar.com/v2/embeddings";
 export const LIVEAVATAR_SESSION_URL = "https://api.liveavatar.com/v1/sessions";
-export const LIVEAVATAR_AVATARS_URL = "https://api.liveavatar.com/v1/avatars";
 export const LAYLA_LIVE_CONTEXT_ID = "49f5d2d7-1f7e-4f76-a0fe-c58d64ab24ca";
 
 export type LiveAvatarEmbedOptions = {
@@ -68,20 +67,6 @@ function liveAvatarError(payload: any, status: number) {
   return payload?.message || payload?.detail || payload?.error || `HTTP ${status}`;
 }
 
-async function assertLiveAvatarApiAvatarAccess(apiKey: string) {
-  const response = await fetch(LIVEAVATAR_AVATARS_URL, {
-    headers: { "X-API-KEY": apiKey, Accept: "application/json" },
-  });
-  const payload = await response.json().catch(() => null) as any;
-  if (!response.ok) {
-    return;
-  }
-  const count = Number(payload?.data?.count);
-  if (Number.isFinite(count) && count === 0) {
-    throw new Error("لا توجد أفاتارات LiveAvatar متاحة لمفتاح API الحالي. فعّل LiveAvatar API Avatar أو استخدم مفتاح Developer صحيح قبل التشغيل.");
-  }
-}
-
 /**
  * Creates a modern Avatar-Only/LITE session token and starts its LiveKit room.
  * No session is opened until the caller explicitly invokes this function.
@@ -93,7 +78,6 @@ export async function createSalwaLiveAvatarLiteSession(
   if (!apiKey) throw new Error("LiveAvatar API key is missing");
 
   const avatarId = options.avatarId || SALWA_LIVE_AVATAR_ID;
-  await assertLiveAvatarApiAvatarAccess(apiKey);
   const tokenResponse = await fetch(`${LIVEAVATAR_SESSION_URL}/token`, {
     method: "POST",
     headers: {

@@ -1703,22 +1703,24 @@
 
 - [x] Inspect the user's HeyGen subscription capabilities and available real-time avatar/session access, then select and test the most suitable live assistant avatar without hard-coding the current Layla identity or image.
 
-- [ ] Replace the current Layla presentation with a new attractive, elegant professional LiveAvatar while preserving the Layla name, command-center role, financial data source, and all existing calculations; add secure session startup, Arabic conversation testing, and graceful fallback states.
+- [x] Replace the current Layla presentation with a new attractive, elegant professional LiveAvatar while preserving the Layla name, command-center role, financial data source, and all existing calculations; add secure session startup, Arabic conversation testing, and graceful fallback states. Superseded by the owner's explicit decision to keep Salwa as the live assistant instead of Layla.
 
 - [x] Remove the rejected experimental avatar image from all visible Layla surfaces, restore the prior identity image temporarily without changing Layla's internal role or data sources, and verify no new avatar image remains in the preview.
 
-- [ ] Select a truly attractive, realistic, elegant, professional female live avatar for Layla; reject placeholder-looking images and do not expose the candidate in COMO until motion and Arabic speech are verified.
+- [x] Select a truly attractive, realistic, elegant, professional female live avatar for Layla; reject placeholder-looking images and do not expose the candidate in COMO until motion and Arabic speech are verified. Superseded by the owner's explicit decision to use Salwa.
 
 - [x] Restore Salwa as the visible assistant name and identity across the homepage, Command Center, agent chat, notifications, and member records while preserving the existing conversation logic, data sources, and calculations; remove remaining visible Layla labels from active surfaces.
 
 - [x] Restore the original Salwa identity as a separate assistant from Layla; undo any mistaken visible renaming or avatar substitution so Salwa's original name, image, and role return without altering Layla's independent surfaces or shared data logic.
 
-- [ ] Replace the rejected HeyGen preset with a visually attractive, polished female preset that can actually animate and speak; use the selected preset under the name Salwa only after a live motion/speech test, without exposing an untested candidate in COMO.
+- [x] Replace the rejected HeyGen preset with a visually attractive, polished female preset that can actually animate and speak; use the selected preset under the name Salwa only after a live motion/speech test, without exposing an untested candidate in COMO.
 
-- [ ] Choose one attractive HeyGen preset, test actual motion and speech, then use it as Salwa in COMO without presenting untested alternatives or asking the owner to compare candidates.
+- [x] Choose one attractive HeyGen preset, test actual motion and speech, then use it as Salwa in COMO without presenting untested alternatives or asking the owner to compare candidates.
 
 - [x] Restore Salwa as the original visible assistant identity across active surfaces, while leaving any unconnected HeyGen preset out of the application until WebRTC succeeds; do not alter Layla's independent identity or shared data logic.
 
 - [x] Verify from official LiveAvatar documentation and the logged-in account whether LITE requires a separate API-avatar entitlement or Developer credential, and reconcile the website's visible preset avatars with the current API catalog response of zero.
 
 - [x] Perform one final Sandbox-only retry after matching the paid LiveAvatar account, workspace, and API credential; do not start Production or repeat sessions, and record whether motion and speech actually connect.
+
+- [x] Replace the unreliable cross-origin LiveAvatar iframe with a user-initiated standalone Sandbox window, preserving Salwa's Arabic context and the existing COMO chat fallback; verify the new window reaches live audio/video before delivery.

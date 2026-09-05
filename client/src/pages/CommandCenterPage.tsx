@@ -465,10 +465,11 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
-  const [liveAvatarState, setLiveAvatarState] = useState<"idle" | "connecting">("idle");
+  const [liveAvatarState, setLiveAvatarState] = useState<"idle" | "connecting" | "connected">("idle");
   const [isLiveAvatarLoading, setIsLiveAvatarLoading] = useState(false);
   const [liveAvatarLiteSession, setLiveAvatarLiteSession] = useState<{ livekitUrl: string; livekitClientToken: string; sessionId: string } | null>(null);
   const liveAvatarRoomRef = useRef<Room | null>(null);
+  const liveAvatarWindowRef = useRef<Window | null>(null);
   const liveAvatarVideoRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -482,7 +483,6 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
   const generateLaylaSpeech = trpc.commandCenter.generateLaylaSpeech.useMutation();
   const createLiveAvatar = trpc.commandCenter.createLaylaLiveAvatarEmbed.useMutation();
-  const createLiveAvatarLite = trpc.commandCenter.createSalwaLiveAvatarLiteSession.useMutation();
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
@@ -513,6 +513,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
       stopLaylaBrowserVoice();
       liveAvatarRoomRef.current?.disconnect();
       liveAvatarRoomRef.current = null;
+      if (liveAvatarWindowRef.current && !liveAvatarWindowRef.current.closed) liveAvatarWindowRef.current.close();
+      liveAvatarWindowRef.current = null;
       setIsSpeaking(false);
       setLiveAvatarUrl(null);
       setLiveAvatarLiteSession(null);
@@ -688,6 +690,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     if (liveAvatarLiteSession || liveAvatarUrl) {
       liveAvatarRoomRef.current?.disconnect();
       liveAvatarRoomRef.current = null;
+      if (liveAvatarWindowRef.current && !liveAvatarWindowRef.current.closed) liveAvatarWindowRef.current.close();
+      liveAvatarWindowRef.current = null;
       setLiveAvatarLiteSession(null);
       setLiveAvatarUrl(null);
       setLiveAvatarState("idle");
@@ -697,14 +701,30 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
 
     setIsLiveAvatarLoading(true);
     setLiveAvatarState("connecting");
+    const liveWindow = window.open("about:blank", "salwa-liveavatar", "popup=yes,width=960,height=720,resizable=yes,scrollbars=yes");
+    liveAvatarWindowRef.current = liveWindow;
+    if (liveWindow) {
+      liveWindow.document.title = "سلوى الحية";
+      liveWindow.document.body.dir = "rtl";
+      liveWindow.document.body.innerHTML = '<div style="font-family:Arial,sans-serif;display:grid;place-items:center;min-height:90vh;color:#334155"><p>جاري تجهيز سلوى الحية...</p></div>';
+    }
     try {
-      const session = await createLiveAvatarLite.mutateAsync({ token, isSandbox: true });
-      setLiveAvatarLiteSession(session);
-      toast.success("جاري تهيئة فيديو سلوى الحي عبر المسار الآمن");
+      const embed = await createLiveAvatar.mutateAsync({ token, isSandbox: true });
+      setLiveAvatarUrl(embed.url);
+      if (liveWindow && !liveWindow.closed) {
+        liveWindow.location.replace(embed.url);
+        setLiveAvatarState("connected");
+        toast.success("فُتحت سلوى الحية في نافذة مستقلة؛ اضغط Chat now لبدء المحادثة");
+      } else {
+        setLiveAvatarState("idle");
+        toast.info("تم تجهيز سلوى الحية؛ اسمح بالنوافذ المنبثقة ثم اضغط فتح النافذة");
+      }
     } catch (error) {
-      console.error("[LiveAvatar LITE] Failed to start Salwa", error);
+      console.error("[LiveAvatar FULL] Failed to start Salwa", error);
+      if (liveWindow && !liveWindow.closed) liveWindow.close();
+      liveAvatarWindowRef.current = null;
       setLiveAvatarState("idle");
-      toast.error("تعذر تهيئة فيديو سلوى؛ بقيت المحادثة النصية والصوتية متاحة");
+      toast.error("تعذر تهيئة سلوى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
     } finally {
       setIsLiveAvatarLoading(false);
     }
@@ -787,10 +807,33 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           <div className="border-b border-amber-100 bg-slate-950 p-2">
             <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
               <span>سلوى — جلسة حية</span>
-              <span className="text-amber-200">{liveAvatarState === "connected" ? "متصلة الآن" : "جاري الاتصال..."}</span>
+              <span className="text-amber-200">{liveAvatarState === "connected" ? "مفتوحة الآن" : liveAvatarUrl ? "جاهزة للفتح" : "جاري التجهيز..."}</span>
             </div>
-            <div ref={liveAvatarVideoRef} className="min-h-52 overflow-hidden rounded-xl bg-black shadow-inner sm:min-h-64" />
-            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تظل المحادثة النصية والصوتية في COMO هي مصدر الإجابات والأرقام المعتمدة، بينما LiveAvatar يعرض حركة سلوى فقط.</p>
+            {liveAvatarUrl ? (
+              <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 px-5 py-6 text-center text-white shadow-inner sm:min-h-40">
+                <p className="text-sm font-semibold">سلوى الحية جاهزة في نافذة مستقلة</p>
+                <p className="max-w-sm text-[11px] leading-5 text-slate-300">تعمل النافذة المستقلة بشكل أفضل للصوت والفيديو المباشر من تضمين WebRTC داخل إطار خارجي.</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    const opened = window.open(liveAvatarUrl, "salwa-liveavatar", "popup=yes,width=960,height=720,resizable=yes,scrollbars=yes");
+                    if (opened) {
+                      liveAvatarWindowRef.current = opened;
+                      setLiveAvatarState("connected");
+                    } else {
+                      toast.error("اسمح بالنوافذ المنبثقة لفتح سلوى الحية");
+                    }
+                  }}
+                  className="bg-amber-500 text-slate-950 hover:bg-amber-400"
+                >
+                  فتح سلوى الحية
+                </Button>
+              </div>
+            ) : (
+              <div ref={liveAvatarVideoRef} className="min-h-52 overflow-hidden rounded-xl bg-black shadow-inner sm:min-h-64" />
+            )}
+            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">الأفاتار الحي يعمل حاليًا في Sandbox. تبقى المحادثة النصية في COMO هي المصدر المعتمد للأرقام والتقارير المالية.</p>
           </div>
         )}
 
