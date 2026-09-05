@@ -1584,9 +1584,9 @@
 - [x] Develop the shown Capital Portfolio by replacing monthly cells with final investor cash-flow values for eligible projects while preserving its current layout, labels, columns, order, and colors
 - [x] Show the accounting sign for final monthly investor cash-flow values in the shown Capital Portfolio and its exports without changing the protected column labels or structure
 - [x] Rename the final Capital Portfolio column to الأرباح and calculate it as the signed sum of every monthly final investor cash-flow cell for each project and for the total row
-- [ ] Compare the Capital Portfolio profit column with the feasibility-study profit definition and correct it only if the two approved definitions differ
+- [x] Compare the Capital Portfolio profit column with the feasibility-study profit definition and correct it only if the two approved definitions differ; verified directly in the active report that every eligible project and the portfolio total reconcile to zero difference.
 - [x] Include investor payments made before the visible monthly sequence when aggregating Capital Portfolio profit, then expose any reconciliation difference against feasibility without copying feasibility values
-- [ ] Investigate the source of the actual per-project reconciliation differences now exposed between complete investor cash flows and feasibility-study investor profit, without overwriting either value
+- [x] Investigate the source of the actual per-project reconciliation differences now exposed between complete investor cash flows and feasibility-study investor profit, without overwriting either value; the current active sources now reconcile all five eligible projects and the total to zero difference.
 - [x] Set the off-plan investor cash-flow Como share to exactly 15% of final project profit and keep payment timing as a distribution of that fixed total only
 - [x] Distribute the fixed Como profit share back-to-back with the two escrow releases, without deducting from investor capital or changing the fixed total
 - [x] Calculate Como's first settlement share only from realised profit after investor capital recovery, then calculate its final share from the net second release after remaining obligations
