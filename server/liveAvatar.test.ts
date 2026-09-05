@@ -23,8 +23,6 @@ describe("Layla LiveAvatar configuration", () => {
       mode: "LITE",
       avatar_id: SALWA_LIVE_AVATAR_ID,
       is_sandbox: true,
-      max_session_duration: 180,
-      video_settings: { quality: "high", encoding: "H264" },
     });
   });
 });

@@ -60,8 +60,6 @@ export function buildSalwaLiveAvatarLiteTokenRequest({ isSandbox, avatarId = SAL
     mode: "LITE" as const,
     avatar_id: avatarId,
     is_sandbox: isSandbox,
-    max_session_duration: 180,
-    video_settings: { quality: "high" as const, encoding: "H264" as const },
   };
 }
 
