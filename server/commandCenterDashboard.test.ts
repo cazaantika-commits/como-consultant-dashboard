@@ -81,8 +81,8 @@ describe("Command Center dashboard card registry", () => {
   });
 
   it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
-    expect(source).toContain('layla-command-center-portrait_2ede5e10.jpg');
-    expect(source).toContain('تحدث مع ليلى');
+    expect(source).toContain('salwa-enhanced_0251b1a8.png');
+    expect(source).toContain('تحدث مع سلوى');
     expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
@@ -98,21 +98,21 @@ describe("Command Center dashboard card registry", () => {
     expect(routerSource).not.toContain("UPDATE financialData");
   });
 
-  it("serves Layla's permanent portrait through the project storage proxy", () => {
+  it("serves Salwa's permanent portrait through the project storage proxy", () => {
     expect(serverSource).toContain('import { registerStorageProxy } from "./storageProxy";');
     expect(serverSource.indexOf('registerStorageProxy(app);')).toBeLessThan(serverSource.indexOf('registerOAuthRoutes(app);'));
     expect(storageProxySource).toContain('app.get("/manus-storage/*"');
     expect(storageProxySource).toContain('v1/storage/presign/get');
   });
 
-  it("keeps Layla voice diagnosable and manually playable when autoplay is blocked", () => {
+  it("keeps Salwa voice diagnosable and manually playable when autoplay is blocked", () => {
     expect(routerSource).toContain("reportLaylaVoiceEvent");
     expect(routerSource).toContain("[Layla TTS client]");
     expect(source).toContain("openingBriefingAudioRef");
     expect(source).toContain("openingBriefingAutoplayAttemptedRef.current");
     expect(source).toContain("preload=\"auto\"");
     expect(source).toContain("controls={openingBriefingState === \"error\"}");
-    expect(source).toContain("اضغط لسماع ملخص ليلى");
+    expect(source).toContain("اضغط لسماع ملخص سلوى");
     expect(source).toContain("تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.");
     expect(source).toContain("manual_play_attempted");
     expect(source).toContain("play_failed");

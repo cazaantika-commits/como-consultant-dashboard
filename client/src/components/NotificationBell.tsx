@@ -225,7 +225,7 @@ export default function NotificationBell() {
                 }}
               >
                 <ExternalLink className="w-3.5 h-3.5 ml-1" />
-                افتح شات ليلى للرد
+                افتح شات سلوى للرد
               </Button>
             </div>
           )}

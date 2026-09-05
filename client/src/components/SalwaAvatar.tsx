@@ -160,7 +160,7 @@ export function SalwaAvatar({ avatarUrl, isSpeaking, isLoading, size = "md", cla
       >
         <img
           src={avatarUrl}
-          alt="ليلى"
+          alt="سلوى"
           className="w-full h-full object-cover"
         />
 
@@ -223,7 +223,7 @@ export function SalwaSpeakingIndicator({ isSpeaking }: { isSpeaking: boolean }) 
           />
         ))}
       </div>
-      <span className="text-[10px] text-amber-600 font-medium mr-0.5">ليلى تتحدث</span>
+      <span className="text-[10px] text-amber-600 font-medium mr-0.5">سلوى تتحدث</span>
       <style>{`
         @keyframes soundBar {
           0% { height: 20%; }

@@ -16,9 +16,9 @@ describe("Layla opening voice briefing", () => {
 
   it("starts with the member greeting and limits the briefing to the two highest-priority points", () => {
     const text = buildLaylaOpeningBriefing({ memberId: "sheikh_issa", nameAr: "الشيخ عيسى", role: "executive" }, operations);
-    expect(text.startsWith("حياك الله يا شيخ عيسى، أنا ليلى.")).toBe(true);
+    expect(text.startsWith("حياك الله يا شيخ عيسى، أنا سلوى.")).toBe(true);
     expect(text).toContain("1 مهام عاجلة");
-    expect(text).toContain("2 طلبات صرف معلقة");
+    expect(text).not.toContain("2 طلبات صرف معلقة");
     expect(text).not.toContain("قرارات ظاهرة");
     expect(text).not.toContain("جلسات تقييم");
     expect(text.length).toBeLessThan(220);
@@ -29,6 +29,6 @@ describe("Layla opening voice briefing", () => {
       { memberId: "member_7", nameAr: "عبدالرحمن زقوت", role: "executive" },
       { ...operations, openTasks: 0, urgentTasks: 0, pendingPayments: 0, decisions: 0, evaluations: 0 },
     );
-    expect(text).toBe("أهلاً عبدالرحمن زقوت، أنا ليلى. لا توجد عناصر عاجلة ظاهرة حاليًا.");
+    expect(text).toBe("أهلاً عبدالرحمن زقوت، أنا سلوى. لا توجد عناصر عاجلة ظاهرة حاليًا.");
   });
 });

@@ -121,7 +121,7 @@ import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
 import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 import { playLaylaGeneratedAudio, stopLaylaGeneratedAudio } from "@/lib/laylaGeneratedAudio";
 
-const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
+const LAYLA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
@@ -482,8 +482,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
 
   const messages = chatHistory.data || [];
   const displayLaylaContent = (content: unknown) => String(content || "")
-    .replaceAll("سلوى", "ليلى")
-    .replaceAll("Salwa", "Layla")
+    
+    
     .replace(
       "مهمتي هي مساعدتك في إدارة مركز القيادة، تنفيذ أوامرك بإضافة المحتوى للفقاعات، إرسال الرسائل للشركاء التنفيذيين (وائل والشيخ عيسى)، وإنشاء جلسات التقييم، بالإضافة إلى تزويدك بالمعلومات حول مشاريعنا الاستثمارية والاستشاريين المعنيين.",
       "مهمتي مساعدتك في فهم معلومات مركز القيادة والتدفقات النقدية المعتمدة والإجابة عن استفساراتك من مصادرها.",
@@ -522,7 +522,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
       await chatMutation.mutateAsync({ token, message: msg });
       utils.commandCenter.getChatHistory.invalidate({ token });
     } catch (err: any) {
-      toast.error("خطأ في الاتصال بليلى");
+      toast.error("خطأ في الاتصال بسلوى");
     } finally {
       setIsLoading(false);
     }
@@ -636,7 +636,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     if (liveAvatarUrl) {
       setLiveAvatarUrl(null);
       setLiveAvatarState("idle");
-      toast.info("تم إيقاف جلسة ليلى الحية");
+      toast.info("تم إيقاف جلسة سلوى الحية");
       return;
     }
 
@@ -645,10 +645,10 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
       const session = await createLiveAvatar.mutateAsync({ token, isSandbox: false });
       setLiveAvatarUrl(session.url);
       setLiveAvatarState("connecting");
-      toast.success("بدأت محاولة تشغيل جلسة ليلى الحية");
+      toast.success("بدأت محاولة تشغيل جلسة سلوى الحية");
     } catch (error) {
       console.error("[LiveAvatar] Failed to start Layla", error);
-      toast.error("تعذر تشغيل ليلى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
+      toast.error("تعذر تشغيل سلوى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
     } finally {
       setIsLiveAvatarLoading(false);
     }
@@ -679,9 +679,9 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     const played = speakWithLaylaBrowserVoice(cleanText, {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
-      onError: () => { setIsSpeaking(false); toast.error("تعذر تشغيل صوت ليلى على هذا الجهاز"); },
+      onError: () => { setIsSpeaking(false); toast.error("تعذر تشغيل صوت سلوى على هذا الجهاز"); },
     });
-    if (!played) toast.error("تعذر تشغيل صوت ليلى على هذا الجهاز");
+    if (!played) toast.error("تعذر تشغيل صوت سلوى على هذا الجهاز");
   };
 
   if (!isOpen) return null;
@@ -696,10 +696,10 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-l from-amber-50 to-white">
           <div className="flex items-center gap-3">
-            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={LAYLA_AVATAR_URL} alt="ليلى" className="w-full h-full object-cover" /></div>
+            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={LAYLA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
             <div className="flex sm:hidden h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-white shadow-md"><MessageCircle className="h-5 w-5" /></div>
             <div>
-              <h3 className="font-bold text-slate-800 text-sm">ليلى</h3>
+              <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
               <p className="text-[11px] text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 متصلة الآن
@@ -713,10 +713,10 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
               onClick={handleLiveAvatarToggle}
               disabled={isLiveAvatarLoading}
               className={`h-8 gap-1 px-2 text-xs ${liveAvatarUrl ? "text-emerald-600 hover:text-emerald-700" : "text-slate-500 hover:text-amber-600"}`}
-              title={liveAvatarUrl ? "إيقاف ليلى الحية" : "تشغيل ليلى الحية"}
+              title={liveAvatarUrl ? "إيقاف سلوى الحية" : "تشغيل سلوى الحية"}
             >
               {isLiveAvatarLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{liveAvatarUrl ? "إيقاف الحي" : "ليلى الحية"}</span>
+              <span className="hidden sm:inline">{liveAvatarUrl ? "إيقاف الحي" : "سلوى الحية"}</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={handleClear} className="text-slate-400 hover:text-red-500 h-8 w-8 p-0">
               <Trash2 className="w-4 h-4" />
@@ -730,13 +730,13 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         {liveAvatarUrl && (
           <div className="border-b border-amber-100 bg-slate-950 p-2">
             <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
-              <span>ليلى — جلسة حية</span>
+              <span>سلوى — جلسة حية</span>
               <span className="text-amber-200">جاري الاتصال...</span>
             </div>
             <div className="overflow-hidden rounded-xl bg-black shadow-inner">
               <iframe
                 src={liveAvatarUrl}
-                title="ليلى — الأفاتار الحي"
+                title="سلوى — الأفاتار الحي"
                 allow="autoplay; microphone; camera; fullscreen; speaker-selection"
                 className="h-52 w-full border-0 sm:h-64"
               />
@@ -749,7 +749,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
           {messages.length === 0 && !isLoading && (
             <div className="text-center py-10">
-              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={LAYLA_AVATAR_URL} alt="ليلى" className="w-full h-full object-cover" /></div>
+              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={LAYLA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
               <div className="flex sm:hidden h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white mx-auto mb-4 shadow-lg"><MessageCircle className="h-7 w-7" /></div>
               <p className="text-slate-700 font-semibold mb-1">مرحباً {memberName}</p>
               <p className="text-slate-400 text-sm">كيف يمكنني مساعدتك اليوم؟</p>
@@ -791,7 +791,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
                     <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-xs text-white/70">ليلى تفكر...</span>
+                  <span className="text-xs text-white/70">سلوى تفكر...</span>
                 </div>
               </div>
             </div>
@@ -844,7 +844,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لليلى..."}
+              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لسلوى..."}
               className="flex-1 min-h-[44px] max-h-[120px] resize-none rounded-xl border-slate-200 text-sm focus:border-amber-400 focus:ring-amber-400/20"
               rows={1}
               disabled={isRecording || isTranscribing}
@@ -2402,7 +2402,7 @@ function NewsTicker({ token }: { token: string }) {
   const defaultItems = [
     { id: -1, label: 'مركز القيادة', text: 'مرحباً بكم في مركز القيادة — COMO Developments Command Center', isUrgent: false, needsResponse: false },
     { id: -2, label: 'مركز القيادة', text: 'تابعوا آخر التطورات في مشاريعنا العقارية', isUrgent: false, needsResponse: false },
-    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع ليلى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
+    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع سلوى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
   ];
 
   const displayItems = liveItems.length > 0 ? liveItems : defaultItems;
@@ -4292,7 +4292,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         setOpeningBriefingState("error");
         setOpeningBriefingError(detail);
         reportVoiceStage("browser_fallback_failed", detail);
-        if (startedByUser) toast.error("تعذر تشغيل صوت ليلى؛ أعد المحاولة من مشغل الصوت الظاهر");
+        if (startedByUser) toast.error("تعذر تشغيل صوت سلوى؛ أعد المحاولة من مشغل الصوت الظاهر");
       },
     });
     if (!playedFallback) {
@@ -4568,9 +4568,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
               <div className="h-[10.5rem] w-36 overflow-hidden rounded-2xl bg-slate-100 ring-2 ring-amber-200 shadow-[0_10px_22px_rgba(15,23,42,0.14)] lg:h-48 lg:w-[10.5rem]">
-                <img src={LAYLA_AVATAR_URL} alt="ليلى، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
+                <img src={LAYLA_AVATAR_URL} alt="سلوى، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
               </div>
-              <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">ليلى</span>
+              <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">سلوى</span>
               <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-500" />
             </div>
             <div className="flex-1 text-right">
@@ -4578,7 +4578,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800"><Gauge className="h-3.5 w-3.5" /> ملخص مركز القيادة</span>
                 <span className="text-xs font-medium text-slate-500">{new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               </div>
-              <h2 className="mb-0.5 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{String(member.greeting || "").replaceAll("سلوى", "ليلى").replaceAll("Salwa", "Layla")}</h2>
+              <h2 className="mb-0.5 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{String(member.greeting || "")}</h2>
               <p className="mb-3 text-sm text-slate-600">القرارات والتقارير والمتابعة التشغيلية في مكان واحد.</p>
               {/* Personalized stats chips - clickable */}
               {counts.data && (
@@ -4628,7 +4628,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]">
                   <MessageSquare className="w-4 h-4" />
-                  <span>تحدث مع ليلى</span>
+                  <span>تحدث مع سلوى</span>
                 </button>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -4664,19 +4664,19 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                           type="button"
                           onClick={() => { playOpeningBriefing(true); }}
                           disabled={!openingBriefingText || openingBriefingState === "loading"}
-                          aria-label={openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}
+                          aria-label={openingBriefingState === "playing" ? "إيقاف ملخص سلوى الصوتي" : "تشغيل ملخص سلوى الصوتي"}
                           className="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {openingBriefingState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : openingBriefingState === "playing" ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                           <span className="text-[11px] font-black">
-                            {openingBriefingState === "loading" ? "جاري تجهيز صوت ليلى" : openingBriefingState === "playing" ? "إيقاف صوت ليلى" : openingBriefingState === "blocked" ? "اضغط لسماع ملخص ليلى" : "تشغيل صوت ليلى"}
+                            {openingBriefingState === "loading" ? "جاري تجهيز صوت سلوى" : openingBriefingState === "playing" ? "إيقاف صوت سلوى" : openingBriefingState === "blocked" ? "اضغط لسماع ملخص سلوى" : "تشغيل صوت سلوى"}
                           </span>
                         </button>
                       )}
                       {openingBriefingError && <span className="max-w-[280px] text-[10px] font-semibold text-red-600">تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.</span>}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص ليلى الصوتي" : "تشغيل ملخص ليلى الصوتي"}</TooltipContent>
+                  <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص سلوى الصوتي" : "تشغيل ملخص سلوى الصوتي"}</TooltipContent>
                 </Tooltip>
                 <button onClick={() => setActiveBubble("reports")}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
@@ -4984,7 +4984,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.4), 0 8px 32px rgba(245,158,11,0.3)'}}
       >
         <MessageCircle className="h-6 w-6 text-white sm:hidden" />
-        <img src={LAYLA_AVATAR_URL} alt="ليلى" className="hidden sm:block w-full h-full object-cover" />
+        <img src={LAYLA_AVATAR_URL} alt="سلوى" className="hidden sm:block w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
       <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />

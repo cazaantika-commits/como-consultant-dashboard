@@ -957,7 +957,7 @@ export const commandCenterRouter = router({
         };
       } catch (error) {
         console.error("[LiveAvatar] Embed creation failed", error);
-        throw new TRPCError({ code: "BAD_GATEWAY", message: "تعذر تشغيل أفاتار ليلى الحي حاليًا" });
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "تعذر تشغيل أفاتار سلوى الحي حاليًا" });
       }
     }),
 
@@ -1012,7 +1012,7 @@ export const commandCenterRouter = router({
         return { response: laylaResponse };
       }
       
-      const systemPrompt = `أنتِ ليلى، المساعدة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.
+      const systemPrompt = `أنتِ سلوى، المساعدة التنفيذية الذكية في مركز القيادة لشركة COMO Developments.
       
 دورك: قناة تواصل ذكية بين عبدالرحمن (المشرف) ووائل والشيخ عيسى (الشركاء التنفيذيون).
 
@@ -1510,7 +1510,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         return result;
       } catch (error) {
         console.error("[Layla TTS] Generation failed:", error);
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر توليد صوت ليلى عالي الجودة" });
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر توليد صوت سلوى عالي الجودة" });
       }
     }),
 

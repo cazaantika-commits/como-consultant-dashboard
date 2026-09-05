@@ -62,7 +62,7 @@ describe("Layla opening briefing", () => {
       report,
     );
 
-    expect(text).toContain("أهلاً عبدالرحمن، أنا ليلى");
+    expect(text).toContain("أهلاً عبدالرحمن، أنا سلوى");
     expect(text).toContain("احتياج المجموعة خلال الأشهر الأربعة القادمة");
     expect(text).toContain("حوالي 25 مليونًا ونصف درهم");
     for (const month of ["سبتمبر 2026", "أكتوبر 2026", "نوفمبر 2026", "ديسمبر 2026"]) {
