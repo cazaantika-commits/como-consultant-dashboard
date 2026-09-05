@@ -37,6 +37,8 @@ import { loadUnifiedGroupCashFlowSource } from "./cashFlowSettings";
 import { laylaCashFlowTools, runLaylaCashFlowTool } from "../laylaCashFlowContext";
 import { buildLaylaOpeningOperations, formatLaylaCommandCenterFallback, formatLaylaCommandCenterOverview, isLaylaCommandCenterOverviewRequest, laylaCommandCenterTools, loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
 import { generateLaylaSpeechAudio } from "../laylaSpeech";
+import { ENV } from "../_core/env";
+import { createLaylaLiveAvatarEmbed, LAYLA_LIVE_AVATAR_ID } from "../liveAvatar";
 
 // --- Helper: Verify Command Center access token ---
 async function verifyToken(token: string) {
@@ -931,6 +933,32 @@ export const commandCenterRouter = router({
         isRevealed: true,
         completedCount: session.completedCount,
       };
+    }),
+
+  // ═══ Layla LiveAvatar session ═══
+
+  createLaylaLiveAvatarEmbed: publicProcedure
+    .input(z.object({
+      token: z.string(),
+      isSandbox: z.boolean().default(false),
+    }))
+    .mutation(async ({ input }) => {
+      await verifyToken(input.token);
+      if (!ENV.liveAvatarApiKey) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "خدمة الأفاتار الحي غير مهيأة" });
+      }
+
+      try {
+        const session = await createLaylaLiveAvatarEmbed(ENV.liveAvatarApiKey, { isSandbox: input.isSandbox });
+        return {
+          ...session,
+          avatarId: LAYLA_LIVE_AVATAR_ID,
+          isSandbox: input.isSandbox,
+        };
+      } catch (error) {
+        console.error("[LiveAvatar] Embed creation failed", error);
+        throw new TRPCError({ code: "BAD_GATEWAY", message: "تعذر تشغيل أفاتار ليلى الحي حاليًا" });
+      }
     }),
 
   // ═══ Layla Chat (Command Center specific) ═══

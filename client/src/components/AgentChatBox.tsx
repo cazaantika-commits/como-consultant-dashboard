@@ -69,11 +69,11 @@ const AGENT_DEFAULT_MODEL: Record<AgentType, string> = {
 
 const agentDefaults: Record<AgentType, { name: string; title: string; description: string; gradient: string; avatar: string }> = {
   salwa: {
-    name: "سلوى",
-    title: "المنسقة والمساعدة التنفيذية",
-    description: "فحص الإيميل وإدارة المراسلات والتنسيق",
+    name: "ليلى",
+    title: "المساعدة التنفيذية ومركز القيادة",
+    description: "تلخيص المعلومات الموثقة وتنسيق المتابعة التنفيذية",
     gradient: "from-amber-500 to-yellow-600",
-    avatar: "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png"
+    avatar: "/manus-storage/layla-katya-black-suit_8a741ab1.webp"
   },
   farouq: {
     name: "فاروق",
@@ -931,7 +931,7 @@ export function AgentChatBox({ agent, agentData, onClose }: AgentChatBoxProps) {
           <div className="text-center py-6">
             <Mail className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">لا توجد مسودة رد جاهزة</p>
-            <p className="text-xs text-muted-foreground mt-1">قولي لسلوى "شيكي على الإيميل" أولاً</p>
+            <p className="text-xs text-muted-foreground mt-1">قولي لليلى "شيّكي على الإيميل" أولًا</p>
           </div>
         )}
 

@@ -10,4 +10,5 @@ export const ENV = {
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
   googleGeminiApiKey: process.env.GOOGLE_GEMINI_API_KEY ?? "",
+  liveAvatarApiKey: process.env.HEYGEN_API_KEY ?? "",
 };

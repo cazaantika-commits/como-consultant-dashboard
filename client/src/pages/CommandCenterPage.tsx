@@ -121,7 +121,7 @@ import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
 import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 import { playLaylaGeneratedAudio, stopLaylaGeneratedAudio } from "@/lib/laylaGeneratedAudio";
 
-const LAYLA_AVATAR_URL = "/manus-storage/layla-command-center-portrait_2ede5e10.jpg";
+const LAYLA_AVATAR_URL = "/manus-storage/layla-katya-black-suit_8a741ab1.webp";
 
 // --- Voice Recording Hook ---
 function getSupportedMimeType(): string {
@@ -463,6 +463,8 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
+  const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
+  const [isLiveAvatarLoading, setIsLiveAvatarLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -474,6 +476,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const clearMutation = trpc.commandCenter.clearChatHistory.useMutation();
   const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
   const generateLaylaSpeech = trpc.commandCenter.generateLaylaSpeech.useMutation();
+  const createLiveAvatar = trpc.commandCenter.createLaylaLiveAvatarEmbed.useMutation();
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
@@ -497,12 +500,13 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   }, [isOpen]);
 
-  // Stop audio on close
+  // Stop audio and close the visual session on close
   useEffect(() => {
     if (!isOpen) {
       stopLaylaGeneratedAudio();
       stopLaylaBrowserVoice();
       setIsSpeaking(false);
+      setLiveAvatarUrl(null);
     }
   }, [isOpen]);
 
@@ -626,6 +630,26 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
   };
 
+  const handleLiveAvatarToggle = async () => {
+    if (liveAvatarUrl) {
+      setLiveAvatarUrl(null);
+      toast.info("تم إيقاف جلسة ليلى الحية");
+      return;
+    }
+
+    setIsLiveAvatarLoading(true);
+    try {
+      const session = await createLiveAvatar.mutateAsync({ token, isSandbox: false });
+      setLiveAvatarUrl(session.url);
+      toast.success("بدأت جلسة ليلى الحية");
+    } catch (error) {
+      console.error("[LiveAvatar] Failed to start Layla", error);
+      toast.error("تعذر تشغيل ليلى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
+    } finally {
+      setIsLiveAvatarLoading(false);
+    }
+  };
+
   // TTS: Play Layla's response
   const handlePlayResponse = async (text: string) => {
     if (isSpeaking) {
@@ -679,6 +703,17 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLiveAvatarToggle}
+              disabled={isLiveAvatarLoading}
+              className={`h-8 gap-1 px-2 text-xs ${liveAvatarUrl ? "text-emerald-600 hover:text-emerald-700" : "text-slate-500 hover:text-amber-600"}`}
+              title={liveAvatarUrl ? "إيقاف ليلى الحية" : "تشغيل ليلى الحية"}
+            >
+              {isLiveAvatarLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">{liveAvatarUrl ? "إيقاف الحي" : "ليلى الحية"}</span>
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleClear} className="text-slate-400 hover:text-red-500 h-8 w-8 p-0">
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -687,6 +722,24 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
             </Button>
           </div>
         </div>
+
+        {liveAvatarUrl && (
+          <div className="border-b border-amber-100 bg-slate-950 p-2">
+            <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
+              <span>ليلى — جلسة حية</span>
+              <span className="text-emerald-300">متصلة بالفيديو</span>
+            </div>
+            <div className="overflow-hidden rounded-xl bg-black shadow-inner">
+              <iframe
+                src={liveAvatarUrl}
+                title="ليلى — الأفاتار الحي"
+                allow="autoplay; microphone; camera; fullscreen; speaker-selection"
+                className="h-52 w-full border-0 sm:h-64"
+              />
+            </div>
+            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تظل المحادثة النصية في COMO هي مصدر الإجابات والأرقام المعتمدة.</p>
+          </div>
+        )}
 
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -4521,7 +4574,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800"><Gauge className="h-3.5 w-3.5" /> ملخص مركز القيادة</span>
                 <span className="text-xs font-medium text-slate-500">{new Date().toLocaleDateString("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
               </div>
-              <h2 className="mb-0.5 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{member.greeting}</h2>
+              <h2 className="mb-0.5 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{String(member.greeting || "").replaceAll("سلوى", "ليلى").replaceAll("Salwa", "Layla")}</h2>
               <p className="mb-3 text-sm text-slate-600">القرارات والتقارير والمتابعة التشغيلية في مكان واحد.</p>
               {/* Personalized stats chips - clickable */}
               {counts.data && (
