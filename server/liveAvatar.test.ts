@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLaylaLiveAvatarEmbedRequest, LAYLA_LIVE_AVATAR_ID, LAYLA_LIVE_CONTEXT_ID } from "./liveAvatar";
+import { buildLaylaLiveAvatarEmbedRequest, buildSalwaLiveAvatarLiteTokenRequest, LAYLA_LIVE_AVATAR_ID, LAYLA_LIVE_CONTEXT_ID, SALWA_LIVE_AVATAR_ID } from "./liveAvatar";
 
 describe("Layla LiveAvatar configuration", () => {
   it("uses the selected elegant preset, Arabic default language, and short session limit", () => {
@@ -16,5 +16,15 @@ describe("Layla LiveAvatar configuration", () => {
 
   it("preserves sandbox mode for safe integration checks", () => {
     expect(buildLaylaLiveAvatarEmbedRequest({ isSandbox: true }).is_sandbox).toBe(true);
+  });
+
+  it("builds a modern LITE request for the selected avatar without opening a session", () => {
+    expect(buildSalwaLiveAvatarLiteTokenRequest({ isSandbox: true })).toEqual({
+      mode: "LITE",
+      avatar_id: SALWA_LIVE_AVATAR_ID,
+      is_sandbox: true,
+      max_session_duration: 180,
+      video_settings: { quality: "high", encoding: "H264" },
+    });
   });
 });

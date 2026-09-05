@@ -1701,7 +1701,7 @@
 - [x] Add a complete but readable cost schedule to the Vertex executive presentation, listing every feasibility cost item, amount, and share of total cost with exact reconciliation to the approved total.
 - [x] Expand the Vertex executive presentation with a professional risk section covering construction, sales, liquidity, escrow, partnership allocation, final registration, programme, and data/reconciliation risks, each with impact and mitigation rather than one compressed line.
 
-- [ ] Inspect the user's HeyGen subscription capabilities and available real-time avatar/session access, then select and test the most suitable live assistant avatar without hard-coding the current Layla identity or image.
+- [x] Inspect the user's HeyGen subscription capabilities and available real-time avatar/session access, then select and test the most suitable live assistant avatar without hard-coding the current Layla identity or image.
 
 - [ ] Replace the current Layla presentation with a new attractive, elegant professional LiveAvatar while preserving the Layla name, command-center role, financial data source, and all existing calculations; add secure session startup, Arabic conversation testing, and graceful fallback states.
 

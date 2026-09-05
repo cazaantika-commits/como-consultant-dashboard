@@ -2,6 +2,7 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { Room, RoomEvent, Track } from "livekit-client";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getCommandCenterTokenKey, getPersonaLoginHint, resolveCommandCenterPersona, type CommandCenterPersona } from "@/lib/commandCenterIdentity";
 import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
@@ -466,6 +467,9 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
   const [liveAvatarState, setLiveAvatarState] = useState<"idle" | "connecting">("idle");
   const [isLiveAvatarLoading, setIsLiveAvatarLoading] = useState(false);
+  const [liveAvatarLiteSession, setLiveAvatarLiteSession] = useState<{ livekitUrl: string; livekitClientToken: string; sessionId: string } | null>(null);
+  const liveAvatarRoomRef = useRef<Room | null>(null);
+  const liveAvatarVideoRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -478,6 +482,7 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
   const generateLaylaSpeech = trpc.commandCenter.generateLaylaSpeech.useMutation();
   const createLiveAvatar = trpc.commandCenter.createLaylaLiveAvatarEmbed.useMutation();
+  const createLiveAvatarLite = trpc.commandCenter.createSalwaLiveAvatarLiteSession.useMutation();
   const utils = trpc.useUtils();
 
   const messages = chatHistory.data || [];
@@ -506,11 +511,58 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     if (!isOpen) {
       stopLaylaGeneratedAudio();
       stopLaylaBrowserVoice();
+      liveAvatarRoomRef.current?.disconnect();
+      liveAvatarRoomRef.current = null;
       setIsSpeaking(false);
       setLiveAvatarUrl(null);
+      setLiveAvatarLiteSession(null);
       setLiveAvatarState("idle");
     }
   }, [isOpen]);
+
+  // Connect the LiveAvatar LITE video room only after the backend has returned valid LiveKit credentials.
+  useEffect(() => {
+    const session = liveAvatarLiteSession;
+    const container = liveAvatarVideoRef.current;
+    if (!session || !container) return;
+
+    const room = new Room({ adaptiveStream: true, dynacast: true });
+    liveAvatarRoomRef.current = room;
+    let disposed = false;
+
+    const attachVideo = (track: any) => {
+      if (disposed || track.kind !== Track.Kind.Video || !liveAvatarVideoRef.current) return;
+      const element = track.attach();
+      element.className = "h-52 w-full object-cover sm:h-64";
+      liveAvatarVideoRef.current.replaceChildren(element);
+      setLiveAvatarState("connected");
+    };
+
+    room.on(RoomEvent.TrackSubscribed, (track) => attachVideo(track));
+    room.on(RoomEvent.Disconnected, () => {
+      if (!disposed) {
+        setLiveAvatarState("idle");
+        setLiveAvatarLiteSession(null);
+      }
+    });
+
+    room.connect(session.livekitUrl, session.livekitClientToken).catch((error) => {
+      if (!disposed) {
+        console.error("[LiveAvatar LITE] LiveKit connection failed", error);
+        setLiveAvatarState("idle");
+        setLiveAvatarLiteSession(null);
+        toast.error("تعذر اتصال فيديو سلوى؛ بقيت المحادثة النصية والصوتية متاحة");
+      }
+    });
+
+    return () => {
+      disposed = true;
+      room.removeAllListeners();
+      room.disconnect();
+      if (liveAvatarRoomRef.current === room) liveAvatarRoomRef.current = null;
+      if (liveAvatarVideoRef.current) liveAvatarVideoRef.current.replaceChildren();
+    };
+  }, [liveAvatarLiteSession]);
 
   const handleSend = async (text?: string) => {
     const msg = (text || message).trim();
@@ -633,7 +685,10 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
   };
 
   const handleLiveAvatarToggle = async () => {
-    if (liveAvatarUrl) {
+    if (liveAvatarLiteSession || liveAvatarUrl) {
+      liveAvatarRoomRef.current?.disconnect();
+      liveAvatarRoomRef.current = null;
+      setLiveAvatarLiteSession(null);
       setLiveAvatarUrl(null);
       setLiveAvatarState("idle");
       toast.info("تم إيقاف جلسة سلوى الحية");
@@ -641,14 +696,15 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
     }
 
     setIsLiveAvatarLoading(true);
+    setLiveAvatarState("connecting");
     try {
-      const session = await createLiveAvatar.mutateAsync({ token, isSandbox: false });
-      setLiveAvatarUrl(session.url);
-      setLiveAvatarState("connecting");
-      toast.success("بدأت محاولة تشغيل جلسة سلوى الحية");
+      const session = await createLiveAvatarLite.mutateAsync({ token, isSandbox: true });
+      setLiveAvatarLiteSession(session);
+      toast.success("جاري تهيئة فيديو سلوى الحي عبر المسار الآمن");
     } catch (error) {
-      console.error("[LiveAvatar] Failed to start Layla", error);
-      toast.error("تعذر تشغيل سلوى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
+      console.error("[LiveAvatar LITE] Failed to start Salwa", error);
+      setLiveAvatarState("idle");
+      toast.error("تعذر تهيئة فيديو سلوى؛ بقيت المحادثة النصية والصوتية متاحة");
     } finally {
       setIsLiveAvatarLoading(false);
     }
@@ -712,11 +768,11 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
               size="sm"
               onClick={handleLiveAvatarToggle}
               disabled={isLiveAvatarLoading}
-              className={`h-8 gap-1 px-2 text-xs ${liveAvatarUrl ? "text-emerald-600 hover:text-emerald-700" : "text-slate-500 hover:text-amber-600"}`}
-              title={liveAvatarUrl ? "إيقاف سلوى الحية" : "تشغيل سلوى الحية"}
+              className={`h-8 gap-1 px-2 text-xs ${liveAvatarLiteSession || liveAvatarUrl ? "text-emerald-600 hover:text-emerald-700" : "text-slate-500 hover:text-amber-600"}`}
+              title={liveAvatarLiteSession || liveAvatarUrl ? "إيقاف سلوى الحية" : "تشغيل سلوى الحية"}
             >
               {isLiveAvatarLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{liveAvatarUrl ? "إيقاف الحي" : "سلوى الحية"}</span>
+              <span className="hidden sm:inline">{liveAvatarLiteSession || liveAvatarUrl ? "إيقاف الحي" : "سلوى الحية"}</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={handleClear} className="text-slate-400 hover:text-red-500 h-8 w-8 p-0">
               <Trash2 className="w-4 h-4" />
@@ -727,21 +783,14 @@ function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memb
           </div>
         </div>
 
-        {liveAvatarUrl && (
+        {(liveAvatarLiteSession || liveAvatarUrl) && (
           <div className="border-b border-amber-100 bg-slate-950 p-2">
             <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
               <span>سلوى — جلسة حية</span>
-              <span className="text-amber-200">جاري الاتصال...</span>
+              <span className="text-amber-200">{liveAvatarState === "connected" ? "متصلة الآن" : "جاري الاتصال..."}</span>
             </div>
-            <div className="overflow-hidden rounded-xl bg-black shadow-inner">
-              <iframe
-                src={liveAvatarUrl}
-                title="سلوى — الأفاتار الحي"
-                allow="autoplay; microphone; camera; fullscreen; speaker-selection"
-                className="h-52 w-full border-0 sm:h-64"
-              />
-            </div>
-            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تجري محاولة الاتصال بالفيديو؛ وتظل المحادثة النصية والصوتية في COMO هي مصدر الإجابات والأرقام المعتمدة.</p>
+            <div ref={liveAvatarVideoRef} className="min-h-52 overflow-hidden rounded-xl bg-black shadow-inner sm:min-h-64" />
+            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">تظل المحادثة النصية والصوتية في COMO هي مصدر الإجابات والأرقام المعتمدة، بينما LiveAvatar يعرض حركة سلوى فقط.</p>
           </div>
         )}
 
