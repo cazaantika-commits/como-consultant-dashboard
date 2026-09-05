@@ -76,3 +76,18 @@ Chosen preset test 2026-09-05: selected public preset `Katya in Black Suit` (ava
 Voice Agent fallback test 2026-09-05: created a Sandbox embed using the preset's official `default_voice_agent_id` (`37885e6e-c073-4d7c-bb60-aad4058f62b6`) and `default_language: multi`, excluding the custom Salwa context. The embed loaded the same chosen Katya preset, but after Chat now it remained in Connecting. This confirms the failure is not caused only by the custom context or Arabic default language; the account/session path itself is still not completing WebRTC in this environment. Candidate remains uninstalled.
 
 78. LITE token retry 2026-09-05: after reducing the request to the official minimum `{ mode: "LITE", avatar_id: "26393b8e-e944-4367-98ef-e2bc75c4b792", is_sandbox: true }`, the API still returned HTTP 400 before session creation. A read-only `GET /v1/avatars` with the current credential returned `code: 1000`, `count: 0`, and an empty result list. This indicates that the current API credential exposes no LiveAvatar API avatars, even though the web dashboard shows preset avatars; the hard-coded Katya UUID therefore cannot be used by the token endpoint. No production session was created by this retry and no API key was saved.
+
+## Official-site verification 2026-09-05
+
+The official HeyGen FAQ states that LiveAvatar is a separate platform with its own plans and settings; HeyGen paid plans and avatar slots do not automatically affect LiveAvatar. It also states that LiveAvatar avatars are not cross-compatible with HeyGen avatars, that Free accounts can explore/sample the service, and that Lite mode is the recommended route for unsupported languages because the customer supplies ASR/LLM/TTS. The FAQ confirms that LiveAvatar credits are independent from HeyGen API credits: Full uses one credit per 30 seconds, while Lite uses one credit per minute. The official overview quickstart uses a built-in sandbox avatar/context example through `POST /v2/embeddings`, and explicitly says Sandbox does not consume credits. These findings mean that a visible preset in the dashboard does not by itself prove that the current API key can use the same avatar through the LITE token endpoint; the API credential/plan path must be matched to the correct LiveAvatar resource.
+
+References:
+- https://help.heygen.com/en/articles/12758866-liveavatar-faq
+- https://help.heygen.com/en/articles/12758516-introducing-liveavatar
+- https://docs.liveavatar.com/
+
+## Final official Sandbox retry — 2026-09-05
+
+The currently logged-in LiveAvatar workspace is the single `Default Space` workspace, marked `Free`, with one space-scoped API key named `For Manus` created on 2026-09-05 and ending in `4bae`. The workspace selector exposed no second paid workspace. The official FAQ explicitly states that HeyGen paid plans and HeyGen avatar slots are separate from LiveAvatar plans and do not automatically grant LiveAvatar streaming entitlements.
+
+Using the exact avatar and context identifiers published in the official LiveAvatar quickstart, `POST /v2/embeddings` in Sandbox returned HTTP 200 and `Embed Avatar created successfully`. The generated page rendered a real female LiveAvatar, progressed from `Connecting...` to the active chat controls, and showed visible frame-to-frame facial movement. An Arabic text prompt was submitted, but an audible Arabic reply could not be verified in the automated browser, so Arabic speech is not claimed as proven. A read-only credit check remained at `8.0` after the retry, confirming that this official Sandbox attempt did not consume additional credits.

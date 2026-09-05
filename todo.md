@@ -1718,3 +1718,7 @@
 - [ ] Choose one attractive HeyGen preset, test actual motion and speech, then use it as Salwa in COMO without presenting untested alternatives or asking the owner to compare candidates.
 
 - [x] Restore Salwa as the original visible assistant identity across active surfaces, while leaving any unconnected HeyGen preset out of the application until WebRTC succeeds; do not alter Layla's independent identity or shared data logic.
+
+- [x] Verify from official LiveAvatar documentation and the logged-in account whether LITE requires a separate API-avatar entitlement or Developer credential, and reconcile the website's visible preset avatars with the current API catalog response of zero.
+
+- [x] Perform one final Sandbox-only retry after matching the paid LiveAvatar account, workspace, and API credential; do not start Production or repeat sessions, and record whether motion and speech actually connect.
