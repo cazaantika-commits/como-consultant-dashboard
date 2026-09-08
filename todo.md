@@ -1724,3 +1724,11 @@
 - [x] Perform one final Sandbox-only retry after matching the paid LiveAvatar account, workspace, and API credential; do not start Production or repeat sessions, and record whether motion and speech actually connect.
 
 - [x] Replace the unreliable cross-origin LiveAvatar iframe with a user-initiated standalone Sandbox window, preserving Salwa's Arabic context and the existing COMO chat fallback; verify the new window reaches live audio/video before delivery.
+
+- [ ] Prevent reuse of expired LiveAvatar embed URLs: every Salwa launch or retry must request a fresh Sandbox session, clear the previous URL/window state, and never present an expired session as connected.
+
+- [ ] Attempt to create a HeyGen Photo/Custom LiveAvatar from Salwa's current approved image; if the account or image is ineligible, select a clearly more attractive official preset, and do not place either candidate in COMO until Sandbox motion and Arabic speech are verified.
+
+- [ ] Prepare Salwa's approved square portrait as a content-preserving 9:16 LiveAvatar source, submit it only through the logged-in LiveAvatar dashboard, and record the processing status before making any application change.
+
+- [ ] Select one clearly attractive, polished female preset from the existing LiveAvatar public library, configure it with Salwa's Arabic context, test it in Sandbox, and only then make it the active Salwa avatar in COMO.
