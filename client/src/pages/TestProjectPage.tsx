@@ -46,6 +46,13 @@ export default function TestProjectPage() {
       navigate(`/test-project?projectId=${project.id}`);
     },
   });
+  const createNadAlShebaPlot2TestProject = trpc.projects.createNadAlShebaPlot2TestProject.useMutation({
+    onSuccess: async (project) => {
+      await utils.projects.listTestProjects.invalidate();
+      setSelectedProjectId(project.id);
+      navigate(`/test-project?projectId=${project.id}`);
+    },
+  });
 
   const search = new URLSearchParams(window.location.search);
   const requestedProjectId = Number(search.get("projectId") || 0);
@@ -142,7 +149,15 @@ export default function TestProjectPage() {
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-700 text-white shadow-sm"><FlaskConical className="h-6 w-6" /></span>
               <div><p className="text-xs font-black text-violet-700">مختبر مشاريع دائم ومعزول</p><h1 className="mt-1 text-2xl font-black text-slate-950">المشاريع التجريبية</h1><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-600">أنشئ واحفظ وافتح أي عدد من المشاريع التجريبية. كل مشروع مستقل ولا يدخل في المشاريع الرسمية أو مركز القيادة أو التقارير المجمعة.</p></div>
             </div>
-            <button type="button" onClick={() => setShowCreate(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-700 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-violet-800"><Plus className="h-4 w-4" />إنشاء مشروع تجريبي جديد</button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => createNadAlShebaPlot2TestProject.mutate()} disabled={createNadAlShebaPlot2TestProject.isPending} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-teal-200 bg-teal-700 px-4 py-3 text-xs font-black text-white shadow-sm transition hover:bg-teal-800 disabled:opacity-50"><FlaskConical className="h-4 w-4" />{createNadAlShebaPlot2TestProject.isPending ? "جاري تجهيز ند الشبا 2..." : "نسخة ند الشبا 2 التجريبية"}</button>
+              <button type="button" onClick={() => setShowCreate(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-violet-700 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-violet-800"><Plus className="h-4 w-4" />إنشاء مشروع تجريبي جديد</button>
+            </div>
+          </div>
+
+          <div className="border-t border-teal-100 bg-teal-50/50 px-6 py-3 text-xs leading-5 text-teal-950">
+            <strong>ند الشبا 2:</strong> ينشئ الزر نسخة معزولة لقطعة 6182776 بنموذج «الأرض مقابل وحدات»: حصة مالك الأرض 35%، تكاليف التطوير على المطور، ورسوم تسجيل الوحدات النهائية 4%. تُنسخ حقائق الأرض والتخطيط المحفوظة فقط؛ تبقى الأسعار والتكاليف وخطة المبيعات مدخلات مستقلة داخل التجربة.
+            {createNadAlShebaPlot2TestProject.error && <span className="mr-2 font-black text-red-700">{createNadAlShebaPlot2TestProject.error.message}</span>}
           </div>
 
           {showCreate && (

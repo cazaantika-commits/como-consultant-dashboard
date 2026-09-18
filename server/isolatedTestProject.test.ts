@@ -46,6 +46,22 @@ describe("isolated test project contract", () => {
     expect(service).toContain("WHERE id = ${projectId} AND userId = ${userId} AND is_test_project = 1");
   });
 
+  it("creates an idempotent Nad Al Sheba Plot 2 feasibility workspace from land facts only", () => {
+    expect(service).toContain("createNadAlShebaPlot2TestProject");
+    expect(service).toContain("clearAssumedFinancialDefaults");
+    expect(service).toContain("SOURCE_PROJECT_ID=5 | SOURCE_PLOT=6182776");
+    expect(service).toContain("NAD_AL_SHEBA_PLOT_2_TEST_NAME");
+    expect(service).toContain("landOwnerProjectSharePct: 35");
+    expect(service).toContain("landOwnerUnitsRegistrationFeePct: 4");
+    expect(service).toContain("تم نسخ حقائق الأرض والتخطيط فقط");
+    expect(service).toContain("AND is_test_project = 0");
+    expect(service).not.toContain("studioArea = NULL");
+    expect(service).not.toContain("villaArea = NULL");
+    expect(projectsRouter).toContain("createNadAlShebaPlot2TestProject");
+    expect(testPage).toContain("نسخة ند الشبا 2 التجريبية");
+    expect(testPage).toContain("الأرض مقابل وحدات");
+  });
+
   it("exposes a dedicated authenticated entry and reuses the real project cards", () => {
     expect(projectsRouter).toContain("getTestProject");
     expect(projectsRouter).toContain("ensureTestProject");

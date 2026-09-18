@@ -27,6 +27,10 @@ export type CreateIsolatedTestProjectInput = {
   landOwnerSharePct?: number;
 };
 
+const NAD_AL_SHEBA_PLOT_2_SOURCE_ID = 5;
+const NAD_AL_SHEBA_PLOT_2_TEST_NAME = "المشروع التجريبي — ند الشبا 2 (6182776)";
+const NAD_AL_SHEBA_PLOT_2_SOURCE_MARKER = "SOURCE_PROJECT_ID=5 | SOURCE_PLOT=6182776";
+
 async function rows<T>(db: Db, query: ReturnType<typeof sql>): Promise<T[]> {
   const result = await db.execute(query);
   return (result[0] as unknown as T[]) ?? [];
@@ -214,6 +218,41 @@ export async function ensureIsolatedTestProject(userId: number): Promise<Isolate
   return testProject;
 }
 
+/**
+ * Keeps optional financial and unit-input defaults blank in a test workspace.
+ * Four legacy unit categories remain schema-level zero values because their
+ * database columns are non-nullable; without unit quantities they create no
+ * project income, cost, or feasibility result.
+ */
+async function clearAssumedFinancialDefaults(db: Db, projectId: number, userId: number) {
+  await db.execute(sql`
+    UPDATE projects
+    SET developerFeePct = NULL,
+        saleableResidentialPct = NULL,
+        saleableRetailPct = NULL,
+        saleableOfficesPct = NULL,
+        residential1brArea = NULL,
+        residential2brArea = NULL,
+        residential3brArea = NULL,
+        retailSmallArea = NULL,
+        retailMediumArea = NULL,
+        retailLargeArea = NULL,
+        officeSmallArea = NULL,
+        officeMediumArea = NULL,
+        officeLargeArea = NULL,
+        residential1brPrice = NULL,
+        residential2brPrice = NULL,
+        residential3brPrice = NULL,
+        retailSmallPrice = NULL,
+        retailMediumPrice = NULL,
+        retailLargePrice = NULL,
+        officeSmallPrice = NULL,
+        officeMediumPrice = NULL,
+        officeLargePrice = NULL
+    WHERE id = ${projectId} AND userId = ${userId} AND is_test_project = 1
+  `);
+}
+
 export async function createIsolatedTestProject(
   userId: number,
   input: CreateIsolatedTestProjectInput,
@@ -258,42 +297,7 @@ export async function createIsolatedTestProject(
   const projectId = Number((inserted[0] as any).insertId);
   if (!projectId) throw new Error("تعذر إنشاء المشروع التجريبي");
 
-  await db.execute(sql`
-    UPDATE projects
-    SET developerFeePct = NULL,
-        saleableResidentialPct = NULL,
-        saleableRetailPct = NULL,
-        saleableOfficesPct = NULL,
-        studioArea = NULL,
-        residential1brArea = NULL,
-        residential2brArea = NULL,
-        residential2brMaidArea = NULL,
-        residential3brArea = NULL,
-        residential3brMaidArea = NULL,
-        villaArea = NULL,
-        townhouseArea = NULL,
-        retailSmallArea = NULL,
-        retailMediumArea = NULL,
-        retailLargeArea = NULL,
-        officeSmallArea = NULL,
-        officeMediumArea = NULL,
-        officeLargeArea = NULL,
-        studioPrice = NULL,
-        residential1brPrice = NULL,
-        residential2brPrice = NULL,
-        residential2brMaidPrice = NULL,
-        residential3brPrice = NULL,
-        residential3brMaidPrice = NULL,
-        villaPrice = NULL,
-        townhousePrice = NULL,
-        retailSmallPrice = NULL,
-        retailMediumPrice = NULL,
-        retailLargePrice = NULL,
-        officeSmallPrice = NULL,
-        officeMediumPrice = NULL,
-        officeLargePrice = NULL
-    WHERE id = ${projectId} AND userId = ${userId} AND is_test_project = 1
-  `);
+  await clearAssumedFinancialDefaults(db, projectId, userId);
 
   await db.execute(sql`
     INSERT INTO cpa_projects
@@ -309,5 +313,123 @@ export async function createIsolatedTestProject(
   await ensureJointVentureOffPlanTerms(db, projectId);
   const created = await getIsolatedTestProject(userId, projectId);
   if (!created) throw new Error("تعذر قراءة المشروع التجريبي بعد إنشائه");
+  return created;
+}
+
+/**
+ * Creates one isolated feasibility workspace for Nad Al Sheba Plot 2. Only
+ * documented land and planning facts are copied from the official record; no
+ * original project financial input, price, sales plan, or consultant record is
+ * altered or used as an assumed feasibility result.
+ */
+export async function createNadAlShebaPlot2TestProject(userId: number): Promise<IsolatedTestProject> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await rows<any>(db, sql`
+    SELECT id
+    FROM projects
+    WHERE userId = ${userId}
+      AND is_test_project = 1
+      AND notes LIKE ${`%${NAD_AL_SHEBA_PLOT_2_SOURCE_MARKER}%`}
+    ORDER BY id DESC
+    LIMIT 1
+  `);
+
+  const sourceRows = await rows<any>(db, sql`
+    SELECT id, plotNumber, areaCode, titleDeedNumber, ddaNumber, masterDevRef,
+           plotAreaSqm, plotAreaSqft, gfaSqm, gfaSqft, bua, permittedUse,
+           ownershipType, subdivisionRestrictions, masterDevName, masterDevAddress,
+           preConMonths, constructionMonths, handoverMonths,
+           marketingPrepMonths, reraLeadMonths, startDate
+    FROM projects
+    WHERE id = ${NAD_AL_SHEBA_PLOT_2_SOURCE_ID}
+      AND userId = ${userId}
+      AND is_test_project = 0
+    LIMIT 1
+  `);
+  const source = sourceRows[0];
+  if (!source || String(source.plotNumber) !== "6182776") {
+    throw new Error("تعذر قراءة بيانات قطعة ند الشبا 2 الرسمية لإنشاء النسخة التجريبية");
+  }
+
+  if (existing[0]?.id) {
+    const projectId = Number(existing[0].id);
+    await clearAssumedFinancialDefaults(db, projectId, userId);
+    const cpaRows = await rows<any>(db, sql`
+      SELECT id FROM cpa_projects WHERE project_id = ${projectId} ORDER BY id ASC LIMIT 1
+    `);
+    if (!cpaRows[0]?.id) {
+      await db.execute(sql`
+        INSERT INTO cpa_projects
+          (project_id, plot_number, location, project_type, description,
+           bua_sqft, construction_cost_per_sqft, duration_months, status)
+        VALUES
+          (${projectId}, ${source.plotNumber}, ${source.areaCode ?? 'ند الشبا'}, 'RESIDENTIAL',
+           'نسخة تجريبية مستقلة لدراسة عرض الأرض مقابل وحدات لمالك قطعة ند الشبا 2؛ لا تدخل في المشاريع أو التقارير الرسمية.',
+           ${source.bua ?? 0}, 0, ${source.constructionMonths ?? 0}, 'ACTIVE')
+      `);
+    }
+    await ensureDesignScope(db, projectId);
+    await ensureJointVentureOffPlanTerms(db, projectId);
+    const project = await getIsolatedTestProject(userId, projectId);
+    if (project) return project;
+  }
+
+  const schedule = {
+    settings: {
+      jointVenture: {
+        landOwnerProjectSharePct: 35,
+        landOwnerResidentialSharePct: 35,
+        landOwnerCommercialSharePct: 35,
+        developmentLicenseCost: 0,
+        waelLicenseRegistrationCost: 0,
+        landOwnerLicenseRegistrationCost: 0,
+        landOwnerUnitsRegistrationFeePct: 4,
+      },
+    },
+  };
+  const description = "نسخة تجريبية مستقلة لدراسة عرض الأرض مقابل وحدات لمالك قطعة ند الشبا 2؛ لا تدخل في المشاريع أو التقارير الرسمية.";
+  const notes = `ISOLATED_TEST_PROJECT | ${NAD_AL_SHEBA_PLOT_2_SOURCE_MARKER} | تم نسخ حقائق الأرض والتخطيط فقط من البطاقة الرسمية؛ المدخلات المالية مستقلة وغير مفترضة`;
+
+  const inserted = await db.execute(sql`
+    INSERT INTO projects
+      (userId, name, is_test_project, description, plotNumber, areaCode,
+       titleDeedNumber, ddaNumber, masterDevRef, plotAreaSqm, plotAreaSqft,
+       gfaSqm, gfaSqft, bua, permittedUse, ownershipType, subdivisionRestrictions,
+       masterDevName, masterDevAddress, notes, financingScenario, preConMonths,
+       constructionMonths, handoverMonths, marketingPrepMonths, reraLeadMonths,
+       startDate, constructionScheduleJson)
+    VALUES
+      (${userId}, ${NAD_AL_SHEBA_PLOT_2_TEST_NAME}, 1, ${description},
+       ${source.plotNumber ?? null}, ${source.areaCode ?? null},
+       ${source.titleDeedNumber ?? null}, ${source.ddaNumber ?? null}, ${source.masterDevRef ?? null},
+       ${source.plotAreaSqm ?? null}, ${source.plotAreaSqft ?? null},
+       ${source.gfaSqm ?? null}, ${source.gfaSqft ?? null}, ${source.bua ?? null},
+       ${source.permittedUse ?? null}, ${source.ownershipType ?? null}, ${source.subdivisionRestrictions ?? null},
+       ${source.masterDevName ?? null}, ${source.masterDevAddress ?? null}, ${notes},
+       'joint_venture_land_for_units', ${source.preConMonths ?? null},
+       ${source.constructionMonths ?? null}, ${source.handoverMonths ?? null},
+       ${source.marketingPrepMonths ?? null}, ${source.reraLeadMonths ?? null},
+       ${source.startDate ?? null}, ${JSON.stringify(schedule)})
+  `);
+  const projectId = Number((inserted[0] as any).insertId);
+  if (!projectId) throw new Error("تعذر إنشاء النسخة التجريبية لند الشبا 2");
+
+  await clearAssumedFinancialDefaults(db, projectId, userId);
+
+  await db.execute(sql`
+    INSERT INTO cpa_projects
+      (project_id, plot_number, location, project_type, description,
+       bua_sqft, construction_cost_per_sqft, duration_months, status)
+    VALUES
+      (${projectId}, ${source.plotNumber}, ${source.areaCode ?? 'ند الشبا'}, 'RESIDENTIAL',
+       ${description}, ${source.bua ?? 0}, 0, ${source.constructionMonths ?? 0}, 'ACTIVE')
+  `);
+
+  await ensureDesignScope(db, projectId);
+  await ensureJointVentureOffPlanTerms(db, projectId);
+  const created = await getIsolatedTestProject(userId, projectId);
+  if (!created) throw new Error("تعذر قراءة النسخة التجريبية لند الشبا 2 بعد الإنشاء");
   return created;
 }

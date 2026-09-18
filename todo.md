@@ -1732,3 +1732,5 @@
 - [ ] Prepare Salwa's approved square portrait as a content-preserving 9:16 LiveAvatar source, submit it only through the logged-in LiveAvatar dashboard, and record the processing status before making any application change.
 
 - [ ] Select one clearly attractive, polished female preset from the existing LiveAvatar public library, configure it with Salwa's Arabic context, test it in Sandbox, and only then make it the active Salwa avatar in COMO.
+
+- [x] Create an isolated Nad Al Sheba Plot 2 (6182776) feasibility workspace inside the permanent test laboratory for the proposed Joint Venture Off-Plan — Land for Units offer: copy only saved land/planning facts from the official card, keep the source official project unchanged, set the landowner share to 35% of saleable residential/commercial area and final unit-registration fee to 4%, and leave pricing, costs, unit mix, sales plan, and financial inputs blank for the test workspace.

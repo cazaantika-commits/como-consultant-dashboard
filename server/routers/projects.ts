@@ -13,6 +13,7 @@ import {
 } from "../db";
 import {
   createIsolatedTestProject,
+  createNadAlShebaPlot2TestProject,
   ensureIsolatedTestProject,
   getIsolatedTestProject,
   listIsolatedTestProjects,
@@ -239,6 +240,11 @@ export const projectsRouter = router({
       if (!ctx.user) throw new Error("Unauthorized");
       return createIsolatedTestProject(ctx.user.id, input);
     }),
+
+  createNadAlShebaPlot2TestProject: publicProcedure.mutation(({ ctx }) => {
+    if (!ctx.user) throw new Error("Unauthorized");
+    return createNadAlShebaPlot2TestProject(ctx.user.id);
+  }),
 
   // List with summary stats (consultant count, financial summary, fact sheet completeness)
   listWithStats: publicProcedure.query(async ({ ctx }) => {
