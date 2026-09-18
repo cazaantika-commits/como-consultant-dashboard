@@ -143,7 +143,7 @@ describe("independent design-only project scope data", () => {
     }
   });
 
-  it("stores the owner-approved Majan scope and assisted editable drafts with the expected selections", async () => {
+  it("stores approved project scopes and remaining editable drafts with the expected selections", async () => {
     const [rows] = await connection.execute(`
       SELECT cp.plot_number, active_set.status, active_set.notes,
              SUM(CASE WHEN requirement.is_required = 1 THEN 1 ELSE 0 END) AS selected_count
@@ -156,7 +156,7 @@ describe("independent design-only project scope data", () => {
       ORDER BY cp.plot_number
     `) as any;
     const expected: Record<string, number> = {
-      "6457956": 39,
+      "6457956": 35,
       "6457879": 36,
       "3260885": 34,
       "6185392": 38,
@@ -169,7 +169,10 @@ describe("independent design-only project scope data", () => {
     const majan = rows.find((row: any) => String(row.plot_number) === "6457879");
     expect(majan.status).toBe("APPROVED");
     expect(String(majan.notes)).toContain("OWNER_APPROVED_MAJAN_SCOPE_V1");
-    for (const row of rows.filter((entry: any) => String(entry.plot_number) !== "6457879")) {
+    const commercialCenter = rows.find((row: any) => String(row.plot_number) === "6457956");
+    expect(commercialCenter.status).toBe("APPROVED");
+    expect(String(commercialCenter.notes)).toContain("35 بندًا مختارًا");
+    for (const row of rows.filter((entry: any) => !["6457879", "6457956"].includes(String(entry.plot_number)))) {
       expect(row.status).toBe("DRAFT");
       expect(String(row.notes)).toContain("ASSISTED_SCOPE_DRAFT_V1");
     }
