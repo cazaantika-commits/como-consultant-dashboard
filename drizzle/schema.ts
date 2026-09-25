@@ -2729,3 +2729,179 @@ export const waelSalesPlans = mysqlTable("wael_sales_plans", {
   index("wael_plan_project").on(table.projectId),
   index("wael_plan_user").on(table.userId),
 ]);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMO Next — Executive Office foundation
+// Additive-only bounded context. Existing project and financial records remain
+// the source of truth and are never copied into these tables.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const comoNextProjectAccess = mysqlTable("como_next_project_access", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  accessRole: mysqlEnum("access_role", ["manager", "contributor", "viewer"]).notNull().default("viewer"),
+  grantedByUserId: int("granted_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_access_project_user_uq").on(table.projectId, table.userId),
+  index("como_next_access_user_role_idx").on(table.userId, table.accessRole),
+]);
+
+export const comoNextParties = mysqlTable("como_next_parties", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  partyType: mysqlEnum("party_type", ["organization", "person", "authority"]).notNull(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  legalName: varchar("legal_name", { length: 500 }),
+  jurisdiction: varchar("jurisdiction", { length: 120 }),
+  registrationNumber: varchar("registration_number", { length: 120 }),
+  partyStatus: mysqlEnum("party_status", ["active", "inactive"]).notNull().default("active"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 64 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_party_legal_identity_uq").on(table.userId, table.jurisdiction, table.registrationNumber),
+  index("como_next_party_name_idx").on(table.userId, table.displayName),
+  index("como_next_party_source_idx").on(table.sourceSystem, table.sourceRecordId),
+]);
+
+export const comoNextProjectParties = mysqlTable("como_next_project_parties", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  partyId: int("party_id").notNull().references(() => comoNextParties.id, { onDelete: "restrict" }),
+  roleCode: varchar("role_code", { length: 80 }).notNull(),
+  relationshipStatus: mysqlEnum("relationship_status", ["active", "inactive"]).notNull().default("active"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_party_role_uq").on(table.projectId, table.partyId, table.roleCode),
+  uniqueIndex("como_next_project_party_project_id_uq").on(table.projectId, table.id),
+  index("como_next_project_party_state_idx").on(table.projectId, table.relationshipStatus, table.roleCode),
+  index("como_next_project_party_lookup_idx").on(table.partyId, table.relationshipStatus),
+]);
+
+export const comoNextWorkFiles = mysqlTable("como_next_work_files", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  title: varchar("title", { length: 500 }).notNull(),
+  governingQuestion: text("governing_question").notNull(),
+  desiredOutcome: text("desired_outcome").notNull(),
+  workFileStatus: mysqlEnum("work_file_status", ["draft", "open", "waiting", "blocked", "ready_to_close", "closed", "cancelled"]).notNull().default("open"),
+  priority: mysqlEnum("priority", ["normal", "important", "urgent"]).notNull().default("normal"),
+  ownerUserId: int("owner_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  closureEvidenceRef: text("closure_evidence_ref"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 64 }),
+  openedAt: timestamp("opened_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  closedAt: timestamp("closed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_work_file_project_id_uq").on(table.projectId, table.id),
+  uniqueIndex("como_next_work_file_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_work_file_project_state_idx").on(table.projectId, table.workFileStatus, table.updatedAt),
+  index("como_next_work_file_owner_state_idx").on(table.ownerUserId, table.workFileStatus, table.updatedAt),
+]);
+
+export const comoNextWorkFileParties = mysqlTable("como_next_work_file_parties", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  projectPartyId: int("project_party_id").notNull(),
+  relationshipRole: varchar("relationship_role", { length: 80 }).notNull().default("counterparty"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_work_file_party_uq").on(table.workFileId, table.projectPartyId),
+  foreignKey({
+    name: "como_next_work_file_party_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    name: "como_next_work_file_party_project_party_fk",
+    columns: [table.projectId, table.projectPartyId],
+    foreignColumns: [comoNextProjectParties.projectId, comoNextProjectParties.id],
+  }).onDelete("restrict"),
+]);
+
+export const comoNextActions = mysqlTable("como_next_actions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  acceptanceCriteria: text("acceptance_criteria").notNull(),
+  ownerType: mysqlEnum("owner_type", ["human", "manus", "team"]).notNull().default("human"),
+  ownerUserId: int("owner_user_id").references(() => users.id, { onDelete: "restrict" }),
+  waitingProjectPartyId: int("waiting_project_party_id"),
+  actionStatus: mysqlEnum("action_status", ["open", "in_progress", "waiting_external", "completed_pending_verification", "verified", "cancelled"]).notNull().default("open"),
+  priority: mysqlEnum("priority", ["normal", "important", "urgent"]).notNull().default("normal"),
+  dueAt: timestamp("due_at", { mode: "string" }),
+  followUpAt: timestamp("follow_up_at", { mode: "string" }),
+  attentionAt: timestamp("attention_at", { mode: "string" }),
+  evidenceReference: text("evidence_reference"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 64 }),
+  completedAt: timestamp("completed_at", { mode: "string" }),
+  verifiedAt: timestamp("verified_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_action_project_id_uq").on(table.projectId, table.id),
+  uniqueIndex("como_next_action_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_action_owner_attention_idx").on(table.ownerType, table.ownerUserId, table.actionStatus, table.attentionAt),
+  index("como_next_action_project_attention_idx").on(table.projectId, table.actionStatus, table.attentionAt),
+  index("como_next_action_file_attention_idx").on(table.workFileId, table.actionStatus, table.attentionAt),
+  foreignKey({
+    name: "como_next_action_work_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    name: "como_next_action_waiting_party_fk",
+    columns: [table.projectId, table.waitingProjectPartyId],
+    foreignColumns: [comoNextProjectParties.projectId, comoNextProjectParties.id],
+  }).onDelete("restrict"),
+]);
+
+export const comoNextWorkFileEvents = mysqlTable("como_next_work_file_events", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  actionId: int("action_id"),
+  sequenceNo: int("sequence_no").notNull(),
+  actorType: mysqlEnum("actor_type", ["human", "manus", "system"]).notNull().default("human"),
+  actorUserId: int("actor_user_id").references(() => users.id, { onDelete: "restrict" }),
+  eventType: varchar("event_type", { length: 80 }).notNull(),
+  summary: varchar("summary", { length: 1000 }).notNull(),
+  payloadJson: text("payload_json"),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }),
+  occurredAt: timestamp("occurred_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_event_sequence_uq").on(table.workFileId, table.sequenceNo),
+  uniqueIndex("como_next_event_idempotency_uq").on(table.idempotencyKey),
+  index("como_next_event_project_time_idx").on(table.projectId, table.occurredAt),
+  index("como_next_event_action_time_idx").on(table.actionId, table.occurredAt),
+  foreignKey({
+    name: "como_next_event_work_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    name: "como_next_event_action_fk",
+    columns: [table.projectId, table.actionId],
+    foreignColumns: [comoNextActions.projectId, comoNextActions.id],
+  }).onDelete("restrict"),
+]);

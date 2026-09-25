@@ -67,6 +67,7 @@ import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
 import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
 import { default as Wallet } from "lucide-react/dist/esm/icons/wallet.js";
 import { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.js";
+import { default as BriefcaseBusiness } from "lucide-react/dist/esm/icons/briefcase-business.js";
 import { useLocation } from "wouter";
 import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
@@ -415,6 +416,7 @@ export default function Home() {
 
   /* -- Navigation items organized in groups -- */
   const NAV_MAIN = [
+    { id: "main-next", label: "المكتب التنفيذي", icon: BriefcaseBusiness, path: "/como-next", borderColor: "#1e6478", iconBg: "linear-gradient(135deg, #1e6478, #28556d)", shadow: "rgba(30, 100, 120, 0.25)" },
     { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
     { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)", badge: overdueCount > 0 ? overdueCount : undefined },
     { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)" },
