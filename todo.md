@@ -1749,3 +1749,8 @@
 - [x] Reconcile staged content: 1,163 reviewable records, 29 temporarily skipped records, 87 file references, 71 unique file payloads; zero operational records promoted.
 - [x] Add the admin-only read-only «منطقة النقل» tab in COMO Next with project decisions, category counts, and explicit zero-side-effect safeguards.
 - [x] Verify idempotency, 18 targeted tests, production build, git diff hygiene, and unchanged protected financial/project row counts.
+
+- [x] Promote the approved Follow-up Desk operational core into COMO Next using a resumable visibility-gated process: 11 work files, 78 actions, 147 memory items, 597 events, 4 meetings, 113 agenda items, and 32 contacts.
+- [x] Copy and link 34 source documents after checksum verification, including resumable chunk storage for the 165 MB technical proposal; verify every final document against its original SHA-256.
+- [x] Deliver documents only through authenticated project-level COMO routes; hide raw storage URLs from the API and browser, and fail closed with HTTP 401 when unauthenticated.
+- [x] Keep Al Satwa excluded, keep staging intact for traceability, move no secrets, trigger no email/schedule/Manus side effects, and preserve all official project and protected financial rows.

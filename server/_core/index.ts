@@ -21,6 +21,7 @@ import complianceReportRoute from "../complianceReport";
 import lifecycleApiRoute from "../lifecycleApiRoute";
 import cpaReportRoute from "../cpaReportRoute";
 import portfolioPdfRoute from "../portfolioPdfRoute";
+import { registerComoNextDocumentRoute } from "../comoNextDocumentRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -75,6 +76,8 @@ async function startServer() {
   app.use("/api/cpa/report", cpaReportRoute);
   // Capital Portfolio PDF export
   app.use("/api/portfolio/pdf", portfolioPdfRoute);
+  // Authenticated COMO Next document delivery with project-level access checks.
+  registerComoNextDocumentRoute(app);
 
   // tRPC API
   app.use(

@@ -1,0 +1,14 @@
+{
+  "mode": "plan",
+  "batchId": "COMO-FUD-2026-09-25-02",
+  "batchStatus": "staged",
+  "expected": {
+    "projects": 2,
+    "parties": 15,
+    "workFiles": 11,
+    "workEntries": 225,
+    "events": 586,
+    "meetings": 4
+  },
+  "writesExecuted": 0
+}

@@ -18,9 +18,11 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   AlertCircle,
   ArrowLeft,
+  BookOpenCheck,
   Bot,
   BriefcaseBusiness,
   Building2,
+  CalendarDays,
   CalendarClock,
   Check,
   CheckCheck,
@@ -30,12 +32,15 @@ import {
   Clock3,
   Database,
   FileCheck2,
+  FileText,
   FileStack,
   FolderOpen,
   GitMerge,
   LockKeyhole,
   Loader2,
   LogIn,
+  MessagesSquare,
+  Paperclip,
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -418,6 +423,7 @@ function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => voi
 function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFileId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onChanged: () => void }) {
   const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, { enabled: open && Boolean(workFileId) });
   const [, navigate] = useLocation();
+  const [showAllMemory, setShowAllMemory] = useState(false);
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
@@ -430,10 +436,13 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
           </div>
           <div className="space-y-6 p-6">
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-400">السؤال الحاكم</p><p className="mt-2 text-sm font-semibold leading-7 text-slate-900">{data.workFile.governingQuestion}</p><div className="my-4 h-px bg-slate-100" /><p className="text-xs font-bold text-slate-400">النتيجة المطلوبة</p><p className="mt-2 text-sm leading-7 text-slate-700">{data.workFile.desiredOutcome}</p></Card>
+            {data.parties.length ? <Card className="rounded-3xl border-[#cfe3df] bg-[#f1f8f6] p-5 shadow-sm"><div className="flex items-center gap-2 text-[#1e6478]"><UsersRound className="h-4 w-4" /><h3 className="text-sm font-black">الأطراف المرتبطة بهذا الملف</h3></div><div className="mt-3 flex flex-wrap gap-2">{data.parties.map((party: any) => <Badge key={party.id} variant="outline" className="rounded-full border-[#bdd8d2] bg-white px-3 py-1.5 text-[#18596a]">{party.displayName}</Badge>)}</div></Card> : null}
             <section>
               <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
               <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4>{action.description ? <p className="mt-2 text-xs leading-6 text-slate-600">{action.description}</p> : null}<p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p>{action.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل التحقق:</span> {action.evidenceReference}</div> : null}</div>{!isClosed ? <ActionStatusDialog action={action} onUpdated={onChanged} /> : null}</div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
             </section>
+            {data.meetings.length ? <section><div className="mb-3 flex items-center gap-2"><CalendarDays className="h-5 w-5 text-[#1e6478]" /><div><h3 className="text-base font-black text-slate-900">الاجتماعات المرتبطة</h3><p className="text-xs text-slate-500">المحاور والنتائج محفوظة في سياق ملف العمل نفسه.</p></div></div><div className="space-y-3">{data.meetings.map((meeting: any) => <Card key={meeting.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><h4 className="font-bold leading-6 text-slate-900">{meeting.title}</h4><p className="mt-1 text-xs text-slate-500">{meeting.partyName || "اجتماع داخلي"} · <bdi dir="ltr">{formatDateTime(meeting.startsAt)}</bdi></p></div><Badge variant="outline" className="rounded-full border-[#cfe3df] bg-[#f1f8f6] text-[#1e6478]">{meeting.meetingStatus === "completed" ? "مغلق بمحضر" : "مخطط"}</Badge></div>{meeting.outcomeSummary ? <p className="mt-3 line-clamp-4 text-xs leading-6 text-slate-600">{meeting.outcomeSummary}</p> : meeting.objective ? <p className="mt-3 line-clamp-3 text-xs leading-6 text-slate-600">{meeting.objective}</p> : null}<div className="mt-3 flex gap-4 border-t border-slate-100 pt-3 text-[11px] font-bold text-slate-500"><span>{meeting.participantCount} مشارك</span><span>{meeting.agendaItemCount} محور</span></div></Card>)}</div></section> : null}
+            {data.memory.length ? <section><div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#1e6478]" /><div><h3 className="text-base font-black text-slate-900">ذاكرة الملف</h3><p className="text-xs text-slate-500">المواد والتحليلات والقرارات السابقة بعد ربطها بسياقها الصحيح.</p></div></div><Badge variant="outline" className="rounded-full bg-white">{data.memory.length}</Badge></div><div className="space-y-3">{(showAllMemory ? data.memory : data.memory.slice(0, 8)).map((entry: any) => <Card key={entry.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex gap-3"><div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.memoryType === "decision" ? "bg-amber-50 text-amber-700" : entry.memoryType === "work_product" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{entry.memoryType === "decision" ? <CheckCheck className="h-4 w-4" /> : entry.memoryType === "work_product" ? <FileText className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h4 className="font-bold leading-6 text-slate-900">{entry.title}</h4>{entry.sourceFileName ? <Paperclip className="h-3.5 w-3.5 text-slate-400" /> : null}</div>{entry.body ? <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-6 text-slate-600">{entry.body}</p> : null}{entry.documents?.length ? <div className="mt-3 space-y-2">{entry.documents.map((document: any) => <a key={document.id} href={document.downloadPath} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3df] bg-[#f1f8f6] px-3 py-2 text-[11px] font-bold text-[#18596a] transition hover:bg-[#e5f2ef]"><span className="min-w-0 truncate">{document.fileName}</span><span className="shrink-0">فتح الملف</span></a>)}</div> : entry.sourceFileName ? <p className="mt-2 truncate text-[11px] font-semibold text-slate-500">مرجع محفوظ: {entry.sourceFileName}</p> : null}<p className="mt-2 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(entry.occurredAt)}</bdi></p></div></div></Card>)}</div>{data.memory.length > 8 ? <Button variant="outline" onClick={() => setShowAllMemory(value => !value)} className="mt-3 w-full rounded-xl bg-white">{showAllMemory ? "عرض المختصر" : `عرض جميع عناصر الذاكرة (${data.memory.length})`}</Button> : null}</section> : null}
             <section><h3 className="mb-3 text-base font-black text-slate-900">سجل الملف</h3><div className="space-y-3">{data.events.map((event: any) => <div key={event.id} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500"><CircleDot className="h-4 w-4" /></div><div><p className="text-sm font-semibold leading-6 text-slate-800">{event.summary}</p><p className="mt-1 text-[11px] text-slate-400"><bdi dir="ltr">{formatDateTime(event.occurredAt)}</bdi></p></div></div>)}</div></section>
             <div className="grid gap-3 sm:grid-cols-2">
               {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
@@ -465,12 +474,17 @@ function ImportReviewPanel({ data, isLoading, error }: { data: any; isLoading: b
     archive_history: "سجل تاريخي",
     skip_reference: "مستبعد مؤقتًا",
   };
+  const transferStatus = data.batch.batchStatus === "promoted"
+    ? { label: "النواة التشغيلية رُقّيت", className: "border-emerald-200 bg-emerald-50 text-emerald-800" }
+    : data.batch.batchStatus === "reviewed"
+      ? { label: "الترقية جارية", className: "border-cyan-200 bg-cyan-50 text-cyan-800" }
+      : { label: "للمراجعة فقط", className: "border-amber-200 bg-amber-50 text-amber-800" };
 
   return <div className="space-y-6">
     <Card className="relative overflow-hidden rounded-[28px] border-slate-200 bg-white p-6 shadow-sm">
       <div className="absolute inset-y-0 right-0 w-1.5 bg-gradient-to-b from-[#1b7182] via-[#55a696] to-[#d5aa68]" />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4f3] text-[#1e6478]"><Database className="h-6 w-6" /></div><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black text-slate-900">منطقة النقل المعزولة</h2><Badge variant="outline" className="rounded-full border-amber-200 bg-amber-50 text-amber-800">للمراجعة فقط</Badge></div><p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">تم حفظ نسخة منظمة من Follow-up Desk دون تحويل أي سجل إلى ملف عمل حي، ودون تشغيل بريد أو جدولة أو Manus.</p></div></div>
+        <div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4f3] text-[#1e6478]"><Database className="h-6 w-6" /></div><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black text-slate-900">سجل النقل والترقية</h2><Badge variant="outline" className={`rounded-full ${transferStatus.className}`}>{transferStatus.label}</Badge></div><p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">بقيت الحزمة الخام محفوظة كما وصلت، وتم تحويل الجزء الواضح منها فقط إلى ملفات عمل وذاكرة واجتماعات تشغيلية. لم يُرسل بريد ولم تُشغّل جدولة أو Manus أثناء النقل.</p></div></div>
         <div className="rounded-2xl border border-slate-200 bg-[#f8f8f5] px-4 py-3 text-left"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Batch</p><p dir="ltr" className="mt-1 font-mono text-xs font-bold text-slate-700">{data.batch.batchId}</p></div>
       </div>
     </Card>
@@ -494,6 +508,20 @@ function ImportReviewPanel({ data, isLoading, error }: { data: any; isLoading: b
         <div className="grid gap-2 sm:grid-cols-2">{data.breakdown.map((item: any) => <div key={`${item.stageStatus}-${item.disposition}`} className="flex items-center justify-between rounded-xl border border-slate-100 bg-[#f8f8f5] px-3 py-2.5"><span className="text-xs font-semibold text-slate-600">{dispositionLabels[item.disposition] || item.disposition}</span><bdi className="text-sm font-black text-slate-900">{item.recordCount}</bdi></div>)}</div>
       </Card>
     </section>
+
+    {data.promotion && data.safeguards.operationalRecordsPromoted > 0 ? <Card className="rounded-3xl border-[#cfe3df] bg-[#f1f8f6] p-6 shadow-sm">
+      <div className="mb-5 flex items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-[#1e6478]"><CheckCheck className="h-5 w-5" /></div><div><h3 className="text-lg font-black text-slate-900">ما أصبح حيًا داخل المكتب التنفيذي</h3><p className="mt-1 text-sm leading-6 text-slate-600">هذه الأرقام تمثل سجلات تشغيلية قابلة للاستخدام وليست مجرد نسخة أرشيفية.</p></div></div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
+        { label: "ملفات العمل", value: data.promotion.workFiles },
+        { label: "الإجراءات", value: data.promotion.actions },
+        { label: "عناصر الذاكرة", value: data.promotion.memoryEntries },
+        { label: "أحداث السجل", value: data.promotion.events },
+        { label: "الاجتماعات", value: data.promotion.meetings },
+        { label: "محاور الاجتماعات", value: data.promotion.agendaItems },
+        { label: "جهات الاتصال", value: data.promotion.contacts },
+        { label: "الوثائق المحفوظة", value: data.promotion.documentsStored },
+      ].map(item => <div key={item.label} className="rounded-2xl border border-white bg-white/90 px-4 py-3"><p className="text-[11px] font-bold text-slate-500">{item.label}</p><p className="mt-1 text-2xl font-black text-[#18596a]"><bdi>{item.value}</bdi></p></div>)}</div>
+    </Card> : null}
 
     <div className="grid gap-4 md:grid-cols-3">
       {[{ label: "سجلات تشغيلية رُقّيت", value: data.safeguards.operationalRecordsPromoted }, { label: "أسرار تم نقلها", value: data.safeguards.secretsImported }, { label: "إجراءات خارجية نُفذت", value: data.safeguards.externalSideEffects }].map(item => <div key={item.label} className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-emerald-900"><span className="text-xs font-bold">{item.label}</span><bdi className="text-lg font-black">{item.value}</bdi></div>)}

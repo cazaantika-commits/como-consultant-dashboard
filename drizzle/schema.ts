@@ -2967,3 +2967,195 @@ export const comoNextImportFiles = mysqlTable("como_next_import_files", {
   uniqueIndex("como_next_import_file_source_uq").on(table.importBatchId, table.sourceIndex),
   index("como_next_import_file_sha_idx").on(table.sha256),
 ]);
+
+// Clean operational projection of approved Follow-up Desk knowledge. The raw
+// source remains immutable in the staging tables; these records are the
+// reviewed executive-office representation used by COMO Next.
+export const comoNextPartyContacts = mysqlTable("como_next_party_contacts", {
+  id: int("id").autoincrement().primaryKey(),
+  partyId: int("party_id").notNull().references(() => comoNextParties.id, { onDelete: "restrict" }),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 120 }),
+  jobTitle: varchar("job_title", { length: 255 }),
+  isPrimary: tinyint("is_primary").notNull().default(0),
+  notes: text("notes"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_party_contact_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_party_contact_party_idx").on(table.partyId, table.isPrimary),
+  index("como_next_party_contact_email_idx").on(table.email),
+]);
+
+export const comoNextWorkMemory = mysqlTable("como_next_work_memory", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  memoryType: mysqlEnum("memory_type", ["material", "work_product", "decision", "note"]).notNull(),
+  entryType: varchar("entry_type", { length: 120 }),
+  title: varchar("title", { length: 1000 }).notNull(),
+  body: longtext("body"),
+  sourceStatus: varchar("source_status", { length: 80 }),
+  sourceUrl: text("source_url"),
+  sourceFileKey: varchar("source_file_key", { length: 1000 }),
+  sourceFileName: varchar("source_file_name", { length: 1000 }),
+  mimeType: varchar("mime_type", { length: 255 }),
+  isCurrent: tinyint("is_current").notNull().default(1),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  occurredAt: timestamp("occurred_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_work_memory_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_work_memory_file_idx").on(table.workFileId, table.memoryType, table.occurredAt),
+  foreignKey({
+    name: "como_next_work_memory_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+]);
+
+export const comoNextDocuments = mysqlTable("como_next_documents", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  title: varchar("title", { length: 1000 }).notNull(),
+  fileName: varchar("file_name", { length: 1000 }).notNull(),
+  mimeType: varchar("mime_type", { length: 255 }).notNull(),
+  byteSize: bigint("byte_size", { mode: "number" }).notNull(),
+  sha256: varchar("sha256", { length: 64 }).notNull(),
+  storageKey: varchar("storage_key", { length: 1000 }).notNull(),
+  storageUrl: text("storage_url").notNull(),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceKey: varchar("source_key", { length: 1000 }),
+  sourceUrl: text("source_url"),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_document_sha_uq").on(table.sha256),
+  uniqueIndex("como_next_document_storage_key_uq").on(table.storageKey),
+  index("como_next_document_batch_idx").on(table.importBatchId),
+]);
+
+export const comoNextDocumentChunks = mysqlTable("como_next_document_chunks", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  documentId: bigint("document_id", { mode: "number" }).notNull().references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  chunkIndex: int("chunk_index").notNull(),
+  byteSize: int("byte_size").notNull(),
+  sha256: varchar("sha256", { length: 64 }).notNull(),
+  storageKey: varchar("storage_key", { length: 1000 }).notNull(),
+  storageUrl: text("storage_url").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_document_chunk_order_uq").on(table.documentId, table.chunkIndex),
+  uniqueIndex("como_next_document_chunk_key_uq").on(table.storageKey),
+  index("como_next_document_chunk_document_idx").on(table.documentId),
+]);
+
+export const comoNextWorkMemoryDocuments = mysqlTable("como_next_work_memory_documents", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  memoryId: bigint("memory_id", { mode: "number" }).notNull().references(() => comoNextWorkMemory.id, { onDelete: "restrict" }),
+  documentId: bigint("document_id", { mode: "number" }).notNull().references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  relationType: mysqlEnum("relation_type", ["attachment", "source", "evidence"]).notNull().default("attachment"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_memory_document_uq").on(table.memoryId, table.documentId),
+  index("como_next_memory_document_file_idx").on(table.workFileId, table.memoryId),
+  index("como_next_memory_document_batch_idx").on(table.importBatchId),
+  foreignKey({
+    name: "como_next_memory_document_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+]);
+
+export const comoNextMeetings = mysqlTable("como_next_meetings", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  workFileId: int("work_file_id"),
+  projectPartyId: int("project_party_id"),
+  title: varchar("title", { length: 1000 }).notNull(),
+  objective: text("objective"),
+  meetingType: varchar("meeting_type", { length: 80 }),
+  meetingFormat: varchar("meeting_format", { length: 80 }),
+  meetingStatus: mysqlEnum("meeting_status", ["planned", "confirmed", "completed", "cancelled"]).notNull().default("planned"),
+  startsAt: timestamp("starts_at", { mode: "string" }),
+  endsAt: timestamp("ends_at", { mode: "string" }),
+  timezone: varchar("timezone", { length: 80 }).notNull().default("Asia/Dubai"),
+  location: varchar("location", { length: 1000 }),
+  meetingLink: text("meeting_link"),
+  outcomeSummary: longtext("outcome_summary"),
+  closedAt: timestamp("closed_at", { mode: "string" }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_meeting_project_time_idx").on(table.projectId, table.startsAt),
+  index("como_next_meeting_file_time_idx").on(table.workFileId, table.startsAt),
+  foreignKey({
+    name: "como_next_meeting_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    name: "como_next_meeting_party_fk",
+    columns: [table.projectId, table.projectPartyId],
+    foreignColumns: [comoNextProjectParties.projectId, comoNextProjectParties.id],
+  }).onDelete("restrict"),
+]);
+
+export const comoNextMeetingParticipants = mysqlTable("como_next_meeting_participants", {
+  id: int("id").autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  organizationName: varchar("organization_name", { length: 500 }),
+  participantRole: varchar("participant_role", { length: 255 }),
+  attendance: varchar("attendance", { length: 80 }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_participant_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_meeting_participant_meeting_idx").on(table.meetingId),
+]);
+
+export const comoNextMeetingAgendaItems = mysqlTable("como_next_meeting_agenda_items", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  itemKind: varchar("item_kind", { length: 80 }),
+  category: varchar("category", { length: 255 }),
+  promptAr: text("prompt_ar"),
+  promptEn: text("prompt_en"),
+  response: longtext("response"),
+  isChecked: tinyint("is_checked").notNull().default(0),
+  isRequired: tinyint("is_required").notNull().default(0),
+  sortOrder: int("sort_order").notNull().default(0),
+  briefingNote: text("briefing_note"),
+  desiredOutcome: text("desired_outcome"),
+  audience: varchar("audience", { length: 80 }),
+  priority: varchar("priority", { length: 80 }),
+  sourceEvidence: longtext("source_evidence"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_agenda_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_meeting_agenda_order_idx").on(table.meetingId, table.sortOrder),
+]);

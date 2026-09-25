@@ -12,7 +12,9 @@
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
     "migration:como-followup": "tsx scripts/comoFollowupImporter.ts",
-    "migration:como-followup:stage": "tsx scripts/comoFollowupStage.ts"
+    "migration:como-followup:stage": "tsx scripts/comoFollowupStage.ts",
+    "migration:como-followup:promote": "tsx scripts/comoFollowupPromote.ts",
+    "migration:como-followup:documents": "tsx scripts/comoFollowupCopyDocuments.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

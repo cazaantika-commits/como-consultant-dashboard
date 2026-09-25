@@ -110,10 +110,12 @@ export const comoNextRouter = router({
         ) AS openActionCount
       FROM como_next_work_files wf
       JOIN projects p ON p.id = wf.project_id AND p.is_test_project = 0
+      LEFT JOIN como_next_import_batches import_batch ON import_batch.batch_id = wf.import_batch_id
       LEFT JOIN como_next_project_access access_row
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
       ORDER BY
         CASE wf.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
         wf.updated_at DESC
@@ -139,6 +141,7 @@ export const comoNextRouter = router({
       FROM como_next_actions a
       JOIN como_next_work_files wf ON wf.id = a.work_file_id AND wf.project_id = a.project_id
       JOIN projects p ON p.id = a.project_id AND p.is_test_project = 0
+      LEFT JOIN como_next_import_batches import_batch ON import_batch.batch_id = wf.import_batch_id
       LEFT JOIN como_next_project_access access_row
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       LEFT JOIN como_next_project_parties waiting_link
@@ -146,6 +149,7 @@ export const comoNextRouter = router({
       LEFT JOIN como_next_parties waiting_party ON waiting_party.id = waiting_link.party_id
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND a.action_status NOT IN ('verified','cancelled')
+        AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
     `);
 
     const workFiles = getRows<any>(workFilesResult).map(row => ({
@@ -210,6 +214,47 @@ export const comoNextRouter = router({
       GROUP BY file_status
       ORDER BY file_status
     `);
+    const promotedResult = await db.execute(sql`
+      SELECT
+        (SELECT COUNT(*) FROM como_next_parties WHERE import_batch_id = ${String(batch.batchId)}) AS parties,
+        (SELECT COUNT(*) FROM como_next_party_contacts WHERE import_batch_id = ${String(batch.batchId)}) AS contacts,
+        (SELECT COUNT(*) FROM como_next_project_parties pp JOIN como_next_parties party ON party.id = pp.party_id WHERE party.import_batch_id = ${String(batch.batchId)}) AS projectParties,
+        (SELECT COUNT(*) FROM como_next_work_files WHERE import_batch_id = ${String(batch.batchId)}) AS workFiles,
+        (SELECT COUNT(*) FROM como_next_actions WHERE import_batch_id = ${String(batch.batchId)}) AS actions,
+        (SELECT COUNT(*) FROM como_next_work_memory WHERE import_batch_id = ${String(batch.batchId)}) AS memoryEntries,
+        (SELECT COUNT(*) FROM como_next_work_file_events event_row JOIN como_next_work_files wf ON wf.id = event_row.work_file_id WHERE wf.import_batch_id = ${String(batch.batchId)} AND event_row.idempotency_key LIKE 'followup:%') AS events,
+        (SELECT COUNT(*) FROM como_next_meetings WHERE import_batch_id = ${String(batch.batchId)}) AS meetings,
+        (SELECT COUNT(*) FROM como_next_meeting_participants WHERE import_batch_id = ${String(batch.batchId)}) AS meetingParticipants,
+        (SELECT COUNT(*) FROM como_next_meeting_agenda_items WHERE import_batch_id = ${String(batch.batchId)}) AS agendaItems,
+        (SELECT COUNT(DISTINCT COALESCE(NULLIF(source_file_key, ''), NULLIF(source_url, ''))) FROM como_next_work_memory WHERE import_batch_id = ${String(batch.batchId)} AND (source_file_key IS NOT NULL OR source_url IS NOT NULL)) AS documentReferences,
+        (SELECT COUNT(*) FROM como_next_documents WHERE import_batch_id = ${String(batch.batchId)}) AS documentsStored,
+        (SELECT COALESCE(SUM(byte_size), 0) FROM como_next_documents WHERE import_batch_id = ${String(batch.batchId)}) AS documentBytes,
+        (SELECT COUNT(*) FROM como_next_work_memory_documents WHERE import_batch_id = ${String(batch.batchId)}) AS documentLinks,
+        (SELECT COUNT(*) FROM como_next_document_chunks chunk_row JOIN como_next_documents document_row ON document_row.id = chunk_row.document_id WHERE document_row.import_batch_id = ${String(batch.batchId)}) AS documentChunks
+    `);
+    const promoted = getRows<any>(promotedResult)[0] || {};
+    const promotion = {
+      parties: Number(promoted.parties || 0),
+      contacts: Number(promoted.contacts || 0),
+      projectParties: Number(promoted.projectParties || 0),
+      workFiles: Number(promoted.workFiles || 0),
+      actions: Number(promoted.actions || 0),
+      memoryEntries: Number(promoted.memoryEntries || 0),
+      events: Number(promoted.events || 0),
+      meetings: Number(promoted.meetings || 0),
+      meetingParticipants: Number(promoted.meetingParticipants || 0),
+      agendaItems: Number(promoted.agendaItems || 0),
+      documentReferences: Number(promoted.documentReferences || 0),
+      documentsStored: Number(promoted.documentsStored || 0),
+      documentBytes: Number(promoted.documentBytes || 0),
+      documentLinks: Number(promoted.documentLinks || 0),
+      documentChunks: Number(promoted.documentChunks || 0),
+    };
+    const operationalRecordsPromoted = batch.batchStatus === "promoted"
+      ? Object.entries(promotion)
+          .filter(([key]) => !["documentReferences", "documentBytes", "documentChunks"].includes(key))
+          .reduce((sum, [, value]) => sum + Number(value), 0)
+      : 0;
 
     return {
       available: true as const,
@@ -239,8 +284,9 @@ export const comoNextRouter = router({
         };
       }),
       files: getRows<any>(filesResult).map(row => ({ ...row, fileCount: Number(row.fileCount), totalBytes: Number(row.totalBytes) })),
+      promotion,
       safeguards: {
-        operationalRecordsPromoted: 0,
+        operationalRecordsPromoted,
         externalSideEffects: 0,
         secretsImported: 0,
       },
@@ -262,6 +308,7 @@ export const comoNextRouter = router({
           desiredOutcome: comoNextWorkFiles.desiredOutcome,
           workFileStatus: comoNextWorkFiles.workFileStatus,
           priority: comoNextWorkFiles.priority,
+          importBatchId: comoNextWorkFiles.importBatchId,
           closureEvidenceRef: comoNextWorkFiles.closureEvidenceRef,
           openedAt: comoNextWorkFiles.openedAt,
           closedAt: comoNextWorkFiles.closedAt,
@@ -271,6 +318,16 @@ export const comoNextRouter = router({
         .where(eq(comoNextWorkFiles.id, input.workFileId))
         .limit(1);
       if (!workFile) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على ملف العمل" });
+      if (workFile.importBatchId) {
+        const visibilityResult = await db.execute(sql`
+          SELECT batch_status AS batchStatus
+          FROM como_next_import_batches
+          WHERE batch_id = ${workFile.importBatchId}
+          LIMIT 1
+        `);
+        const visibility = getRows<any>(visibilityResult)[0];
+        if (visibility?.batchStatus !== "promoted") throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على ملف العمل" });
+      }
       const access = await requireProjectAccess(db, workFile.projectId, ctx.user.id, "read");
       const actions = await db
         .select()
@@ -278,7 +335,76 @@ export const comoNextRouter = router({
         .where(eq(comoNextActions.workFileId, input.workFileId))
         .orderBy(desc(comoNextActions.updatedAt));
       const events = await getRecentWorkFileEvents(input.workFileId);
-      return { workFile: { ...workFile, projectName: access.project.name }, actions, events, accessRole: access.role };
+      const memoryResult = await db.execute(sql`
+        SELECT id, memory_type AS memoryType, entry_type AS entryType, title, body,
+          source_status AS sourceStatus, source_url AS sourceUrl,
+          source_file_key AS sourceFileKey, source_file_name AS sourceFileName,
+          mime_type AS mimeType, is_current AS isCurrent, occurred_at AS occurredAt
+        FROM como_next_work_memory
+        WHERE work_file_id = ${input.workFileId}
+        ORDER BY is_current DESC, occurred_at DESC, id DESC
+      `);
+      const documentsResult = await db.execute(sql`
+        SELECT link.memory_id AS memoryId, document_row.id, document_row.title,
+          document_row.file_name AS fileName, document_row.mime_type AS mimeType,
+          document_row.byte_size AS byteSize, document_row.sha256
+        FROM como_next_work_memory_documents link
+        JOIN como_next_documents document_row ON document_row.id = link.document_id
+        WHERE link.work_file_id = ${input.workFileId}
+        ORDER BY link.memory_id, document_row.id
+      `);
+      const meetingsResult = await db.execute(sql`
+        SELECT m.id, m.title, m.objective, m.meeting_type AS meetingType,
+          m.meeting_format AS meetingFormat, m.meeting_status AS meetingStatus,
+          m.starts_at AS startsAt, m.ends_at AS endsAt, m.location,
+          m.outcome_summary AS outcomeSummary, party.display_name AS partyName,
+          (SELECT COUNT(*) FROM como_next_meeting_participants mp WHERE mp.meeting_id = m.id) AS participantCount,
+          (SELECT COUNT(*) FROM como_next_meeting_agenda_items ai WHERE ai.meeting_id = m.id) AS agendaItemCount
+        FROM como_next_meetings m
+        LEFT JOIN como_next_project_parties pp ON pp.id = m.project_party_id AND pp.project_id = m.project_id
+        LEFT JOIN como_next_parties party ON party.id = pp.party_id
+        WHERE m.work_file_id = ${input.workFileId}
+        ORDER BY m.starts_at DESC, m.id DESC
+      `);
+      const partiesResult = await db.execute(sql`
+        SELECT party.id, party.display_name AS displayName, party.party_status AS partyStatus,
+          pp.role_code AS roleCode, pp.relationship_status AS relationshipStatus,
+          wfp.relationship_role AS relationshipRole
+        FROM como_next_work_file_parties wfp
+        JOIN como_next_project_parties pp ON pp.id = wfp.project_party_id AND pp.project_id = wfp.project_id
+        JOIN como_next_parties party ON party.id = pp.party_id
+        WHERE wfp.work_file_id = ${input.workFileId}
+        ORDER BY party.display_name
+      `);
+      const documentsByMemory = new Map<number, any[]>();
+      for (const row of getRows<any>(documentsResult)) {
+        const memoryId = Number(row.memoryId);
+        const current = documentsByMemory.get(memoryId) || [];
+        current.push({
+          ...row,
+          id: Number(row.id),
+          byteSize: Number(row.byteSize),
+          downloadPath: `/api/como-next/documents/${Number(row.id)}`,
+        });
+        documentsByMemory.set(memoryId, current);
+      }
+      return {
+        workFile: { ...workFile, projectName: access.project.name },
+        actions,
+        events,
+        memory: getRows<any>(memoryResult).map(row => {
+          const id = Number(row.id);
+          return { ...row, id, isCurrent: Number(row.isCurrent) === 1, documents: documentsByMemory.get(id) || [] };
+        }),
+        meetings: getRows<any>(meetingsResult).map(row => ({
+          ...row,
+          id: Number(row.id),
+          participantCount: Number(row.participantCount || 0),
+          agendaItemCount: Number(row.agendaItemCount || 0),
+        })),
+        parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
+        accessRole: access.role,
+      };
     }),
 
   createWorkFile: protectedProcedure

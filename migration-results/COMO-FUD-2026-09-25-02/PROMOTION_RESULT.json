@@ -1,0 +1,63 @@
+{
+  "mode": "apply",
+  "batchId": "COMO-FUD-2026-09-25-02",
+  "sourceFingerprint": "d4283d21c1490a408b6ab14cba6cede6f60e9d4a4212cbbaa81c933ad6e61720",
+  "promotionFingerprint": "9d2fd19df3280ecf06691d594e147f1848972ff5eae483978eb0cd3bd960f3cc",
+  "expected": {
+    "projects": 2,
+    "parties": 15,
+    "workFiles": 11,
+    "workEntries": 225,
+    "events": 586,
+    "meetings": 4
+  },
+  "stats": {
+    "parties": {
+      "resolved": 15,
+      "created": 15
+    },
+    "contacts": {
+      "resolved": 32,
+      "created": 32
+    },
+    "projectParties": {
+      "resolved": 15,
+      "created": 15
+    },
+    "workFiles": {
+      "resolved": 11,
+      "created": 11
+    },
+    "memory": {
+      "resolved": 147,
+      "created": 147
+    },
+    "actions": {
+      "resolved": 78,
+      "created": 78
+    },
+    "events": {
+      "resolved": 586,
+      "created": 586
+    },
+    "meetings": {
+      "resolved": 4,
+      "created": 4
+    },
+    "meetingParticipants": {
+      "resolved": 15,
+      "created": 15
+    },
+    "meetingAgendaItems": {
+      "resolved": 113,
+      "created": 113
+    }
+  },
+  "skippedProjectIds": [
+    "30001"
+  ],
+  "externalSideEffects": 0,
+  "secretsImported": 0,
+  "documentFilesPendingStorageCopy": 34,
+  "completedAt": "2026-09-25T17:26:15.533Z"
+}

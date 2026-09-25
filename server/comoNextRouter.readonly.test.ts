@@ -36,14 +36,14 @@ describe("COMO Next read-only router", () => {
     expect(overview.today.summary.dueToday).toBe(0);
   });
 
-  it("exposes the staged transfer review to the system owner without promoting records", async () => {
+  it("exposes the completed transfer review to the system owner", async () => {
     const caller = comoNextRouter.createCaller(context(1));
     const review = await caller.getImportReview();
     expect(review.available).toBe(true);
     if (!review.available) return;
     expect(review.batch).toMatchObject({
       batchId: "COMO-FUD-2026-09-25-02",
-      batchStatus: "staged",
+      batchStatus: "promoted",
       sourceRecordCount: 1193,
       stagedRecordCount: 1163,
       skippedRecordCount: 29,
@@ -51,6 +51,7 @@ describe("COMO Next read-only router", () => {
     });
     expect(review.projects.find(project => project.sourceRecordId === "1")).toMatchObject({ targetId: 1, stageStatus: "staged" });
     expect(review.projects.find(project => project.sourceRecordId === "30001")).toMatchObject({ targetId: null, stageStatus: "skipped" });
-    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 0, externalSideEffects: 0, secretsImported: 0 });
+    expect(review.promotion).toMatchObject({ workFiles: 11, actions: 78, memoryEntries: 147, meetings: 4, documentsStored: 34, documentLinks: 37, documentChunks: 20 });
+    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 1098, externalSideEffects: 0, secretsImported: 0 });
   });
 });

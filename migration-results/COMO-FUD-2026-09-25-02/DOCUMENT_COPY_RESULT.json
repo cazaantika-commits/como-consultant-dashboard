@@ -1,0 +1,320 @@
+{
+  "mode": "apply",
+  "batchId": "COMO-FUD-2026-09-25-02",
+  "sourceFingerprint": "d4283d21c1490a408b6ab14cba6cede6f60e9d4a4212cbbaa81c933ad6e61720",
+  "eligibleMemoryReferences": 97,
+  "matchedMemoryReferences": 37,
+  "unresolvedMemoryReferences": 60,
+  "uniqueFiles": 34,
+  "totalBytes": 231547515,
+  "externalSideEffects": 34,
+  "unresolved": [
+    {
+      "memoryId": 148,
+      "title": "رسالة البريد التي وصل معها عرض MDL",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 149,
+      "title": "مراسلات Design International وتأكيد الاجتماع",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 150,
+      "title": "Olly أكد الاستلام وتسليم العرضين يوم الجمعة — Inbox UID 402",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 151,
+      "title": "مسودة إقرار استلام وموعد Chapman Taylor — Draft UID 878",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 155,
+      "title": "متابعة اجتماع ECCE المرسلة — Sent UID 159",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 157,
+      "title": "Hearan أكدت تسليم عرض Design International غدًا وطلبت مكالمة — Inbox UID 404",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 158,
+      "title": "رد Hearan بشأن العرض والمكالمة — Sent UID 160",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 159,
+      "title": "رسالة وائل المرسلة — اتجاه مجان وقبول تقرير كولييرز",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 161,
+      "title": "وصل عرض Design International الفني والتجاري — Inbox UID 405",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 164,
+      "title": "إقرار استلام عرض Design International — Sent UID 162",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 165,
+      "title": "متابعة موعد عرض Chapman Taylor — Sent UID 163",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 166,
+      "title": "إشعار SharePoint تلقائي بملف عرض Design International — Inbox UID 406",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 167,
+      "title": "Olly طلب تمديدًا بسيطًا والتزم بإرسال العرضين يوم الاثنين — Inbox UID 407",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 168,
+      "title": "إقرار موعد الاثنين لعرض Chapman Taylor — أُرسل كـ Sent UID 164",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 191,
+      "title": "تسليم عرضي Chapman Taylor — Inbox UID 414",
+      "reference": "access_tokens/login/48134/fd275b66edd91f6a91c40463599e79e85d470740cac843ce335d75c27888ecfd"
+    },
+    {
+      "memoryId": 196,
+      "title": "عرض خطيب وعلمي الفني — Inbox UID 415",
+      "reference": ":b:/g/personal/omaima_abedi_khatibalami_com/IQCIdGhjgNidQK4z71L_ZJidAXlDEJYJ9K6rzSYYH5pd21E"
+    },
+    {
+      "memoryId": 197,
+      "title": "عرض خطيب وعلمي التجاري — Inbox UID 415",
+      "reference": ":b:/g/personal/omaima_abedi_khatibalami_com/IQAxhhz1ADYMQIwwRBK7gQkOAeRP0GFmaQmglugsGjvCPDM"
+    },
+    {
+      "memoryId": 206,
+      "title": "طلب اجتماع لمراجعة عرض Design International — Sent UID 172",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 207,
+      "title": "طلب صرف فاتورة كولييرز الثانية — Sent UID 173",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 208,
+      "title": "طلب عرض خدمات الفلل الأربع المرسل إلى ECCE",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 209,
+      "title": "Design International 2026 marketing brochure — Inbox UID 417",
+      "reference": ":f:/g/personal/paolo_bianchini_designinternational_com/IgCqMjmtmRrHSp_qwclUax-1Aczsvo9GsSY0I3l6GpCwDKs"
+    },
+    {
+      "memoryId": 210,
+      "title": "تأكيد موعد ديزاين إنترناشونال — Sent UID 174",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 214,
+      "title": "تأكيد استلام عرض ECCE — Sent UID 175",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 215,
+      "title": "إرسال رابط Zoom إلى Design International — 23 سبتمبر 2026",
+      "reference": "j/86455259520"
+    },
+    {
+      "memoryId": 229,
+      "title": "تذكير وائل بسداد كولييرز مع التقرير والفاتورة — Sent UID 182",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 230,
+      "title": "مسودة اعتذار مهذب وعدم المضي مع ECCE — Draft UID 897",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 231,
+      "title": "طلب عرض معدل من ديزاين إنترناشونال — Sent UID 184",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 232,
+      "title": "رد عدم المضي مع ECCE — Sent UID 183",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 234,
+      "title": "طلب توضيح دور تشابمان المعماري — Sent UID 185",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 239,
+      "title": "متابعة Colliers المرسلة — 14 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 240,
+      "title": "متابعة ECCE المرسلة — 14 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 242,
+      "title": "رسالة Ontario بعد الاجتماع",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 243,
+      "title": "Ontario Technical Commercial Proposal",
+      "reference": ""
+    },
+    {
+      "memoryId": 245,
+      "title": "طلب تأكيد زيارة مكتب ECCE — 16 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 247,
+      "title": "إشعار Mia لحجز موعد ECCE في تقويم وائل",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 249,
+      "title": "تلخيص مكالمة Chapman Taylor — أُرسل (Sent UID 142)",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 253,
+      "title": "شكر وتلخيص اجتماع Design International — أُرسل (Sent UID 143)",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 255,
+      "title": "رسالة Amy Thornton — ترتيب اتصال Benoy",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 256,
+      "title": "رسالة Neil Serridge — تأكيد الاتصال صباحًا",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 257,
+      "title": "مسودة الرد على Neil Serridge",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 258,
+      "title": "ملفات الشركة والسير الذاتية والمشاريع المرسلة من MDL",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 259,
+      "title": "مسودة الرد على Amy Thornton",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 260,
+      "title": "توجيه Wael بشأن MDL وOntario — 15 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 261,
+      "title": "توجيه Wael بشأن MDL وOntario — 15 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 262,
+      "title": "توجيه Wael بشأن MDL وOntario — 15 سبتمبر",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 264,
+      "title": "مسودة تحديث MDL بأن المراجعة مستمرة — Draft UID 865",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 265,
+      "title": "مسودة تأكيد استلام توجيه Wael — Draft UID 866",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 268,
+      "title": "رسالة Colliers: تسليم Draft Report V0.2 والخطوات التالية",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 272,
+      "title": "رد استلام كولييرز المرسل — الرسالة الصادرة 148",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 279,
+      "title": "رد Ontario النهائي — مرسل 15 سبتمبر 2026",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 281,
+      "title": "رسالة تلخيص مكالمة Neil — Sent UID 151",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 282,
+      "title": "رسالة Benoy المرسلة بعد المكالمة — 15 سبتمبر 2026",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 283,
+      "title": "الموجز المرسل إلى Chapman Taylor — Sent UID 152",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 284,
+      "title": "الموجز المرسل إلى Design International — Sent UID 153",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 285,
+      "title": "مراسلات Colliers بشأن الرد المجمّع والتقرير المحدّث",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 290,
+      "title": "شكر Benoy بعد تأكيد موعد العرض — Sent UID 154",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 291,
+      "title": "شكر Benoy بعد تأكيد بدء العرض — Sent UID 154",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 292,
+      "title": "رسالة Sandro Giorgi — استمرار اهتمام MDL (Inbox UID 401)",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 293,
+      "title": "مسودة إقرار اهتمام MDL — Draft UID 877",
+      "reference": "spm/mail/"
+    },
+    {
+      "memoryId": 294,
+      "title": "إعادة توجيه مستندات 9 سبتمبر إلى عنوان Kennedy الجديد — Sent UID 155",
+      "reference": "spm/mail/"
+    }
+  ],
+  "documentsResolved": 34,
+  "documentsCreated": 26,
+  "chunkedDocuments": 1,
+  "uploadedStorageObjects": 45,
+  "memoryLinksResolved": 37,
+  "memoryLinksCreated": 37,
+  "completedAt": "2026-09-25T18:07:37.137Z"
+}
