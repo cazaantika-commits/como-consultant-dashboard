@@ -6,6 +6,8 @@ import { assertActionTransition, deriveAttentionAt, toSqlUtcTimestamp } from "./
 const migration = readFileSync(new URL("../drizzle/0077_como_next_executive_core.sql", import.meta.url), "utf8");
 const decisionMigration = readFileSync(new URL("../drizzle/0082_como_next_decision_register.sql", import.meta.url), "utf8");
 const communicationMigration = readFileSync(new URL("../drizzle/0083_como_next_communications.sql", import.meta.url), "utf8");
+const meetingMigration = readFileSync(new URL("../drizzle/0084_como_next_meeting_workspace.sql", import.meta.url), "utf8");
+const meetingMetadataMigration = readFileSync(new URL("../drizzle/0085_como_next_meeting_proposal_metadata.sql", import.meta.url), "utf8");
 const commandSource = readFileSync(new URL("./services/comoNextCommands.ts", import.meta.url), "utf8");
 
 describe("COMO Next command invariants", () => {
@@ -58,5 +60,21 @@ describe("COMO Next additive migration", () => {
     expect(commandSource).toContain("لا يمكن تسجيل الإرسال قبل اعتماد المسودة");
     expect(commandSource).toContain("لا يمكن إغلاق الملف وفيه مسودة أو مراسلة معتمدة لم يُسجل إرسالها");
     expect(commandSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
+  });
+
+  it("adds the meeting workspace without touching protected or legacy tables", () => {
+    expect([...meetingMigration.matchAll(/CREATE TABLE IF NOT EXISTS `([^`]+)`/g)].map(match => match[1])).toEqual([
+      "como_next_meeting_consents",
+      "como_next_meeting_sources",
+      "como_next_meeting_analyses",
+      "como_next_meeting_proposals",
+      "como_next_meeting_minutes",
+    ]);
+    expect(meetingMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
+    expect(meetingMetadataMigration.match(/ALTER TABLE `como_next_meeting_proposals`/g)).toHaveLength(2);
+    expect(meetingMetadataMigration).not.toMatch(/ALTER TABLE `(?!como_next_meeting_proposals`)/);
+    expect(commandSource).toContain("لا يمكن إغلاق الملف وفيه اجتماع لم يُغلق بمحضر مراجَع");
+    expect(commandSource).toContain("لا يمكن إغلاق الملف قبل مراجعة مقترحات الاجتماعات");
+    expect(commandSource).toContain("لا يمكن إغلاق الملف وفيه مسودة محضر تنتظر المراجعة");
   });
 });

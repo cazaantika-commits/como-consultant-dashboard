@@ -35,6 +35,7 @@ describe("COMO Next read-only router", () => {
     expect(overview.workFiles).toEqual([]);
     expect(overview.decisions).toEqual([]);
     expect(overview.draftCommunications).toEqual([]);
+    expect(overview.meetingAttention).toEqual([]);
     expect(overview.today.summary.dueToday).toBe(0);
   });
 
@@ -63,6 +64,15 @@ describe("COMO Next read-only router", () => {
     const detail = await caller.getWorkFile({ workFileId: overview.draftCommunications[0].workFileId });
     expect(detail.communications.some(communication => communication.id === overview.draftCommunications[0].id)).toBe(true);
     expect(detail.communications.some(communication => communication.communicationStatus === "sent")).toBe(true);
+  });
+
+  it("keeps completed historical meetings in their work file without raising false Today alerts", async () => {
+    const caller = comoNextRouter.createCaller(context(1));
+    const overview = await caller.getOverview();
+    expect(overview.meetingAttention).toEqual([]);
+    const detail = await caller.getWorkFile({ workFileId: 60017 });
+    expect(detail.meetings.some(meeting => meeting.id === 2 && meeting.meetingStatus === "completed")).toBe(true);
+    expect(detail.meetings.find(meeting => meeting.id === 2)).toMatchObject({ participantCount: 2, agendaItemCount: 7, unresolvedRequiredCount: 0 });
   });
 
   it("exposes the completed transfer review to the system owner", async () => {

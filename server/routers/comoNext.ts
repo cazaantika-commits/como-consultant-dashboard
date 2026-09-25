@@ -26,6 +26,18 @@ import {
   reviewCommunicationDraftCommand,
 } from "../services/comoNextCommands";
 import { buildComoNextTodayProjection, type ComoNextTodayRow } from "../services/comoNextToday";
+import {
+  addMeetingAgendaItemCommand,
+  addMeetingSourceCommand,
+  analyzeMeetingSourceCommand,
+  createMeetingCommand,
+  getMeetingWorkspace,
+  prepareMeetingMinutesCommand,
+  recordMeetingConsentCommand,
+  reviewMeetingMinutesCommand,
+  reviewMeetingProposalCommand,
+  updateMeetingAgendaItemCommand,
+} from "../services/comoNextMeetings";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -42,6 +54,7 @@ const prioritySchema = z.enum(["normal", "important", "urgent"]);
 const ownerTypeSchema = z.enum(["human", "manus", "team"]);
 const decisionAuthoritySchema = z.enum(["abdulrahman", "wael", "sheikh_issa", "joint", "other"]);
 const communicationChannelSchema = z.enum(["email", "whatsapp", "letter", "phone_note", "internal"]);
+const meetingProposalTargetSchema = z.enum(["agenda_item", "decision", "action", "external_commitment", "risk", "note", "communication_draft"]);
 const actionStatusSchema = z.enum([
   "open",
   "in_progress",
@@ -210,6 +223,26 @@ export const comoNextRouter = router({
       ORDER BY communication.created_at ASC, communication.id ASC
     `);
 
+    const meetingAttentionResult = await db.execute(sql`
+      SELECT meeting.id, meeting.project_id AS projectId, meeting.work_file_id AS workFileId,
+        p.name AS projectName, wf.title AS workFileTitle, meeting.title,
+        meeting.meeting_status AS meetingStatus, meeting.starts_at AS startsAt,
+        (SELECT COUNT(*) FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id = meeting.id AND proposal.review_status = 'pending') AS pendingProposalCount,
+        (SELECT COUNT(*) FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id = meeting.id AND minutes.minutes_status = 'draft') AS draftMinutesCount
+      FROM como_next_meetings meeting
+      JOIN como_next_work_files wf ON wf.id = meeting.work_file_id AND wf.project_id = meeting.project_id
+      JOIN projects p ON p.id = meeting.project_id AND p.is_test_project = 0
+      LEFT JOIN como_next_project_access access_row
+        ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
+      WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
+        AND (
+          meeting.meeting_status IN ('planned','confirmed')
+          OR EXISTS (SELECT 1 FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id = meeting.id AND proposal.review_status = 'pending')
+          OR EXISTS (SELECT 1 FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id = meeting.id AND minutes.minutes_status = 'draft')
+        )
+      ORDER BY CASE WHEN meeting.starts_at IS NULL THEN 1 ELSE 0 END, meeting.starts_at ASC, meeting.id ASC
+    `);
+
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -236,11 +269,20 @@ export const comoNextRouter = router({
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
     }));
+    const meetingAttention = getRows<any>(meetingAttentionResult).map(row => ({
+      ...row,
+      id: Number(row.id),
+      projectId: Number(row.projectId),
+      workFileId: Number(row.workFileId),
+      pendingProposalCount: Number(row.pendingProposalCount || 0),
+      draftMinutesCount: Number(row.draftMinutesCount || 0),
+    }));
 
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       decisions,
       draftCommunications,
+      meetingAttention,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };
@@ -440,7 +482,11 @@ export const comoNextRouter = router({
           m.starts_at AS startsAt, m.ends_at AS endsAt, m.location,
           m.outcome_summary AS outcomeSummary, party.display_name AS partyName,
           (SELECT COUNT(*) FROM como_next_meeting_participants mp WHERE mp.meeting_id = m.id) AS participantCount,
-          (SELECT COUNT(*) FROM como_next_meeting_agenda_items ai WHERE ai.meeting_id = m.id) AS agendaItemCount
+          (SELECT COUNT(*) FROM como_next_meeting_agenda_items ai WHERE ai.meeting_id = m.id) AS agendaItemCount,
+          (SELECT COUNT(*) FROM como_next_meeting_agenda_items ai WHERE ai.meeting_id = m.id AND ai.is_required = 1 AND ai.is_checked = 0) AS unresolvedRequiredCount,
+          (SELECT COUNT(*) FROM como_next_meeting_sources source_row WHERE source_row.meeting_id = m.id) AS sourceCount,
+          (SELECT COUNT(*) FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id = m.id AND proposal.review_status = 'pending') AS pendingProposalCount,
+          (SELECT minutes.minutes_status FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id = m.id ORDER BY minutes.version DESC LIMIT 1) AS latestMinutesStatus
         FROM como_next_meetings m
         LEFT JOIN como_next_project_parties pp ON pp.id = m.project_party_id AND pp.project_id = m.project_id
         LEFT JOIN como_next_parties party ON party.id = pp.party_id
@@ -488,6 +534,9 @@ export const comoNextRouter = router({
           id: Number(row.id),
           participantCount: Number(row.participantCount || 0),
           agendaItemCount: Number(row.agendaItemCount || 0),
+          unresolvedRequiredCount: Number(row.unresolvedRequiredCount || 0),
+          sourceCount: Number(row.sourceCount || 0),
+          pendingProposalCount: Number(row.pendingProposalCount || 0),
         })),
         communications,
         parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
@@ -603,6 +652,116 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return resolveDecisionCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  getMeetingWorkspace: protectedProcedure
+    .input(z.object({ meetingId: z.number().int().positive() }))
+    .query(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return getMeetingWorkspace(input.meetingId, ctx.user.id);
+    }),
+
+  createMeeting: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      title: z.string().trim().min(3).max(1000),
+      objective: z.string().trim().max(10_000).optional().nullable(),
+      meetingType: z.string().trim().max(80).optional().nullable(),
+      meetingFormat: z.string().trim().max(80).optional().nullable(),
+      startsAt: z.string().optional().nullable(),
+      endsAt: z.string().optional().nullable(),
+      location: z.string().trim().max(1000).optional().nullable(),
+      participantNames: z.array(z.string().trim().min(2).max(255)).max(50).optional(),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return createMeetingCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  addMeetingAgendaItem: protectedProcedure
+    .input(z.object({
+      meetingId: z.number().int().positive(),
+      itemKind: z.enum(["question", "check", "decision", "commitment", "risk", "note"]),
+      category: z.string().trim().max(255).optional().nullable(),
+      promptAr: z.string().trim().min(3).max(10_000),
+      briefingNote: z.string().trim().max(10_000).optional().nullable(),
+      desiredOutcome: z.string().trim().max(10_000).optional().nullable(),
+      audience: z.enum(["discuss", "internal_only", "reference"]).default("discuss"),
+      priority: z.enum(["critical", "high", "normal"]).default("normal"),
+      isRequired: z.boolean().default(false),
+      sourceEvidence: z.string().trim().max(10_000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return addMeetingAgendaItemCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  updateMeetingAgendaItem: protectedProcedure
+    .input(z.object({ agendaItemId: z.number().int().positive(), response: z.string().trim().max(20_000).optional().nullable(), isChecked: z.boolean() }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return updateMeetingAgendaItemCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  recordMeetingConsent: protectedProcedure
+    .input(z.object({
+      meetingId: z.number().int().positive(),
+      consentScope: z.enum(["recording", "transcription"]),
+      consentStatus: z.enum(["granted", "declined", "not_required"]),
+      consentBasis: z.string().trim().max(5000).optional().nullable(),
+      evidenceReference: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return recordMeetingConsentCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  addMeetingSource: protectedProcedure
+    .input(z.object({
+      meetingId: z.number().int().positive(),
+      sourceKind: z.enum(["preparation", "notes", "transcript"]),
+      visibility: z.enum(["meeting_record", "internal_only"]).default("meeting_record"),
+      title: z.string().trim().min(3).max(1000),
+      rawText: z.string().trim().min(10).max(500_000),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return addMeetingSourceCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  analyzeMeetingSource: protectedProcedure
+    .input(z.object({ sourceId: z.number().int().positive(), requestKey: z.string().trim().min(8).max(128) }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return analyzeMeetingSourceCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  reviewMeetingProposal: protectedProcedure
+    .input(z.object({
+      proposalId: z.number().int().positive(),
+      decision: z.enum(["apply", "dismiss"]),
+      applyAs: meetingProposalTargetSchema.optional(),
+      reviewNote: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewMeetingProposalCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  prepareMeetingMinutes: protectedProcedure
+    .input(z.object({ meetingId: z.number().int().positive(), summary: z.string().trim().min(10).max(50_000) }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return prepareMeetingMinutesCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  reviewMeetingMinutes: protectedProcedure
+    .input(z.object({ minutesId: z.number().int().positive(), decision: z.enum(["approve", "reject"]), reviewNote: z.string().trim().max(5000).optional().nullable() }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewMeetingMinutesCommand({ userId: ctx.user.id, ...input });
     }),
 
   closeWorkFile: protectedProcedure

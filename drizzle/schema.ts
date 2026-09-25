@@ -3192,6 +3192,111 @@ export const comoNextMeetingAgendaItems = mysqlTable("como_next_meeting_agenda_i
   index("como_next_meeting_agenda_order_idx").on(table.meetingId, table.sortOrder),
 ]);
 
+export const comoNextMeetingConsents = mysqlTable("como_next_meeting_consents", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  consentScope: mysqlEnum("consent_scope", ["recording", "transcription"]).notNull(),
+  consentStatus: mysqlEnum("consent_status", ["pending", "granted", "declined", "not_required"]).notNull().default("pending"),
+  consentBasis: text("consent_basis"),
+  evidenceReference: text("evidence_reference"),
+  recordedByUserId: int("recorded_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  recordedAt: timestamp("recorded_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_consent_scope_uq").on(table.meetingId, table.consentScope),
+  uniqueIndex("como_next_meeting_consent_source_uq").on(table.sourceSystem, table.sourceRecordId),
+]);
+
+export const comoNextMeetingSources = mysqlTable("como_next_meeting_sources", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  sourceKind: mysqlEnum("source_kind", ["preparation", "notes", "transcript"]).notNull(),
+  visibility: mysqlEnum("visibility", ["meeting_record", "internal_only"]).notNull().default("meeting_record"),
+  title: varchar("title", { length: 1000 }).notNull(),
+  rawText: longtext("raw_text").notNull(),
+  sourceDocumentId: bigint("source_document_id", { mode: "number" }).references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  consentId: bigint("consent_id", { mode: "number" }).references(() => comoNextMeetingConsents.id, { onDelete: "restrict" }),
+  sourceSha256: varchar("source_sha256", { length: 64 }).notNull(),
+  sourceStatus: mysqlEnum("source_status", ["captured", "ready_for_analysis", "archived"]).notNull().default("captured"),
+  createdByUserId: int("created_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_source_external_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_meeting_source_meeting_idx").on(table.meetingId, table.sourceStatus, table.createdAt),
+]);
+
+export const comoNextMeetingAnalyses = mysqlTable("como_next_meeting_analyses", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  sourceId: bigint("source_id", { mode: "number" }).notNull().references(() => comoNextMeetingSources.id, { onDelete: "restrict" }),
+  analysisType: mysqlEnum("analysis_type", ["preparation", "evidence_extraction"]).notNull(),
+  analysisStatus: mysqlEnum("analysis_status", ["draft", "reviewed", "applied", "rejected"]).notNull().default("draft"),
+  summary: longtext("summary").notNull(),
+  openQuestionsJson: longtext("open_questions_json"),
+  modelId: varchar("model_id", { length: 120 }).notNull(),
+  evidenceBound: tinyint("evidence_bound").notNull().default(1),
+  requestKey: varchar("request_key", { length: 128 }).notNull(),
+  requestedByUserId: int("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_analysis_request_uq").on(table.requestKey),
+  index("como_next_meeting_analysis_meeting_idx").on(table.meetingId, table.analysisStatus, table.createdAt),
+]);
+
+export const comoNextMeetingProposals = mysqlTable("como_next_meeting_proposals", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  analysisId: bigint("analysis_id", { mode: "number" }).notNull().references(() => comoNextMeetingAnalyses.id, { onDelete: "restrict" }),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  ordinal: int("ordinal").notNull(),
+  proposalKind: mysqlEnum("proposal_kind", ["question", "check", "decision", "action", "external_commitment", "risk", "note"]).notNull(),
+  title: varchar("title", { length: 1000 }).notNull(),
+  content: longtext("content"),
+  assignedTo: varchar("assigned_to", { length: 255 }),
+  dueAt: timestamp("due_at", { mode: "string" }),
+  evidenceExcerpt: text("evidence_excerpt").notNull(),
+  audience: mysqlEnum("audience", ["meeting_record", "internal_only"]).notNull().default("meeting_record"),
+  priority: mysqlEnum("priority", ["critical", "high", "normal"]).notNull().default("normal"),
+  isRequired: tinyint("is_required").notNull().default(0),
+  reviewStatus: mysqlEnum("review_status", ["pending", "applied", "dismissed"]).notNull().default("pending"),
+  appliedAs: mysqlEnum("applied_as", ["agenda_item", "decision", "action", "external_commitment", "risk", "note", "communication_draft"]),
+  targetId: bigint("target_id", { mode: "number" }),
+  reviewNote: text("review_note"),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_proposal_order_uq").on(table.analysisId, table.ordinal),
+  index("como_next_meeting_proposal_review_idx").on(table.meetingId, table.reviewStatus, table.createdAt),
+]);
+
+export const comoNextMeetingMinutes = mysqlTable("como_next_meeting_minutes", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  version: int("version").notNull(),
+  minutesStatus: mysqlEnum("minutes_status", ["draft", "approved", "rejected", "superseded"]).notNull().default("draft"),
+  summary: longtext("summary").notNull(),
+  content: longtext("content").notNull(),
+  preparedByUserId: int("prepared_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewNote: text("review_note"),
+  approvedAt: timestamp("approved_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_minutes_version_uq").on(table.meetingId, table.version),
+  index("como_next_meeting_minutes_status_idx").on(table.meetingId, table.minutesStatus, table.version),
+]);
+
 // Project-scoped correspondence register. Historical messages are promoted from
 // verified work memory; new outbound content remains a draft until the owner
 // explicitly approves it. This table never sends email by itself.

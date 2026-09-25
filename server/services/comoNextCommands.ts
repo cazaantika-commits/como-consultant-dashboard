@@ -4,6 +4,7 @@ import {
   comoNextActions,
   comoNextCommunications,
   comoNextDecisions,
+  comoNextMeetings,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
   comoNextWorkFiles,
@@ -88,7 +89,7 @@ export async function requireProjectAccess(
   return { project, role: access.role };
 }
 
-async function appendEvent(
+export async function appendEvent(
   tx: any,
   input: {
     userId: number;
@@ -575,6 +576,34 @@ export async function closeWorkFileCommand(input: {
     .where(eq(comoNextCommunications.workFileId, input.workFileId));
   if (communications.some(communication => ["draft", "approved_for_send"].includes(communication.status))) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف وفيه مسودة أو مراسلة معتمدة لم يُسجل إرسالها" });
+  }
+  const meetings = await db
+    .select({ id: comoNextMeetings.id, status: comoNextMeetings.meetingStatus })
+    .from(comoNextMeetings)
+    .where(eq(comoNextMeetings.workFileId, input.workFileId));
+  if (meetings.some(meeting => ["planned", "confirmed"].includes(meeting.status))) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف وفيه اجتماع لم يُغلق بمحضر مراجَع" });
+  }
+  if (meetings.length) {
+    const meetingIds = meetings.map(meeting => meeting.id);
+    const pendingProposalResult = await db.execute(sql`
+      SELECT COUNT(*) AS pendingCount FROM como_next_meeting_proposals
+      WHERE meeting_id IN (${sql.join(meetingIds.map(id => sql`${id}`), sql`, `)}) AND review_status = 'pending'
+    `);
+    const proposalRows = Array.isArray(pendingProposalResult) && Array.isArray(pendingProposalResult[0]) ? pendingProposalResult[0] : pendingProposalResult;
+    if (Number((proposalRows as any[])[0]?.pendingCount || 0) > 0) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف قبل مراجعة مقترحات الاجتماعات" });
+    }
+    const draftMinutesResult = await db.execute(sql`
+      SELECT COUNT(*) AS draftCount
+      FROM como_next_meeting_minutes minutes
+      JOIN como_next_meetings meeting ON meeting.id = minutes.meeting_id
+      WHERE meeting.work_file_id = ${input.workFileId} AND minutes.minutes_status = 'draft'
+    `);
+    const minuteRows = Array.isArray(draftMinutesResult) && Array.isArray(draftMinutesResult[0]) ? draftMinutesResult[0] : draftMinutesResult;
+    if (Number((minuteRows as any[])[0]?.draftCount || 0) > 0) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف وفيه مسودة محضر تنتظر المراجعة" });
+    }
   }
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {
