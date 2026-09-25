@@ -3191,3 +3191,51 @@ export const comoNextMeetingAgendaItems = mysqlTable("como_next_meeting_agenda_i
   uniqueIndex("como_next_meeting_agenda_source_uq").on(table.sourceSystem, table.sourceRecordId),
   index("como_next_meeting_agenda_order_idx").on(table.meetingId, table.sortOrder),
 ]);
+
+// Project-scoped correspondence register. Historical messages are promoted from
+// verified work memory; new outbound content remains a draft until the owner
+// explicitly approves it. This table never sends email by itself.
+export const comoNextCommunications = mysqlTable("como_next_communications", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  projectPartyId: int("project_party_id"),
+  sourceMemoryId: bigint("source_memory_id", { mode: "number" }),
+  channel: mysqlEnum("channel", ["email", "whatsapp", "letter", "phone_note", "internal"]).notNull().default("email"),
+  direction: mysqlEnum("direction", ["inbound", "outbound", "internal"]).notNull(),
+  communicationStatus: mysqlEnum("communication_status", ["received", "draft", "approved_for_send", "sent", "cancelled", "archived"]).notNull(),
+  approvalStatus: mysqlEnum("approval_status", ["not_required", "pending", "approved", "rejected"]).notNull().default("not_required"),
+  subject: varchar("subject", { length: 1000 }).notNull(),
+  body: longtext("body").notNull(),
+  fromText: text("from_text"),
+  toText: text("to_text"),
+  ccText: text("cc_text"),
+  externalMessageRef: varchar("external_message_ref", { length: 500 }),
+  evidenceReference: text("evidence_reference"),
+  reviewNote: text("review_note"),
+  approvedByUserId: int("approved_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  approvedAt: timestamp("approved_at", { mode: "string" }),
+  occurredAt: timestamp("occurred_at", { mode: "string" }).notNull(),
+  sentAt: timestamp("sent_at", { mode: "string" }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_communication_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  uniqueIndex("como_next_communication_memory_uq").on(table.sourceMemoryId),
+  index("como_next_communication_file_time_idx").on(table.workFileId, table.occurredAt),
+  index("como_next_communication_project_status_idx").on(table.projectId, table.communicationStatus, table.occurredAt),
+  foreignKey({
+    name: "como_next_communication_work_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+  foreignKey({
+    name: "como_next_communication_project_party_fk",
+    columns: [table.projectId, table.projectPartyId],
+    foreignColumns: [comoNextProjectParties.projectId, comoNextProjectParties.id],
+  }).onDelete("restrict"),
+]);

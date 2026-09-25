@@ -14,6 +14,8 @@ const promotionMigration = readFileSync(new URL("../drizzle/0079_como_next_opera
 const documentMigration = readFileSync(new URL("../drizzle/0080_como_next_documents.sql", import.meta.url), "utf8");
 const documentChunkMigration = readFileSync(new URL("../drizzle/0081_como_next_document_chunks.sql", import.meta.url), "utf8");
 const decisionMigration = readFileSync(new URL("../drizzle/0082_como_next_decision_register.sql", import.meta.url), "utf8");
+const communicationLoader = readFileSync(new URL("../scripts/comoFollowupPromoteCommunications.ts", import.meta.url), "utf8");
+const communicationMigration = readFileSync(new URL("../drizzle/0083_como_next_communications.sql", import.meta.url), "utf8");
 const mapping = JSON.parse(readFileSync(new URL("../migration/como-followup-candidate-mapping.json", import.meta.url), "utf8"));
 const summary = JSON.parse(readFileSync(new URL("../migration-results/COMO-FUD-2026-09-25-02/dry-run-summary.json", import.meta.url), "utf8"));
 const conflicts = JSON.parse(readFileSync(new URL("../migration-results/COMO-FUD-2026-09-25-02/conflicts.json", import.meta.url), "utf8"));
@@ -201,5 +203,15 @@ describe("Follow-up Desk importer safety boundary", () => {
     expect(comoNextRouterSource).not.toContain("document_row.storage_url AS storageUrl");
     expect(comoNextPageSource).toContain("href={document.downloadPath}");
     expect(comoNextPageSource).not.toContain("href={document.storageUrl}");
+  });
+
+  it("promotes correspondence only into the clean register and never sends externally", () => {
+    expect(communicationLoader).toContain('const apply = process.argv.includes("--apply")');
+    expect(communicationLoader).toContain("directCommunicationTypes");
+    expect(communicationLoader).toContain("INSERT IGNORE INTO como_next_communications");
+    expect(communicationLoader).toContain("externalSideEffects: 0");
+    expect(communicationLoader).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner|invokeLLM|createTask|schedule/i);
+    expect(communicationMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
+    expect([...communicationMigration.matchAll(/CREATE TABLE `([^`]+)`/g)].map(match => match[1])).toEqual(["como_next_communications"]);
   });
 });

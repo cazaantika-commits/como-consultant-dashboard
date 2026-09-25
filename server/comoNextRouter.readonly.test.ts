@@ -34,6 +34,7 @@ describe("COMO Next read-only router", () => {
     const overview = await caller.getOverview();
     expect(overview.workFiles).toEqual([]);
     expect(overview.decisions).toEqual([]);
+    expect(overview.draftCommunications).toEqual([]);
     expect(overview.today.summary.dueToday).toBe(0);
   });
 
@@ -48,6 +49,20 @@ describe("COMO Next read-only router", () => {
     });
     const detail = await caller.getWorkFile({ workFileId: overview.decisions[0].workFileId });
     expect(detail.decisions.some(decision => decision.id === overview.decisions[0].id)).toBe(true);
+  });
+
+  it("exposes only active draft communications in Today while retaining full work-file history", async () => {
+    const caller = comoNextRouter.createCaller(context(1));
+    const overview = await caller.getOverview();
+    expect(overview.draftCommunications).toHaveLength(1);
+    expect(overview.draftCommunications[0]).toMatchObject({
+      communicationStatus: "draft",
+      approvalStatus: "pending",
+      projectId: 1,
+    });
+    const detail = await caller.getWorkFile({ workFileId: overview.draftCommunications[0].workFileId });
+    expect(detail.communications.some(communication => communication.id === overview.draftCommunications[0].id)).toBe(true);
+    expect(detail.communications.some(communication => communication.communicationStatus === "sent")).toBe(true);
   });
 
   it("exposes the completed transfer review to the system owner", async () => {
@@ -65,7 +80,7 @@ describe("COMO Next read-only router", () => {
     });
     expect(review.projects.find(project => project.sourceRecordId === "1")).toMatchObject({ targetId: 1, stageStatus: "staged" });
     expect(review.projects.find(project => project.sourceRecordId === "30001")).toMatchObject({ targetId: null, stageStatus: "skipped" });
-    expect(review.promotion).toMatchObject({ workFiles: 11, actions: 78, decisions: 1, memoryEntries: 147, meetings: 4, documentsStored: 34, documentLinks: 37, documentChunks: 20 });
-    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 1100, externalSideEffects: 0, secretsImported: 0 });
+    expect(review.promotion).toMatchObject({ workFiles: 11, actions: 78, decisions: 1, communications: 76, memoryEntries: 147, meetings: 4, documentsStored: 34, documentLinks: 37, documentChunks: 20 });
+    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 1176, externalSideEffects: 0, secretsImported: 0 });
   });
 });

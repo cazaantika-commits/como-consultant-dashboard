@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
   comoNextActions,
+  comoNextCommunications,
   comoNextDecisions,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
@@ -20,6 +21,7 @@ export type ComoNextActionStatus =
   | "cancelled";
 export type ComoNextDecisionStatus = "required" | "approved" | "rejected" | "deferred" | "superseded";
 export type ComoNextDecisionAuthority = "abdulrahman" | "wael" | "sheikh_issa" | "joint" | "other";
+export type ComoNextCommunicationChannel = "email" | "whatsapp" | "letter" | "phone_note" | "internal";
 
 const terminalActionStatuses = new Set<ComoNextActionStatus>(["verified", "cancelled"]);
 const allowedTransitions: Record<ComoNextActionStatus, ReadonlySet<ComoNextActionStatus>> = {
@@ -407,6 +409,141 @@ export async function resolveDecisionCommand(input: {
   });
 }
 
+export async function createCommunicationDraftCommand(input: {
+  userId: number;
+  workFileId: number;
+  channel: ComoNextCommunicationChannel;
+  subject: string;
+  body: string;
+  toText?: string | null;
+  ccText?: string | null;
+  idempotencyKey?: string;
+}) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [workFile] = await db
+    .select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
+    .from(comoNextWorkFiles)
+    .where(eq(comoNextWorkFiles.id, input.workFileId))
+    .limit(1);
+  if (!workFile) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على ملف العمل" });
+  await requireProjectAccess(db, workFile.projectId, input.userId, "write");
+  if (["closed", "cancelled"].includes(workFile.status)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إنشاء مسودة في ملف مغلق" });
+  }
+
+  return db.transaction(async tx => {
+    if (input.idempotencyKey) {
+      const [existing] = await tx
+        .select({ id: comoNextCommunications.id })
+        .from(comoNextCommunications)
+        .where(and(eq(comoNextCommunications.sourceSystem, "como_next"), eq(comoNextCommunications.sourceRecordId, input.idempotencyKey)))
+        .limit(1);
+      if (existing) return { id: existing.id, replayed: true as const };
+    }
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const result = await tx.insert(comoNextCommunications).values({
+      userId: input.userId,
+      projectId: workFile.projectId,
+      workFileId: workFile.id,
+      channel: input.channel,
+      direction: input.channel === "internal" ? "internal" : "outbound",
+      communicationStatus: "draft",
+      approvalStatus: "pending",
+      subject: input.subject.trim(),
+      body: input.body.trim(),
+      toText: input.toText?.trim() || null,
+      ccText: input.ccText?.trim() || null,
+      occurredAt: now,
+      sourceSystem: "como_next",
+      sourceRecordId: input.idempotencyKey ?? null,
+    });
+    const id = Number(result[0].insertId);
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: workFile.projectId,
+      workFileId: workFile.id,
+      eventType: "communication_draft_created",
+      summary: `إنشاء مسودة مراسلة: ${input.subject.trim()}`,
+      payload: { communicationId: id, channel: input.channel, externalSideEffect: false },
+      idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
+    });
+    return { id, replayed: false as const };
+  });
+}
+
+export async function reviewCommunicationDraftCommand(input: {
+  userId: number;
+  communicationId: number;
+  decision: "approve" | "reject";
+  reviewNote?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [communication] = await db.select().from(comoNextCommunications).where(eq(comoNextCommunications.id, input.communicationId)).limit(1);
+  if (!communication) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المراسلة" });
+  await requireProjectAccess(db, communication.projectId, input.userId, "write");
+  if (communication.communicationStatus !== "draft" || communication.approvalStatus !== "pending") {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "هذه المسودة لم تعد بانتظار المراجعة" });
+  }
+  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  const approved = input.decision === "approve";
+  return db.transaction(async tx => {
+    await tx.update(comoNextCommunications).set({
+      communicationStatus: approved ? "approved_for_send" : "cancelled",
+      approvalStatus: approved ? "approved" : "rejected",
+      reviewNote: input.reviewNote?.trim() || null,
+      approvedByUserId: input.userId,
+      approvedAt: now,
+    }).where(eq(comoNextCommunications.id, input.communicationId));
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: communication.projectId,
+      workFileId: communication.workFileId,
+      eventType: approved ? "communication_draft_approved" : "communication_draft_rejected",
+      summary: `${approved ? "اعتماد" : "رفض"} مسودة المراسلة: ${communication.subject}`,
+      payload: { communicationId: communication.id, externalSideEffect: false },
+    });
+    return { success: true, externalSideEffect: false };
+  });
+}
+
+export async function recordCommunicationSentCommand(input: {
+  userId: number;
+  communicationId: number;
+  evidenceReference: string;
+  externalMessageRef?: string | null;
+  sentAt?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [communication] = await db.select().from(comoNextCommunications).where(eq(comoNextCommunications.id, input.communicationId)).limit(1);
+  if (!communication) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المراسلة" });
+  await requireProjectAccess(db, communication.projectId, input.userId, "write");
+  if (communication.communicationStatus !== "approved_for_send" || communication.approvalStatus !== "approved") {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تسجيل الإرسال قبل اعتماد المسودة" });
+  }
+  const sentAt = toSqlUtcTimestamp(input.sentAt) ?? new Date().toISOString().slice(0, 19).replace("T", " ");
+  return db.transaction(async tx => {
+    await tx.update(comoNextCommunications).set({
+      communicationStatus: "sent",
+      sentAt,
+      occurredAt: sentAt,
+      evidenceReference: input.evidenceReference.trim(),
+      externalMessageRef: input.externalMessageRef?.trim() || null,
+    }).where(eq(comoNextCommunications.id, input.communicationId));
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: communication.projectId,
+      workFileId: communication.workFileId,
+      eventType: "communication_sent_recorded",
+      summary: `تسجيل دليل إرسال المراسلة: ${communication.subject}`,
+      payload: { communicationId: communication.id, evidenceReference: input.evidenceReference.trim(), externalSideEffect: false },
+    });
+    return { success: true, externalSideEffect: false };
+  });
+}
+
 export async function closeWorkFileCommand(input: {
   userId: number;
   workFileId: number;
@@ -431,6 +568,13 @@ export async function closeWorkFileCommand(input: {
     .where(eq(comoNextDecisions.workFileId, input.workFileId));
   if (decisions.some(decision => ["required", "deferred"].includes(decision.status))) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف قبل حسم القرارات المطلوبة" });
+  }
+  const communications = await db
+    .select({ status: comoNextCommunications.communicationStatus })
+    .from(comoNextCommunications)
+    .where(eq(comoNextCommunications.workFileId, input.workFileId));
+  if (communications.some(communication => ["draft", "approved_for_send"].includes(communication.status))) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف وفيه مسودة أو مراسلة معتمدة لم يُسجل إرسالها" });
   }
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {

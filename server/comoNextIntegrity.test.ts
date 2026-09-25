@@ -5,6 +5,7 @@ import { assertActionTransition, deriveAttentionAt, toSqlUtcTimestamp } from "./
 
 const migration = readFileSync(new URL("../drizzle/0077_como_next_executive_core.sql", import.meta.url), "utf8");
 const decisionMigration = readFileSync(new URL("../drizzle/0082_como_next_decision_register.sql", import.meta.url), "utf8");
+const communicationMigration = readFileSync(new URL("../drizzle/0083_como_next_communications.sql", import.meta.url), "utf8");
 const commandSource = readFileSync(new URL("./services/comoNextCommands.ts", import.meta.url), "utf8");
 
 describe("COMO Next command invariants", () => {
@@ -47,5 +48,15 @@ describe("COMO Next additive migration", () => {
     expect(decisionMigration).toContain("FOREIGN KEY (`project_id`,`work_file_id`) REFERENCES `como_next_work_files` (`project_id`,`id`)");
     expect(decisionMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
     expect(commandSource).toContain("لا يمكن إغلاق الملف قبل حسم القرارات المطلوبة");
+  });
+
+  it("adds a project-scoped communication register without any send capability", () => {
+    expect(communicationMigration).toContain("CREATE TABLE `como_next_communications`");
+    expect(communicationMigration).toContain("FOREIGN KEY (`project_id`,`work_file_id`) REFERENCES `como_next_work_files`(`project_id`,`id`)");
+    expect(communicationMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
+    expect(commandSource).toContain("externalSideEffect: false");
+    expect(commandSource).toContain("لا يمكن تسجيل الإرسال قبل اعتماد المسودة");
+    expect(commandSource).toContain("لا يمكن إغلاق الملف وفيه مسودة أو مراسلة معتمدة لم يُسجل إرسالها");
+    expect(commandSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
   });
 });

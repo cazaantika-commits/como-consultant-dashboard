@@ -39,11 +39,13 @@ import {
   LockKeyhole,
   Loader2,
   LogIn,
+  Mail,
   MessagesSquare,
   Paperclip,
   Plus,
   RotateCcw,
   Scale,
+  SendHorizontal,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -56,6 +58,7 @@ type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
 type DecisionStatus = "required" | "approved" | "rejected" | "deferred" | "superseded";
 type DecisionAuthority = "abdulrahman" | "wael" | "sheikh_issa" | "joint" | "other";
+type CommunicationChannel = "email" | "whatsapp" | "letter" | "phone_note" | "internal";
 
 const priorityMeta: Record<Priority, { label: string; className: string }> = {
   normal: { label: "عادي", className: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -71,6 +74,23 @@ const workFileStatusMeta: Record<string, { label: string; className: string }> =
   ready_to_close: { label: "جاهز للإغلاق", className: "bg-cyan-50 text-cyan-800 border-cyan-200" },
   closed: { label: "مغلق", className: "bg-slate-100 text-slate-600 border-slate-200" },
   cancelled: { label: "ملغي", className: "bg-slate-100 text-slate-500 border-slate-200" },
+};
+
+const communicationStatusMeta: Record<string, { label: string; className: string }> = {
+  received: { label: "وارد", className: "border-sky-200 bg-sky-50 text-sky-800" },
+  draft: { label: "مسودة تنتظر المراجعة", className: "border-amber-200 bg-amber-50 text-amber-800" },
+  approved_for_send: { label: "معتمدة — لم يُسجل إرسالها", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  sent: { label: "مرسلة", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  cancelled: { label: "ملغاة", className: "border-slate-200 bg-slate-100 text-slate-600" },
+  archived: { label: "مؤرشفة", className: "border-slate-200 bg-slate-50 text-slate-600" },
+};
+
+const communicationChannelLabel: Record<CommunicationChannel, string> = {
+  email: "بريد إلكتروني",
+  whatsapp: "واتساب",
+  letter: "خطاب",
+  phone_note: "ملاحظة اتصال",
+  internal: "مراسلة داخلية",
 };
 
 const actionStatusMeta: Record<ActionStatus, { label: string; className: string }> = {
@@ -424,6 +444,72 @@ function ResolveDecisionDialog({ decision, onUpdated }: { decision: any; onUpdat
   </Dialog>;
 }
 
+function NewCommunicationDraftDialog({ workFileId, onCreated }: { workFileId: number; onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [channel, setChannel] = useState<CommunicationChannel>("email");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [toText, setToText] = useState("");
+  const [ccText, setCcText] = useState("");
+  const mutation = trpc.comoNext.createCommunicationDraft.useMutation();
+  const submit = async () => {
+    if (!subject.trim() || !body.trim()) { toast.error("أدخل عنوان المسودة ونصها"); return; }
+    try {
+      await mutation.mutateAsync({ workFileId, channel, subject: subject.trim(), body: body.trim(), toText: toText.trim() || undefined, ccText: ccText.trim() || undefined, idempotencyKey: crypto.randomUUID() });
+      toast.success("حُفظت المسودة للمراجعة — لم تُرسل");
+      setOpen(false); setSubject(""); setBody(""); setToText(""); setCcText("");
+      onCreated();
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ المسودة"); }
+  };
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button size="sm" variant="outline" className="rounded-xl border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"><Mail className="ms-1.5 h-4 w-4" />مسودة جديدة</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-2xl rounded-3xl bg-[#fdfcf9]">
+      <DialogHeader className="text-right"><DialogTitle>مسودة مراسلة</DialogTitle><DialogDescription>هذه الخطوة تحفظ المسودة داخل الملف فقط. لا يوجد إرسال أو اتصال خارجي.</DialogDescription></DialogHeader>
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label>القناة</Label><Select value={channel} onValueChange={value => setChannel(value as CommunicationChannel)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(communicationChannelLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-2"><Label>إلى</Label><Input value={toText} onChange={event => setToText(event.target.value)} className="h-11 rounded-xl bg-white" placeholder="الاسم أو البريد" /></div></div>
+        <div className="grid gap-2"><Label>نسخة إلى</Label><Input value={ccText} onChange={event => setCcText(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>العنوان</Label><Input value={subject} onChange={event => setSubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>نص المسودة</Label><Textarea value={body} onChange={event => setBody(event.target.value)} className="min-h-52 rounded-xl bg-white" /></div>
+      </div>
+      <DialogFooter className="gap-2 sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">حفظ للمراجعة</Button><Button variant="outline" onClick={() => setOpen(false)} className="rounded-xl bg-white">إلغاء</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
+function CommunicationControls({ communication, onUpdated }: { communication: any; onUpdated: () => void }) {
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [sentOpen, setSentOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [externalRef, setExternalRef] = useState("");
+  const review = trpc.comoNext.reviewCommunicationDraft.useMutation();
+  const recordSent = trpc.comoNext.recordCommunicationSent.useMutation();
+  const decide = async (decision: "approve" | "reject") => {
+    try {
+      await review.mutateAsync({ communicationId: communication.id, decision, reviewNote: note.trim() || undefined });
+      toast.success(decision === "approve" ? "اعتمدت المسودة — لم تُرسل" : "رُفضت المسودة");
+      setReviewOpen(false); setNote(""); onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر تحديث المسودة"); }
+  };
+  const markSent = async () => {
+    if (!evidence.trim()) { toast.error("أدخل دليل الإرسال"); return; }
+    try {
+      await recordSent.mutateAsync({ communicationId: communication.id, evidenceReference: evidence.trim(), externalMessageRef: externalRef.trim() || undefined });
+      toast.success("تم تسجيل دليل الإرسال");
+      setSentOpen(false); setEvidence(""); setExternalRef(""); onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر تسجيل الإرسال"); }
+  };
+  if (communication.communicationStatus === "draft") return <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-amber-700 hover:bg-amber-800">مراجعة المسودة</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-2xl rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>{communication.subject}</DialogTitle><DialogDescription>اعتماد المسودة لا يرسلها. الإرسال الخارجي غير مفعّل في هذه المرحلة.</DialogDescription></DialogHeader><div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"><div className="mb-3 grid gap-1 text-[11px] text-slate-500">{communication.toText ? <p>إلى: <bdi dir="ltr">{communication.toText}</bdi></p> : null}{communication.ccText ? <p>نسخة: <bdi dir="ltr">{communication.ccText}</bdi></p> : null}</div><p className="whitespace-pre-wrap text-xs leading-7 text-slate-700">{communication.body}</p></div><div className="grid gap-2"><Label>ملاحظة المراجعة — اختياري</Label><Textarea value={note} onChange={event => setNote(event.target.value)} className="min-h-24 rounded-xl bg-white" /></div><DialogFooter className="gap-2 sm:justify-start"><Button onClick={() => decide("approve")} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">اعتماد دون إرسال</Button><Button variant="outline" onClick={() => decide("reject")} className="rounded-xl border-rose-200 bg-rose-50 text-rose-700">رفض المسودة</Button></DialogFooter></DialogContent>
+  </Dialog>;
+  if (communication.communicationStatus === "approved_for_send") return <Dialog open={sentOpen} onOpenChange={setSentOpen}>
+    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-violet-700 hover:bg-violet-800">تسجيل الإرسال</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-lg rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>تسجيل إرسال تم خارج COMO</DialogTitle><DialogDescription>هذا الزر لا يرسل الرسالة؛ يسجل فقط دليلًا على إرسالها عبر القناة الخارجية.</DialogDescription></DialogHeader><div className="grid gap-4"><div className="grid gap-2"><Label>دليل الإرسال</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-24 rounded-xl bg-white" placeholder="رقم الرسالة في Sent أو مرجع موثق" /></div><div className="grid gap-2"><Label>مرجع خارجي — اختياري</Label><Input value={externalRef} onChange={event => setExternalRef(event.target.value)} className="h-11 rounded-xl bg-white" /></div></div><DialogFooter className="sm:justify-start"><Button onClick={markSent} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">حفظ دليل الإرسال</Button></DialogFooter></DialogContent>
+  </Dialog>;
+  return null;
+}
+
 function ActionStatusDialog({ action, onUpdated }: { action: any; onUpdated: () => void }) {
   const [open, setOpen] = useState(false);
   const [evidence, setEvidence] = useState("");
@@ -517,6 +603,13 @@ function TodayDecisionCard({ item, onOpen }: { item: any; onOpen: (workFileId: n
   </button>;
 }
 
+function TodayCommunicationCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
+  const meta = communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived;
+  return <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-sky-100 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div><h4 className="text-sm font-black leading-6 text-slate-900">{item.subject}</h4>{item.toText ? <p className="mt-1 truncate text-xs text-slate-500">إلى: <bdi dir="ltr">{item.toText}</bdi></p> : null}<p className="mt-2 text-[11px] font-semibold text-[#1e6478]">{item.projectName} · {item.workFileTitle}</p></div><ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-sky-600" /></div>
+  </button>;
+}
+
 function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => void }) {
   return (
     <button onClick={() => onOpen(file.id)} className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 text-right shadow-sm transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
@@ -541,6 +634,7 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
   const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;
+  const hasPendingCommunications = data?.communications.some((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) ?? false;
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -557,6 +651,10 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
               <div className="space-y-3">{data.decisions.length === 0 ? <EmptyState title="لا يوجد قرار مطلوب" description="أضف قرارًا فقط عندما يحتاج الملف حسمًا، لا لمجرد وجود إجراء." /> : data.decisions.map((decision: any) => { const meta = decisionStatusMeta[decision.decisionStatus as DecisionStatus]; return <Card key={decision.id} className="rounded-2xl border-rose-100 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[decision.decisionAuthority as DecisionAuthority]}</Badge></div><h4 className="font-black leading-6 text-slate-900">{decision.title}</h4><p className="mt-2 text-xs font-semibold leading-6 text-slate-700">{decision.question}</p>{decision.contextSummary ? <p className="mt-2 text-xs leading-6 text-slate-500">{decision.contextSummary}</p> : null}{decision.recommendation ? <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs leading-6 text-cyan-900"><span className="font-bold">توصية المكتب:</span> {decision.recommendation}</div> : null}{decision.decisionText ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">القرار المسجل:</span> {decision.decisionText}</div> : null}</div>{!isClosed && ["required", "deferred"].includes(decision.decisionStatus) ? <ResolveDecisionDialog decision={decision} onUpdated={onChanged} /> : null}</div>{decision.dueAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(decision.dueAt)}</bdi></div> : null}</Card>; })}</div>
             </section>
             <section>
+              <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Mail className="h-5 w-5 text-sky-700" /><div><h3 className="text-base font-black text-slate-900">المراسلات</h3><p className="text-xs text-slate-500">الوارد، المرسل، والمسودات في سياق الملف. لا إرسال دون اعتماد صريح.</p></div></div>{!isClosed ? <NewCommunicationDraftDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
+              <div className="space-y-3">{data.communications.length === 0 ? <EmptyState title="لا توجد مراسلات" description="أنشئ مسودة عندما يحتاج الملف تواصلًا خارجيًا؛ الحفظ لا يرسل شيئًا." /> : data.communications.map((communication: any) => { const meta = communicationStatusMeta[communication.communicationStatus] || communicationStatusMeta.archived; return <Card key={communication.id} className="rounded-2xl border-sky-100 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[communication.channel as CommunicationChannel]}</Badge>{communication.direction === "inbound" ? <Badge variant="outline" className="rounded-full border-sky-100 bg-white text-sky-700">وارد</Badge> : null}</div><h4 className="font-black leading-6 text-slate-900">{communication.subject}</h4>{communication.toText ? <p className="mt-1 text-[11px] text-slate-500">إلى: <bdi dir="ltr">{communication.toText}</bdi></p> : null}{communication.fromText ? <p className="mt-1 text-[11px] text-slate-500">من: <bdi dir="ltr">{communication.fromText}</bdi></p> : null}<p className="mt-2 max-h-28 overflow-hidden whitespace-pre-wrap text-xs leading-6 text-slate-600">{communication.body}</p>{communication.reviewNote ? <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-6 text-amber-900"><span className="font-bold">ملاحظة المراجعة:</span> {communication.reviewNote}</div> : null}{communication.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل الإرسال:</span> {communication.evidenceReference}</div> : null}</div>{!isClosed ? <CommunicationControls communication={communication} onUpdated={onChanged} /> : null}</div><div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(communication.occurredAt)}</bdi>{communication.externalMessageRef ? <bdi dir="ltr">{communication.externalMessageRef}</bdi> : null}</div></Card>; })}</div>
+            </section>
+            <section>
               <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
               <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4>{action.description ? <p className="mt-2 text-xs leading-6 text-slate-600">{action.description}</p> : null}<p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p>{action.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل التحقق:</span> {action.evidenceReference}</div> : null}</div>{!isClosed ? <ActionStatusDialog action={action} onUpdated={onChanged} /> : null}</div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
             </section>
@@ -564,7 +662,7 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
             {data.memory.length ? <section><div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#1e6478]" /><div><h3 className="text-base font-black text-slate-900">ذاكرة الملف</h3><p className="text-xs text-slate-500">المواد والتحليلات والقرارات السابقة بعد ربطها بسياقها الصحيح.</p></div></div><Badge variant="outline" className="rounded-full bg-white">{data.memory.length}</Badge></div><div className="space-y-3">{(showAllMemory ? data.memory : data.memory.slice(0, 8)).map((entry: any) => <Card key={entry.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex gap-3"><div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.memoryType === "decision" ? "bg-amber-50 text-amber-700" : entry.memoryType === "work_product" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{entry.memoryType === "decision" ? <CheckCheck className="h-4 w-4" /> : entry.memoryType === "work_product" ? <FileText className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h4 className="font-bold leading-6 text-slate-900">{entry.title}</h4>{entry.sourceFileName ? <Paperclip className="h-3.5 w-3.5 text-slate-400" /> : null}</div>{entry.body ? <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-6 text-slate-600">{entry.body}</p> : null}{entry.documents?.length ? <div className="mt-3 space-y-2">{entry.documents.map((document: any) => <a key={document.id} href={document.downloadPath} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3df] bg-[#f1f8f6] px-3 py-2 text-[11px] font-bold text-[#18596a] transition hover:bg-[#e5f2ef]"><span className="min-w-0 truncate">{document.fileName}</span><span className="shrink-0">فتح الملف</span></a>)}</div> : entry.sourceFileName ? <p className="mt-2 truncate text-[11px] font-semibold text-slate-500">مرجع محفوظ: {entry.sourceFileName}</p> : null}<p className="mt-2 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(entry.occurredAt)}</bdi></p></div></div></Card>)}</div>{data.memory.length > 8 ? <Button variant="outline" onClick={() => setShowAllMemory(value => !value)} className="mt-3 w-full rounded-xl bg-white">{showAllMemory ? "عرض المختصر" : `عرض جميع عناصر الذاكرة (${data.memory.length})`}</Button> : null}</section> : null}
             <section><h3 className="mb-3 text-base font-black text-slate-900">سجل الملف</h3><div className="space-y-3">{data.events.map((event: any) => <div key={event.id} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500"><CircleDot className="h-4 w-4" /></div><div><p className="text-sm font-semibold leading-6 text-slate-800">{event.summary}</p><p className="mt-1 text-[11px] text-slate-400"><bdi dir="ltr">{formatDateTime(event.occurredAt)}</bdi></p></div></div>)}</div></section>
             <div className="grid gap-3 sm:grid-cols-2">
-              {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
+              {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions || hasPendingCommunications} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
               <Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />فتح بطاقة المشروع الأصلية</Button>
             </div>
           </div>
@@ -634,6 +732,7 @@ function ImportReviewPanel({ data, isLoading, error }: { data: any; isLoading: b
         { label: "ملفات العمل", value: data.promotion.workFiles },
         { label: "الإجراءات", value: data.promotion.actions },
         { label: "القرارات المطلوبة", value: data.promotion.decisions },
+        { label: "المراسلات", value: data.promotion.communications },
         { label: "عناصر الذاكرة", value: data.promotion.memoryEntries },
         { label: "أحداث السجل", value: data.promotion.events },
         { label: "الاجتماعات", value: data.promotion.meetings },
@@ -707,17 +806,20 @@ export default function ComoNextTodayPage() {
           </div>
 
           <TabsContent value="today" className="mt-0 space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
               <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مستحق اليوم</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{data.today.summary.dueToday}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><CalendarClock className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">متأخر</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.today.summary.overdue}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><AlertCircle className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">قرارات مطلوبة</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.decisions.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-6 w-6" /></div></div></Card>
+              <Card className="rounded-3xl border-sky-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مسودات للمراجعة</p><p className="mt-2 text-3xl font-black text-sky-700"><bdi>{data.draftCommunications.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><Mail className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بانتظار الخارج</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.today.summary.waitingExternal}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Clock3 className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-violet-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">لدى Manus</p><p className="mt-2 text-3xl font-black text-violet-700"><bdi>{data.today.summary.manus}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><Sparkles className="h-6 w-6" /></div></div></Card>
             </section>
 
             {data.decisions.length ? <Card className="rounded-3xl border-rose-100 bg-[#fffafa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">قرارات تنتظر الحسم</h2><p className="text-xs text-slate-500">لا تتحول إلى إجراء خارجي قبل تسجيل القرار وسلطته.</p></div></div><Badge variant="outline" className="rounded-full border-rose-200 bg-white text-rose-700"><bdi>{data.decisions.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
 
-            {data.today.summary.dueToday === 0 && data.decisions.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
+            {data.draftCommunications.length ? <Card className="rounded-3xl border-sky-100 bg-[#f8fcfd] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><SendHorizontal className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">مراسلات تنتظر المراجعة</h2><p className="text-xs text-slate-500">المسودة لا تُرسل. بعد اعتمادها يبقى تسجيل دليل الإرسال خطوة منفصلة.</p></div></div><Badge variant="outline" className="rounded-full border-sky-200 bg-white text-sky-700"><bdi>{data.draftCommunications.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.draftCommunications.map((item: any) => <TodayCommunicationCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
+
+            {data.today.summary.dueToday === 0 && data.decisions.length === 0 && data.draftCommunications.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات أو مسودات مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
 
             <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-black">نبض ملفات العمل</h2><p className="mt-1 text-sm text-slate-500">أهم الملفات النشطة وما الذي ينتظرها.</p></div><Button variant="ghost" onClick={() => updateTab("work-files")} className="rounded-xl text-[#1e6478]">عرض الكل<ChevronLeft className="me-1 h-4 w-4" /></Button></div>{data.workFiles.length === 0 ? <EmptyState title="لم تفتح ملفات عمل بعد" description="ابدأ بموضوع حقيقي له سؤال حاكم ونتيجة مطلوبة، ثم أضف إجراءه التالي." action={<NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />} /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.slice(0, 3).map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}</section>
           </TabsContent>

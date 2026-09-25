@@ -3,6 +3,7 @@ import { and, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   comoNextActions,
+  comoNextCommunications,
   comoNextDecisions,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
@@ -15,11 +16,14 @@ import {
   changeActionStatusCommand,
   closeWorkFileCommand,
   createActionCommand,
+  createCommunicationDraftCommand,
   createDecisionCommand,
   createWorkFileCommand,
   getRecentWorkFileEvents,
+  recordCommunicationSentCommand,
   requireProjectAccess,
   resolveDecisionCommand,
+  reviewCommunicationDraftCommand,
 } from "../services/comoNextCommands";
 import { buildComoNextTodayProjection, type ComoNextTodayRow } from "../services/comoNextToday";
 
@@ -37,6 +41,7 @@ function getRows<T>(result: unknown): T[] {
 const prioritySchema = z.enum(["normal", "important", "urgent"]);
 const ownerTypeSchema = z.enum(["human", "manus", "team"]);
 const decisionAuthoritySchema = z.enum(["abdulrahman", "wael", "sheikh_issa", "joint", "other"]);
+const communicationChannelSchema = z.enum(["email", "whatsapp", "letter", "phone_note", "internal"]);
 const actionStatusSchema = z.enum([
   "open",
   "in_progress",
@@ -187,6 +192,24 @@ export const comoNextRouter = router({
         decision_row.id ASC
     `);
 
+    const draftCommunicationsResult = await db.execute(sql`
+      SELECT communication.id, communication.project_id AS projectId,
+        communication.work_file_id AS workFileId, p.name AS projectName,
+        wf.title AS workFileTitle, communication.channel,
+        communication.subject, communication.to_text AS toText,
+        communication.communication_status AS communicationStatus,
+        communication.approval_status AS approvalStatus,
+        communication.created_at AS createdAt
+      FROM como_next_communications communication
+      JOIN como_next_work_files wf ON wf.id = communication.work_file_id AND wf.project_id = communication.project_id
+      JOIN projects p ON p.id = communication.project_id AND p.is_test_project = 0
+      LEFT JOIN como_next_project_access access_row
+        ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
+      WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
+        AND communication.communication_status IN ('draft','approved_for_send')
+      ORDER BY communication.created_at ASC, communication.id ASC
+    `);
+
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -207,10 +230,17 @@ export const comoNextRouter = router({
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
     }));
+    const draftCommunications = getRows<any>(draftCommunicationsResult).map(row => ({
+      ...row,
+      id: Number(row.id),
+      projectId: Number(row.projectId),
+      workFileId: Number(row.workFileId),
+    }));
 
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       decisions,
+      draftCommunications,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };
@@ -264,6 +294,7 @@ export const comoNextRouter = router({
         (SELECT COUNT(*) FROM como_next_work_files WHERE import_batch_id = ${String(batch.batchId)}) AS workFiles,
         (SELECT COUNT(*) FROM como_next_actions WHERE import_batch_id = ${String(batch.batchId)}) AS actions,
         (SELECT COUNT(*) FROM como_next_decisions WHERE import_batch_id = ${String(batch.batchId)}) AS decisions,
+        (SELECT COUNT(*) FROM como_next_communications WHERE import_batch_id = ${String(batch.batchId)}) AS communications,
         (SELECT COUNT(*) FROM como_next_work_memory WHERE import_batch_id = ${String(batch.batchId)}) AS memoryEntries,
         (SELECT COUNT(*) FROM como_next_work_file_events event_row JOIN como_next_work_files wf ON wf.id = event_row.work_file_id WHERE wf.import_batch_id = ${String(batch.batchId)} AND event_row.idempotency_key LIKE 'followup:%') AS events,
         (SELECT COUNT(*) FROM como_next_meetings WHERE import_batch_id = ${String(batch.batchId)}) AS meetings,
@@ -283,6 +314,7 @@ export const comoNextRouter = router({
       workFiles: Number(promoted.workFiles || 0),
       actions: Number(promoted.actions || 0),
       decisions: Number(promoted.decisions || 0),
+      communications: Number(promoted.communications || 0),
       memoryEntries: Number(promoted.memoryEntries || 0),
       events: Number(promoted.events || 0),
       meetings: Number(promoted.meetings || 0),
@@ -425,6 +457,11 @@ export const comoNextRouter = router({
         WHERE wfp.work_file_id = ${input.workFileId}
         ORDER BY party.display_name
       `);
+      const communications = await db
+        .select()
+        .from(comoNextCommunications)
+        .where(eq(comoNextCommunications.workFileId, input.workFileId))
+        .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id));
       const documentsByMemory = new Map<number, any[]>();
       for (const row of getRows<any>(documentsResult)) {
         const memoryId = Number(row.memoryId);
@@ -452,6 +489,7 @@ export const comoNextRouter = router({
           participantCount: Number(row.participantCount || 0),
           agendaItemCount: Number(row.agendaItemCount || 0),
         })),
+        communications,
         parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
         accessRole: access.role,
       };
@@ -486,6 +524,44 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return createActionCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  createCommunicationDraft: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      channel: communicationChannelSchema.default("email"),
+      subject: z.string().trim().min(3).max(1000),
+      body: z.string().trim().min(3).max(100_000),
+      toText: z.string().trim().max(5000).optional().nullable(),
+      ccText: z.string().trim().max(5000).optional().nullable(),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return createCommunicationDraftCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  reviewCommunicationDraft: protectedProcedure
+    .input(z.object({
+      communicationId: z.number().int().positive(),
+      decision: z.enum(["approve", "reject"]),
+      reviewNote: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewCommunicationDraftCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  recordCommunicationSent: protectedProcedure
+    .input(z.object({
+      communicationId: z.number().int().positive(),
+      evidenceReference: z.string().trim().min(3).max(5000),
+      externalMessageRef: z.string().trim().max(500).optional().nullable(),
+      sentAt: z.string().optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return recordCommunicationSentCommand({ userId: ctx.user.id, ...input });
     }),
 
   createDecision: protectedProcedure
