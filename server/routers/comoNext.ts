@@ -170,6 +170,83 @@ export const comoNextRouter = router({
     };
   }),
 
+  getImportReview: protectedProcedure.query(async ({ ctx }) => {
+    assertComoNextEnabled();
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "منطقة النقل متاحة لمالك النظام فقط" });
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+
+    const batchResult = await db.execute(sql`
+      SELECT id, batch_id AS batchId, source_system AS sourceSystem,
+        source_fingerprint AS sourceFingerprint, batch_status AS batchStatus,
+        source_record_count AS sourceRecordCount, staged_record_count AS stagedRecordCount,
+        skipped_record_count AS skippedRecordCount, staged_file_count AS stagedFileCount,
+        created_at AS createdAt
+      FROM como_next_import_batches
+      ORDER BY id DESC LIMIT 1
+    `);
+    const batch = getRows<any>(batchResult)[0];
+    if (!batch) return { available: false as const };
+
+    const breakdownResult = await db.execute(sql`
+      SELECT disposition, stage_status AS stageStatus, COUNT(*) AS recordCount
+      FROM como_next_import_rows
+      WHERE import_batch_id = ${Number(batch.id)}
+      GROUP BY disposition, stage_status
+      ORDER BY stage_status, disposition
+    `);
+    const projectResult = await db.execute(sql`
+      SELECT source_record_id AS sourceRecordId, target_id AS targetId,
+        stage_status AS stageStatus, disposition, disposition_reason AS reason, payload_json AS payloadJson
+      FROM como_next_import_rows
+      WHERE import_batch_id = ${Number(batch.id)} AND source_table = 'projects'
+      ORDER BY source_record_id
+    `);
+    const filesResult = await db.execute(sql`
+      SELECT file_status AS fileStatus, COUNT(*) AS fileCount,
+        COALESCE(SUM(byte_size), 0) AS totalBytes
+      FROM como_next_import_files
+      WHERE import_batch_id = ${Number(batch.id)}
+      GROUP BY file_status
+      ORDER BY file_status
+    `);
+
+    return {
+      available: true as const,
+      batch: {
+        ...batch,
+        id: Number(batch.id),
+        sourceRecordCount: Number(batch.sourceRecordCount),
+        stagedRecordCount: Number(batch.stagedRecordCount),
+        skippedRecordCount: Number(batch.skippedRecordCount),
+        stagedFileCount: Number(batch.stagedFileCount),
+      },
+      breakdown: getRows<any>(breakdownResult).map(row => ({ ...row, recordCount: Number(row.recordCount) })),
+      projects: getRows<any>(projectResult).map(row => {
+        let payload: Record<string, unknown> = {};
+        try { payload = JSON.parse(String(row.payloadJson || "{}")); } catch { payload = {}; }
+        return {
+          sourceRecordId: String(row.sourceRecordId),
+          sourceName: String(payload.name || payload.shortName || `مشروع ${row.sourceRecordId}`),
+          targetId: row.targetId == null ? null : Number(row.targetId),
+          stageStatus: row.stageStatus,
+          disposition: row.disposition,
+          reason: row.stageStatus === "skipped"
+            ? "مستبعد مؤقتًا بقرار المالك؛ محفوظ فقط داخل الحزمة المصدرية."
+            : row.targetId != null
+              ? `مطابق لمشروع COMO الرسمي رقم ${Number(row.targetId)} دون تغيير اسمه أو رقم قطعته.`
+              : row.reason,
+        };
+      }),
+      files: getRows<any>(filesResult).map(row => ({ ...row, fileCount: Number(row.fileCount), totalBytes: Number(row.totalBytes) })),
+      safeguards: {
+        operationalRecordsPromoted: 0,
+        externalSideEffects: 0,
+        secretsImported: 0,
+      },
+    };
+  }),
+
   getWorkFile: protectedProcedure
     .input(z.object({ workFileId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {

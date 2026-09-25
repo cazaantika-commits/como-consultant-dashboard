@@ -4,7 +4,7 @@ import { basename, join, resolve } from "node:path";
 import mysql from "mysql2/promise";
 
 type JsonRecord = Record<string, unknown> & { id?: number | string };
-type MappingDecision = { targetId: number | null; status: "confirmed" | "create_candidate" | "needs_approval" | "no_match"; evidence: string };
+type MappingDecision = { targetId: number | null; status: "confirmed" | "create_candidate" | "exclude_temporarily" | "needs_approval" | "no_match"; evidence: string };
 type MappingFile = {
   version: number;
   approved: boolean;
@@ -116,6 +116,9 @@ function validateMapping(kind: keyof Pick<MappingFile, "users" | "projects" | "c
   if (kind === "consultants" && decision.status === "create_candidate" && decision.targetId == null) {
     return null;
   }
+  if (kind === "projects" && decision.status === "exclude_temporarily" && decision.targetId == null) {
+    return null;
+  }
   conflicts.push({ key: `${kind}:${sourceId}`, severity: decision.status === "no_match" ? "blocking" : "review", entityType: kind === "consultants" ? "consultant" : kind.slice(0, -1) as "user" | "project", sourceId, sourceLabel: sourceLabel(sourceRecord), candidateTargetId: decision.targetId, reason: decision.evidence, requiredDecision: decision.status === "no_match" ? "Decide whether to create a target record or archive the source entity" : "Approve or reject the proposed mapping" });
   return null;
 }
@@ -129,6 +132,7 @@ for (const row of sourceTables.get("consultants") || []) validateMapping("consul
 
 const projectMap = verifiedMapping.projects;
 const consultantMap = verifiedMapping.consultants;
+const excludedProjectIds = new Set(Object.entries(mapping.projects).filter(([, decision]) => decision.status === "exclude_temporarily").map(([sourceId]) => sourceId));
 const taskRecords = sourceTables.get("followUpTasks") || [];
 const taskDisposition = new Map<string, PlanRow>();
 
@@ -143,7 +147,8 @@ for (const [table, records] of sourceTables) {
       row = { sourceTable: table, sourceId, disposition: targetId ? "map_existing" : "blocked", targetType: "users", targetId, reason: targetId ? "Exact approved user mapping" : "User mapping requires approval", blockedBy: targetId ? null : `users:${sourceId}` };
     } else if (table === "projects") {
       const targetId = projectMap[sourceId] ?? null;
-      row = { sourceTable: table, sourceId, disposition: targetId ? "map_existing" : "blocked", targetType: "projects", targetId, reason: targetId ? "Approved project mapping" : "Project mapping requires owner decision", blockedBy: targetId ? null : `projects:${sourceId}` };
+      const excluded = excludedProjectIds.has(sourceId);
+      row = { sourceTable: table, sourceId, disposition: targetId ? "map_existing" : excluded ? "skip_reference" : "blocked", targetType: "projects", targetId, reason: targetId ? "Approved project mapping" : excluded ? "Owner approved temporary exclusion; retain only in the source package" : "Project mapping requires owner decision", blockedBy: targetId || excluded ? null : `projects:${sourceId}` };
     } else if (table === "consultants") {
       const targetId = consultantMap[sourceId] ?? null;
       const isCandidate = mapping.consultants[sourceId]?.status === "create_candidate";
@@ -151,27 +156,32 @@ for (const [table, records] of sourceTables) {
     } else if (table === "followUpTasks") {
       const sourceProjectId = String(record.projectId ?? "");
       const projectId = projectMap[sourceProjectId] ?? null;
-      row = { sourceTable: table, sourceId, disposition: projectId ? "create_work_file" : "blocked", targetType: "como_next_work_files", targetId: null, reason: projectId ? `Create a staged work file under project ${projectId}` : "Parent project mapping is not approved", blockedBy: projectId ? null : `projects:${sourceProjectId}` };
+      const excluded = excludedProjectIds.has(sourceProjectId);
+      row = { sourceTable: table, sourceId, disposition: projectId ? "create_work_file" : excluded ? "skip_reference" : "blocked", targetType: "como_next_work_files", targetId: null, reason: projectId ? `Create a staged work file under project ${projectId}` : excluded ? "Skip because the owner temporarily excluded the source project" : "Parent project mapping is not approved", blockedBy: projectId || excluded ? null : `projects:${sourceProjectId}` };
       taskDisposition.set(sourceId, row);
     } else if (table === "taskActivities" || table === "workEntries") {
       const sourceTaskId = String(record.taskId ?? "");
       const parent = taskDisposition.get(sourceTaskId);
       const valid = parent?.disposition === "create_work_file";
-      row = { sourceTable: table, sourceId, disposition: valid ? (table === "taskActivities" ? "create_event" : "create_entry") : "blocked", targetType: table === "taskActivities" ? "como_next_work_file_events" : "como_next_work_entries", targetId: null, reason: valid ? "Create under the staged parent work file with provenance" : "Parent work file is blocked", blockedBy: valid ? null : `followUpTasks:${sourceTaskId}` };
+      const excluded = parent?.disposition === "skip_reference";
+      row = { sourceTable: table, sourceId, disposition: valid ? (table === "taskActivities" ? "create_event" : "create_entry") : excluded ? "skip_reference" : "blocked", targetType: table === "taskActivities" ? "como_next_work_file_events" : "como_next_work_entries", targetId: null, reason: valid ? "Create under the staged parent work file with provenance" : excluded ? "Skip with the temporarily excluded parent project" : "Parent work file is blocked", blockedBy: valid || excluded ? null : `followUpTasks:${sourceTaskId}` };
     } else if (table === "meetings") {
       const sourceProjectId = String(record.projectId ?? "");
       const projectId = projectMap[sourceProjectId] ?? null;
       const sourceTaskId = String(record.followUpTaskId ?? "");
       const parent = taskDisposition.get(sourceTaskId);
       const valid = Boolean(projectId && parent?.disposition === "create_work_file");
-      row = { sourceTable: table, sourceId, disposition: valid ? "create_meeting" : "blocked", targetType: "como_next_meetings", targetId: null, reason: valid ? "Create staged meeting linked to the mapped project and work file" : "Project or parent work file is blocked", blockedBy: valid ? null : (!projectId ? `projects:${sourceProjectId}` : `followUpTasks:${sourceTaskId}`) };
+      const excluded = excludedProjectIds.has(sourceProjectId) || parent?.disposition === "skip_reference";
+      row = { sourceTable: table, sourceId, disposition: valid ? "create_meeting" : excluded ? "skip_reference" : "blocked", targetType: "como_next_meetings", targetId: null, reason: valid ? "Create staged meeting linked to the mapped project and work file" : excluded ? "Skip with the temporarily excluded parent project" : "Project or parent work file is blocked", blockedBy: valid || excluded ? null : (!projectId ? `projects:${sourceProjectId}` : `followUpTasks:${sourceTaskId}`) };
     } else if (["meetingParticipants", "meetingAgendaItems", "meetingLogEntries", "meetingPreparationSources", "meetingVersions", "meetingRecordings", "meetingRecordingChunks"].includes(table)) {
       row = { sourceTable: table, sourceId, disposition: "create_child", targetType: `como_next_${table}`, targetId: null, reason: "Create only after parent meeting mapping resolves", blockedBy: null };
     } else if (table === "consultantContacts" || table === "projectConsultants") {
       const sourceConsultantId = String(record.consultantId ?? "");
       const targetId = consultantMap[sourceConsultantId] ?? null;
       const isCandidate = mapping.consultants[sourceConsultantId]?.status === "create_candidate";
-      row = { sourceTable: table, sourceId, disposition: targetId || isCandidate ? "create_child" : "blocked", targetType: table === "consultantContacts" ? "organization_contacts" : "project_organizations", targetId: null, reason: targetId ? "Create under approved organization mapping" : isCandidate ? "Create under the unverified party candidate with full provenance" : "Consultant identity requires approval", blockedBy: targetId || isCandidate ? null : `consultants:${sourceConsultantId}` };
+      const sourceProjectId = String(record.projectId ?? "");
+      const excluded = table === "projectConsultants" && excludedProjectIds.has(sourceProjectId);
+      row = { sourceTable: table, sourceId, disposition: excluded ? "skip_reference" : targetId || isCandidate ? "create_child" : "blocked", targetType: table === "consultantContacts" ? "organization_contacts" : "project_organizations", targetId: null, reason: excluded ? "Skip with the temporarily excluded parent project" : targetId ? "Create under approved organization mapping" : isCandidate ? "Create under the unverified party candidate with full provenance" : "Consultant identity requires approval", blockedBy: excluded || targetId || isCandidate ? null : `consultants:${sourceConsultantId}` };
     } else if (["agentRequests", "saraBriefingSnapshots", "saraBriefingDeliveries"].includes(table)) {
       row = { sourceTable: table, sourceId, disposition: "archive_history", targetType: "assistant_history", targetId: null, reason: "Historical record only; never rerun", blockedBy: null };
     } else if (["saraBriefingSchedules", "automationJobs"].includes(table)) {

@@ -1,0 +1,21 @@
+{
+  "batchId": "COMO-FUD-2026-09-25-02",
+  "batchDbId": 1,
+  "batchStatus": "staged",
+  "sourceRecordCount": 1193,
+  "stagedRecordCount": 1163,
+  "skippedRecordCount": 29,
+  "stagedFileCount": 87,
+  "actualRowCount": 1192,
+  "actualFileCount": 87,
+  "uniqueFilePayloads": 71,
+  "writesExecuted": 1281,
+  "writesLimitedTo": [
+    "como_next_import_batches",
+    "como_next_import_rows",
+    "como_next_import_files"
+  ],
+  "operationalRecordsPromoted": 0,
+  "externalSideEffects": 0,
+  "reversibleByBatchDelete": true
+}

@@ -28,8 +28,11 @@ import {
   CirclePause,
   CircleDot,
   Clock3,
+  Database,
+  FileCheck2,
   FileStack,
   FolderOpen,
+  GitMerge,
   LockKeyhole,
   Loader2,
   LogIn,
@@ -41,7 +44,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type ExecutiveTab = "today" | "work-files";
+type ExecutiveTab = "today" | "work-files" | "transfer";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
@@ -443,15 +446,72 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
   );
 }
 
+function ImportReviewPanel({ data, isLoading, error }: { data: any; isLoading: boolean; error?: string }) {
+  if (isLoading) return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[0, 1, 2, 3].map(item => <Skeleton key={item} className="h-28 rounded-3xl" />)}</div>;
+  if (error) return <EmptyState title="تعذر قراءة منطقة النقل" description={error} />;
+  if (!data?.available) return <EmptyState title="لا توجد حزمة منقولة" description="عند اكتمال بروفة نقل معتمدة ستظهر هنا قبل إدخال أي سجل إلى التشغيل." />;
+
+  const projectDecision = (project: any) => project.stageStatus === "skipped"
+    ? { label: "مستبعد مؤقتًا", className: "border-slate-200 bg-slate-100 text-slate-700" }
+    : { label: `مرتبط بالمشروع ${project.targetId}`, className: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+  const dispositionLabels: Record<string, string> = {
+    map_existing: "مطابقة مرجعية",
+    create_candidate: "جهات مرشحة",
+    create_work_file: "ملفات عمل",
+    create_event: "أحداث وسجل",
+    create_entry: "مدخلات ومخرجات",
+    create_meeting: "اجتماعات",
+    create_child: "تفاصيل تابعة",
+    archive_history: "سجل تاريخي",
+    skip_reference: "مستبعد مؤقتًا",
+  };
+
+  return <div className="space-y-6">
+    <Card className="relative overflow-hidden rounded-[28px] border-slate-200 bg-white p-6 shadow-sm">
+      <div className="absolute inset-y-0 right-0 w-1.5 bg-gradient-to-b from-[#1b7182] via-[#55a696] to-[#d5aa68]" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4f3] text-[#1e6478]"><Database className="h-6 w-6" /></div><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-xl font-black text-slate-900">منطقة النقل المعزولة</h2><Badge variant="outline" className="rounded-full border-amber-200 bg-amber-50 text-amber-800">للمراجعة فقط</Badge></div><p className="mt-2 max-w-2xl text-sm leading-7 text-slate-500">تم حفظ نسخة منظمة من Follow-up Desk دون تحويل أي سجل إلى ملف عمل حي، ودون تشغيل بريد أو جدولة أو Manus.</p></div></div>
+        <div className="rounded-2xl border border-slate-200 bg-[#f8f8f5] px-4 py-3 text-left"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Batch</p><p dir="ltr" className="mt-1 font-mono text-xs font-bold text-slate-700">{data.batch.batchId}</p></div>
+      </div>
+    </Card>
+
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {[
+        { label: "السجلات في المصدر", value: data.batch.sourceRecordCount, icon: Database, tone: "bg-slate-100 text-slate-700" },
+        { label: "جاهزة للمراجعة", value: data.batch.stagedRecordCount, icon: GitMerge, tone: "bg-cyan-50 text-cyan-800" },
+        { label: "مستبعدة بقرار", value: data.batch.skippedRecordCount, icon: LockKeyhole, tone: "bg-amber-50 text-amber-800" },
+        { label: "مراجع الملفات", value: data.batch.stagedFileCount, icon: FileCheck2, tone: "bg-emerald-50 text-emerald-800" },
+      ].map(item => { const Icon = item.icon; return <Card key={item.label} className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">{item.label}</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{item.value}</bdi></p></div><div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-6 w-6" /></div></div></Card>; })}
+    </section>
+
+    <section className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
+      <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-5"><h3 className="text-lg font-black text-slate-900">قرارات المشاريع</h3><p className="mt-1 text-sm text-slate-500">الربط لا يغيّر اسم المشروع أو رقم القطعة في قاعدة COMO الأصلية.</p></div>
+        <div className="space-y-3">{data.projects.map((project: any) => { const decision = projectDecision(project); return <div key={project.sourceRecordId} className="rounded-2xl border border-slate-200 bg-[#fbfbf8] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold text-slate-900">{project.sourceName}</p><p className="mt-1 text-xs leading-6 text-slate-500">{project.reason}</p></div><Badge variant="outline" className={`rounded-full ${decision.className}`}>{decision.label}</Badge></div></div>; })}</div>
+      </Card>
+      <Card className="rounded-3xl border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-5"><h3 className="text-lg font-black text-slate-900">تكوين الحزمة</h3><p className="mt-1 text-sm text-slate-500">كل فئة محفوظة مع مصدرها وحكمها قبل أي ترقية تشغيلية.</p></div>
+        <div className="grid gap-2 sm:grid-cols-2">{data.breakdown.map((item: any) => <div key={`${item.stageStatus}-${item.disposition}`} className="flex items-center justify-between rounded-xl border border-slate-100 bg-[#f8f8f5] px-3 py-2.5"><span className="text-xs font-semibold text-slate-600">{dispositionLabels[item.disposition] || item.disposition}</span><bdi className="text-sm font-black text-slate-900">{item.recordCount}</bdi></div>)}</div>
+      </Card>
+    </section>
+
+    <div className="grid gap-4 md:grid-cols-3">
+      {[{ label: "سجلات تشغيلية رُقّيت", value: data.safeguards.operationalRecordsPromoted }, { label: "أسرار تم نقلها", value: data.safeguards.secretsImported }, { label: "إجراءات خارجية نُفذت", value: data.safeguards.externalSideEffects }].map(item => <div key={item.label} className="flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-emerald-900"><span className="text-xs font-bold">{item.label}</span><bdi className="text-lg font-black">{item.value}</bdi></div>)}
+    </div>
+  </div>;
+}
+
 export default function ComoNextTodayPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
-  const initialTab = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "work-files" ? "work-files" : "today";
+  const requestedTab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
+  const initialTab: ExecutiveTab = requestedTab === "work-files" || requestedTab === "transfer" ? requestedTab : "today";
   const [activeTab, setActiveTab] = useState<ExecutiveTab>(initialTab);
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(null);
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
+  const importReviewQuery = trpc.comoNext.getImportReview.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin", staleTime: 60_000 });
   const data = overviewQuery.data;
 
   const updateTab = (value: string) => {
@@ -494,7 +554,7 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <Tabs value={activeTab} onValueChange={updateTab}>
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className="grid h-12 w-full grid-cols-2 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200 sm:w-[360px]"><TabsTrigger value="today" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><CalendarClock className="ms-2 h-4 w-4" />اليوم</TabsTrigger><TabsTrigger value="work-files" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><FileStack className="ms-2 h-4 w-4" />ملفات العمل</TabsTrigger></TabsList>
+            <TabsList className={`grid h-12 w-full ${user.role === "admin" ? "grid-cols-3 sm:w-[540px]" : "grid-cols-2 sm:w-[360px]"} rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200`}><TabsTrigger value="today" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><CalendarClock className="ms-2 h-4 w-4" />اليوم</TabsTrigger><TabsTrigger value="work-files" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><FileStack className="ms-2 h-4 w-4" />ملفات العمل</TabsTrigger>{user.role === "admin" ? <TabsTrigger value="transfer" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Database className="ms-2 h-4 w-4" />منطقة النقل</TabsTrigger> : null}</TabsList>
             <p className="text-xs text-slate-500">آخر قراءة <bdi dir="ltr">{formatDateTime(data.today.generatedAt)}</bdi> · توقيت دبي</p>
           </div>
 
@@ -515,6 +575,10 @@ export default function ComoNextTodayPage() {
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-xl font-black">ملفات العمل النشطة</h2><p className="mt-1 text-sm leading-6 text-slate-500">كل ملف يبدأ بسؤال، وينتهي بدليل، وبينهما إجراءات ومسؤوليات واضحة.</p></div><div className="flex items-center gap-2 text-xs text-slate-500"><BriefcaseBusiness className="h-4 w-4" /><bdi>{data.workFiles.length}</bdi> ملف نشط</div></div>
             {data.workFiles.length === 0 ? <EmptyState title="لا توجد ملفات عمل" description="افتح أول ملف من زر «فتح ملف عمل» في أعلى الصفحة." /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}
           </TabsContent>
+
+          {user.role === "admin" ? <TabsContent value="transfer" className="mt-0">
+            <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} />
+          </TabsContent> : null}
         </Tabs> : null}
       </main>
 

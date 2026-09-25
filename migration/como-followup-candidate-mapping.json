@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "approved": false,
+  "approved": true,
   "users": {
     "1": {
       "targetId": 3330456,
@@ -21,8 +21,8 @@
   "projects": {
     "1": {
       "targetId": 1,
-      "status": "needs_approval",
-      "evidence": "Majan business context matches, but source plot RT-040 does not equal target plot 6457956"
+      "status": "confirmed",
+      "evidence": "Owner approved Majan Lifestyle Centre as the same business project as target project 1; source plot description RT-040 is retained as provenance and does not overwrite target plot 6457956"
     },
     "2": {
       "targetId": 6,
@@ -31,8 +31,8 @@
     },
     "30001": {
       "targetId": null,
-      "status": "no_match",
-      "evidence": "Deluxe Hotel Apartment – Al Satwa, plot 3347343 has no target project record"
+      "status": "exclude_temporarily",
+      "evidence": "Owner approved temporary exclusion of Deluxe Hotel Apartment – Al Satwa, plot 3347343; preserve only in the verified source package and do not create a COMO project"
     }
   },
   "consultants": {

@@ -1742,3 +1742,10 @@
 - [x] Complete the COMO Next work-file panel: separate due and follow-up times, support waiting-external and resume states, preserve descriptions and acceptance criteria, expose verification evidence, and allow file closure only after every action is verified or cancelled and a final closure reference is supplied.
 - [x] Build a guarded Follow-up Desk importer that supports `plan` and `dry-run` only, validates 23 source tables and record counts, rejects secrets, reads the live target for approved identities and protected-table counts, verifies file checksums and source deduplication, emits plan/conflict/reconciliation artifacts, and has no apply, upload, messaging, scheduling, notification, or Manus-execution path.
 - [x] Run the first real dry-run against the verified transfer package: account for 1,193 source rows (1,192 exported plus one secret excluded), verify 80 exported files as 71 unique payloads plus nine duplicate references, preserve all protected financial row counts, and isolate only two project decisions for owner review.
+
+- [x] Apply the owner decisions for Follow-up Desk mapping: confirm Majan to official project 1 and exclude Al Satwa temporarily.
+- [x] Rerun dry-run batch `COMO-FUD-2026-09-25-02`: 1,192 planned records, 87 file references, zero conflicts, zero writes, zero external side effects.
+- [x] Create isolated reversible transfer staging (`como_next_import_batches`, `como_next_import_rows`, `como_next_import_files`) and stage batch 02 only.
+- [x] Reconcile staged content: 1,163 reviewable records, 29 temporarily skipped records, 87 file references, 71 unique file payloads; zero operational records promoted.
+- [x] Add the admin-only read-only «منطقة النقل» tab in COMO Next with project decisions, category counts, and explicit zero-side-effect safeguards.
+- [x] Verify idempotency, 18 targeted tests, production build, git diff hygiene, and unchanged protected financial/project row counts.

@@ -2905,3 +2905,65 @@ export const comoNextWorkFileEvents = mysqlTable("como_next_work_file_events", {
     foreignColumns: [comoNextActions.projectId, comoNextActions.id],
   }).onDelete("restrict"),
 ]);
+
+// Follow-up Desk transfer staging. Raw source rows and file metadata land here
+// first; they are never treated as active COMO records until a separate,
+// reviewed promotion command is executed.
+export const comoNextImportBatches = mysqlTable("como_next_import_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchId: varchar("batch_id", { length: 100 }).notNull(),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull(),
+  sourceFingerprint: varchar("source_fingerprint", { length: 64 }).notNull(),
+  mappingVersion: int("mapping_version").notNull(),
+  mappingSha256: varchar("mapping_sha256", { length: 64 }).notNull(),
+  planSha256: varchar("plan_sha256", { length: 64 }).notNull(),
+  batchStatus: mysqlEnum("batch_status", ["staged", "reviewed", "promoted", "rolled_back"]).notNull().default("staged"),
+  sourceRecordCount: int("source_record_count").notNull(),
+  stagedRecordCount: int("staged_record_count").notNull().default(0),
+  skippedRecordCount: int("skipped_record_count").notNull().default(0),
+  stagedFileCount: int("staged_file_count").notNull().default(0),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_import_batch_id_uq").on(table.batchId),
+  index("como_next_import_source_status_idx").on(table.sourceSystem, table.batchStatus),
+]);
+
+export const comoNextImportRows = mysqlTable("como_next_import_rows", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  importBatchId: int("import_batch_id").notNull().references(() => comoNextImportBatches.id, { onDelete: "cascade" }),
+  sourceTable: varchar("source_table", { length: 120 }).notNull(),
+  sourceRecordId: varchar("source_record_id", { length: 128 }).notNull(),
+  sourceProjectId: varchar("source_project_id", { length: 128 }),
+  sourceConsultantId: varchar("source_consultant_id", { length: 128 }),
+  disposition: mysqlEnum("disposition", ["map_existing", "create_candidate", "create_work_file", "create_event", "create_entry", "create_meeting", "create_child", "archive_history", "skip_reference", "reject_secret", "blocked"]).notNull(),
+  targetType: varchar("target_type", { length: 120 }).notNull(),
+  targetId: bigint("target_id", { mode: "number" }),
+  stageStatus: mysqlEnum("stage_status", ["staged", "skipped", "rejected"]).notNull(),
+  dispositionReason: text("disposition_reason").notNull(),
+  payloadSha256: varchar("payload_sha256", { length: 64 }).notNull(),
+  payloadJson: longtext("payload_json").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_import_row_source_uq").on(table.importBatchId, table.sourceTable, table.sourceRecordId),
+  index("como_next_import_row_status_idx").on(table.importBatchId, table.stageStatus, table.disposition),
+  index("como_next_import_row_project_idx").on(table.importBatchId, table.sourceProjectId),
+]);
+
+export const comoNextImportFiles = mysqlTable("como_next_import_files", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  importBatchId: int("import_batch_id").notNull().references(() => comoNextImportBatches.id, { onDelete: "cascade" }),
+  sourceIndex: int("source_index").notNull(),
+  originalName: varchar("original_name", { length: 1000 }),
+  storedName: varchar("stored_name", { length: 1000 }).notNull(),
+  sourceUrl: text("source_url"),
+  byteSize: bigint("byte_size", { mode: "number" }).notNull().default(0),
+  sha256: varchar("sha256", { length: 64 }),
+  canonicalStoredName: varchar("canonical_stored_name", { length: 1000 }),
+  fileStatus: mysqlEnum("file_status", ["verified_unique", "verified_duplicate", "reference_only", "skipped"]).notNull(),
+  stagedStorageUrl: text("staged_storage_url"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_import_file_source_uq").on(table.importBatchId, table.sourceIndex),
+  index("como_next_import_file_sha_idx").on(table.sha256),
+]);
