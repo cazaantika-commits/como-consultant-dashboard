@@ -4,6 +4,8 @@ import { TRPCError } from "@trpc/server";
 import { assertActionTransition, deriveAttentionAt, toSqlUtcTimestamp } from "./services/comoNextCommands";
 
 const migration = readFileSync(new URL("../drizzle/0077_como_next_executive_core.sql", import.meta.url), "utf8");
+const decisionMigration = readFileSync(new URL("../drizzle/0082_como_next_decision_register.sql", import.meta.url), "utf8");
+const commandSource = readFileSync(new URL("./services/comoNextCommands.ts", import.meta.url), "utf8");
 
 describe("COMO Next command invariants", () => {
   it("derives one canonical attention timestamp", () => {
@@ -38,5 +40,12 @@ describe("COMO Next additive migration", () => {
     expect(migration).toContain("FOREIGN KEY (`project_id`,`project_party_id`) REFERENCES `como_next_project_parties` (`project_id`,`id`)");
     expect(migration).toContain("`action_status` <> 'verified' OR `evidence_reference` IS NOT NULL");
     expect(migration).toContain("`work_file_status` <> 'closed' OR `closure_evidence_ref` IS NOT NULL");
+  });
+
+  it("adds the decision register without altering legacy or financial tables", () => {
+    expect(decisionMigration).toContain("CREATE TABLE IF NOT EXISTS `como_next_decisions`");
+    expect(decisionMigration).toContain("FOREIGN KEY (`project_id`,`work_file_id`) REFERENCES `como_next_work_files` (`project_id`,`id`)");
+    expect(decisionMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
+    expect(commandSource).toContain("لا يمكن إغلاق الملف قبل حسم القرارات المطلوبة");
   });
 });

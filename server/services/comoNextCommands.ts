@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
   comoNextActions,
+  comoNextDecisions,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
   comoNextWorkFiles,
@@ -17,6 +18,8 @@ export type ComoNextActionStatus =
   | "completed_pending_verification"
   | "verified"
   | "cancelled";
+export type ComoNextDecisionStatus = "required" | "approved" | "rejected" | "deferred" | "superseded";
+export type ComoNextDecisionAuthority = "abdulrahman" | "wael" | "sheikh_issa" | "joint" | "other";
 
 const terminalActionStatuses = new Set<ComoNextActionStatus>(["verified", "cancelled"]);
 const allowedTransitions: Record<ComoNextActionStatus, ReadonlySet<ComoNextActionStatus>> = {
@@ -238,6 +241,69 @@ export async function createActionCommand(input: {
   });
 }
 
+export async function createDecisionCommand(input: {
+  userId: number;
+  workFileId: number;
+  title: string;
+  question: string;
+  contextSummary?: string | null;
+  recommendation?: string | null;
+  decisionAuthority: ComoNextDecisionAuthority;
+  dueAt?: string | null;
+  idempotencyKey?: string;
+}) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [workFile] = await db
+    .select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
+    .from(comoNextWorkFiles)
+    .where(eq(comoNextWorkFiles.id, input.workFileId))
+    .limit(1);
+  if (!workFile) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على ملف العمل" });
+  await requireProjectAccess(db, workFile.projectId, input.userId, "write");
+  if (["closed", "cancelled"].includes(workFile.status)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إضافة قرار مطلوب إلى ملف مغلق" });
+  }
+
+  return db.transaction(async tx => {
+    if (input.idempotencyKey) {
+      const [existing] = await tx
+        .select({ id: comoNextDecisions.id })
+        .from(comoNextDecisions)
+        .where(and(eq(comoNextDecisions.sourceSystem, "como_next"), eq(comoNextDecisions.sourceRecordId, input.idempotencyKey)))
+        .limit(1);
+      if (existing) return { id: existing.id, replayed: true as const };
+    }
+
+    const dueAt = toSqlUtcTimestamp(input.dueAt);
+    const result = await tx.insert(comoNextDecisions).values({
+      userId: input.userId,
+      projectId: workFile.projectId,
+      workFileId: workFile.id,
+      title: input.title,
+      question: input.question,
+      contextSummary: input.contextSummary?.trim() || null,
+      recommendation: input.recommendation?.trim() || null,
+      decisionAuthority: input.decisionAuthority,
+      decisionStatus: "required",
+      dueAt,
+      sourceSystem: "como_next",
+      sourceRecordId: input.idempotencyKey ?? null,
+    });
+    const id = Number(result[0].insertId);
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: workFile.projectId,
+      workFileId: workFile.id,
+      eventType: "decision_required",
+      summary: `إضافة قرار مطلوب: ${input.title}`,
+      payload: { decisionId: id, authority: input.decisionAuthority, dueAt },
+      idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
+    });
+    return { id, replayed: false as const };
+  });
+}
+
 export async function changeActionStatusCommand(input: {
   userId: number;
   actionId: number;
@@ -287,6 +353,60 @@ export async function changeActionStatusCommand(input: {
   });
 }
 
+export async function resolveDecisionCommand(input: {
+  userId: number;
+  decisionId: number;
+  nextStatus: "approved" | "rejected" | "deferred";
+  decisionAuthority: ComoNextDecisionAuthority;
+  decisionText: string;
+  evidenceReference?: string | null;
+  deferredUntil?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [decision] = await db.select().from(comoNextDecisions).where(eq(comoNextDecisions.id, input.decisionId)).limit(1);
+  if (!decision) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على القرار" });
+  await requireProjectAccess(db, decision.projectId, input.userId, "write");
+  if (!["required", "deferred"].includes(decision.decisionStatus)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "هذا القرار محسوم ولا يمكن حسمه مرة أخرى" });
+  }
+  if (input.nextStatus === "deferred" && !input.deferredUntil) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "تأجيل القرار يحتاج موعد عودة واضح" });
+  }
+
+  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+  return db.transaction(async tx => {
+    await tx
+      .update(comoNextDecisions)
+      .set({
+        decisionStatus: input.nextStatus,
+        decisionAuthority: input.decisionAuthority,
+        decisionText: input.decisionText.trim(),
+        evidenceReference: input.evidenceReference?.trim() || null,
+        dueAt: input.nextStatus === "deferred" ? toSqlUtcTimestamp(input.deferredUntil) : decision.dueAt,
+        decidedByUserId: input.userId,
+        decidedAt: now,
+      })
+      .where(eq(comoNextDecisions.id, input.decisionId));
+
+    const statusLabel = input.nextStatus === "approved" ? "اعتماد" : input.nextStatus === "rejected" ? "رفض" : "تأجيل";
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: decision.projectId,
+      workFileId: decision.workFileId,
+      eventType: input.nextStatus === "deferred" ? "decision_deferred" : "decision_recorded",
+      summary: `${statusLabel} القرار: ${decision.title}`,
+      payload: {
+        decisionId: decision.id,
+        status: input.nextStatus,
+        authority: input.decisionAuthority,
+        evidenceReference: input.evidenceReference?.trim() || null,
+      },
+    });
+    return { success: true };
+  });
+}
+
 export async function closeWorkFileCommand(input: {
   userId: number;
   workFileId: number;
@@ -304,6 +424,13 @@ export async function closeWorkFileCommand(input: {
     .where(eq(comoNextActions.workFileId, input.workFileId));
   if (actions.some(action => !terminalActionStatuses.has(action.status))) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف قبل التحقق من جميع إجراءاته أو إلغائها" });
+  }
+  const decisions = await db
+    .select({ status: comoNextDecisions.decisionStatus })
+    .from(comoNextDecisions)
+    .where(eq(comoNextDecisions.workFileId, input.workFileId));
+  if (decisions.some(decision => ["required", "deferred"].includes(decision.status))) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف قبل حسم القرارات المطلوبة" });
   }
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {

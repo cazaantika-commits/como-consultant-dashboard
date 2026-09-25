@@ -13,6 +13,7 @@ const stageMigration = readFileSync(new URL("../drizzle/0078_como_next_transfer_
 const promotionMigration = readFileSync(new URL("../drizzle/0079_como_next_operational_promotion.sql", import.meta.url), "utf8");
 const documentMigration = readFileSync(new URL("../drizzle/0080_como_next_documents.sql", import.meta.url), "utf8");
 const documentChunkMigration = readFileSync(new URL("../drizzle/0081_como_next_document_chunks.sql", import.meta.url), "utf8");
+const decisionMigration = readFileSync(new URL("../drizzle/0082_como_next_decision_register.sql", import.meta.url), "utf8");
 const mapping = JSON.parse(readFileSync(new URL("../migration/como-followup-candidate-mapping.json", import.meta.url), "utf8"));
 const summary = JSON.parse(readFileSync(new URL("../migration-results/COMO-FUD-2026-09-25-02/dry-run-summary.json", import.meta.url), "utf8"));
 const conflicts = JSON.parse(readFileSync(new URL("../migration-results/COMO-FUD-2026-09-25-02/conflicts.json", import.meta.url), "utf8"));
@@ -101,6 +102,7 @@ describe("Follow-up Desk importer safety boundary", () => {
         projects: 2,
         parties: 15,
         workFiles: 11,
+        decisions: 1,
         workEntries: 225,
         events: 586,
         meetings: 4,
@@ -115,7 +117,8 @@ describe("Follow-up Desk importer safety boundary", () => {
     expect(promotionLoader).toContain("batch_status = 'reviewed'");
     expect(promotionLoader).toContain("batch_status = 'promoted'");
     expect(promotionLoader).not.toContain("await connection.beginTransaction()");
-    expect(promotionLoader).toContain("INSERT IGNORE INTO como_next_work_file_events");
+    expect(promotionLoader).toContain("como_next_work_file_events");
+    expect(promotionLoader).toContain("followup:decision:");
     expect(promotionLoader).not.toMatch(/storagePut|notifyOwner|sendMail|invokeLLM|createTask|schedule/i);
 
     const insertTargets = [...promotionLoader.matchAll(/INSERT(?:\s+IGNORE)?\s+INTO\s+([a-zA-Z0-9_]+)/g)].map(match => match[1]);
@@ -126,6 +129,7 @@ describe("Follow-up Desk importer safety boundary", () => {
       "como_next_work_files",
       "como_next_work_file_parties",
       "como_next_actions",
+      "como_next_decisions",
       "como_next_work_memory",
       "como_next_work_file_events",
       "como_next_meetings",
@@ -140,6 +144,8 @@ describe("Follow-up Desk importer safety boundary", () => {
       "como_next_meeting_participants",
       "como_next_meeting_agenda_items",
     ]);
+    expect(decisionMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
+    expect(decisionMigration).toContain("CREATE TABLE IF NOT EXISTS `como_next_decisions`");
   });
 
   it("plans checksum-verified document storage with zero writes", () => {

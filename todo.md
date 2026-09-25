@@ -1754,3 +1754,5 @@
 - [x] Copy and link 34 source documents after checksum verification, including resumable chunk storage for the 165 MB technical proposal; verify every final document against its original SHA-256.
 - [x] Deliver documents only through authenticated project-level COMO routes; hide raw storage URLs from the API and browser, and fail closed with HTTP 401 when unauthenticated.
 - [x] Keep Al Satwa excluded, keep staging intact for traceability, move no secrets, trigger no email/schedule/Manus side effects, and preserve all official project and protected financial rows.
+
+- [x] Add the COMO Next executive decision register as a first-class part of the Today radar and each work file: preserve the imported MDL decision, identify the authority, require evidence when resolving it, prevent work-file closure while a decision remains unresolved, show one pending decision in Today, and keep all financial/project tables unchanged. Targeted suite: 25/25 passed; production build passed; reversible command smoke test passed and was fully cleaned. (2026-09-25)

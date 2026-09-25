@@ -43,6 +43,7 @@ import {
   Paperclip,
   Plus,
   RotateCcw,
+  Scale,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -53,6 +54,8 @@ type ExecutiveTab = "today" | "work-files" | "transfer";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
+type DecisionStatus = "required" | "approved" | "rejected" | "deferred" | "superseded";
+type DecisionAuthority = "abdulrahman" | "wael" | "sheikh_issa" | "joint" | "other";
 
 const priorityMeta: Record<Priority, { label: string; className: string }> = {
   normal: { label: "عادي", className: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -83,6 +86,22 @@ const ownerMeta: Record<OwnerType, { label: string; icon: typeof UserRound; clas
   human: { label: "عبد الرحمن", icon: UserRound, className: "text-slate-700 bg-slate-100" },
   manus: { label: "Manus", icon: Bot, className: "text-violet-800 bg-violet-50" },
   team: { label: "الفريق", icon: UsersRound, className: "text-cyan-800 bg-cyan-50" },
+};
+
+const decisionStatusMeta: Record<DecisionStatus, { label: string; className: string }> = {
+  required: { label: "مطلوب الحسم", className: "border-rose-200 bg-rose-50 text-rose-700" },
+  approved: { label: "معتمد", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  rejected: { label: "مرفوض", className: "border-slate-300 bg-slate-100 text-slate-700" },
+  deferred: { label: "مؤجل", className: "border-amber-200 bg-amber-50 text-amber-800" },
+  superseded: { label: "مستبدل", className: "border-violet-200 bg-violet-50 text-violet-800" },
+};
+
+const decisionAuthorityMeta: Record<DecisionAuthority, string> = {
+  abdulrahman: "عبد الرحمن",
+  wael: "وائل",
+  sheikh_issa: "الشيخ عيسى",
+  joint: "قرار مشترك",
+  other: "جهة أخرى",
 };
 
 function normalizeUtc(value: string | null | undefined) {
@@ -318,6 +337,93 @@ function NewActionDialog({ workFileId, onCreated }: { workFileId: number; onCrea
   );
 }
 
+function NewDecisionDialog({ workFileId, onCreated }: { workFileId: number; onCreated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [question, setQuestion] = useState("");
+  const [context, setContext] = useState("");
+  const [recommendation, setRecommendation] = useState("");
+  const [authority, setAuthority] = useState<DecisionAuthority>("abdulrahman");
+  const [dueAt, setDueAt] = useState("");
+  const mutation = trpc.comoNext.createDecision.useMutation();
+
+  const submit = async () => {
+    if (!title.trim() || !question.trim()) {
+      toast.error("أدخل عنوان القرار والسؤال المطلوب حسمه");
+      return;
+    }
+    try {
+      await mutation.mutateAsync({
+        workFileId,
+        title: title.trim(),
+        question: question.trim(),
+        contextSummary: context.trim() || undefined,
+        recommendation: recommendation.trim() || undefined,
+        decisionAuthority: authority,
+        dueAt: toIso(dueAt),
+        idempotencyKey: crypto.randomUUID(),
+      });
+      toast.success("تم تسجيل القرار المطلوب");
+      setOpen(false);
+      setTitle(""); setQuestion(""); setContext(""); setRecommendation(""); setDueAt("");
+      onCreated();
+    } catch (error: any) {
+      toast.error(error?.message || "تعذر تسجيل القرار");
+    }
+  };
+
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button size="sm" variant="outline" className="rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"><Scale className="ms-1.5 h-4 w-4" />قرار مطلوب</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-2xl rounded-3xl bg-[#fdfcf9]">
+      <DialogHeader className="text-right"><DialogTitle>فتح قرار مطلوب</DialogTitle><DialogDescription>افصل القرار عن الإجراء: اكتب ما يجب حسمه، ومن صاحب السلطة، وما توصية المكتب إن وجدت.</DialogDescription></DialogHeader>
+      <div className="grid gap-4">
+        <div className="grid gap-2"><Label>عنوان القرار</Label><Input value={title} onChange={event => setTitle(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>السؤال المطلوب حسمه</Label><Textarea value={question} onChange={event => setQuestion(event.target.value)} className="min-h-24 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>الخلاصة والسياق</Label><Textarea value={context} onChange={event => setContext(event.target.value)} className="min-h-20 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>توصية المكتب التنفيذي — إن وجدت</Label><Textarea value={recommendation} onChange={event => setRecommendation(event.target.value)} className="min-h-20 rounded-xl bg-white" /></div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-2"><Label>صاحب سلطة القرار</Label><Select value={authority} onValueChange={value => setAuthority(value as DecisionAuthority)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(decisionAuthorityMeta).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div>
+          <div className="grid gap-2"><Label>موعد الحسم</Label><Input type="datetime-local" value={dueAt} onChange={event => setDueAt(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+        </div>
+      </div>
+      <DialogFooter className="gap-2 sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">{mutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}حفظ القرار المطلوب</Button><Button variant="outline" onClick={() => setOpen(false)} className="rounded-xl bg-white">إلغاء</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
+function ResolveDecisionDialog({ decision, onUpdated }: { decision: any; onUpdated: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState<"approved" | "rejected" | "deferred">("approved");
+  const [authority, setAuthority] = useState<DecisionAuthority>(decision.decisionAuthority || "abdulrahman");
+  const [text, setText] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [deferredUntil, setDeferredUntil] = useState("");
+  const mutation = trpc.comoNext.resolveDecision.useMutation();
+  const submit = async () => {
+    if (!text.trim()) { toast.error("اكتب القرار أو سبب التأجيل"); return; }
+    if (status === "deferred" && !deferredUntil) { toast.error("حدد موعد العودة للقرار"); return; }
+    try {
+      await mutation.mutateAsync({ decisionId: decision.id, nextStatus: status, decisionAuthority: authority, decisionText: text.trim(), evidenceReference: evidence.trim() || undefined, deferredUntil: status === "deferred" ? toIso(deferredUntil) : undefined });
+      toast.success(status === "approved" ? "تم اعتماد القرار" : status === "rejected" ? "تم تسجيل الرفض" : "تم تأجيل القرار");
+      setOpen(false); setText(""); setEvidence(""); setDeferredUntil("");
+      onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ القرار"); }
+  };
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-rose-700 hover:bg-rose-800">حسم القرار</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-xl rounded-3xl bg-[#fdfcf9]">
+      <DialogHeader className="text-right"><DialogTitle>{decision.title}</DialogTitle><DialogDescription>{decision.question}</DialogDescription></DialogHeader>
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label>النتيجة</Label><Select value={status} onValueChange={value => setStatus(value as typeof status)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="approved">اعتماد</SelectItem><SelectItem value="rejected">رفض</SelectItem><SelectItem value="deferred">تأجيل</SelectItem></SelectContent></Select></div><div className="grid gap-2"><Label>صاحب القرار</Label><Select value={authority} onValueChange={value => setAuthority(value as DecisionAuthority)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(decisionAuthorityMeta).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div></div>
+        <div className="grid gap-2"><Label>نص القرار وأسبابه</Label><Textarea value={text} onChange={event => setText(event.target.value)} className="min-h-28 rounded-xl bg-white" /></div>
+        <div className="grid gap-2"><Label>مرجع الدليل — اختياري</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-20 rounded-xl bg-white" placeholder="محضر، موافقة مكتوبة، أو اسم المستند" /></div>
+        {status === "deferred" ? <div className="grid gap-2"><Label>موعد العودة للقرار</Label><Input type="datetime-local" value={deferredUntil} onChange={event => setDeferredUntil(event.target.value)} className="h-11 rounded-xl bg-white" /></div> : null}
+      </div>
+      <DialogFooter className="sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">حفظ القرار</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
 function ActionStatusDialog({ action, onUpdated }: { action: any; onUpdated: () => void }) {
   const [open, setOpen] = useState(false);
   const [evidence, setEvidence] = useState("");
@@ -403,6 +509,14 @@ function TodayActionCard({ item, onOpen }: { item: any; onOpen: (workFileId: num
   );
 }
 
+function TodayDecisionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
+  const status = decisionStatusMeta[item.decisionStatus as DecisionStatus];
+  return <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-rose-100 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
+    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${status.className}`}>{status.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[item.decisionAuthority as DecisionAuthority]}</Badge></div><h4 className="text-sm font-black leading-6 text-slate-900">{item.title}</h4><p className="mt-1 line-clamp-2 text-xs leading-6 text-slate-600">{item.question}</p><p className="mt-2 text-[11px] font-semibold text-[#1e6478]">{item.projectName} · {item.workFileTitle}</p></div><ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-rose-600" /></div>
+    {item.dueAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(item.dueAt)}</bdi></div> : null}
+  </button>;
+}
+
 function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => void }) {
   return (
     <button onClick={() => onOpen(file.id)} className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 text-right shadow-sm transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
@@ -426,6 +540,7 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
   const [showAllMemory, setShowAllMemory] = useState(false);
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
+  const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -438,6 +553,10 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-400">السؤال الحاكم</p><p className="mt-2 text-sm font-semibold leading-7 text-slate-900">{data.workFile.governingQuestion}</p><div className="my-4 h-px bg-slate-100" /><p className="text-xs font-bold text-slate-400">النتيجة المطلوبة</p><p className="mt-2 text-sm leading-7 text-slate-700">{data.workFile.desiredOutcome}</p></Card>
             {data.parties.length ? <Card className="rounded-3xl border-[#cfe3df] bg-[#f1f8f6] p-5 shadow-sm"><div className="flex items-center gap-2 text-[#1e6478]"><UsersRound className="h-4 w-4" /><h3 className="text-sm font-black">الأطراف المرتبطة بهذا الملف</h3></div><div className="mt-3 flex flex-wrap gap-2">{data.parties.map((party: any) => <Badge key={party.id} variant="outline" className="rounded-full border-[#bdd8d2] bg-white px-3 py-1.5 text-[#18596a]">{party.displayName}</Badge>)}</div></Card> : null}
             <section>
+              <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Scale className="h-5 w-5 text-rose-700" /><div><h3 className="text-base font-black text-slate-900">سجل القرارات</h3><p className="text-xs text-slate-500">السؤال، صاحب السلطة، والنتيجة المعتمدة في مكان واحد.</p></div></div>{!isClosed ? <NewDecisionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
+              <div className="space-y-3">{data.decisions.length === 0 ? <EmptyState title="لا يوجد قرار مطلوب" description="أضف قرارًا فقط عندما يحتاج الملف حسمًا، لا لمجرد وجود إجراء." /> : data.decisions.map((decision: any) => { const meta = decisionStatusMeta[decision.decisionStatus as DecisionStatus]; return <Card key={decision.id} className="rounded-2xl border-rose-100 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[decision.decisionAuthority as DecisionAuthority]}</Badge></div><h4 className="font-black leading-6 text-slate-900">{decision.title}</h4><p className="mt-2 text-xs font-semibold leading-6 text-slate-700">{decision.question}</p>{decision.contextSummary ? <p className="mt-2 text-xs leading-6 text-slate-500">{decision.contextSummary}</p> : null}{decision.recommendation ? <div className="mt-3 rounded-xl border border-cyan-100 bg-cyan-50 px-3 py-2 text-xs leading-6 text-cyan-900"><span className="font-bold">توصية المكتب:</span> {decision.recommendation}</div> : null}{decision.decisionText ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">القرار المسجل:</span> {decision.decisionText}</div> : null}</div>{!isClosed && ["required", "deferred"].includes(decision.decisionStatus) ? <ResolveDecisionDialog decision={decision} onUpdated={onChanged} /> : null}</div>{decision.dueAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(decision.dueAt)}</bdi></div> : null}</Card>; })}</div>
+            </section>
+            <section>
               <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
               <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4>{action.description ? <p className="mt-2 text-xs leading-6 text-slate-600">{action.description}</p> : null}<p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p>{action.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل التحقق:</span> {action.evidenceReference}</div> : null}</div>{!isClosed ? <ActionStatusDialog action={action} onUpdated={onChanged} /> : null}</div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
             </section>
@@ -445,7 +564,7 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
             {data.memory.length ? <section><div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#1e6478]" /><div><h3 className="text-base font-black text-slate-900">ذاكرة الملف</h3><p className="text-xs text-slate-500">المواد والتحليلات والقرارات السابقة بعد ربطها بسياقها الصحيح.</p></div></div><Badge variant="outline" className="rounded-full bg-white">{data.memory.length}</Badge></div><div className="space-y-3">{(showAllMemory ? data.memory : data.memory.slice(0, 8)).map((entry: any) => <Card key={entry.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex gap-3"><div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.memoryType === "decision" ? "bg-amber-50 text-amber-700" : entry.memoryType === "work_product" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{entry.memoryType === "decision" ? <CheckCheck className="h-4 w-4" /> : entry.memoryType === "work_product" ? <FileText className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h4 className="font-bold leading-6 text-slate-900">{entry.title}</h4>{entry.sourceFileName ? <Paperclip className="h-3.5 w-3.5 text-slate-400" /> : null}</div>{entry.body ? <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-6 text-slate-600">{entry.body}</p> : null}{entry.documents?.length ? <div className="mt-3 space-y-2">{entry.documents.map((document: any) => <a key={document.id} href={document.downloadPath} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3df] bg-[#f1f8f6] px-3 py-2 text-[11px] font-bold text-[#18596a] transition hover:bg-[#e5f2ef]"><span className="min-w-0 truncate">{document.fileName}</span><span className="shrink-0">فتح الملف</span></a>)}</div> : entry.sourceFileName ? <p className="mt-2 truncate text-[11px] font-semibold text-slate-500">مرجع محفوظ: {entry.sourceFileName}</p> : null}<p className="mt-2 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(entry.occurredAt)}</bdi></p></div></div></Card>)}</div>{data.memory.length > 8 ? <Button variant="outline" onClick={() => setShowAllMemory(value => !value)} className="mt-3 w-full rounded-xl bg-white">{showAllMemory ? "عرض المختصر" : `عرض جميع عناصر الذاكرة (${data.memory.length})`}</Button> : null}</section> : null}
             <section><h3 className="mb-3 text-base font-black text-slate-900">سجل الملف</h3><div className="space-y-3">{data.events.map((event: any) => <div key={event.id} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500"><CircleDot className="h-4 w-4" /></div><div><p className="text-sm font-semibold leading-6 text-slate-800">{event.summary}</p><p className="mt-1 text-[11px] text-slate-400"><bdi dir="ltr">{formatDateTime(event.occurredAt)}</bdi></p></div></div>)}</div></section>
             <div className="grid gap-3 sm:grid-cols-2">
-              {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
+              {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
               <Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />فتح بطاقة المشروع الأصلية</Button>
             </div>
           </div>
@@ -514,6 +633,7 @@ function ImportReviewPanel({ data, isLoading, error }: { data: any; isLoading: b
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
         { label: "ملفات العمل", value: data.promotion.workFiles },
         { label: "الإجراءات", value: data.promotion.actions },
+        { label: "القرارات المطلوبة", value: data.promotion.decisions },
         { label: "عناصر الذاكرة", value: data.promotion.memoryEntries },
         { label: "أحداث السجل", value: data.promotion.events },
         { label: "الاجتماعات", value: data.promotion.meetings },
@@ -587,14 +707,17 @@ export default function ComoNextTodayPage() {
           </div>
 
           <TabsContent value="today" className="mt-0 space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
               <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مستحق اليوم</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{data.today.summary.dueToday}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><CalendarClock className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">متأخر</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.today.summary.overdue}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><AlertCircle className="h-6 w-6" /></div></div></Card>
+              <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">قرارات مطلوبة</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.decisions.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بانتظار الخارج</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.today.summary.waitingExternal}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Clock3 className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-violet-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">لدى Manus</p><p className="mt-2 text-3xl font-black text-violet-700"><bdi>{data.today.summary.manus}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><Sparkles className="h-6 w-6" /></div></div></Card>
             </section>
 
-            {data.today.summary.dueToday === 0 ? <EmptyState title="لا توجد متابعة مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء التالي بموعد واضح." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
+            {data.decisions.length ? <Card className="rounded-3xl border-rose-100 bg-[#fffafa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">قرارات تنتظر الحسم</h2><p className="text-xs text-slate-500">لا تتحول إلى إجراء خارجي قبل تسجيل القرار وسلطته.</p></div></div><Badge variant="outline" className="rounded-full border-rose-200 bg-white text-rose-700"><bdi>{data.decisions.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
+
+            {data.today.summary.dueToday === 0 && data.decisions.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
 
             <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-black">نبض ملفات العمل</h2><p className="mt-1 text-sm text-slate-500">أهم الملفات النشطة وما الذي ينتظرها.</p></div><Button variant="ghost" onClick={() => updateTab("work-files")} className="rounded-xl text-[#1e6478]">عرض الكل<ChevronLeft className="me-1 h-4 w-4" /></Button></div>{data.workFiles.length === 0 ? <EmptyState title="لم تفتح ملفات عمل بعد" description="ابدأ بموضوع حقيقي له سؤال حاكم ونتيجة مطلوبة، ثم أضف إجراءه التالي." action={<NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />} /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.slice(0, 3).map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}</section>
           </TabsContent>

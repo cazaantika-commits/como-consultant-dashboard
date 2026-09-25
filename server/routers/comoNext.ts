@@ -3,6 +3,7 @@ import { and, desc, eq, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   comoNextActions,
+  comoNextDecisions,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
   comoNextWorkFiles,
@@ -14,9 +15,11 @@ import {
   changeActionStatusCommand,
   closeWorkFileCommand,
   createActionCommand,
+  createDecisionCommand,
   createWorkFileCommand,
   getRecentWorkFileEvents,
   requireProjectAccess,
+  resolveDecisionCommand,
 } from "../services/comoNextCommands";
 import { buildComoNextTodayProjection, type ComoNextTodayRow } from "../services/comoNextToday";
 
@@ -33,6 +36,7 @@ function getRows<T>(result: unknown): T[] {
 
 const prioritySchema = z.enum(["normal", "important", "urgent"]);
 const ownerTypeSchema = z.enum(["human", "manus", "team"]);
+const decisionAuthoritySchema = z.enum(["abdulrahman", "wael", "sheikh_issa", "joint", "other"]);
 const actionStatusSchema = z.enum([
   "open",
   "in_progress",
@@ -152,6 +156,37 @@ export const comoNextRouter = router({
         AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
     `);
 
+    const decisionsResult = await db.execute(sql`
+      SELECT
+        decision_row.id,
+        decision_row.project_id AS projectId,
+        p.name AS projectName,
+        decision_row.work_file_id AS workFileId,
+        wf.title AS workFileTitle,
+        decision_row.title,
+        decision_row.question,
+        decision_row.context_summary AS contextSummary,
+        decision_row.recommendation,
+        decision_row.decision_status AS decisionStatus,
+        decision_row.decision_authority AS decisionAuthority,
+        decision_row.due_at AS dueAt,
+        wf.priority
+      FROM como_next_decisions decision_row
+      JOIN como_next_work_files wf ON wf.id = decision_row.work_file_id AND wf.project_id = decision_row.project_id
+      JOIN projects p ON p.id = decision_row.project_id AND p.is_test_project = 0
+      LEFT JOIN como_next_import_batches import_batch ON import_batch.batch_id = wf.import_batch_id
+      LEFT JOIN como_next_project_access access_row
+        ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
+      WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
+        AND decision_row.decision_status IN ('required','deferred')
+        AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
+      ORDER BY
+        CASE wf.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
+        CASE WHEN decision_row.due_at IS NULL THEN 1 ELSE 0 END,
+        decision_row.due_at ASC,
+        decision_row.id ASC
+    `);
+
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -166,9 +201,16 @@ export const comoNextRouter = router({
       workFileId: Number(row.workFileId),
       ownerUserId: row.ownerUserId == null ? null : Number(row.ownerUserId),
     }));
+    const decisions = getRows<any>(decisionsResult).map(row => ({
+      ...row,
+      id: Number(row.id),
+      projectId: Number(row.projectId),
+      workFileId: Number(row.workFileId),
+    }));
 
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
+      decisions,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };
@@ -221,6 +263,7 @@ export const comoNextRouter = router({
         (SELECT COUNT(*) FROM como_next_project_parties pp JOIN como_next_parties party ON party.id = pp.party_id WHERE party.import_batch_id = ${String(batch.batchId)}) AS projectParties,
         (SELECT COUNT(*) FROM como_next_work_files WHERE import_batch_id = ${String(batch.batchId)}) AS workFiles,
         (SELECT COUNT(*) FROM como_next_actions WHERE import_batch_id = ${String(batch.batchId)}) AS actions,
+        (SELECT COUNT(*) FROM como_next_decisions WHERE import_batch_id = ${String(batch.batchId)}) AS decisions,
         (SELECT COUNT(*) FROM como_next_work_memory WHERE import_batch_id = ${String(batch.batchId)}) AS memoryEntries,
         (SELECT COUNT(*) FROM como_next_work_file_events event_row JOIN como_next_work_files wf ON wf.id = event_row.work_file_id WHERE wf.import_batch_id = ${String(batch.batchId)} AND event_row.idempotency_key LIKE 'followup:%') AS events,
         (SELECT COUNT(*) FROM como_next_meetings WHERE import_batch_id = ${String(batch.batchId)}) AS meetings,
@@ -239,6 +282,7 @@ export const comoNextRouter = router({
       projectParties: Number(promoted.projectParties || 0),
       workFiles: Number(promoted.workFiles || 0),
       actions: Number(promoted.actions || 0),
+      decisions: Number(promoted.decisions || 0),
       memoryEntries: Number(promoted.memoryEntries || 0),
       events: Number(promoted.events || 0),
       meetings: Number(promoted.meetings || 0),
@@ -334,6 +378,11 @@ export const comoNextRouter = router({
         .from(comoNextActions)
         .where(eq(comoNextActions.workFileId, input.workFileId))
         .orderBy(desc(comoNextActions.updatedAt));
+      const decisions = await db
+        .select()
+        .from(comoNextDecisions)
+        .where(eq(comoNextDecisions.workFileId, input.workFileId))
+        .orderBy(desc(comoNextDecisions.updatedAt));
       const events = await getRecentWorkFileEvents(input.workFileId);
       const memoryResult = await db.execute(sql`
         SELECT id, memory_type AS memoryType, entry_type AS entryType, title, body,
@@ -391,6 +440,7 @@ export const comoNextRouter = router({
       return {
         workFile: { ...workFile, projectName: access.project.name },
         actions,
+        decisions,
         events,
         memory: getRows<any>(memoryResult).map(row => {
           const id = Number(row.id);
@@ -438,6 +488,22 @@ export const comoNextRouter = router({
       return createActionCommand({ userId: ctx.user.id, ...input });
     }),
 
+  createDecision: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      title: z.string().trim().min(3).max(500),
+      question: z.string().trim().min(5).max(5000),
+      contextSummary: z.string().trim().max(20_000).optional().nullable(),
+      recommendation: z.string().trim().max(20_000).optional().nullable(),
+      decisionAuthority: decisionAuthoritySchema.default("abdulrahman"),
+      dueAt: z.string().optional().nullable(),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return createDecisionCommand({ userId: ctx.user.id, ...input });
+    }),
+
   changeActionStatus: protectedProcedure
     .input(z.object({
       actionId: z.number().int().positive(),
@@ -447,6 +513,20 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return changeActionStatusCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  resolveDecision: protectedProcedure
+    .input(z.object({
+      decisionId: z.number().int().positive(),
+      nextStatus: z.enum(["approved", "rejected", "deferred"]),
+      decisionAuthority: decisionAuthoritySchema,
+      decisionText: z.string().trim().min(3).max(20_000),
+      evidenceReference: z.string().trim().max(5000).optional().nullable(),
+      deferredUntil: z.string().optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return resolveDecisionCommand({ userId: ctx.user.id, ...input });
     }),
 
   closeWorkFile: protectedProcedure

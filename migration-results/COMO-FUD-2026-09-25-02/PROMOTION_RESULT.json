@@ -2,11 +2,12 @@
   "mode": "apply",
   "batchId": "COMO-FUD-2026-09-25-02",
   "sourceFingerprint": "d4283d21c1490a408b6ab14cba6cede6f60e9d4a4212cbbaa81c933ad6e61720",
-  "promotionFingerprint": "9d2fd19df3280ecf06691d594e147f1848972ff5eae483978eb0cd3bd960f3cc",
+  "promotionFingerprint": "a8c83ea16aa6a72ac48871da9c6741131efed02b2e151c80475d403310d61805",
   "expected": {
     "projects": 2,
     "parties": 15,
     "workFiles": 11,
+    "decisions": 1,
     "workEntries": 225,
     "events": 586,
     "meetings": 4
@@ -14,43 +15,47 @@
   "stats": {
     "parties": {
       "resolved": 15,
-      "created": 15
+      "created": 0
     },
     "contacts": {
       "resolved": 32,
-      "created": 32
+      "created": 0
     },
     "projectParties": {
       "resolved": 15,
-      "created": 15
+      "created": 0
     },
     "workFiles": {
       "resolved": 11,
-      "created": 11
+      "created": 0
+    },
+    "decisions": {
+      "resolved": 1,
+      "created": 1
     },
     "memory": {
       "resolved": 147,
-      "created": 147
+      "created": 0
     },
     "actions": {
       "resolved": 78,
-      "created": 78
+      "created": 0
     },
     "events": {
       "resolved": 586,
-      "created": 586
+      "created": 0
     },
     "meetings": {
       "resolved": 4,
-      "created": 4
+      "created": 0
     },
     "meetingParticipants": {
       "resolved": 15,
-      "created": 15
+      "created": 0
     },
     "meetingAgendaItems": {
       "resolved": 113,
-      "created": 113
+      "created": 0
     }
   },
   "skippedProjectIds": [
@@ -59,5 +64,5 @@
   "externalSideEffects": 0,
   "secretsImported": 0,
   "documentFilesPendingStorageCopy": 34,
-  "completedAt": "2026-09-25T17:26:15.533Z"
+  "completedAt": "2026-09-25T18:37:06.369Z"
 }

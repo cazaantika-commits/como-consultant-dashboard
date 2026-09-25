@@ -33,7 +33,21 @@ describe("COMO Next read-only router", () => {
     expect(await caller.listProjects()).toEqual([]);
     const overview = await caller.getOverview();
     expect(overview.workFiles).toEqual([]);
+    expect(overview.decisions).toEqual([]);
     expect(overview.today.summary.dueToday).toBe(0);
+  });
+
+  it("exposes the imported required decision only inside its authorized work file", async () => {
+    const caller = comoNextRouter.createCaller(context(1));
+    const overview = await caller.getOverview();
+    expect(overview.decisions).toHaveLength(1);
+    expect(overview.decisions[0]).toMatchObject({
+      decisionStatus: "required",
+      decisionAuthority: "abdulrahman",
+      projectId: 1,
+    });
+    const detail = await caller.getWorkFile({ workFileId: overview.decisions[0].workFileId });
+    expect(detail.decisions.some(decision => decision.id === overview.decisions[0].id)).toBe(true);
   });
 
   it("exposes the completed transfer review to the system owner", async () => {
@@ -51,7 +65,7 @@ describe("COMO Next read-only router", () => {
     });
     expect(review.projects.find(project => project.sourceRecordId === "1")).toMatchObject({ targetId: 1, stageStatus: "staged" });
     expect(review.projects.find(project => project.sourceRecordId === "30001")).toMatchObject({ targetId: null, stageStatus: "skipped" });
-    expect(review.promotion).toMatchObject({ workFiles: 11, actions: 78, memoryEntries: 147, meetings: 4, documentsStored: 34, documentLinks: 37, documentChunks: 20 });
-    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 1098, externalSideEffects: 0, secretsImported: 0 });
+    expect(review.promotion).toMatchObject({ workFiles: 11, actions: 78, decisions: 1, memoryEntries: 147, meetings: 4, documentsStored: 34, documentLinks: 37, documentChunks: 20 });
+    expect(review.safeguards).toEqual({ operationalRecordsPromoted: 1100, externalSideEffects: 0, secretsImported: 0 });
   });
 });

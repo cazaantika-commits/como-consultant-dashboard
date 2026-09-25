@@ -2874,6 +2874,38 @@ export const comoNextActions = mysqlTable("como_next_actions", {
   }).onDelete("restrict"),
 ]);
 
+export const comoNextDecisions = mysqlTable("como_next_decisions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  question: text("question").notNull(),
+  contextSummary: longtext("context_summary"),
+  recommendation: longtext("recommendation"),
+  decisionStatus: mysqlEnum("decision_status", ["required", "approved", "rejected", "deferred", "superseded"]).notNull().default("required"),
+  decisionAuthority: mysqlEnum("decision_authority", ["abdulrahman", "wael", "sheikh_issa", "joint", "other"]).notNull().default("abdulrahman"),
+  decisionText: longtext("decision_text"),
+  evidenceReference: text("evidence_reference"),
+  dueAt: timestamp("due_at", { mode: "string" }),
+  decidedByUserId: int("decided_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  decidedAt: timestamp("decided_at", { mode: "string" }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  importBatchId: varchar("import_batch_id", { length: 100 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_decision_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_decision_project_status_idx").on(table.projectId, table.decisionStatus, table.dueAt),
+  index("como_next_decision_file_status_idx").on(table.workFileId, table.decisionStatus, table.dueAt),
+  foreignKey({
+    name: "como_next_decision_work_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+]);
+
 export const comoNextWorkFileEvents = mysqlTable("como_next_work_file_events", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),

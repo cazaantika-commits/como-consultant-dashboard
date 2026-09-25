@@ -147,6 +147,7 @@ async function main() {
       projects: projectMap.size,
       parties: (byTable.get("projectConsultants") || []).filter(row => projectMap.has(stringId(row.source_project_id))).length,
       workFiles: eligibleTaskRows.length,
+      decisions: eligibleTaskRows.filter(row => jsonParse<any>(row.payload_json).status === "decision").length,
       workEntries: eligibleChildRows("workEntries").length,
       events: eligibleChildRows("taskActivities").length,
       meetings: (byTable.get("meetings") || []).filter(row => projectMap.has(stringId(row.source_project_id))).length,
@@ -307,6 +308,30 @@ async function main() {
     }
     console.log(`[promotion] work-files=${workFileMap.size}`);
 
+    for (const row of eligibleTaskRows) {
+      const payload = jsonParse<any>(row.payload_json);
+      if (payload.status !== "decision") continue;
+      const workFileId = workFileMap.get(row.source_record_id);
+      const projectId = projectMap.get(stringId(row.source_project_id));
+      if (!workFileId || !projectId) throw new Error(`Missing work file mapping for decision task ${row.source_record_id}`);
+      const [existing] = await connection.query<RowDataPacket[]>(
+        `SELECT id FROM como_next_decisions WHERE source_system = ? AND source_record_id = ? LIMIT 1`,
+        [SOURCE_SYSTEM, row.source_record_id],
+      );
+      let created = false;
+      if (!existing[0]?.id) {
+        await connection.execute(
+          `INSERT INTO como_next_decisions
+            (user_id, project_id, work_file_id, title, question, context_summary, recommendation, decision_status, decision_authority, due_at, source_system, source_record_id, import_batch_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, 'required', 'abdulrahman', ?, ?, ?, ?, ?, ?)`,
+          [ownerUserId, projectId, workFileId, `حسم التقييم الداخلي — ${String(payload.title)}`, String(payload.nextAction || "ما القرار المطلوب اعتماده قبل أي إجراء خارجي؟"), safeText(payload.summary), dbTime(payload.dueAt), SOURCE_SYSTEM, row.source_record_id, batchId, dbTime(payload.createdAt), dbTime(payload.updatedAt)],
+        );
+        created = true;
+      }
+      bump("decisions", created);
+    }
+    console.log(`[promotion] decisions=${stats.decisions?.resolved || 0}`);
+
     for (const row of eligibleChildRows("workEntries")) {
       const payload = jsonParse<any>(row.payload_json);
       const workFileId = workFileMap.get(stringId(payload.taskId));
@@ -453,16 +478,46 @@ async function main() {
     for (const [taskId, workFileId] of workFileMap) {
       const taskRow = rowBy("followUpTasks", taskId);
       if (!taskRow) continue;
+      const taskPayload = jsonParse<any>(taskRow.payload_json);
       const projectId = projectMap.get(stringId(taskRow.source_project_id));
       if (!projectId) continue;
       const idempotencyKey = `followup:promotion:${batchId}:${taskId}`;
-      const activityCount = (activitiesByTask.get(taskId) || []).length;
-      await connection.execute(
-          `INSERT IGNORE INTO como_next_work_file_events
+      const hasRequiredDecision = taskPayload.status === "decision";
+      if (hasRequiredDecision) {
+        const decisionEventKey = `followup:decision:${batchId}:${taskId}`;
+        const [decisionEventRows] = await connection.query<RowDataPacket[]>(
+          `SELECT id FROM como_next_work_file_events WHERE idempotency_key = ? LIMIT 1`,
+          [decisionEventKey],
+        );
+        if (!decisionEventRows[0]?.id) {
+          const [sequenceRows] = await connection.query<RowDataPacket[]>(
+            `SELECT COALESCE(MAX(sequence_no), 0) AS sequenceNo FROM como_next_work_file_events WHERE work_file_id = ?`,
+            [workFileId],
+          );
+          await connection.execute(
+            `INSERT INTO como_next_work_file_events
+              (user_id, project_id, work_file_id, action_id, sequence_no, actor_type, actor_user_id, event_type, summary, payload_json, idempotency_key, occurred_at, created_at)
+             VALUES (?, ?, ?, NULL, ?, 'system', ?, 'decision_required', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+            [ownerUserId, projectId, workFileId, Number(sequenceRows[0]?.sequenceNo || 0) + 1, ownerUserId, `قرار مطلوب: ${String(taskPayload.title)}`, JSON.stringify({ batchId, sourceTaskId: taskId }), decisionEventKey],
+          );
+        }
+      }
+      const [promotionEventRows] = await connection.query<RowDataPacket[]>(
+        `SELECT id FROM como_next_work_file_events WHERE idempotency_key = ? LIMIT 1`,
+        [idempotencyKey],
+      );
+      if (!promotionEventRows[0]?.id) {
+        const [sequenceRows] = await connection.query<RowDataPacket[]>(
+          `SELECT COALESCE(MAX(sequence_no), 0) AS sequenceNo FROM como_next_work_file_events WHERE work_file_id = ?`,
+          [workFileId],
+        );
+        await connection.execute(
+          `INSERT INTO como_next_work_file_events
             (user_id, project_id, work_file_id, action_id, sequence_no, actor_type, actor_user_id, event_type, summary, payload_json, idempotency_key, occurred_at, created_at)
            VALUES (?, ?, ?, NULL, ?, 'system', ?, 'import_promoted', 'تمت ترقية الملف من Follow-up Desk إلى نواة COMO Next التشغيلية دون تنفيذ أي إجراء خارجي.', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [ownerUserId, projectId, workFileId, activityCount + 1, ownerUserId, JSON.stringify({ batchId, sourceTaskId: taskId }), idempotencyKey],
+          [ownerUserId, projectId, workFileId, Number(sequenceRows[0]?.sequenceNo || 0) + 1, ownerUserId, JSON.stringify({ batchId, sourceTaskId: taskId }), idempotencyKey],
         );
+      }
     }
 
     await connection.execute(`UPDATE como_next_import_batches SET batch_status = 'promoted', updated_at = CURRENT_TIMESTAMP WHERE id = ?`, [Number(batch.id)]);
