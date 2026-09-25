@@ -80,9 +80,9 @@ describe("Command Center dashboard card registry", () => {
     expect(source).not.toContain('COMO Developments — Command Center');
   });
 
-  it("places the decision summary ahead of financial alerts and uses the new professional advisor portrait", () => {
-    expect(source).toContain('salwa-enhanced_0251b1a8.png');
-    expect(source).toContain('تحدث مع سلوى');
+  it("places the decision summary ahead of financial alerts and uses Sara's approved local portrait", () => {
+    expect(source).toContain('/sara/sara-approved-5256847d.webp');
+    expect(source).toContain('تحدث مع سارة');
     expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));
   });
@@ -98,21 +98,21 @@ describe("Command Center dashboard card registry", () => {
     expect(routerSource).not.toContain("UPDATE financialData");
   });
 
-  it("serves Salwa's permanent portrait through the project storage proxy", () => {
+  it("keeps the authenticated storage proxy registered for project documents", () => {
     expect(serverSource).toContain('import { registerStorageProxy } from "./storageProxy";');
     expect(serverSource.indexOf('registerStorageProxy(app);')).toBeLessThan(serverSource.indexOf('registerOAuthRoutes(app);'));
     expect(storageProxySource).toContain('app.get("/manus-storage/*"');
     expect(storageProxySource).toContain('v1/storage/presign/get');
   });
 
-  it("keeps Salwa voice diagnosable and manually playable when autoplay is blocked", () => {
+  it("keeps Sara's opening briefing diagnosable and manually playable when autoplay is blocked", () => {
     expect(routerSource).toContain("reportLaylaVoiceEvent");
     expect(routerSource).toContain("[Layla TTS client]");
     expect(source).toContain("openingBriefingAudioRef");
     expect(source).toContain("openingBriefingAutoplayAttemptedRef.current");
     expect(source).toContain("preload=\"auto\"");
     expect(source).toContain("controls={openingBriefingState === \"error\"}");
-    expect(source).toContain("اضغط لسماع ملخص سلوى");
+    expect(source).toContain("اضغط لسماع ملخص سارة");
     expect(source).toContain("تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.");
     expect(source).toContain("manual_play_attempted");
     expect(source).toContain("play_failed");

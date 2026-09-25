@@ -65,10 +65,10 @@ function monthLabel(monthDate: string) {
 }
 
 function greeting(member: OpeningMember) {
-  if (member.memberId === "sheikh_issa") return "حياك الله يا شيخ عيسى، أنا سلوى.";
-  if (member.memberId === "wael") return "أهلاً وائل، أنا سلوى.";
+  if (member.memberId === "sheikh_issa") return "حياك الله يا شيخ عيسى، أنا سارة.";
+  if (member.memberId === "wael") return "أهلاً وائل، أنا سارة.";
   const name = member.nameAr?.trim() || "بك";
-  return `أهلاً ${name}، أنا سلوى.`;
+  return `أهلاً ${name}، أنا سارة.`;
 }
 
 function describeSignedMovement(value: number) {

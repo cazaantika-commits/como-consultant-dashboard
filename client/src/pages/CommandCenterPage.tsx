@@ -2,7 +2,6 @@ import { useProjectContext } from "@/contexts/ProjectContext";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { Room, RoomEvent, Track } from "livekit-client";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getCommandCenterTokenKey, getPersonaLoginHint, resolveCommandCenterPersona, type CommandCenterPersona } from "@/lib/commandCenterIdentity";
 import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
@@ -40,9 +39,6 @@ import { default as Flag } from "lucide-react/dist/esm/icons/flag.js";
 import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
 import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
 import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
-import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
-import { default as MicOff } from "lucide-react/dist/esm/icons/mic-off.js";
-import { default as Square } from "lucide-react/dist/esm/icons/square.js";
 import { default as Volume2 } from "lucide-react/dist/esm/icons/volume-2.js";
 import { default as VolumeX } from "lucide-react/dist/esm/icons/volume-x.js";
 import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
@@ -121,111 +117,9 @@ import { buildLaylaOpeningBriefing } from "@/lib/laylaOpeningBriefing";
 import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
 import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 import { playLaylaGeneratedAudio, stopLaylaGeneratedAudio } from "@/lib/laylaGeneratedAudio";
+import { SaraRealtimeRoom } from "@/components/SaraRealtimeRoom";
 
-const LAYLA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
-
-// --- Voice Recording Hook ---
-function getSupportedMimeType(): string {
-  // Safari/iOS prefers mp4, Chrome/Firefox prefer webm
-  const types = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-    "audio/ogg;codecs=opus",
-    "audio/ogg",
-    "", // fallback: let browser decide
-  ];
-  for (const t of types) {
-    if (t === "") return "";
-    try { if (MediaRecorder.isTypeSupported(t)) return t; } catch { /* skip */ }
-  }
-  return "";
-}
-
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1];
-      if (base64) resolve(base64);
-      else reject(new Error("Failed to convert audio to base64"));
-    };
-    reader.onerror = () => reject(new Error("FileReader error"));
-    reader.readAsDataURL(blob);
-  });
-}
-
-function useVoiceRecorder() {
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startRecording = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = getSupportedMimeType();
-      console.log("[Voice] Starting recording, mimeType:", mimeType || "browser-default");
-      const options: MediaRecorderOptions = mimeType ? { mimeType } : {};
-      const mediaRecorder = new MediaRecorder(stream, options);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mediaRecorder.onerror = (e) => {
-        console.error("[Voice] MediaRecorder error:", e);
-      };
-      mediaRecorder.start(250);
-      setIsRecording(true);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000);
-      console.log("[Voice] Recording started successfully");
-    } catch (err: any) {
-      console.error("[Voice] Failed to start recording:", err);
-      throw new Error(err.message || "لم يتم السماح بالوصول للميكروفون");
-    }
-  }, []);
-
-  const stopRecording = useCallback((): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const mediaRecorder = mediaRecorderRef.current;
-      if (!mediaRecorder || mediaRecorder.state === "inactive") {
-        console.error("[Voice] No active recording to stop");
-        reject(new Error("No active recording")); return;
-      }
-      mediaRecorder.onstop = () => {
-        mediaRecorder.stream.getTracks().forEach(t => t.stop());
-        const actualMime = mediaRecorder.mimeType || "audio/webm";
-        const blob = new Blob(chunksRef.current, { type: actualMime });
-        console.log("[Voice] Recording stopped, blob size:", blob.size, "type:", actualMime, "chunks:", chunksRef.current.length);
-        if (blob.size < 100) {
-          reject(new Error("التسجيل قصير جداً، حاول مرة أخرى")); return;
-        }
-        resolve(blob);
-      };
-      mediaRecorder.stop();
-      setIsRecording(false);
-      if (timerRef.current) clearInterval(timerRef.current);
-    });
-  }, []);
-
-  const cancelRecording = useCallback(() => {
-    const mediaRecorder = mediaRecorderRef.current;
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      mediaRecorder.stream.getTracks().forEach(t => t.stop());
-      mediaRecorder.stop();
-    }
-    setIsRecording(false);
-    setRecordingTime(0);
-    if (timerRef.current) clearInterval(timerRef.current);
-  }, []);
-
-  return { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording };
-}
+const SARA_AVATAR_URL = "/sara/sara-approved-5256847d.webp";
 
 // --- Token Management ---
 function getStoredToken(persona: CommandCenterPersona | null): string | null {
@@ -456,504 +350,7 @@ function LoginScreen({ onLogin, hint }: { onLogin: (token: string) => void; hint
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// LAYLA CHAT PANEL (with Voice)
-// ═══════════════════════════════════════════════════════
-function SalwaChat({ token, memberName, isOpen, onClose }: { token: string; memberName: string; isOpen: boolean; onClose: () => void }) {
-  const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [micError, setMicError] = useState<string | null>(null);
-  const [liveAvatarUrl, setLiveAvatarUrl] = useState<string | null>(null);
-  const [liveAvatarState, setLiveAvatarState] = useState<"idle" | "connecting" | "connected">("idle");
-  const [isLiveAvatarLoading, setIsLiveAvatarLoading] = useState(false);
-  const [liveAvatarLiteSession, setLiveAvatarLiteSession] = useState<{ livekitUrl: string; livekitClientToken: string; sessionId: string } | null>(null);
-  const liveAvatarRoomRef = useRef<Room | null>(null);
-  const liveAvatarWindowRef = useRef<Window | null>(null);
-  const liveAvatarVideoRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const { isRecording, recordingTime, isTranscribing, setIsTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecorder();
-  const autoStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const chatHistory = trpc.commandCenter.getChatHistory.useQuery({ token }, { enabled: isOpen });
-  const chatMutation = trpc.commandCenter.chatWithSalwa.useMutation();
-  const clearMutation = trpc.commandCenter.clearChatHistory.useMutation();
-  const transcribeMutation = trpc.commandCenter.transcribeVoice.useMutation();
-  const generateLaylaSpeech = trpc.commandCenter.generateLaylaSpeech.useMutation();
-  const createLiveAvatar = trpc.commandCenter.createLaylaLiveAvatarEmbed.useMutation();
-  const utils = trpc.useUtils();
-
-  const messages = chatHistory.data || [];
-  const displayLaylaContent = (content: unknown) => String(content || "")
-    
-    
-    .replace(
-      "مهمتي هي مساعدتك في إدارة مركز القيادة، تنفيذ أوامرك بإضافة المحتوى للفقاعات، إرسال الرسائل للشركاء التنفيذيين (وائل والشيخ عيسى)، وإنشاء جلسات التقييم، بالإضافة إلى تزويدك بالمعلومات حول مشاريعنا الاستثمارية والاستشاريين المعنيين.",
-      "مهمتي مساعدتك في فهم معلومات مركز القيادة والتدفقات النقدية المعتمدة والإجابة عن استفساراتك من مصادرها.",
-    );
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 300);
-    }
-  }, [isOpen]);
-
-  // Stop audio and close the visual session on close
-  useEffect(() => {
-    if (!isOpen) {
-      stopLaylaGeneratedAudio();
-      stopLaylaBrowserVoice();
-      liveAvatarRoomRef.current?.disconnect();
-      liveAvatarRoomRef.current = null;
-      if (liveAvatarWindowRef.current && !liveAvatarWindowRef.current.closed) liveAvatarWindowRef.current.close();
-      liveAvatarWindowRef.current = null;
-      setIsSpeaking(false);
-      setLiveAvatarUrl(null);
-      setLiveAvatarLiteSession(null);
-      setLiveAvatarState("idle");
-    }
-  }, [isOpen]);
-
-  // Connect the LiveAvatar LITE video room only after the backend has returned valid LiveKit credentials.
-  useEffect(() => {
-    const session = liveAvatarLiteSession;
-    const container = liveAvatarVideoRef.current;
-    if (!session || !container) return;
-
-    const room = new Room({ adaptiveStream: true, dynacast: true });
-    liveAvatarRoomRef.current = room;
-    let disposed = false;
-
-    const attachVideo = (track: any) => {
-      if (disposed || track.kind !== Track.Kind.Video || !liveAvatarVideoRef.current) return;
-      const element = track.attach();
-      element.className = "h-52 w-full object-cover sm:h-64";
-      liveAvatarVideoRef.current.replaceChildren(element);
-      setLiveAvatarState("connected");
-    };
-
-    room.on(RoomEvent.TrackSubscribed, (track) => attachVideo(track));
-    room.on(RoomEvent.Disconnected, () => {
-      if (!disposed) {
-        setLiveAvatarState("idle");
-        setLiveAvatarLiteSession(null);
-      }
-    });
-
-    room.connect(session.livekitUrl, session.livekitClientToken).catch((error) => {
-      if (!disposed) {
-        console.error("[LiveAvatar LITE] LiveKit connection failed", error);
-        setLiveAvatarState("idle");
-        setLiveAvatarLiteSession(null);
-        toast.error("تعذر اتصال فيديو سلوى؛ بقيت المحادثة النصية والصوتية متاحة");
-      }
-    });
-
-    return () => {
-      disposed = true;
-      room.removeAllListeners();
-      room.disconnect();
-      if (liveAvatarRoomRef.current === room) liveAvatarRoomRef.current = null;
-      if (liveAvatarVideoRef.current) liveAvatarVideoRef.current.replaceChildren();
-    };
-  }, [liveAvatarLiteSession]);
-
-  const handleSend = async (text?: string) => {
-    const msg = (text || message).trim();
-    if (!msg || isLoading) return;
-    setMessage("");
-    setIsLoading(true);
-
-    try {
-      await chatMutation.mutateAsync({ token, message: msg });
-      utils.commandCenter.getChatHistory.invalidate({ token });
-    } catch (err: any) {
-      toast.error("خطأ في الاتصال بسلوى");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleClear = async () => {
-    stopLaylaGeneratedAudio();
-    stopLaylaBrowserVoice();
-    setIsSpeaking(false);
-    await clearMutation.mutateAsync({ token });
-    utils.commandCenter.getChatHistory.invalidate({ token });
-    toast.success("تم مسح المحادثة");
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // Voice: Process recorded audio blob
-  const processVoiceBlob = async (blob: Blob) => {
-    try {
-      console.log("[Voice] Got blob:", blob.size, "bytes, type:", blob.type);
-      setIsTranscribing(true);
-      toast.info("جاري تحويل الصوت إلى نص...");
-      
-      // Convert blob to base64
-      const base64 = await blobToBase64(blob);
-      console.log("[Voice] Base64 length:", base64.length);
-      
-      const mimeType = blob.type || "audio/webm";
-      console.log("[Voice] Sending to transcription, mimeType:", mimeType);
-      
-      const result = await transcribeMutation.mutateAsync({
-        token,
-        audioBase64: base64,
-        mimeType,
-        language: "ar",
-      });
-      
-      console.log("[Voice] Transcription result:", result);
-      setIsTranscribing(false);
-      
-      if (result.text && result.text.trim()) {
-        toast.success(`تم التعرف: "${result.text.substring(0, 50)}${result.text.length > 50 ? '...' : ''}"`);
-        // Set the message in the input so user can see it
-        setMessage(result.text);
-        // Auto-send after brief delay
-        setTimeout(() => {
-          handleSend(result.text);
-        }, 300);
-      } else {
-        setMicError("لم يتم التعرف على كلام، حاول مرة أخرى");
-        toast.error("لم يتم التعرف على كلام");
-        setTimeout(() => setMicError(null), 4000);
-      }
-    } catch (err: any) {
-      console.error("[Voice] Error in voice flow:", err);
-      setIsTranscribing(false);
-      const errMsg = err.message || "فشل التحويل الصوتي";
-      setMicError(errMsg);
-      toast.error(errMsg);
-      setTimeout(() => setMicError(null), 4000);
-    }
-  };
-
-  // Voice: Mic click handler
-  const handleMicClick = async () => {
-    setMicError(null);
-    if (isRecording) {
-      // Clear auto-stop timer
-      if (autoStopRef.current) { clearTimeout(autoStopRef.current); autoStopRef.current = null; }
-      try {
-        console.log("[Voice] Stopping recording...");
-        const blob = await stopRecording();
-        await processVoiceBlob(blob);
-      } catch (err: any) {
-        console.error("[Voice] Stop error:", err);
-        setIsTranscribing(false);
-        setMicError(err.message || "فشل التحويل الصوتي");
-        setTimeout(() => setMicError(null), 4000);
-      }
-    } else {
-      try {
-        console.log("[Voice] Starting recording...");
-        await startRecording();
-        toast.info("جاري التسجيل... اضغط مرة أخرى للإيقاف");
-        // Auto-stop after 30 seconds
-        autoStopRef.current = setTimeout(async () => {
-          console.log("[Voice] Auto-stopping after 30s");
-          try {
-            const blob = await stopRecording();
-            toast.info("تم إيقاف التسجيل تلقائياً (30 ثانية)");
-            await processVoiceBlob(blob);
-          } catch (e) {
-            console.error("[Voice] Auto-stop error:", e);
-          }
-        }, 30000);
-      } catch (err: any) {
-        console.error("[Voice] Failed to start:", err);
-        setMicError(err.message || "لم يتم السماح بالوصول للميكروفون");
-        toast.error("لم يتم السماح بالوصول للميكروفون. تأكد من الإعدادات.");
-        setTimeout(() => setMicError(null), 4000);
-      }
-    }
-  };
-
-  const handleLiveAvatarToggle = async () => {
-    if (liveAvatarLiteSession || liveAvatarUrl) {
-      liveAvatarRoomRef.current?.disconnect();
-      liveAvatarRoomRef.current = null;
-      if (liveAvatarWindowRef.current && !liveAvatarWindowRef.current.closed) liveAvatarWindowRef.current.close();
-      liveAvatarWindowRef.current = null;
-      setLiveAvatarLiteSession(null);
-      setLiveAvatarUrl(null);
-      setLiveAvatarState("idle");
-      toast.info("تم إيقاف جلسة سلوى الحية");
-      return;
-    }
-
-    setIsLiveAvatarLoading(true);
-    setLiveAvatarState("connecting");
-    const liveWindow = window.open("about:blank", "salwa-liveavatar", "popup=yes,width=960,height=720,resizable=yes,scrollbars=yes");
-    liveAvatarWindowRef.current = liveWindow;
-    if (liveWindow) {
-      liveWindow.document.title = "سلوى الحية";
-      liveWindow.document.body.dir = "rtl";
-      liveWindow.document.body.innerHTML = '<div style="font-family:Arial,sans-serif;display:grid;place-items:center;min-height:90vh;color:#334155"><p>جاري تجهيز سلوى الحية...</p></div>';
-    }
-    try {
-      const embed = await createLiveAvatar.mutateAsync({ token, isSandbox: true });
-      setLiveAvatarUrl(embed.url);
-      if (liveWindow && !liveWindow.closed) {
-        liveWindow.location.replace(embed.url);
-        setLiveAvatarState("connected");
-        toast.success("فُتحت سلوى الحية في نافذة مستقلة؛ اضغط Chat now لبدء المحادثة");
-      } else {
-        setLiveAvatarState("idle");
-        toast.info("تم تجهيز سلوى الحية؛ اسمح بالنوافذ المنبثقة ثم اضغط فتح النافذة");
-      }
-    } catch (error) {
-      console.error("[LiveAvatar FULL] Failed to start Salwa", error);
-      if (liveWindow && !liveWindow.closed) liveWindow.close();
-      liveAvatarWindowRef.current = null;
-      setLiveAvatarState("idle");
-      toast.error("تعذر تهيئة سلوى الحية؛ بقيت المحادثة النصية والصوتية متاحة");
-    } finally {
-      setIsLiveAvatarLoading(false);
-    }
-  };
-
-  // TTS: Play Layla's response
-  const handlePlayResponse = async (text: string) => {
-    if (isSpeaking) {
-      stopLaylaGeneratedAudio();
-      stopLaylaBrowserVoice();
-      setIsSpeaking(false);
-      return;
-    }
-
-    const cleanText = text.replace(/[#*_~`>\[\]()]/g, "").replace(/\s+/g, " ").trim().slice(0, 1200);
-    try {
-      const generated = await generateLaylaSpeech.mutateAsync({ token, text: cleanText });
-      const playedGenerated = await playLaylaGeneratedAudio(generated.audioBase64, generated.mimeType, {
-        onStart: () => setIsSpeaking(true),
-        onEnd: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
-      });
-      if (playedGenerated) return;
-    } catch (error) {
-      console.warn("[Layla TTS] Chat speech generation failed, using browser fallback:", error);
-    }
-
-    const played = speakWithLaylaBrowserVoice(cleanText, {
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
-      onError: () => { setIsSpeaking(false); toast.error("تعذر تشغيل صوت سلوى على هذا الجهاز"); },
-    });
-    if (!played) toast.error("تعذر تشغيل صوت سلوى على هذا الجهاز");
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg h-[90vh] sm:h-[75vh] flex flex-col shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        dir="rtl"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-l from-amber-50 to-white">
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block w-11 h-11 rounded-full overflow-hidden ring-2 ring-amber-400/50 shadow-md"><img src={LAYLA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
-            <div className="flex sm:hidden h-11 w-11 items-center justify-center rounded-full bg-amber-500 text-white shadow-md"><MessageCircle className="h-5 w-5" /></div>
-            <div>
-              <h3 className="font-bold text-slate-800 text-sm">سلوى</h3>
-              <p className="text-[11px] text-emerald-600 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                متصلة الآن
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLiveAvatarToggle}
-              disabled={isLiveAvatarLoading}
-              className={`h-8 gap-1 px-2 text-xs ${liveAvatarLiteSession || liveAvatarUrl ? "text-emerald-600 hover:text-emerald-700" : "text-slate-500 hover:text-amber-600"}`}
-              title={liveAvatarLiteSession || liveAvatarUrl ? "إيقاف سلوى الحية" : "تشغيل سلوى الحية"}
-            >
-              {isLiveAvatarLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{liveAvatarLiteSession || liveAvatarUrl ? "إيقاف الحي" : "سلوى الحية"}</span>
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleClear} className="text-slate-400 hover:text-red-500 h-8 w-8 p-0">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose} className="text-slate-400 hover:text-slate-600 h-8 w-8 p-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {(liveAvatarLiteSession || liveAvatarUrl) && (
-          <div className="border-b border-amber-100 bg-slate-950 p-2">
-            <div className="mb-1 flex items-center justify-between px-1 text-[11px] text-amber-100/80">
-              <span>سلوى — جلسة حية</span>
-              <span className="text-amber-200">{liveAvatarState === "connected" ? "مفتوحة الآن" : liveAvatarUrl ? "جاهزة للفتح" : "جاري التجهيز..."}</span>
-            </div>
-            {liveAvatarUrl ? (
-              <div className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 px-5 py-6 text-center text-white shadow-inner sm:min-h-40">
-                <p className="text-sm font-semibold">سلوى الحية جاهزة في نافذة مستقلة</p>
-                <p className="max-w-sm text-[11px] leading-5 text-slate-300">تعمل النافذة المستقلة بشكل أفضل للصوت والفيديو المباشر من تضمين WebRTC داخل إطار خارجي.</p>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    const opened = window.open(liveAvatarUrl, "salwa-liveavatar", "popup=yes,width=960,height=720,resizable=yes,scrollbars=yes");
-                    if (opened) {
-                      liveAvatarWindowRef.current = opened;
-                      setLiveAvatarState("connected");
-                    } else {
-                      toast.error("اسمح بالنوافذ المنبثقة لفتح سلوى الحية");
-                    }
-                  }}
-                  className="bg-amber-500 text-slate-950 hover:bg-amber-400"
-                >
-                  فتح سلوى الحية
-                </Button>
-              </div>
-            ) : (
-              <div ref={liveAvatarVideoRef} className="min-h-52 overflow-hidden rounded-xl bg-black shadow-inner sm:min-h-64" />
-            )}
-            <p className="px-1 pt-1 text-[10px] leading-4 text-slate-400">الأفاتار الحي يعمل حاليًا في Sandbox. تبقى المحادثة النصية في COMO هي المصدر المعتمد للأرقام والتقارير المالية.</p>
-          </div>
-        )}
-
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.length === 0 && !isLoading && (
-            <div className="text-center py-10">
-              <div className="hidden sm:block w-20 h-20 rounded-full overflow-hidden ring-3 ring-amber-400/40 mx-auto mb-4 shadow-lg"><img src={LAYLA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover" /></div>
-              <div className="flex sm:hidden h-16 w-16 items-center justify-center rounded-full bg-amber-500 text-white mx-auto mb-4 shadow-lg"><MessageCircle className="h-7 w-7" /></div>
-              <p className="text-slate-700 font-semibold mb-1">مرحباً {memberName}</p>
-              <p className="text-slate-400 text-sm">كيف يمكنني مساعدتك اليوم؟</p>
-              <p className="text-slate-400 text-xs mt-2">يمكنك الكتابة أو استخدام الميكروفون 🎙️</p>
-            </div>
-          )}
-
-          {messages.map((msg: any, i: number) => (
-            <div key={msg.id || i} className={`flex ${msg.role === "member" ? "justify-start" : "justify-end"} gap-2`}>
-              {msg.role === "salwa" && (
-                <button
-                  onClick={() => handlePlayResponse(displayLaylaContent(msg.content))}
-                  className="self-end mb-1 p-1.5 rounded-full hover:bg-amber-100 transition-colors flex-shrink-0"
-                  title="استمع للرد"
-                >
-                  {isSpeaking ? <VolumeX className="w-3.5 h-3.5 text-amber-600" /> : <Volume2 className="w-3.5 h-3.5 text-amber-500" />}
-                </button>
-              )}
-              <div className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === "member"
-                  ? "bg-slate-100 text-slate-800 rounded-br-md"
-                  : "bg-gradient-to-l from-amber-500 to-amber-600 text-white rounded-bl-md shadow-md"
-              }`}>
-                {msg.role === "salwa" ? (
-                  <Streamdown>{displayLaylaContent(msg.content)}</Streamdown>
-                ) : (
-                  <p className="whitespace-pre-wrap">{displayLaylaContent(msg.content)}</p>
-                )}
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-end">
-              <div className="bg-gradient-to-l from-amber-500 to-amber-600 text-white rounded-2xl rounded-bl-md px-4 py-3 shadow-md">
-                <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-white/80 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-                  </div>
-                  <span className="text-xs text-white/70">سلوى تفكر...</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Recording indicator */}
-        {(isRecording || isTranscribing) && (
-          <div className="px-4 py-2 bg-red-50 border-t border-red-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {isRecording && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
-              <span className="text-xs text-red-600 font-medium">
-                {isTranscribing ? "جاري التحويل..." : `تسجيل... ${recordingTime}ث`}
-              </span>
-            </div>
-            {isRecording && (
-              <button onClick={cancelRecording} className="text-xs text-red-500 hover:text-red-700">إلغاء</button>
-            )}
-          </div>
-        )}
-
-        {/* Mic error */}
-        {micError && (
-          <div className="px-4 py-1.5 bg-red-50 text-xs text-red-600 text-center">{micError}</div>
-        )}
-
-        {/* Input */}
-        <div className="border-t bg-white p-3">
-          <div className="flex items-end gap-2">
-            {/* Mic button */}
-            <button
-              onClick={handleMicClick}
-              disabled={isLoading || isTranscribing}
-              className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-all border ${
-                isRecording
-                  ? "bg-red-500 text-white border-red-500 animate-pulse"
-                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-amber-600"
-              }`}
-            >
-              {isTranscribing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : isRecording ? (
-                <Square className="w-4 h-4" />
-              ) : (
-                <Mic className="w-4 h-4" />
-              )}
-            </button>
-            <Textarea
-              ref={inputRef}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isRecording ? "اضغط الميكروفون لإيقاف التسجيل..." : "اكتب رسالتك لسلوى..."}
-              className="flex-1 min-h-[44px] max-h-[120px] resize-none rounded-xl border-slate-200 text-sm focus:border-amber-400 focus:ring-amber-400/20"
-              rows={1}
-              disabled={isRecording || isTranscribing}
-            />
-            <Button
-              onClick={() => handleSend()}
-              disabled={!message.trim() || isLoading || isRecording}
-              className="h-11 w-11 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md p-0 flex-shrink-0"
-            >
-              <Send className="w-4 h-4 text-white" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Sara Realtime lives in a dedicated component; this page only controls when it is visible.
 
 // ═══════════════════════════════════════════════════════
 // REQUESTS & INQUIRIES (Interactive)
@@ -2494,7 +1891,7 @@ function NewsTicker({ token }: { token: string }) {
   const defaultItems = [
     { id: -1, label: 'مركز القيادة', text: 'مرحباً بكم في مركز القيادة — COMO Developments Command Center', isUrgent: false, needsResponse: false },
     { id: -2, label: 'مركز القيادة', text: 'تابعوا آخر التطورات في مشاريعنا العقارية', isUrgent: false, needsResponse: false },
-    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع سلوى اضغط على الزر العائم', isUrgent: false, needsResponse: false },
+    { id: -3, label: 'مركز القيادة', text: 'للتواصل مع سارة اضغط على الزر العائم', isUrgent: false, needsResponse: false },
   ];
 
   const displayItems = liveItems.length > 0 ? liveItems : defaultItems;
@@ -4384,7 +3781,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         setOpeningBriefingState("error");
         setOpeningBriefingError(detail);
         reportVoiceStage("browser_fallback_failed", detail);
-        if (startedByUser) toast.error("تعذر تشغيل صوت سلوى؛ أعد المحاولة من مشغل الصوت الظاهر");
+        if (startedByUser) toast.error("تعذر تشغيل صوت سارة؛ أعد المحاولة من مشغل الصوت الظاهر");
       },
     });
     if (!playedFallback) {
@@ -4479,7 +3876,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <Button variant="ghost" size="sm" onClick={() => setActiveBubble(null)} className="mb-2 text-slate-600"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى مركز القيادة</Button>
           <V2CapitalPortfolio embedded onBack={() => setActiveBubble(null)} commandCenterToken={token} initialViewMode={initialViewMode} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4492,7 +3889,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <Button variant="ghost" size="sm" onClick={() => setActiveBubble(null)} className="mb-2 text-slate-600"><ArrowRight className="ml-1 h-4 w-4" />العودة إلى مركز القيادة</Button>
           <V2UnifiedGroupCashFlow memberToken={token} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4513,7 +3910,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             <WorkSchedulePage />
           </div>
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4532,7 +3929,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
           <PaymentRequestsPage embedded={true} memberRole={member?.role || ''} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4550,7 +3947,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
           <InternalMessagesPage ccTokenProp={token} memberIdProp={member?.memberId} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4567,7 +3964,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           </div>
           <GeneralRequestsPage embedded={true} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4584,7 +3981,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             memberRole={member?.role || ''}
           />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4597,7 +3994,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         <div className="mx-auto max-w-5xl px-4 py-6">
           <PendingEvaluationQueue token={token} onOpenOverview={() => setShowPendingEvaluationQueue(false)} onBack={() => { setActiveBubble(null); setShowEvaluation(false); setShowPendingEvaluationQueue(false); }} />
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4616,7 +4013,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             <ArrowLeft className="w-4 h-4 ml-1" /> العودة للرئيسية
           </Button>
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4643,7 +4040,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
             />
           )}
         </div>
-        <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+        <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
       </div>
     );
   }
@@ -4660,9 +4057,9 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
           <div className="relative z-10 flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
             <div className="relative hidden flex-shrink-0 sm:block">
               <div className="h-[10.5rem] w-36 overflow-hidden rounded-2xl bg-slate-100 ring-2 ring-amber-200 shadow-[0_10px_22px_rgba(15,23,42,0.14)] lg:h-48 lg:w-[10.5rem]">
-                <img src={LAYLA_AVATAR_URL} alt="سلوى، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
+                <img src={SARA_AVATAR_URL} alt="سارة، مستشارة مركز القيادة" className="h-full w-full object-cover object-[center_14%]" />
               </div>
-              <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">سلوى</span>
+              <span className="absolute -bottom-2 right-1 rounded-full border border-amber-200 bg-white px-2 py-0.5 text-[9px] font-black text-amber-900 shadow-sm">سارة</span>
               <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-500" />
             </div>
             <div className="flex-1 text-right">
@@ -4720,7 +4117,7 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                 <button onClick={() => setShowSalwa(true)}
                   className="flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]">
                   <MessageSquare className="w-4 h-4" />
-                  <span>تحدث مع سلوى</span>
+                  <span>تحدث مع سارة</span>
                 </button>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -4756,19 +4153,19 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
                           type="button"
                           onClick={() => { playOpeningBriefing(true); }}
                           disabled={!openingBriefingText || openingBriefingState === "loading"}
-                          aria-label={openingBriefingState === "playing" ? "إيقاف ملخص سلوى الصوتي" : "تشغيل ملخص سلوى الصوتي"}
+                          aria-label={openingBriefingState === "playing" ? "إيقاف ملخص سارة الصوتي" : "تشغيل ملخص سارة الصوتي"}
                           className="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {openingBriefingState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : openingBriefingState === "playing" ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                           <span className="text-[11px] font-black">
-                            {openingBriefingState === "loading" ? "جاري تجهيز صوت سلوى" : openingBriefingState === "playing" ? "إيقاف صوت سلوى" : openingBriefingState === "blocked" ? "اضغط لسماع ملخص سلوى" : "تشغيل صوت سلوى"}
+                            {openingBriefingState === "loading" ? "جاري تجهيز صوت سارة" : openingBriefingState === "playing" ? "إيقاف صوت سارة" : openingBriefingState === "blocked" ? "اضغط لسماع ملخص سارة" : "تشغيل صوت سارة"}
                           </span>
                         </button>
                       )}
                       {openingBriefingError && <span className="max-w-[280px] text-[10px] font-semibold text-red-600">تعذر التشغيل التلقائي. استخدم مشغل الصوت الظاهر أعلاه.</span>}
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص سلوى الصوتي" : "تشغيل ملخص سلوى الصوتي"}</TooltipContent>
+                  <TooltipContent>{openingBriefingState === "playing" ? "إيقاف ملخص سارة الصوتي" : "تشغيل ملخص سارة الصوتي"}</TooltipContent>
                 </Tooltip>
                 <button onClick={() => setActiveBubble("reports")}
                   className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]">
@@ -5076,10 +4473,10 @@ function Dashboard({ token, member, onLogout }: { token: string; member: any; on
         style={{boxShadow: '0 0 0 3px rgba(245,158,11,0.4), 0 8px 32px rgba(245,158,11,0.3)'}}
       >
         <MessageCircle className="h-6 w-6 text-white sm:hidden" />
-        <img src={LAYLA_AVATAR_URL} alt="سلوى" className="hidden sm:block w-full h-full object-cover" />
+        <img src={SARA_AVATAR_URL} alt="سارة" className="hidden sm:block w-full h-full object-cover" />
         <div className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
       </button>
-      <SalwaChat token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
+      <SaraRealtimeRoom token={token} memberName={member.nameAr} isOpen={showSalwa} onClose={() => setShowSalwa(false)} />
     </div>
   );
 }

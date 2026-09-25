@@ -62,6 +62,7 @@ import { consultantRequirementsRouter } from "./routers/consultantRequirements";
 import { offerReaderRouter } from "./routers/offerReader";
 import { financialOfferComparisonRouter } from "./routers/financialOfferComparison";
 import { comoNextRouter } from "./routers/comoNext";
+import { saraRealtimeRouter } from "./routers/saraRealtime";
 import { adminProcedure } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -145,6 +146,7 @@ export const appRouter = router({
   offerReader: offerReaderRouter,
   financialOfferComparison: financialOfferComparisonRouter,
   comoNext: comoNextRouter,
+  saraRealtime: saraRealtimeRouter,
 
   // User Management (admin only)
   userManagement: router({

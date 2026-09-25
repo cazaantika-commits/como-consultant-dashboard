@@ -73,7 +73,7 @@ import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
 import { Streamdown } from "streamdown";
 import NotificationBell from "@/components/NotificationBell";
 
-const SALWA_AVATAR_URL = "https://d2xsxph8kpxj0f.cloudfront.net/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX/salwa-enhanced_0251b1a8.png";
+const SARA_AVATAR_URL = "/sara/sara-approved-5256847d.webp";
 
 const AGENT_ICONS: Record<string, any> = {
   crown: Crown,
@@ -132,7 +132,7 @@ function QuickActionResult({
     <div className="mt-4 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
       <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200/40">
         <div className="flex items-center gap-2">
-          <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
+          <img src={SARA_AVATAR_URL} alt="سارة" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
           <span className="font-bold text-sm text-foreground">{title}</span>
         </div>
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-200/30 transition-colors">
@@ -620,7 +620,7 @@ export default function Home() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- SALWA - TOP OF PAGE (Authenticated) -- */}
+        {/* -- SARA - THE SINGLE USER-FACING ASSISTANT -- */}
         {/* ══════════════════════════════════════════════════════════════ */}
         {effectivelyAuthenticated && (
           <section className="pt-8 pb-6">
@@ -632,7 +632,7 @@ export default function Home() {
                 {/* Avatar - compact */}
                 <div className="relative shrink-0">
                   <div className="w-36 h-44 lg:w-40 lg:h-48 rounded-2xl overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
-                    <img src={SALWA_AVATAR_URL} alt="سلوى" className="w-full h-full object-cover object-top" />
+                    <img src={SARA_AVATAR_URL} alt="سارة" className="w-full h-full object-cover object-top" />
                   </div>
                   <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
                     <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
@@ -642,37 +642,26 @@ export default function Home() {
                 {/* Info + Quick Actions */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">سلوى</h2>
+                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">سارة</h2>
                     <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
-                      المنسقة الرئيسية
+                      واجهة التواصل
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">
-                    المساعدة التنفيذية الذكية — نفذي أوامر سريعة أو تحدثي معها مباشرة
+                    تستمع وتتحدث وتعرض معرفة COMO؛ وManus هو العقل التنفيذي عند التكليف
                   </p>
 
-                  {/* Quick Actions Row */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {QUICK_ACTIONS.map((action) => (
-                      <QuickActionButton
-                        key={action.id}
-                        icon={action.icon}
-                        label={action.label}
-                        color={action.color}
-                        borderColor={action.borderColor}
-                        isLoading={quickActionLoading === action.id}
-                        onClick={() => executeQuickAction(action.id, action.message, action.resultTitle)}
-                      />
-                    ))}
+                  {/* Controlled assistant entry points */}
+                  <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">صوت مباشر ومقاطعة طبيعية</span>
+                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">لا إرسال خارجي تلقائي</span>
                   </div>
-
-                  {/* Chat button */}
                   <button
-                    onClick={() => setActiveAgent("salwa" as AgentType)}
+                    onClick={() => navigate("/command-center")}
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/20 transition-all duration-200 hover:shadow-lg hover:from-amber-600 hover:to-amber-700 text-xs"
                   >
                     <MessageSquare className="w-3.5 h-3.5" />
-                    تحدث مع سلوى
+                    تحدث مع سارة
                     <ArrowLeft className="w-3 h-3" />
                   </button>
                 </div>
@@ -1020,7 +1009,7 @@ export default function Home() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-foreground">فريق الوكلاء</h2>
-                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} وكيل متخصص تحت إشراف سلوى</p>
+                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} تخصصًا مساندًا؛ Manus يبقى العقل التنفيذي المركزي</p>
                 </div>
               </div>
               <Button

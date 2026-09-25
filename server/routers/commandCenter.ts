@@ -41,7 +41,7 @@ import { ENV } from "../_core/env";
 import { createLaylaLiveAvatarEmbed, createSalwaLiveAvatarLiteSession, LAYLA_LIVE_AVATAR_ID, SALWA_LIVE_AVATAR_ID } from "../liveAvatar";
 
 // --- Helper: Verify Command Center access token ---
-async function verifyToken(token: string) {
+export async function verifyToken(token: string) {
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
   
