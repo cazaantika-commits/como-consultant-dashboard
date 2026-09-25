@@ -1,0 +1,28 @@
+{
+  "summary": {
+    "total": 2,
+    "blocking": 1
+  },
+  "conflicts": [
+    {
+      "key": "projects:1",
+      "severity": "review",
+      "entityType": "project",
+      "sourceId": "1",
+      "sourceLabel": "Majan Lifestyle Centre",
+      "candidateTargetId": 1,
+      "reason": "Majan business context matches, but source plot RT-040 does not equal target plot 6457956",
+      "requiredDecision": "Approve or reject the proposed mapping"
+    },
+    {
+      "key": "projects:30001",
+      "severity": "blocking",
+      "entityType": "project",
+      "sourceId": "30001",
+      "sourceLabel": "Deluxe Hotel Apartment – Al Satwa (Plot 3347343)",
+      "candidateTargetId": null,
+      "reason": "Deluxe Hotel Apartment – Al Satwa, plot 3347343 has no target project record",
+      "requiredDecision": "Decide whether to create a target record or archive the source entity"
+    }
+  ]
+}

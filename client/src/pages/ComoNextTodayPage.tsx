@@ -25,13 +25,16 @@ import {
   Check,
   CheckCheck,
   ChevronLeft,
+  CirclePause,
   CircleDot,
   Clock3,
   FileStack,
   FolderOpen,
+  LockKeyhole,
   Loader2,
   LogIn,
   Plus,
+  RotateCcw,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -242,10 +245,12 @@ function NewWorkFileDialog({ projects, onCreated }: { projects: any[]; onCreated
 function NewActionDialog({ workFileId, onCreated }: { workFileId: number; onCreated: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [criteria, setCriteria] = useState("");
   const [ownerType, setOwnerType] = useState<OwnerType>("human");
   const [priority, setPriority] = useState<Priority>("important");
   const [dueAt, setDueAt] = useState("");
+  const [followUpAt, setFollowUpAt] = useState("");
   const createMutation = trpc.comoNext.createAction.useMutation();
 
   const submit = async () => {
@@ -257,17 +262,21 @@ function NewActionDialog({ workFileId, onCreated }: { workFileId: number; onCrea
       await createMutation.mutateAsync({
         workFileId,
         title: title.trim(),
+        description: description.trim() || undefined,
         acceptanceCriteria: criteria.trim(),
         ownerType,
         priority,
         dueAt: toIso(dueAt),
+        followUpAt: toIso(followUpAt),
         idempotencyKey: crypto.randomUUID(),
       });
       toast.success("تمت إضافة الإجراء");
       setOpen(false);
       setTitle("");
+      setDescription("");
       setCriteria("");
       setDueAt("");
+      setFollowUpAt("");
       onCreated();
     } catch (error: any) {
       toast.error(error?.message || "تعذر إضافة الإجراء");
@@ -281,12 +290,16 @@ function NewActionDialog({ workFileId, onCreated }: { workFileId: number; onCrea
         <DialogHeader className="text-right"><DialogTitle>إضافة الإجراء التالي</DialogTitle><DialogDescription>حدّد ما الذي سينفذ، من يملكه، وكيف نعرف أنه اكتمل.</DialogDescription></DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-2"><Label>الإجراء</Label><Input value={title} onChange={event => setTitle(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+          <div className="grid gap-2"><Label>التفاصيل</Label><Textarea value={description} onChange={event => setDescription(event.target.value)} className="min-h-20 rounded-xl bg-white" placeholder="السياق أو الخطوات التي يجب أخذها في الاعتبار" /></div>
           <div className="grid gap-2"><Label>معيار القبول</Label><Textarea value={criteria} onChange={event => setCriteria(event.target.value)} className="min-h-24 rounded-xl bg-white" placeholder="الدليل أو الناتج الذي سنقبله عند الإكمال" /></div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>المالك</Label><Select value={ownerType} onValueChange={value => setOwnerType(value as OwnerType)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="human">عبد الرحمن</SelectItem><SelectItem value="manus">Manus</SelectItem><SelectItem value="team">الفريق</SelectItem></SelectContent></Select></div>
             <div className="grid gap-2"><Label>الأولوية</Label><Select value={priority} onValueChange={value => setPriority(value as Priority)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="normal">عادي</SelectItem><SelectItem value="important">مهم</SelectItem><SelectItem value="urgent">عاجل</SelectItem></SelectContent></Select></div>
           </div>
-          <div className="grid gap-2"><Label>الموعد أو المتابعة</Label><Input type="datetime-local" value={dueAt} onChange={event => setDueAt(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2"><Label>موعد الاستحقاق</Label><Input type="datetime-local" value={dueAt} onChange={event => setDueAt(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+            <div className="grid gap-2"><Label>موعد المتابعة</Label><Input type="datetime-local" value={followUpAt} onChange={event => setFollowUpAt(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
+          </div>
         </div>
         <DialogFooter className="gap-2 sm:justify-start">
           <Button onClick={submit} disabled={createMutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">{createMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}حفظ الإجراء</Button>
@@ -301,24 +314,13 @@ function ActionStatusDialog({ action, onUpdated }: { action: any; onUpdated: () 
   const [open, setOpen] = useState(false);
   const [evidence, setEvidence] = useState("");
   const mutation = trpc.comoNext.changeActionStatus.useMutation();
-  const nextStatus: ActionStatus | null = action.actionStatus === "open"
-    ? "in_progress"
-    : action.actionStatus === "in_progress"
-      ? "completed_pending_verification"
-      : action.actionStatus === "completed_pending_verification"
-        ? "verified"
-        : null;
-  if (!nextStatus) return null;
-  const needsEvidence = nextStatus === "verified";
-  const label = nextStatus === "in_progress" ? "بدء التنفيذ" : nextStatus === "completed_pending_verification" ? "جاهز للتحقق" : "اعتماد التحقق";
-
-  const submit = async () => {
-    if (needsEvidence && !evidence.trim()) {
+  const changeStatus = async (nextStatus: ActionStatus, evidenceReference?: string) => {
+    if (nextStatus === "verified" && !evidenceReference?.trim()) {
       toast.error("أدخل مرجع الدليل قبل التحقق");
       return;
     }
     try {
-      await mutation.mutateAsync({ actionId: action.id, nextStatus, evidenceReference: needsEvidence ? evidence.trim() : undefined });
+      await mutation.mutateAsync({ actionId: action.id, nextStatus, evidenceReference: evidenceReference?.trim() || undefined });
       toast.success("تم تحديث حالة الإجراء");
       setOpen(false);
       setEvidence("");
@@ -328,19 +330,53 @@ function ActionStatusDialog({ action, onUpdated }: { action: any; onUpdated: () 
     }
   };
 
-  if (!needsEvidence) {
-    return <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={submit} className="rounded-xl bg-white">{label}</Button>;
-  }
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-emerald-700 hover:bg-emerald-800"><CheckCheck className="ms-1.5 h-4 w-4" />{label}</Button></DialogTrigger>
-      <DialogContent dir="rtl" className="max-w-lg rounded-3xl bg-[#fdfcf9]">
-        <DialogHeader className="text-right"><DialogTitle>التحقق من الإجراء</DialogTitle><DialogDescription>لا يُغلق الإجراء لمجرد القول إنه انتهى؛ أدخل الدليل المقبول.</DialogDescription></DialogHeader>
-        <div className="grid gap-2"><Label>مرجع الدليل</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-28 rounded-xl bg-white" placeholder="رابط الملف، اسم المستند، أو نتيجة التحقق" /></div>
-        <DialogFooter className="sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">اعتماد التحقق</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <div className="flex flex-wrap justify-end gap-2">
+      {action.actionStatus === "open" ? <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => changeStatus("in_progress")} className="rounded-xl bg-white"><Check className="ms-1.5 h-4 w-4" />بدء التنفيذ</Button> : null}
+      {["open", "in_progress"].includes(action.actionStatus) ? <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => changeStatus("waiting_external")} className="rounded-xl border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"><CirclePause className="ms-1.5 h-4 w-4" />بانتظار رد</Button> : null}
+      {action.actionStatus === "waiting_external" ? <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => changeStatus("in_progress")} className="rounded-xl bg-white"><RotateCcw className="ms-1.5 h-4 w-4" />استئناف</Button> : null}
+      {action.actionStatus === "in_progress" ? <Button size="sm" variant="outline" disabled={mutation.isPending} onClick={() => changeStatus("completed_pending_verification")} className="rounded-xl bg-white">جاهز للتحقق</Button> : null}
+      {action.actionStatus === "completed_pending_verification" ? <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-emerald-700 hover:bg-emerald-800"><CheckCheck className="ms-1.5 h-4 w-4" />اعتماد التحقق</Button></DialogTrigger>
+        <DialogContent dir="rtl" className="max-w-lg rounded-3xl bg-[#fdfcf9]">
+          <DialogHeader className="text-right"><DialogTitle>التحقق من الإجراء</DialogTitle><DialogDescription>لا يُغلق الإجراء لمجرد القول إنه انتهى؛ أدخل الدليل المقبول.</DialogDescription></DialogHeader>
+          <div className="grid gap-2"><Label>مرجع الدليل</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-28 rounded-xl bg-white" placeholder="رابط الملف، اسم المستند، أو نتيجة التحقق" /></div>
+          <DialogFooter className="sm:justify-start"><Button onClick={() => changeStatus("verified", evidence)} disabled={mutation.isPending} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">اعتماد التحقق</Button></DialogFooter>
+        </DialogContent>
+      </Dialog> : null}
+      {action.actionStatus === "verified" ? <Button size="sm" variant="ghost" disabled={mutation.isPending} onClick={() => changeStatus("in_progress")} className="rounded-xl text-slate-500"><RotateCcw className="ms-1.5 h-4 w-4" />إعادة فتح</Button> : null}
+    </div>
   );
+}
+
+function CloseWorkFileDialog({ workFileId, disabled, onClosed }: { workFileId: number; disabled: boolean; onClosed: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [evidence, setEvidence] = useState("");
+  const mutation = trpc.comoNext.closeWorkFile.useMutation();
+
+  const submit = async () => {
+    if (!evidence.trim()) {
+      toast.error("أدخل دليل إغلاق الملف");
+      return;
+    }
+    try {
+      await mutation.mutateAsync({ workFileId, closureEvidenceRef: evidence.trim() });
+      toast.success("تم إغلاق ملف العمل");
+      setOpen(false);
+      onClosed();
+    } catch (error: any) {
+      toast.error(error?.message || "تعذر إغلاق ملف العمل");
+    }
+  };
+
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button variant="outline" disabled={disabled} className="rounded-xl border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"><LockKeyhole className="ms-2 h-4 w-4" />إغلاق الملف</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-w-lg rounded-3xl bg-[#fdfcf9]">
+      <DialogHeader className="text-right"><DialogTitle>إغلاق ملف العمل</DialogTitle><DialogDescription>لا يمكن الإغلاق قبل التحقق من كل الإجراءات. سجّل هنا الدليل النهائي على تحقق النتيجة المطلوبة.</DialogDescription></DialogHeader>
+      <div className="grid gap-2"><Label>دليل الإغلاق</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-28 rounded-xl bg-white" placeholder="القرار المعتمد، المستند النهائي، أو مرجع النتيجة" /></div>
+      <DialogFooter className="sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">تأكيد الإغلاق</Button></DialogFooter>
+    </DialogContent>
+  </Dialog>;
 }
 
 function TodayActionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
@@ -380,6 +416,8 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
   const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, { enabled: open && Boolean(workFileId) });
   const [, navigate] = useLocation();
   const data = detailQuery.data;
+  const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
+  const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent dir="rtl" side="left" className="w-full overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0 sm:max-w-2xl">
@@ -390,11 +428,14 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
           <div className="space-y-6 p-6">
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-400">السؤال الحاكم</p><p className="mt-2 text-sm font-semibold leading-7 text-slate-900">{data.workFile.governingQuestion}</p><div className="my-4 h-px bg-slate-100" /><p className="text-xs font-bold text-slate-400">النتيجة المطلوبة</p><p className="mt-2 text-sm leading-7 text-slate-700">{data.workFile.desiredOutcome}</p></Card>
             <section>
-              <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div><NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /></div>
-              <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4><p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p></div><ActionStatusDialog action={action} onUpdated={onChanged} /></div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
+              <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
+              <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4>{action.description ? <p className="mt-2 text-xs leading-6 text-slate-600">{action.description}</p> : null}<p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p>{action.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل التحقق:</span> {action.evidenceReference}</div> : null}</div>{!isClosed ? <ActionStatusDialog action={action} onUpdated={onChanged} /> : null}</div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
             </section>
             <section><h3 className="mb-3 text-base font-black text-slate-900">سجل الملف</h3><div className="space-y-3">{data.events.map((event: any) => <div key={event.id} className="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500"><CircleDot className="h-4 w-4" /></div><div><p className="text-sm font-semibold leading-6 text-slate-800">{event.summary}</p><p className="mt-1 text-[11px] text-slate-400"><bdi dir="ltr">{formatDateTime(event.occurredAt)}</bdi></p></div></div>)}</div></section>
-            <Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="w-full rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />فتح بطاقة المشروع الأصلية</Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}
+              <Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />فتح بطاقة المشروع الأصلية</Button>
+            </div>
           </div>
         </> : null}
       </SheetContent>

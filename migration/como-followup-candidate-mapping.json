@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "approved": false,
+  "users": {
+    "1": {
+      "targetId": 3330456,
+      "status": "confirmed",
+      "evidence": "Exact email match: a.zaqout@comodevelopments.com; target permissions remain authoritative"
+    },
+    "750001": {
+      "targetId": 1,
+      "status": "confirmed",
+      "evidence": "Exact email match: cazaantika@gmail.com; target permissions remain authoritative"
+    },
+    "10680001": {
+      "targetId": 1890097,
+      "status": "confirmed",
+      "evidence": "Exact email and name match: eyad11@gmail.com"
+    }
+  },
+  "projects": {
+    "1": {
+      "targetId": 1,
+      "status": "needs_approval",
+      "evidence": "Majan business context matches, but source plot RT-040 does not equal target plot 6457956"
+    },
+    "2": {
+      "targetId": 6,
+      "status": "confirmed",
+      "evidence": "Exact plot match 6180578 and matching four-villa project description"
+    },
+    "30001": {
+      "targetId": null,
+      "status": "no_match",
+      "evidence": "Deluxe Hotel Apartment – Al Satwa, plot 3347343 has no target project record"
+    }
+  },
+  "consultants": {
+    "1": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Chapman Taylor requires legal-identity review before creating a target party"
+    },
+    "2": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Benoy requires legal-identity review before creating a target party"
+    },
+    "3": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "L35 Architects requires legal-identity review before creating a target party"
+    },
+    "4": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "DP Architects requires legal-identity review before creating a target party"
+    },
+    "5": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Design International requires legal-identity review before creating a target party"
+    },
+    "6": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Arcadis / former CRTKL requires legal-identity review before creating a target party"
+    },
+    "7": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Lead8 requires legal-identity review before creating a target party"
+    },
+    "8": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Aedas requires legal-identity review before creating a target party"
+    },
+    "9": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Broadway Malyan requires legal-identity review before creating a target party"
+    },
+    "10": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Mercurio Design Lab requires legal-identity review before creating a target party"
+    },
+    "11": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Colliers requires legal-identity review before creating a target party"
+    },
+    "12": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Ontario Architecture Engineering Consultant requires legal-identity review"
+    },
+    "13": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "ECCE requires legal-identity review before creating a target party"
+    },
+    "30001": {
+      "targetId": 5,
+      "status": "confirmed",
+      "evidence": "Exact full-name match to the existing COMO consultant record"
+    },
+    "30002": {
+      "targetId": null,
+      "status": "create_candidate",
+      "evidence": "Khatib & Alami has no confirmed target master record"
+    },
+    "60001": {
+      "targetId": 2,
+      "status": "confirmed",
+      "evidence": "Normalized full-name match to the existing Realistic Engineering record"
+    }
+  }
+}
