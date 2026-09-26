@@ -1,23 +1,19 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import {
   consultantProposals,
-  marketDecisionApprovals,
   projectContracts,
-  projectMarketEvidence,
-  projectMarketSearchProfiles,
   projectServiceInstances,
   projects,
 } from "../../drizzle/schema";
+import { loadMarketDecisionState, type MarketDecisionState } from "./comoNextMarketDecision";
 
 type GateStatus = "complete" | "partial" | "missing";
 
 type FoundationSeed = {
-  project: Record<string, any>;
-  protectedDocumentCount: number;
-  indexedDocumentCount: number;
-  hasMarketProfile: boolean;
-  verifiedEvidenceCount: number;
-  hasApprovedMarketDecision: boolean;
+	project: Record<string, any>;
+	protectedDocumentCount: number;
+	indexedDocumentCount: number;
+	marketDecision: Pick<MarketDecisionState, "status" | "isValid" | "reason" | "nextAction" | "profile" | "verifiedEvidenceCount" | "evidenceSetHash" | "latestApproved">;
   projectStageCount: number;
   plannedServices: number;
   proposalCount: number;
@@ -54,9 +50,9 @@ export function buildProjectFoundation(seed: FoundationSeed) {
   const factsStatus = statusFromCount(factItems.filter(item => item.present).length, factItems.length);
   const missingFactLabels = factItems.filter(item => !item.present).map(item => item.label);
 
-  const marketStatus: GateStatus = seed.hasApprovedMarketDecision && seed.verifiedEvidenceCount > 0 && seed.hasMarketProfile
+	const marketStatus: GateStatus = seed.marketDecision.isValid
     ? "complete"
-    : seed.hasMarketProfile || seed.verifiedEvidenceCount > 0 || seed.hasApprovedMarketDecision
+		: seed.marketDecision.profile || seed.marketDecision.verifiedEvidenceCount > 0 || seed.marketDecision.latestApproved
       ? "partial"
       : "missing";
   const programStatus: GateStatus = seed.projectStageCount > 0 && seed.plannedServices > 0
@@ -70,11 +66,6 @@ export function buildProjectFoundation(seed: FoundationSeed) {
       ? "partial"
       : "missing";
 
-  const marketMissing = [
-    !seed.hasMarketProfile ? "فلترة سوق محفوظة" : null,
-    seed.verifiedEvidenceCount === 0 ? "دليل سوق موثق" : null,
-    !seed.hasApprovedMarketDecision ? "قرار سوق معتمد" : null,
-  ].filter(Boolean) as string[];
   const programMissing = [
     seed.projectStageCount === 0 ? "مسار مشروع مسجل" : null,
     seed.plannedServices === 0 ? "خدمة لها موعد مخطط" : null,
@@ -116,17 +107,17 @@ export function buildProjectFoundation(seed: FoundationSeed) {
       sourceLabel: "بطاقة المشروع والوثائق المحمية",
     },
     {
-      id: "market",
-      title: "قرار الاستثمار والسوق",
-      description: "يتطلب فلترة سوق محفوظة ودليلًا موثقًا وقرار سوق معتمدًا.",
-      status: marketStatus,
-      detail: `${seed.verifiedEvidenceCount} دليل موثق${seed.hasApprovedMarketDecision ? " · قرار سوق معتمد" : " · لم يعتمد قرار سوق بعد"}`,
-      reason: marketStatus === "complete" ? "فلترة السوق والدليل والقرار المعتمد مكتملة." : `ينقص: ${marketMissing.join("، ")}.`,
-      nextAction: marketStatus === "complete" ? "احفظ قرار السوق مرجعًا لمرحلة البرنامج والتكليف." : "حدد ما تريد بحثه، وثّق الأدلة المتوافقة، ثم راجع قرار السوق واعتمده.",
-      items: [
-        { label: "فلترة سوق محفوظة", present: seed.hasMarketProfile },
-        { label: "دليل سوق موثق", present: seed.verifiedEvidenceCount > 0 },
-        { label: "قرار سوق معتمد", present: seed.hasApprovedMarketDecision },
+		id: "market",
+		title: "قرار الاستثمار والسوق",
+		description: "يُقرأ من سجل قرار السوق نفسه، ولا يعتبر الاعتماد التاريخي صالحًا بعد تغير الفلترة أو الأدلة.",
+		status: marketStatus,
+		detail: `${seed.marketDecision.verifiedEvidenceCount} دليل موثق${seed.marketDecision.isValid ? ` · قرار ساري #${seed.marketDecision.latestApproved?.id}` : " · لا يوجد قرار ساري"}`,
+		reason: seed.marketDecision.reason,
+		nextAction: seed.marketDecision.nextAction,
+		items: [
+			{ label: "فلترة سوق محفوظة", present: Boolean(seed.marketDecision.profile) },
+			{ label: "كامل الدليل الموثق ضمن الفلترة", present: seed.marketDecision.verifiedEvidenceCount > 0 && seed.marketDecision.status !== "incompatible_verified_evidence" },
+			{ label: "قرار سوق ساري على الإصدار الحالي", present: seed.marketDecision.isValid },
       ],
       href: `/knowledge-analysis?projectId=${projectId}`,
       sourceLabel: "المعرفة والتحليل",
@@ -169,21 +160,32 @@ export function buildProjectFoundation(seed: FoundationSeed) {
     totalGateCount: gates.length,
     nextDecision,
     nextActionHref,
-    evidence: {
+		evidence: {
       protectedDocumentCount: seed.protectedDocumentCount,
       indexedDocumentCount: seed.indexedDocumentCount,
-      totalDocumentReferences: documentCount,
-    },
+			totalDocumentReferences: documentCount,
+		},
+		marketDecision: {
+			status: seed.marketDecision.status,
+			isValid: seed.marketDecision.isValid,
+			reason: seed.marketDecision.reason,
+			nextAction: seed.marketDecision.nextAction,
+			decisionId: seed.marketDecision.latestApproved?.id ?? null,
+			decidedAt: seed.marketDecision.latestApproved?.decidedAt ?? null,
+			profileId: seed.marketDecision.profile?.id ?? null,
+			profileVersion: seed.marketDecision.profile?.version ?? null,
+			profileHash: seed.marketDecision.profile?.hash ?? null,
+			evidenceSetHash: seed.marketDecision.evidenceSetHash,
+			verifiedEvidenceCount: seed.marketDecision.verifiedEvidenceCount,
+		},
     gates,
   };
 }
 
 export async function loadProjectFoundation(db: any, projectId: number) {
-  const [projectRows, profileRows, evidenceRows, decisionRows, stageRows, plannedRows, proposalRows, contractRows, indexedRows, protectedResult] = await Promise.all([
-    db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
-    db.select({ id: projectMarketSearchProfiles.id }).from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, projectId)).limit(1),
-    db.select({ id: projectMarketEvidence.id }).from(projectMarketEvidence).where(and(eq(projectMarketEvidence.projectId, projectId), eq(projectMarketEvidence.verificationStatus, "verified"))),
-    db.select({ id: marketDecisionApprovals.id }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).limit(1),
+	const [projectRows, marketDecision, stageRows, plannedRows, proposalRows, contractRows, indexedRows, protectedResult] = await Promise.all([
+		db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
+		loadMarketDecisionState(db, projectId),
     db.selectDistinct({ stageCode: projectServiceInstances.stageCode }).from(projectServiceInstances).where(eq(projectServiceInstances.projectId, projectId)),
     db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
     db.select({ id: consultantProposals.id }).from(consultantProposals).where(eq(consultantProposals.projectId, projectId)),
@@ -204,12 +206,10 @@ export async function loadProjectFoundation(db: any, projectId: number) {
   return {
     project: { id: project.id, name: project.name, financingScenario: project.financingScenario },
     ...buildProjectFoundation({
-      project,
-      protectedDocumentCount,
-      indexedDocumentCount,
-      hasMarketProfile: Boolean(profileRows[0]),
-      verifiedEvidenceCount: evidenceRows.length,
-      hasApprovedMarketDecision: Boolean(decisionRows[0]),
+		project,
+		protectedDocumentCount,
+		indexedDocumentCount,
+		marketDecision,
       projectStageCount: stageRows.length,
       plannedServices: plannedRows.length,
       proposalCount: proposalRows.length,

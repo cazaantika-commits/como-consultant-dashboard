@@ -8,6 +8,17 @@ const launchPageSource = readFileSync("client/src/pages/ProjectLaunchGatePage.ts
 const phasesPageSource = readFileSync("client/src/pages/DevelopmentPhasesPage.tsx", "utf8");
 const appSource = readFileSync("client/src/App.tsx", "utf8");
 
+const currentMarketDecision = {
+	status: "current_valid" as const,
+	isValid: true,
+	reason: "القرار مطابق للإصدار الحالي.",
+	nextAction: "متابعة بوابة التأسيس.",
+	profile: { id: 12, version: 3, hash: "a".repeat(64), snapshot: {} },
+	verifiedEvidenceCount: 2,
+	evidenceSetHash: "b".repeat(64),
+	latestApproved: { id: 91, decidedAt: "2026-09-25", notes: null, sourceSchemaVersion: "como.market-decision.v1", profileId: 12, profileVersion: 3, profileHash: "a".repeat(64), evidenceSetHash: "b".repeat(64), verifiedEvidenceCount: 2 },
+};
+
 const completeSeed = {
   project: {
     id: 7,
@@ -21,9 +32,7 @@ const completeSeed = {
   },
   protectedDocumentCount: 1,
   indexedDocumentCount: 1,
-  hasMarketProfile: true,
-  verifiedEvidenceCount: 2,
-  hasApprovedMarketDecision: true,
+	marketDecision: currentMarketDecision,
   projectStageCount: 4,
   plannedServices: 3,
   proposalCount: 1,
@@ -46,9 +55,7 @@ describe("Unified Project Foundation Gate", () => {
       project: { id: 8, name: "فرصة غير مكتملة" },
       protectedDocumentCount: 0,
       indexedDocumentCount: 0,
-      hasMarketProfile: false,
-      verifiedEvidenceCount: 0,
-      hasApprovedMarketDecision: false,
+		marketDecision: { status: "no_profile", isValid: false, reason: "لا توجد فلترة.", nextAction: "حدد الفلترة.", profile: null, verifiedEvidenceCount: 0, evidenceSetHash: "c".repeat(64), latestApproved: null },
       projectStageCount: 0,
       plannedServices: 0,
       proposalCount: 0,
@@ -81,5 +88,13 @@ describe("Unified Project Foundation Gate", () => {
     expect(launchPageSource).toContain("سبب الحالة");
     expect(launchPageSource).toContain("الإجراء التالي");
     expect(launchPageSource).toContain("مصادر المشروع الفعلية");
+		expect(launchPageSource).toContain("قرار السوق والاستثمار · قراءة من المصدر");
   });
+
+	it("does not open tender readiness for a stale historical approval", () => {
+		const gate = buildProjectFoundation({ ...completeSeed, marketDecision: { ...currentMarketDecision, status: "needs_reapproval", isValid: false, reason: "تغيرت الفلترة.", nextAction: "أعد الاعتماد." } });
+		expect(gate.readyForTender).toBe(false);
+		expect(gate.gates.find(item => item.id === "market")?.status).toBe("partial");
+		expect(gate.marketDecision.decisionId).toBe(91);
+	});
 });

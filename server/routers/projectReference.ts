@@ -1,15 +1,12 @@
 import { z } from "zod";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   designsAndPermits,
   documentIndex,
   legalSetupRecords,
-  marketDecisionApprovals,
   projectBaselines,
   projectChangeRequests,
   projectContracts,
-  projectMarketEvidence,
-  projectServiceInstances,
   projects,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -18,13 +15,10 @@ import { requireProjectAccess } from "../services/comoNextCommands";
 import { loadProjectFoundation } from "../services/comoNextProjectFoundation";
 
 type ReferenceSeed = {
-  project: Record<string, unknown>;
-  foundation: Awaited<ReturnType<typeof loadProjectFoundation>>;
-  officialDocuments: Array<{ sourceName: string; category: string | null; updatedAt: string; sourceType: string; sourceId: string | null; sourcePath: string | null }>;
-  approvedMarketDecision?: { decidedAt: string; notes: string | null };
-  verifiedEvidenceCount: number;
-  plannedServices: number;
-  legalRecord?: Record<string, unknown>;
+	project: Record<string, unknown>;
+	foundation: Awaited<ReturnType<typeof loadProjectFoundation>>;
+	officialDocuments: Array<{ sourceName: string; category: string | null; updatedAt: string; sourceType: string; sourceId: string | null; sourcePath: string | null }>;
+	legalRecord?: Record<string, unknown>;
   permitRecord?: Record<string, unknown>;
   activeContracts: Array<{ title: string; contractNumber: string | null; startDate: string | null }>;
   activeBaseline?: { id: number; approvedAt: string; notes: string | null };
@@ -58,7 +52,7 @@ function getDocumentGate(category: string | null) {
 
 export function buildProjectReference(seed: ReferenceSeed) {
   const project = seed.project;
-  const gateById = new Map(seed.foundation.gates.map(gate => [gate.id, gate]));
+	const gateById = new Map<string, (typeof seed.foundation.gates)[number]>(seed.foundation.gates.map(gate => [gate.id, gate]));
   const foundationStatus = (gateId: string): ReferenceStatus => {
     const status = gateById.get(gateId)?.status;
     return status === "complete" ? "ready" : status === "partial" ? "partial" : "not_ready";
@@ -122,13 +116,10 @@ export function buildProjectReference(seed: ReferenceSeed) {
 }
 
 async function loadReferenceSeed(db: any, projectId: number): Promise<ReferenceSeed> {
-  const [projectRows, documentRows, decisionRows, evidenceRows, serviceRows, legalRows, permitRows, contractRows, baselineRows, foundation] = await Promise.all([
-    db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
-    db.select({ sourceName: documentIndex.sourceName, category: documentIndex.category, updatedAt: documentIndex.updatedAt, sourceType: documentIndex.sourceType, sourceId: documentIndex.sourceId, sourcePath: documentIndex.sourcePath }).from(documentIndex).where(and(eq(documentIndex.projectId, projectId), eq(documentIndex.indexStatus, "indexed"))).orderBy(desc(documentIndex.updatedAt)),
-    db.select({ decidedAt: marketDecisionApprovals.decidedAt, notes: marketDecisionApprovals.notes }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).orderBy(desc(marketDecisionApprovals.decidedAt)).limit(1),
-    db.select({ id: projectMarketEvidence.id }).from(projectMarketEvidence).where(and(eq(projectMarketEvidence.projectId, projectId), eq(projectMarketEvidence.verificationStatus, "verified"))),
-    db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
-    db.select().from(legalSetupRecords).where(eq(legalSetupRecords.projectId, projectId)).orderBy(desc(legalSetupRecords.updatedAt)).limit(1),
+	const [projectRows, documentRows, legalRows, permitRows, contractRows, baselineRows, foundation] = await Promise.all([
+		db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
+		db.select({ sourceName: documentIndex.sourceName, category: documentIndex.category, updatedAt: documentIndex.updatedAt, sourceType: documentIndex.sourceType, sourceId: documentIndex.sourceId, sourcePath: documentIndex.sourcePath }).from(documentIndex).where(and(eq(documentIndex.projectId, projectId), eq(documentIndex.indexStatus, "indexed"))).orderBy(desc(documentIndex.updatedAt)),
+		db.select().from(legalSetupRecords).where(eq(legalSetupRecords.projectId, projectId)).orderBy(desc(legalSetupRecords.updatedAt)).limit(1),
     db.select().from(designsAndPermits).where(eq(designsAndPermits.projectId, projectId)).orderBy(desc(designsAndPermits.updatedAt)).limit(1),
     db.select({ title: projectContracts.title, contractNumber: projectContracts.contractNumber, startDate: projectContracts.startDate }).from(projectContracts).where(and(eq(projectContracts.projectId, projectId), eq(projectContracts.contractStatus, "active"))),
     db.select({ id: projectBaselines.id, approvedAt: projectBaselines.approvedAt, notes: projectBaselines.notes }).from(projectBaselines).where(and(eq(projectBaselines.projectId, projectId), eq(projectBaselines.status, "active"))).orderBy(desc(projectBaselines.approvedAt)).limit(1),
@@ -136,7 +127,7 @@ async function loadReferenceSeed(db: any, projectId: number): Promise<ReferenceS
   ]);
   const project = projectRows[0];
   if (!project) throw new Error("لم يُعثر على المشروع المطلوب");
-  return { project, foundation, officialDocuments: documentRows, approvedMarketDecision: decisionRows[0], verifiedEvidenceCount: evidenceRows.length, plannedServices: serviceRows.length, legalRecord: legalRows[0], permitRecord: permitRows[0], activeContracts: contractRows, activeBaseline: baselineRows[0] };
+	return { project, foundation, officialDocuments: documentRows, legalRecord: legalRows[0], permitRecord: permitRows[0], activeContracts: contractRows, activeBaseline: baselineRows[0] };
 }
 
 export const projectReferenceRouter = router({

@@ -11,7 +11,7 @@ describe("Consultant appointment pack", () => {
       project: { id: 7, name: "مشروع اختبار", plotNumber: "6185392", permittedUse: "Residential", gfaSqft: "50000", driveFolderId: "drive-7" },
       marketProfile: { transactionPurpose: "sale", productForm: "apartment", primaryCommunity: "ند الشبا جاردينز", developmentStatus: "offplan" },
       verifiedEvidenceCount: 2,
-      approvedDecision: { decidedAt: "2026-08-23", notes: "قرار سوق معتمد" },
+		approvedDecision: { id: 44, decidedAt: "2026-08-23", notes: "قرار سوق معتمد", isValid: true, status: "current_valid", reason: "مطابق للمصدر الحالي" },
       activeLifecycleStages: 4,
       plannedServices: 5,
       buildingCategory: { label: "متوسط", description: "فئة مشروع متوسطة" },
@@ -21,8 +21,22 @@ describe("Consultant appointment pack", () => {
     expect(pack.project.name).toBe("مشروع اختبار");
     expect(pack.sections.market.search).toContain("شقق");
     expect(pack.sections.scope.itemCount).toBe(1);
-    expect(pack.readiness.marketReady).toBe(true);
+		expect(pack.readiness.marketReady).toBe(true);
   });
+
+	it("blocks the pack market gate when the historical approval needs reapproval", () => {
+		const pack = buildConsultantAppointmentPack({
+			project: { id: 7, name: "مشروع اختبار", gfaSqft: "50000" },
+			marketProfile: { transactionPurpose: "sale", productForm: "apartment", primaryCommunity: "مجان", developmentStatus: "offplan" },
+			verifiedEvidenceCount: 2,
+			approvedDecision: { id: 44, decidedAt: "2026-08-23", notes: null, isValid: false, status: "needs_reapproval", reason: "تغيرت الفلترة" },
+			activeLifecycleStages: 4,
+			plannedServices: 5,
+			scopeSections: [{ label: "التصاميم", items: [{ label: "تصميم معماري", status: "REQUIRED" }] }],
+		});
+		expect(pack.readiness.marketReady).toBe(false);
+		expect(pack.sections.market.status).toBe("needs_reapproval");
+	});
 
   it("contains only a read query and no write path to any source", () => {
     expect(source).toContain(".query(async");

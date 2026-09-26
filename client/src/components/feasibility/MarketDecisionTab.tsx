@@ -112,7 +112,9 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
     .some((item) => Number(item?.pct || 0) > 0);
   const verifiedEvidence = (marketEvidenceQuery.data?.evidence || []).filter((item: any) => item.verificationStatus === "verified" && item.isCompatible);
   const linkedReports = reportLinksQuery.data || [];
-  const latestApproval = (marketEvidenceQuery.data?.approvals || [])[0] as any;
+	const marketDecisionState = marketEvidenceQuery.data?.decisionState;
+	const latestApproval = marketDecisionState?.latestApproved;
+	const marketDecisionLabel = marketDecisionState?.status === "current_valid" ? "قرار ساري" : marketDecisionState?.status === "needs_reapproval" ? "يتطلب إعادة اعتماد" : marketDecisionState?.status === "incompatible_verified_evidence" ? "تعارض في الدليل" : "لم يعتمد بعد";
 
   return (
     <div className="mx-auto max-w-7xl space-y-4" dir="rtl">
@@ -184,7 +186,7 @@ export default function MarketDecisionTab({ projectId, onOpenResearch }: { proje
           <div className="flex flex-wrap gap-2 text-xs">
             <span className="rounded-full bg-white px-2.5 py-1 font-bold text-emerald-800 ring-1 ring-emerald-200">{verifiedEvidence.length} دليل موثق</span>
             <span className="rounded-full bg-white px-2.5 py-1 font-bold text-indigo-800 ring-1 ring-indigo-200">{linkedReports.length} تقرير مرتبط</span>
-            {latestApproval && <span className={`rounded-full px-2.5 py-1 font-bold ${latestApproval.decisionStatus === "approved" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{latestApproval.decisionStatus === "approved" ? "قرار معتمد" : "قرار قيد المراجعة"}</span>}
+						<span className={`rounded-full px-2.5 py-1 font-bold ${marketDecisionState?.isValid ? "bg-emerald-100 text-emerald-800" : marketDecisionState?.status === "needs_reapproval" || marketDecisionState?.status === "incompatible_verified_evidence" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"}`}>{marketDecisionLabel}{latestApproval?.id ? ` · #${latestApproval.id}` : ""}</span>
           </div>
         </div>
         <div className="mt-3 grid gap-3 lg:grid-cols-2">

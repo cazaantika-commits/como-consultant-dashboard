@@ -12,13 +12,16 @@ describe("Consultant procurement workflow", () => {
     expect(incomplete.complete).toBe(false);
     expect(incomplete.items.find((item) => item.key === "market")?.complete).toBe(false);
     expect(complete.complete).toBe(true);
+		expect(routerSource).toContain("loadMarketDecisionState");
+		expect(routerSource).toContain("approvedDecision: marketDecision.isValid");
   });
 
   it("writes only to the new RFP and deliverable records, not existing source records", () => {
     expect(routerSource).toContain("db.insert(consultantRfpDrafts)");
     expect(routerSource).toContain("db.insert(contractDeliverables)");
     expect(routerSource).not.toContain("db.update(projectContracts)");
-    expect(routerSource).not.toMatch(/db\.update\(projects\)|db\.update\(projectMarket|db\.update\(projectServiceInstances\)/);
+		expect(routerSource).not.toMatch(/db\.update\(projects\)|db\.update\(projectMarket|db\.update\(projectServiceInstances\)/);
+		expect((routerSource.match(/requireProjectAccess\(/g) || []).length).toBeGreaterThanOrEqual(6);
   });
 
   it("keeps the RFP as an explicit internal draft and does not expose an external send action", () => {

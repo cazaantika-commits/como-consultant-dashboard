@@ -1,5 +1,5 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -39,10 +39,24 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [activeTab, setActiveTab] = useState<TabId>("market-decision");
+	const requestedProjectId = useRef(Number(new URLSearchParams(window.location.search).get("projectId"))).current;
+	const routeProjectApplied = useRef(false);
 
-  // Auto-select last opened project (or first project as fallback)
+	// Honor the project-scoped route once, then fall back to the user's last project.
   useEffect(() => {
-    if (projectsQuery.data && projectsQuery.data.length > 0 && !selectedProjectId) {
+		if (projectsQuery.data && projectsQuery.data.length > 0) {
+			if (!routeProjectApplied.current) {
+				routeProjectApplied.current = true;
+				const requested = Number.isInteger(requestedProjectId) && requestedProjectId > 0
+					? projectsQuery.data.find((project: any) => project.id === requestedProjectId)
+					: null;
+				if (requested) {
+					setSelectedProjectId(requestedProjectId);
+					localStorage.setItem(LAST_PROJECT_KEY, String(requestedProjectId));
+					return;
+				}
+			}
+			if (selectedProjectId) return;
       const savedId = localStorage.getItem(LAST_PROJECT_KEY);
       if (savedId) {
         const savedNum = Number(savedId);
@@ -54,7 +68,7 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
       }
       setSelectedProjectId(projectsQuery.data[0].id);
     }
-  }, [projectsQuery.data, selectedProjectId]);
+	}, [projectsQuery.data, requestedProjectId, selectedProjectId, setSelectedProjectId]);
 
   // Persist selected project to localStorage
   const handleProjectChange = (id: number) => {

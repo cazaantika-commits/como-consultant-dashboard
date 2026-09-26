@@ -3,17 +3,16 @@ import { and, desc, eq, isNotNull } from "drizzle-orm";
 import {
   consultantRfpDrafts,
   contractDeliverables,
-  marketDecisionApprovals,
   projectContracts,
   projectConsultantRequirements,
   projectConsultantRequirementSets,
-  projectMarketEvidence,
-  projectMarketSearchProfiles,
   projects,
   projectServiceInstances,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
+import { requireProjectAccess } from "../services/comoNextCommands";
+import { loadMarketDecisionState } from "../services/comoNextMarketDecision";
 
 export function deriveAppointmentReview(input: {
   projectExists: boolean;
@@ -33,14 +32,13 @@ export function deriveAppointmentReview(input: {
   return { items, complete: items.every((item) => item.complete) };
 }
 
-async function loadAppointmentReview(projectId: number) {
+async function loadAppointmentReview(projectId: number, userId: number, required: "read" | "write" = "read") {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
-  const [projectRows, profileRows, evidenceRows, decisionRows, serviceRows, requirementSetRows] = await Promise.all([
+	await requireProjectAccess(db, projectId, userId, required);
+	const [projectRows, marketDecision, serviceRows, requirementSetRows] = await Promise.all([
     db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
-    db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, projectId)).limit(1),
-    db.select({ id: projectMarketEvidence.id }).from(projectMarketEvidence).where(and(eq(projectMarketEvidence.projectId, projectId), eq(projectMarketEvidence.verificationStatus, "verified"))),
-    db.select({ id: marketDecisionApprovals.id }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).limit(1),
+		loadMarketDecisionState(db, projectId),
     db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
     db.select({ id: projectConsultantRequirementSets.id })
       .from(projectConsultantRequirementSets)
@@ -66,30 +64,31 @@ async function loadAppointmentReview(projectId: number) {
   const review = deriveAppointmentReview({
     projectExists: Boolean(project),
     factsReady,
-    marketProfileReady: Boolean(profileRows[0]),
-    verifiedEvidenceCount: evidenceRows.length,
-    approvedDecision: Boolean(decisionRows[0]),
+		marketProfileReady: Boolean(marketDecision.profile),
+		verifiedEvidenceCount: marketDecision.verifiedEvidenceCount,
+		approvedDecision: marketDecision.isValid,
     plannedServices: serviceRows.length,
     scopeReady: selectedScopeRows.length > 0,
   });
-  return { db, project, review, evidenceCount: evidenceRows.length, plannedServices: serviceRows.length, approvedDecisionId: decisionRows[0]?.id ?? null };
+	return { db, project, review, evidenceCount: marketDecision.verifiedEvidenceCount, plannedServices: serviceRows.length, approvedDecisionId: marketDecision.isValid ? marketDecision.latestApproved?.id ?? null : null, marketDecision };
 }
 
 export const consultantProcurementRouter = router({
-  getPackReview: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input }) => {
-    const result = await loadAppointmentReview(input.projectId);
+	getPackReview: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input, ctx }) => {
+		const result = await loadAppointmentReview(input.projectId, ctx.user.id, "read");
     if (!result.project) throw new Error("لم يُعثر على المشروع المطلوب");
     return result.review;
   }),
 
-  listRfpDrafts: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	listRfpDrafts: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input, ctx }) => {
+		const db = await getDb();
+		if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
     return db.select().from(consultantRfpDrafts).where(eq(consultantRfpDrafts.projectId, input.projectId)).orderBy(desc(consultantRfpDrafts.createdAt));
   }),
 
   createRfpDraft: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), notes: z.string().max(4000).optional() })).mutation(async ({ ctx, input }) => {
-    const result = await loadAppointmentReview(input.projectId);
+		const result = await loadAppointmentReview(input.projectId, ctx.user.id, "write");
     if (!result.project) throw new Error("لم يُعثر على المشروع المطلوب");
     if (!result.review.complete) throw new Error("لا يمكن إنشاء مسودة طلب عروض قبل اكتمال قائمة مراجعة حزمة التكليف.");
     const snapshot = {
@@ -111,23 +110,26 @@ export const consultantProcurementRouter = router({
     return { success: true, id: Number(insertResult[0].insertId), status: "draft" as const, message: "أنشئت مسودة داخلية فقط؛ لم يُرسل أي طلب إلى أي مكتب." };
   }),
 
-  listContracts: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	listContracts: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input, ctx }) => {
+		const db = await getDb();
+		if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
     return db.select({ id: projectContracts.id, title: projectContracts.title, contractNumber: projectContracts.contractNumber, contractStatus: projectContracts.contractStatus, partyB: projectContracts.partyB }).from(projectContracts).where(eq(projectContracts.projectId, input.projectId)).orderBy(desc(projectContracts.createdAt));
   }),
 
-  listDeliverables: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive() })).query(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	listDeliverables: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive() })).query(async ({ input, ctx }) => {
+		const db = await getDb();
+		if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
     return db.select().from(contractDeliverables).where(and(eq(contractDeliverables.projectId, input.projectId), eq(contractDeliverables.contractId, input.contractId))).orderBy(contractDeliverables.dueDate, contractDeliverables.createdAt);
   }),
 
   addDeliverable: protectedProcedure.input(z.object({
     projectId: z.number().int().positive(), contractId: z.number().int().positive(), title: z.string().min(2).max(500), description: z.string().max(5000).optional(), acceptanceCriteria: z.string().max(5000).optional(), dueDate: z.string().max(50).optional(), referenceUrl: z.string().url().max(1000).optional(), ownerNotes: z.string().max(5000).optional(),
   })).mutation(async ({ ctx, input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		const db = await getDb();
+		if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
     const [contract] = await db.select({ id: projectContracts.id }).from(projectContracts).where(and(eq(projectContracts.id, input.contractId), eq(projectContracts.projectId, input.projectId))).limit(1);
     if (!contract) throw new Error("العقد المختار لا يرتبط بالمشروع المحدد.");
     const result = await db.insert(contractDeliverables).values({
@@ -136,9 +138,10 @@ export const consultantProcurementRouter = router({
     return { success: true, id: Number(result[0].insertId) };
   }),
 
-  updateDeliverableStatus: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive(), id: z.number().int().positive(), status: z.enum(["not_started", "submitted", "accepted", "returned", "overdue"]) })).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	updateDeliverableStatus: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive(), id: z.number().int().positive(), status: z.enum(["not_started", "submitted", "accepted", "returned", "overdue"]) })).mutation(async ({ input, ctx }) => {
+		const db = await getDb();
+		if (!db) throw new Error("قاعدة البيانات غير متاحة");
+		await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
     const [deliverable] = await db.select({ id: contractDeliverables.id }).from(contractDeliverables).where(and(eq(contractDeliverables.id, input.id), eq(contractDeliverables.projectId, input.projectId), eq(contractDeliverables.contractId, input.contractId))).limit(1);
     if (!deliverable) throw new Error("التسليم المختار لا يرتبط بالعقد والمشروع المحددين.");
     await db.update(contractDeliverables).set({ status: input.status }).where(and(eq(contractDeliverables.id, input.id), eq(contractDeliverables.projectId, input.projectId), eq(contractDeliverables.contractId, input.contractId)));

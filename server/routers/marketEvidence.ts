@@ -4,6 +4,16 @@ import { z } from "zod";
 import { competitionPricing, marketDecisionApprovals, marketPricingHandoffs, marketReports, projectMarketEvidence, projectMarketReportLinks, projectMarketSearchProfiles } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
+import { ENV } from "../_core/env";
+import { requireProjectAccess } from "../services/comoNextCommands";
+import {
+	buildMarketDecisionSourceSnapshot,
+	getEvidenceMismatchReasons as getCanonicalEvidenceMismatchReasons,
+	getMarketProfileHash,
+	isMeaningfulMarketRecommendation,
+	loadMarketDecisionState,
+	MARKET_DECISION_SCHEMA_VERSION,
+} from "../services/comoNextMarketDecision";
 
 const evidenceInput = z.object({
   projectId: z.number().int().positive(),
@@ -68,14 +78,10 @@ const dldImportInput = z.object({
 	transactions: z.array(dldTransactionInput).min(1).max(2000),
 });
 
-const normalize = (value: string | null | undefined) => (value || "").trim().toLocaleLowerCase();
-const parseJsonList = (value: string | null | undefined): string[] => {
-  try { const parsed = JSON.parse(value || "[]"); return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []; } catch { return []; }
-};
-
 function toDldEvidence(projectId: number, transaction: z.infer<typeof dldTransactionInput>) {
 	return {
 		projectId,
+		evidenceType: "transaction" as const,
 		transactionPurpose: "sale" as const,
 		sourceType: "DLD" as const,
 		sourceName: `DLD Transaction ${transaction.transactionNumber}`,
@@ -123,37 +129,25 @@ export function buildPricingPatch(snapshot: Record<string, any>) {
 	return data;
 }
 
-export function getEvidenceMismatchReasons(profile: any, evidence: any): string[] {
-  if (!profile) return ["لم تُحدد بطاقة فلترة السوق لهذا المشروع بعد."];
-  const reasons: string[] = [];
-  if (evidence.transactionPurpose !== profile.transactionPurpose) reasons.push("غرض المعاملة مختلف عن البحث المحدد.");
-  if (evidence.assetClass !== profile.assetClass) reasons.push("فئة الأصل مختلفة عن السوق المطلوب.");
-  if (profile.productForm !== "other" && evidence.productForm !== profile.productForm) reasons.push("شكل المنتج مختلف؛ لا يمكن مقارنة الشقق بالفلل أو الأراضي.");
-  if (profile.developmentStatus !== "any" && evidence.developmentStatus !== "any" && evidence.developmentStatus !== profile.developmentStatus) reasons.push("حالة المشروع مختلفة بين جاهز وأوف بلان.");
-  const allowedCommunities = [profile.primaryCommunity, ...parseJsonList(profile.alternativeCommunitiesJson)].map(normalize).filter(Boolean);
-  if (allowedCommunities.length && evidence.community && !allowedCommunities.includes(normalize(evidence.community))) reasons.push("المنطقة خارج نطاق المقارنة المحدد.");
-  const allowedUnitTypes = parseJsonList(profile.unitTypesJson).map(normalize);
-  if (allowedUnitTypes.length && evidence.unitType && !allowedUnitTypes.includes(normalize(evidence.unitType))) reasons.push("نوع الوحدة خارج نطاق المقارنة المحدد.");
-  const area = Number(evidence.unitAreaSqft || 0);
-  if (profile.minAreaSqft && area > 0 && area < Number(profile.minAreaSqft)) reasons.push("المساحة أقل من نطاق المقارنة.");
-  if (profile.maxAreaSqft && area > 0 && area > Number(profile.maxAreaSqft)) reasons.push("المساحة أعلى من نطاق المقارنة.");
-  const price = Number(evidence.pricePerSqft || 0);
-  if (profile.minPricePerSqft && price > 0 && price < Number(profile.minPricePerSqft)) reasons.push("السعر لكل قدم² أدنى من نطاق المقارنة.");
-  if (profile.maxPricePerSqft && price > 0 && price > Number(profile.maxPricePerSqft)) reasons.push("السعر لكل قدم² أعلى من نطاق المقارنة.");
-  if (profile.transactionDateFrom && evidence.sourceDate && evidence.sourceDate < profile.transactionDateFrom) reasons.push("تاريخ الدليل أقدم من الفترة المحددة.");
-  if (profile.transactionDateTo && evidence.sourceDate && evidence.sourceDate > profile.transactionDateTo) reasons.push("تاريخ الدليل أحدث من الفترة المحددة.");
-  return reasons;
+export const getEvidenceMismatchReasons = getCanonicalEvidenceMismatchReasons;
+
+function assertMarketDecisionOwner(user: { openId?: string | null; role?: string | null }) {
+	if (!ENV.ownerOpenId || user.openId !== ENV.ownerOpenId || user.role !== "admin") {
+		throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد قرار السوق وتسليم السعر متاحان لعبد الرحمن فقط." });
+	}
 }
 
 export const marketEvidenceRouter = router({
   getSearchProfile: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const result = await db.select().from(projectMarketSearchProfiles)
         .where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1);
-      return result[0] || null;
+			if (!result[0]) return null;
+			return { ...result[0], profileHash: getMarketProfileHash(result[0]), profileVersion: Number(result[0].profileVersion || 1) };
     }),
 
   saveSearchProfile: protectedProcedure
@@ -161,6 +155,7 @@ export const marketEvidenceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
       const values = {
         transactionPurpose: input.transactionPurpose,
         evidenceMode: input.evidenceMode,
@@ -177,31 +172,38 @@ export const marketEvidenceRouter = router({
         transactionDateFrom: input.transactionDateFrom || null,
         transactionDateTo: input.transactionDateTo || null,
       };
-      const existing = await db.select({ id: projectMarketSearchProfiles.id }).from(projectMarketSearchProfiles)
+			const existing = await db.select().from(projectMarketSearchProfiles)
         .where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1);
       if (existing[0]) {
-        await db.update(projectMarketSearchProfiles).set(values).where(eq(projectMarketSearchProfiles.id, existing[0].id));
-        return { id: existing[0].id, updated: true };
+				const nextHash = getMarketProfileHash({ ...existing[0], ...values, projectId: input.projectId });
+				const currentHash = getMarketProfileHash(existing[0]);
+				const profileVersion = Number(existing[0].profileVersion || 1) + (currentHash === nextHash ? 0 : 1);
+				await db.update(projectMarketSearchProfiles).set({ ...values, userId: ctx.user.id, profileVersion, profileHash: nextHash }).where(eq(projectMarketSearchProfiles.id, existing[0].id));
+				return { id: existing[0].id, updated: true, profileVersion, profileHash: nextHash };
       }
-      const result = await db.insert(projectMarketSearchProfiles).values({ projectId: input.projectId, userId: ctx.user.id, ...values });
-      return { id: result[0].insertId, updated: false };
+			const profileVersion = 1;
+			const profileHash = getMarketProfileHash({ projectId: input.projectId, ...values });
+			const result = await db.insert(projectMarketSearchProfiles).values({ projectId: input.projectId, userId: ctx.user.id, profileVersion, profileHash, ...values });
+			return { id: result[0].insertId, updated: false, profileVersion, profileHash };
     }),
 
   getProjectEvidence: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
 
-      const [evidence, approvals, profiles] = await Promise.all([
+			const [evidence, approvals, profiles, decisionState] = await Promise.all([
         db.select().from(projectMarketEvidence)
           .where(eq(projectMarketEvidence.projectId, input.projectId))
           .orderBy(desc(projectMarketEvidence.sourceDate), desc(projectMarketEvidence.createdAt)),
         db.select().from(marketDecisionApprovals)
           .where(eq(marketDecisionApprovals.projectId, input.projectId))
           .orderBy(desc(marketDecisionApprovals.decidedAt)),
-        db.select().from(projectMarketSearchProfiles)
-          .where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
+				db.select().from(projectMarketSearchProfiles)
+					.where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
+				loadMarketDecisionState(db, input.projectId),
       ]);
 
       const profile = profiles[0] || null;
@@ -210,16 +212,18 @@ export const marketEvidenceRouter = router({
         evidence: evidence.map((item) => {
           const mismatchReasons = getEvidenceMismatchReasons(profile, item);
           return { ...item, isCompatible: mismatchReasons.length === 0, mismatchReasons };
-        }),
-        approvals,
+				}),
+				approvals,
+				decisionState: { ...decisionState, source: undefined },
       };
     }),
 
   previewDldImport: protectedProcedure
     .input(dldImportInput)
-    .query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const profileRows = await db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1);
       const profile = profileRows[0];
       if (!profile) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد فلترة سوق المقارنة قبل معاينة ملف DLD." });
@@ -236,6 +240,7 @@ export const marketEvidenceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
       const [profileRows, existingRows] = await Promise.all([
         db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
         db.select({ sourceName: projectMarketEvidence.sourceName }).from(projectMarketEvidence).where(eq(projectMarketEvidence.projectId, input.projectId)),
@@ -263,9 +268,10 @@ export const marketEvidenceRouter = router({
 
   getMarketReportLinks: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       return db.select({ link: projectMarketReportLinks, report: marketReports })
         .from(projectMarketReportLinks)
         .innerJoin(marketReports, eq(projectMarketReportLinks.reportId, marketReports.id))
@@ -278,6 +284,7 @@ export const marketEvidenceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
       const [profileRows, reportRows, existingRows] = await Promise.all([
         db.select({ id: projectMarketSearchProfiles.id }).from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
         db.select({ id: marketReports.id }).from(marketReports).where(eq(marketReports.id, input.reportId)).limit(1),
@@ -292,9 +299,10 @@ export const marketEvidenceRouter = router({
 
   unlinkMarketReport: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive(), linkId: z.number().int().positive() }))
-    .mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
       await db.delete(projectMarketReportLinks).where(and(eq(projectMarketReportLinks.id, input.linkId), eq(projectMarketReportLinks.projectId, input.projectId)));
       return { success: true };
     }),
@@ -304,6 +312,7 @@ export const marketEvidenceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
 
       const result = await db.insert(projectMarketEvidence).values({
         projectId: input.projectId,
@@ -337,9 +346,10 @@ export const marketEvidenceRouter = router({
       projectId: z.number().int().positive(),
       verificationStatus: z.enum(["draft", "verified", "excluded"]),
     }))
-    .mutation(async ({ input }) => {
+		.mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
 
       const [evidenceRows, profileRows] = await Promise.all([
         db.select().from(projectMarketEvidence).where(and(eq(projectMarketEvidence.id, input.evidenceId), eq(projectMarketEvidence.projectId, input.projectId))).limit(1),
@@ -362,9 +372,10 @@ export const marketEvidenceRouter = router({
 
   getPricingHandoffStatus: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(async ({ input }) => {
+		.query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const result = await db.select().from(marketPricingHandoffs)
         .where(eq(marketPricingHandoffs.projectId, input.projectId))
         .orderBy(desc(marketPricingHandoffs.handedOffAt)).limit(1);
@@ -375,35 +386,37 @@ export const marketEvidenceRouter = router({
     .input(z.object({
       projectId: z.number().int().positive(),
       decisionStatus: z.enum(["reviewed", "approved", "rejected"]),
-      decisionSnapshot: z.record(z.string(), z.unknown()),
+			recommendation: z.object({
+				product: z.record(z.string(), z.unknown()).default({}),
+				pricing: z.record(z.string(), z.unknown()).default({}),
+			}).strict(),
       notes: z.string().trim().max(4000).optional().or(z.literal("")),
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+			assertMarketDecisionOwner(ctx.user);
 
-      const [verifiedEvidence, profileRows] = await Promise.all([
-        db.select().from(projectMarketEvidence)
-        .where(and(
-          eq(projectMarketEvidence.projectId, input.projectId),
-          eq(projectMarketEvidence.verificationStatus, "verified"),
-        )),
-        db.select().from(projectMarketSearchProfiles).where(eq(projectMarketSearchProfiles.projectId, input.projectId)).limit(1),
-      ]);
-
-      if (input.decisionStatus === "approved" && verifiedEvidence.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن اعتماد القرار قبل توثيق دليل سوقي واحد على الأقل." });
-      }
-      if (input.decisionStatus === "approved" && getEvidenceMismatchReasons(profileRows[0], verifiedEvidence[0]).length) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن اعتماد القرار قبل تحديد فلترة سوق المقارنة." });
-      }
+			const state = await loadMarketDecisionState(db, input.projectId);
+			if (!state.profile) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تسجيل القرار قبل حفظ فلترة سوق المشروع." });
+			if (input.decisionStatus === "approved" && state.verifiedEvidenceCount === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن اعتماد القرار قبل توثيق دليل سوقي واحد على الأقل." });
+			if (input.decisionStatus === "approved" && state.incompatibleEvidence.length > 0) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن الاعتماد ما دام أحد الأدلة الموثقة خارج فلترة السوق الحالية." });
+			if (input.decisionStatus === "approved" && !isMeaningfulMarketRecommendation(input.recommendation)) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن اعتماد قرار سوق دون توصية منظمة للمنتج أو التسعير." });
+			const sourceSnapshot = buildMarketDecisionSourceSnapshot({ profile: state.source.profile, evidenceRows: state.source.verifiedEvidence, recommendation: input.recommendation });
 
       const result = await db.insert(marketDecisionApprovals).values({
         projectId: input.projectId,
         userId: ctx.user.id,
         decisionStatus: input.decisionStatus,
-        decisionSnapshotJson: JSON.stringify(input.decisionSnapshot),
-        evidenceSnapshotJson: JSON.stringify(verifiedEvidence),
+				sourceSchemaVersion: MARKET_DECISION_SCHEMA_VERSION,
+				profileId: state.profile.id,
+				profileVersion: state.profile.version,
+				profileHash: state.profile.hash,
+				evidenceSetHash: state.evidenceSetHash,
+				verifiedEvidenceCount: state.verifiedEvidenceCount,
+				decisionSnapshotJson: JSON.stringify(sourceSnapshot),
+				evidenceSnapshotJson: JSON.stringify(sourceSnapshot.evidence),
         notes: input.notes || null,
       });
 
@@ -415,6 +428,10 @@ export const marketEvidenceRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+			await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+			assertMarketDecisionOwner(ctx.user);
+			const decisionState = await loadMarketDecisionState(db, input.projectId);
+			if (!decisionState.isValid || decisionState.latestApproved?.id !== input.approvalId) throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تسليم السعر لأن قرار السوق غير ساري على الفلترة والأدلة الحالية." });
       const approvalRows = await db.select().from(marketDecisionApprovals)
         .where(and(
           eq(marketDecisionApprovals.id, input.approvalId),
@@ -424,7 +441,9 @@ export const marketEvidenceRouter = router({
       const approval = approvalRows[0];
       if (!approval) throw new TRPCError({ code: "BAD_REQUEST", message: "اختر قرار سوق معتمدًا قبل التسليم إلى التسعير." });
       const snapshot = JSON.parse(approval.decisionSnapshotJson || "{}");
-      const pricingPatch = buildPricingPatch(snapshot);
+			const pricingPatch = buildPricingPatch(snapshot.recommendation || {});
+			const existingHandoff = await db.select().from(marketPricingHandoffs).where(eq(marketPricingHandoffs.approvalId, approval.id)).limit(1);
+			if (existingHandoff[0]) return { id: existingHandoff[0].id, existing: true, fieldsUpdated: Object.keys(pricingPatch).filter((key) => key.endsWith("Price")) };
       const existingRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId)).limit(1);
       if (existingRows[0]) await db.update(competitionPricing).set(pricingPatch).where(eq(competitionPricing.id, existingRows[0].id));
       else await db.insert(competitionPricing).values({ userId: ctx.user.id, projectId: input.projectId, ...pricingPatch });
@@ -434,6 +453,6 @@ export const marketEvidenceRouter = router({
         userId: ctx.user.id,
         pricingSnapshotJson: JSON.stringify({ approvalId: approval.id, pricingPatch, sourceSnapshot: snapshot }),
       });
-      return { id: handoff[0].insertId, fieldsUpdated: Object.keys(pricingPatch).filter((key) => key.endsWith("Price")) };
+			return { id: handoff[0].insertId, existing: false, fieldsUpdated: Object.keys(pricingPatch).filter((key) => key.endsWith("Price")) };
     }),
 });

@@ -1582,6 +1582,8 @@ export const projectMarketSearchProfiles = mysqlTable("project_market_search_pro
 	id: int().autoincrement().notNull().primaryKey(),
 	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
 	userId: int("user_id").notNull().references(() => users.id),
+	profileVersion: int("profile_version").default(1).notNull(),
+	profileHash: varchar("profile_hash", { length: 64 }),
 	transactionPurpose: mysqlEnum("transaction_purpose", ["sale", "rent"]).default("sale").notNull(),
 	evidenceMode: mysqlEnum("evidence_mode", ["active_listing", "closed_transaction", "new_project", "market_report", "mixed"]).default("closed_transaction").notNull(),
 	assetClass: mysqlEnum("asset_class", ["residential", "retail", "office", "mixed_use", "land", "other"]).notNull(),
@@ -1599,7 +1601,7 @@ export const projectMarketSearchProfiles = mysqlTable("project_market_search_pro
 	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
 }, (table) => [
-	index("market_profile_project").on(table.projectId),
+	uniqueIndex("market_profile_project_unique").on(table.projectId),
 ]);
 
 // Reports remain reusable in the library; this junction records why a report is
@@ -1627,7 +1629,7 @@ export const marketPricingHandoffs = mysqlTable("market_pricing_handoffs", {
 	handedOffAt: timestamp("handed_off_at", { mode: "string" }).defaultNow().notNull(),
 }, (table) => [
 	index("market_pricing_handoff_project").on(table.projectId),
-	index("market_pricing_handoff_approval").on(table.approvalId),
+	uniqueIndex("market_pricing_handoff_approval_unique").on(table.approvalId),
 ]);
 
 // Approval records intentionally snapshot a reviewed decision and its evidence.
@@ -1638,6 +1640,12 @@ export const marketDecisionApprovals = mysqlTable("market_decision_approvals", {
 	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
 	userId: int("user_id").notNull().references(() => users.id),
 	decisionStatus: mysqlEnum("decision_status", ["reviewed", "approved", "rejected"]).notNull(),
+	sourceSchemaVersion: varchar("source_schema_version", { length: 50 }),
+	profileId: int("profile_id"),
+	profileVersion: int("profile_version"),
+	profileHash: varchar("profile_hash", { length: 64 }),
+	evidenceSetHash: varchar("evidence_set_hash", { length: 64 }),
+	verifiedEvidenceCount: int("verified_evidence_count"),
 	decisionSnapshotJson: longtext("decision_snapshot_json").notNull(),
 	evidenceSnapshotJson: longtext("evidence_snapshot_json").notNull(),
 	notes: text(),

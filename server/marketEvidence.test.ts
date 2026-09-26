@@ -1,12 +1,23 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildPricingPatch, getEvidenceMismatchReasons } from "./routers/marketEvidence";
+import type { TrpcContext } from "./_core/context";
+import { buildPricingPatch, getEvidenceMismatchReasons, marketEvidenceRouter } from "./routers/marketEvidence";
 
 const routerSource = readFileSync("server/routers/marketEvidence.ts", "utf8");
+const governanceSource = readFileSync("server/services/comoNextMarketDecision.ts", "utf8");
 const panelSource = readFileSync("client/src/components/feasibility/MarketEvidencePanel.tsx", "utf8");
 const decisionSource = readFileSync("client/src/components/feasibility/MarketDecisionTab.tsx", "utf8");
 const profilePanelSource = readFileSync("client/src/components/feasibility/MarketSearchProfilePanel.tsx", "utf8");
 const dldImportSource = readFileSync("client/src/components/feasibility/DldCsvImportPanel.tsx", "utf8");
+const knowledgeHubSource = readFileSync("client/src/pages/KnowledgeHubPage.tsx", "utf8");
+
+function context(userId: number): TrpcContext {
+	return {
+		user: { id: userId, openId: `market-test-${userId}`, email: `market-${userId}@example.com`, name: "Market Test", loginMethod: "test", role: "admin", createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date() },
+		req: { protocol: "https", headers: {} } as TrpcContext["req"],
+		res: {} as TrpcContext["res"],
+	};
+}
 
 describe("project market evidence register", () => {
   it("records evidence with source date, confidence, and a reviewable verification state", () => {
@@ -18,17 +29,19 @@ describe("project market evidence register", () => {
   });
 
   it("requires verified evidence before approval; the approval record itself never writes to pricing or cash flows", () => {
-    expect(routerSource).toContain('if (input.decisionStatus === "approved" && verifiedEvidence.length === 0)');
+		expect(routerSource).toContain('input.decisionStatus === "approved" && state.verifiedEvidenceCount === 0');
     const approvalBlock = routerSource.slice(routerSource.indexOf("recordDecision: protectedProcedure"), routerSource.indexOf("handoffApprovedPricing: protectedProcedure"));
     expect(approvalBlock).not.toContain("competitionPricing");
     expect(approvalBlock).not.toContain("cashFlow");
+		expect(approvalBlock).toContain("buildMarketDecisionSourceSnapshot");
+		expect(approvalBlock).not.toContain("JSON.stringify(input.decisionSnapshot)");
     expect(decisionSource).toContain('<MarketEvidencePanel');
   });
 
   it("locks the comparison context before evidence and excludes incompatible product forms", () => {
-    expect(routerSource).toContain('export function getEvidenceMismatchReasons(profile: any, evidence: any): string[]');
-    expect(routerSource).toContain('evidence.productForm !== profile.productForm');
-    expect(routerSource).toContain('لا يمكن مقارنة الشقق بالفلل أو الأراضي');
+		expect(governanceSource).toContain('export function getEvidenceMismatchReasons(profile: any, evidence: any): string[]');
+		expect(governanceSource).toContain('evidence.productForm !== profile.productForm');
+		expect(governanceSource).toContain('لا يمكن مقارنة الشقق بالفلل أو الأراضي');
     expect(routerSource).toContain('if (input.verificationStatus === "verified")');
     expect(routerSource).toContain('getEvidenceMismatchReasons(profileRows[0], evidenceRows[0])');
     expect(profilePanelSource).toContain('فلترة سوق المقارنة');
@@ -68,6 +81,22 @@ describe("project market evidence register", () => {
     expect(patch).toMatchObject({ baseStudioPrice: 1450, base1brPrice: 1650, consStudioPrice: 1300, optStudioPrice: 1600, paymentBookingPct: "20", paymentConstructionPct: "50", paymentHandoverPct: "30", isApproved: 1 });
     expect(Object.keys(patch).some((key) => key.toLowerCase().includes("cashflow"))).toBe(false);
     expect(routerSource).toContain("handoffApprovedPricing: protectedProcedure");
-    expect(routerSource).toContain("marketPricingHandoffs");
+		expect(routerSource).toContain("marketPricingHandoffs");
+		expect(routerSource).toContain("decisionState.isValid");
   });
+
+	it("enforces project access on every market project procedure and keeps decisions in their source register", () => {
+		expect((routerSource.match(/requireProjectAccess\(/g) || []).length).toBeGreaterThanOrEqual(11);
+		expect(routerSource).toContain("assertMarketDecisionOwner(ctx.user)");
+		expect(routerSource).not.toContain("comoNextDecisions");
+		expect(governanceSource).toContain("verifiedEvidence.map");
+		expect(knowledgeHubSource).toContain('new URLSearchParams(window.location.search).get("projectId")');
+		expect(knowledgeHubSource).toContain("routeProjectApplied");
+	});
+
+	it("rejects cross-project market reads and writes before touching the source register", async () => {
+		const caller = marketEvidenceRouter.createCaller(context(999_999_999));
+		await expect(caller.getSearchProfile({ projectId: 4 })).rejects.toMatchObject({ code: "NOT_FOUND" });
+		await expect(caller.addEvidence({ projectId: 4, evidenceType: "transaction", transactionPurpose: "sale", sourceType: "manual", sourceName: "Unauthorized test", sourceDate: "2026-09-01", confidenceGrade: "high", assetClass: "residential", productForm: "apartment", developmentStatus: "offplan" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+	});
 });
