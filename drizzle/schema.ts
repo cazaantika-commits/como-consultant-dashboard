@@ -3577,3 +3577,102 @@ export const comoNextSpecialistReviews = mysqlTable("como_next_specialist_review
   index("como_next_specialist_work_file_idx").on(table.workFileId, table.reviewStatus, table.createdAt),
   foreignKey({ name: "como_next_specialist_review_work_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
 ]);
+
+
+// Evidence-bound project opening gate. Opportunities remain outside the official
+// projects table until Abdulrahman reviews the extracted facts and approves promotion.
+export const comoNextProjectOpportunities = mysqlTable("como_next_project_opportunities", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  opportunityStatus: mysqlEnum("opportunity_status", ["under_study", "under_review", "ready_for_approval", "approved", "archived"]).notNull().default("under_study"),
+  provisionalName: varchar("provisional_name", { length: 255 }),
+  ownerRelationship: mysqlEnum("owner_relationship", ["owned", "potential_purchase", "land_for_units", "other_partnership", "development_management", "undecided"]),
+  developmentStrategy: mysqlEnum("development_strategy", ["offplan_escrow", "offplan_construction", "build_for_sale", "build_for_rent", "joint_venture_land_for_units", "undecided"]),
+  objective: text("objective"),
+  approvedProjectId: int("approved_project_id").references(() => projects.id, { onDelete: "restrict" }),
+  approvedByUserId: int("approved_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  approvedAt: timestamp("approved_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_opportunity_project_uq").on(table.approvedProjectId),
+  index("como_next_project_opportunity_owner_status_idx").on(table.userId, table.opportunityStatus, table.updatedAt),
+]);
+
+export const comoNextProjectOpportunityDocuments = mysqlTable("como_next_project_opportunity_documents", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  opportunityId: bigint("opportunity_id", { mode: "number" }).notNull().references(() => comoNextProjectOpportunities.id, { onDelete: "restrict" }),
+  documentId: bigint("document_id", { mode: "number" }).notNull().references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  documentRole: mysqlEnum("document_role", ["land_document", "developer_contract", "fact_sheet", "other_land_evidence"]).notNull().default("land_document"),
+  analysisStatus: mysqlEnum("analysis_status", ["pending", "processing", "draft", "reviewed", "manual_reviewed", "failed"]).notNull().default("pending"),
+  uploadedByUserId: int("uploaded_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_opportunity_document_uq").on(table.opportunityId, table.documentId),
+  index("como_next_project_opportunity_document_status_idx").on(table.opportunityId, table.analysisStatus, table.createdAt),
+]);
+
+export const comoNextProjectDocumentExtractions = mysqlTable("como_next_project_document_extractions", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  opportunityId: bigint("opportunity_id", { mode: "number" }).notNull().references(() => comoNextProjectOpportunities.id, { onDelete: "restrict" }),
+  opportunityDocumentId: bigint("opportunity_document_id", { mode: "number" }).notNull().references(() => comoNextProjectOpportunityDocuments.id, { onDelete: "restrict" }),
+  requestKey: varchar("request_key", { length: 128 }).notNull(),
+  inputSha256: varchar("input_sha256", { length: 64 }).notNull(),
+  schemaVersion: varchar("schema_version", { length: 32 }).notNull().default("v1"),
+  modelId: varchar("model_id", { length: 128 }),
+  extractionStatus: mysqlEnum("extraction_status", ["processing", "draft", "failed"]).notNull().default("processing"),
+  proposedName: varchar("proposed_name", { length: 255 }),
+  executiveSummary: text("executive_summary"),
+  factsJson: longtext("facts_json"),
+  conflictsJson: longtext("conflicts_json"),
+  missingRequirementsJson: longtext("missing_requirements_json"),
+  rawTextSha256: varchar("raw_text_sha256", { length: 64 }),
+  rawTextLength: int("raw_text_length").notNull().default(0),
+  errorMessage: text("error_message"),
+  requestedByUserId: int("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_document_extraction_request_uq").on(table.requestKey),
+  index("como_next_project_document_extraction_opportunity_idx").on(table.opportunityId, table.extractionStatus, table.createdAt),
+]);
+
+export const comoNextProjectOpportunityFacts = mysqlTable("como_next_project_opportunity_facts", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  opportunityId: bigint("opportunity_id", { mode: "number" }).notNull().references(() => comoNextProjectOpportunities.id, { onDelete: "restrict" }),
+  fieldKey: varchar("field_key", { length: 80 }).notNull(),
+  fieldLabel: varchar("field_label", { length: 255 }).notNull(),
+  currentValue: text("current_value"),
+  valueType: mysqlEnum("value_type", ["text", "number", "date"]).notNull().default("text"),
+  sourceExtractionId: bigint("source_extraction_id", { mode: "number" }).references(() => comoNextProjectDocumentExtractions.id, { onDelete: "restrict" }),
+  sourceDocumentId: bigint("source_document_id", { mode: "number" }).references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  sourceExcerpt: text("source_excerpt"),
+  confidence: mysqlEnum("confidence", ["high", "medium", "low"]),
+  reviewStatus: mysqlEnum("review_status", ["proposed", "approved", "edited", "rejected", "conflict"]).notNull().default("proposed"),
+  reviewNote: text("review_note"),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_opportunity_fact_uq").on(table.opportunityId, table.fieldKey),
+  index("como_next_project_opportunity_fact_review_idx").on(table.opportunityId, table.reviewStatus, table.updatedAt),
+]);
+
+export const comoNextProjectOpportunityEvents = mysqlTable("como_next_project_opportunity_events", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  opportunityId: bigint("opportunity_id", { mode: "number" }).notNull().references(() => comoNextProjectOpportunities.id, { onDelete: "restrict" }),
+  sequenceNo: int("sequence_no").notNull(),
+  actorType: mysqlEnum("actor_type", ["human", "manus", "system"]).notNull().default("human"),
+  actorUserId: int("actor_user_id").references(() => users.id, { onDelete: "restrict" }),
+  eventType: varchar("event_type", { length: 80 }).notNull(),
+  summary: varchar("summary", { length: 1000 }).notNull(),
+  payloadJson: text("payload_json"),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_opportunity_event_sequence_uq").on(table.opportunityId, table.sequenceNo),
+  uniqueIndex("como_next_project_opportunity_event_idempotency_uq").on(table.idempotencyKey),
+  index("como_next_project_opportunity_event_time_idx").on(table.opportunityId, table.createdAt),
+]);

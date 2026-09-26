@@ -13,6 +13,7 @@ import { default as CalendarCheck } from "lucide-react/dist/esm/icons/calendar-c
 import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
 import { default as CircleAlert } from "lucide-react/dist/esm/icons/circle-alert.js";
 import { default as FileClock } from "lucide-react/dist/esm/icons/file-clock.js";
+import { default as FilePlus2 } from "lucide-react/dist/esm/icons/file-plus-2.js";
 import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
 import { default as Inbox } from "lucide-react/dist/esm/icons/inbox.js";
 import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
@@ -236,6 +237,7 @@ export default function Home() {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Button onClick={() => navigate("/sara")} className="h-12 rounded-2xl bg-amber-400 px-6 font-black text-slate-950 shadow-lg shadow-amber-400/20 hover:bg-amber-300"><MessageSquare className="ml-2 h-5 w-5" /> تحدث مع سارة</Button>
                 <Button variant="outline" onClick={() => navigate("/como-next")} className="h-12 rounded-2xl border-white/20 bg-white/5 px-6 font-bold text-white hover:bg-white/10"><BriefcaseBusiness className="ml-2 h-5 w-5" /> افتح المكتب التنفيذي</Button>
+                <Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="h-12 rounded-2xl border-amber-300/30 bg-amber-300/10 px-6 font-bold text-amber-100 hover:bg-amber-300/20"><FilePlus2 className="ml-2 h-5 w-5" /> ابدأ مشروعًا من وثيقته</Button>
               </div>
               <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-slate-400">
                 <span><ShieldCheck className="ml-1.5 inline h-4 w-4 text-emerald-400" /> لا إرسال خارجي تلقائي</span>

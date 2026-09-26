@@ -809,7 +809,10 @@ export default function ComoNextTodayPage() {
         <div className="relative mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div><button onClick={() => navigate("/")} className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><ArrowLeft className="h-4 w-4" />الصفحة الرئيسية</button><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20"><BriefcaseBusiness className="h-6 w-6 text-[#9dd5ca]" /></div><div><p className="text-xs font-bold tracking-[0.18em] text-[#9dd5ca]">COMO NEXT</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">المكتب التنفيذي</h1></div></div><p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">ما يحتاج انتباهك اليوم، وملفات العمل التي تقود القرار والتنفيذ. Manus هو العقل التنفيذي عند تكليفه؛ ولا توجد نتائج مصطنعة أو إجراءات تلقائية.</p></div>
-            <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); setSelectedWorkFileId(id); }} />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={() => navigate("/como-next/project-opening")} className="rounded-xl bg-[#d5ae63] font-black text-[#14243a] hover:bg-[#e3c27f]"><Building2 className="ms-2 h-4 w-4" />فتح مشروع من وثيقته</Button>
+              <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); setSelectedWorkFileId(id); }} />
+            </div>
           </div>
         </div>
       </header>

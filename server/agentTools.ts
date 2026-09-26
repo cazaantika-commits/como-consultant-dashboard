@@ -1833,12 +1833,7 @@ async function _executeToolInternal(
       }
 
       case "add_project": {
-        const { name, description, bua, pricePerSqft } = args;
-        const result = await db.insert(projects).values({
-          userId, name, description: description || null,
-          bua: bua || null, pricePerSqft: pricePerSqft || null
-        });
-        return JSON.stringify({ success: true, message: `تم إضافة المشروع "${name}" بنجاح`, projectId: (result as any)[0]?.insertId });
+        throw new Error("فتح المشروع الرسمي محصور ببوابة الوثيقة والمراجعة في COMO Next");
       }
 
       case "add_task": {

@@ -309,9 +309,9 @@ export const projectsRouter = router({
   // Create project
   create: publicProcedure
     .input(z.object({ name: z.string().min(1), ...factSheetFields }))
-    .mutation(({ ctx, input }) => {
+    .mutation(({ ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
-      return createProject(ctx.user.id, input);
+      throw new Error("فتح المشروع الرسمي محصور ببوابة الوثيقة والمراجعة في COMO Next");
     }),
 
   // Update project

@@ -797,13 +797,7 @@ async function updatePlatformFromAnalysis(analysis: FarouqAnalysis, email: Email
         projectId = existingProjects[0].id;
         updates.push("✅ وُجد المشروع: " + existingProjects[0].name);
       } else {
-        const result = await db.insert(projects).values({
-          userId: ownerId,
-          name: analysis.projectMentioned,
-          description: analysis.summary?.substring(0, 200),
-        });
-        projectId = (result as any)[0]?.insertId || (result as any).insertId;
-        updates.push("➕ تم إنشاء مشروع جديد: " + analysis.projectMentioned);
+        throw new Error("لن ينشئ البريد مشروعًا رسميًا؛ افتح الفرصة من وثيقتها وراجع حقائقها في COMO Next");
       }
 
       // 3. Link consultant to project

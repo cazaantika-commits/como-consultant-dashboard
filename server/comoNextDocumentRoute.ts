@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Express } from "express";
 import { asc, eq } from "drizzle-orm";
-import { comoNextDocumentChunks, comoNextDocuments, comoNextMeetingSources, comoNextMeetings, comoNextWorkMemoryDocuments } from "../drizzle/schema";
+import { comoNextDocumentChunks, comoNextDocuments, comoNextMeetingSources, comoNextMeetings, comoNextProjectOpportunities, comoNextProjectOpportunityDocuments, comoNextWorkMemoryDocuments } from "../drizzle/schema";
 import { getDb } from "./db";
 import { requireProjectAccess } from "./services/comoNextCommands";
 import { storageGet } from "./storage";
@@ -56,13 +56,31 @@ export function registerComoNextDocumentRoute(app: Express) {
         .innerJoin(comoNextMeetings, eq(comoNextMeetings.id, comoNextMeetingSources.meetingId))
         .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextMeetingSources.sourceDocumentId))
         .where(eq(comoNextMeetingSources.sourceDocumentId, documentId));
-      const links = [...memoryLinks, ...meetingLinks];
+      const opportunityLinks = await db
+        .select({
+          userId: comoNextProjectOpportunities.userId,
+          storageKey: comoNextDocuments.storageKey,
+          fileName: comoNextDocuments.fileName,
+          mimeType: comoNextDocuments.mimeType,
+          byteSize: comoNextDocuments.byteSize,
+          sha256: comoNextDocuments.sha256,
+        })
+        .from(comoNextProjectOpportunityDocuments)
+        .innerJoin(comoNextProjectOpportunities, eq(comoNextProjectOpportunities.id, comoNextProjectOpportunityDocuments.opportunityId))
+        .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextProjectOpportunityDocuments.documentId))
+        .where(eq(comoNextProjectOpportunityDocuments.documentId, documentId));
+      const links = [
+        ...memoryLinks,
+        ...meetingLinks,
+        ...opportunityLinks.map(({ userId: _userId, ...document }) => document),
+      ];
       if (!links.length) {
         res.status(404).send("Document not found");
         return;
       }
       let allowed = false;
       for (const link of links) {
+        if (!("projectId" in link)) continue;
         try {
           await requireProjectAccess(db, link.projectId, user.id, "read");
           allowed = true;
@@ -71,6 +89,7 @@ export function registerComoNextDocumentRoute(app: Express) {
           // Continue in case the same document is linked to another accessible project.
         }
       }
+      if (!allowed && opportunityLinks.some(link => Number(link.userId) === Number(user.id))) allowed = true;
       if (!allowed) {
         res.status(404).send("Document not found");
         return;
