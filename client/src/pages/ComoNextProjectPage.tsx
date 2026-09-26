@@ -131,7 +131,7 @@ export default function ComoNextProjectPage() {
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-7">
         <button type="button" onClick={() => navigate("/como-next?tab=work-files")} className="inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft className="h-4 w-4" />المكتب التنفيذي</button>
-        <div className="flex flex-wrap items-center gap-2"><Button variant="outline" onClick={() => navigate(`/project/${projectId}`)} className="rounded-xl bg-white text-xs">بطاقة المشروع الأصلية</Button><Button variant="outline" onClick={() => navigate(`/development-phases?projectId=${projectId}`)} className="rounded-xl bg-white text-xs"><Route className="ml-1 h-3.5 w-3.5" />جولة مراحل التطوير</Button><Button variant="outline" onClick={() => navigate("/bateekha")} className="rounded-xl bg-white text-xs">الدراسات المحمية</Button></div>
+        <div className="flex flex-wrap items-center gap-2"><Button variant="outline" onClick={() => navigate(`/project/${projectId}`)} className="rounded-xl bg-white text-xs">بطاقة المشروع الأصلية</Button><Button variant="outline" onClick={() => navigate(`/project-launch/${projectId}`)} className="rounded-xl bg-white text-xs"><FileCheck2 className="ml-1 h-3.5 w-3.5" />بوابة تأسيس المشروع</Button><Button variant="outline" onClick={() => navigate(`/development-phases?projectId=${projectId}`)} className="rounded-xl bg-white text-xs"><Route className="ml-1 h-3.5 w-3.5" />جولة مراحل التطوير</Button><Button variant="outline" onClick={() => navigate("/bateekha")} className="rounded-xl bg-white text-xs">الدراسات المحمية</Button></div>
       </div>
     </header>
 
@@ -145,6 +145,13 @@ export default function ComoNextProjectPage() {
       </section>
 
       {projectFacts.length ? <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{projectFacts.map(item => { const Icon = item.icon; return <Card key={item.label} className="rounded-2xl border-slate-200 bg-white/90 p-4 shadow-sm"><Icon className="h-4 w-4 text-[#1f6478]" /><p className="mt-3 text-[10px] font-bold text-slate-400">{item.label}</p><p className="mt-1 text-sm font-black text-slate-800">{item.value}</p></Card>; })}</section> : null}
+
+      <section className="mt-6 overflow-hidden rounded-[30px] border border-amber-200 bg-[#fffaf0] shadow-sm">
+        <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div><div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-full border-amber-200 bg-white text-amber-800">محطة تأسيس المشروع</Badge><span className="text-[10px] font-bold text-slate-500"><bdi>{data.foundation.completeGateCount}</bdi> من <bdi>{data.foundation.totalGateCount}</bdi> مكتملة بالمصدر</span></div><h2 className="mt-3 text-xl font-black leading-8 text-slate-950">{data.foundation.nextDecision}</h2><div className="mt-3 flex flex-wrap gap-2">{data.foundation.gates.map((gate: any) => <span key={gate.id} className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${gate.status === "complete" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : gate.status === "partial" ? "border-amber-200 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-500"}`}>{gate.title}</span>)}</div></div>
+          <Button className="rounded-xl bg-slate-900 text-white" onClick={() => navigate(`/project-launch/${projectId}`)}>فتح البوابة كاملة <ChevronLeft className="mr-2 h-4 w-4" /></Button>
+        </div>
+      </section>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <Metric label="ملفات العمل" value={data.summary.workFiles} note={`${data.summary.activeWorkFiles} نشط`} icon={FileStack} tone="bg-slate-100 text-slate-700" />

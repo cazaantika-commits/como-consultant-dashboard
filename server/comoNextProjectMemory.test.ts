@@ -77,6 +77,8 @@ describe("COMO Next reviewed project memory", () => {
     expect(majan.dossier?.briefStatus).toBe("reviewed");
     expect(majan.summary.reviewedMemory).toBe(12);
     expect(majan.summary.pendingDecisions).toBe(1);
+    expect(majan.foundation.totalGateCount).toBe(4);
+    expect(majan.foundation.gates[0]?.id).toBe("facts");
     expect(villas.dossier?.briefStatus).toBe("reviewed");
     expect(villas.summary.reviewedMemory).toBe(3);
     expect(majan.reviewedMemory.every((item: any) => item.sensitivity === "internal_only")).toBe(true);
@@ -105,6 +107,8 @@ describe("COMO Next reviewed project memory", () => {
     expect(projectPage).toContain("الملف التنفيذي الموحد");
     expect(projectPage).toContain("ذاكرة المشروع");
     expect(projectPage).toContain("مراجع الإثبات");
+    expect(projectPage).toContain("بوابة تأسيس المشروع");
+    expect(projectPage).toContain("data.foundation.nextDecision");
     expect(projectPage).toContain("workFileId=${workFileId}");
     expect(projectPage).not.toContain("sendMail");
     expect(officePage).toContain("الملفات التنفيذية للمشاريع");

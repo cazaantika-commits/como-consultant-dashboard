@@ -33,6 +33,13 @@ const EXTRACTION_MODEL = "gemini-3-flash-preview";
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 const clean = (value: unknown, max: number) => String(value ?? "").trim().slice(0, max);
 const sha256 = (value: Buffer | string) => createHash("sha256").update(value).digest("hex");
+const OWNER_RELATIONSHIP_LABELS: Record<string, string> = {
+  owned: "أرض مملوكة للشركة",
+  potential_purchase: "أرض قيد الشراء أو الاستحواذ",
+  land_for_units: "شراكة أرض مقابل وحدات",
+  other_partnership: "شراكة تطوير أخرى",
+  development_management: "إدارة تطوير لصالح المالك",
+};
 
 const FACT_DEFINITIONS = {
   projectName: { label: "اسم المشروع المقترح", type: "text", projectColumn: "name" },
@@ -630,6 +637,9 @@ export async function approveProjectOpportunity(input: { user: ProjectOpeningUse
       if (fieldKey === "projectName") continue;
       const value = factMap[fieldKey];
       if (value !== undefined && value !== null && value !== "") allowedProjectValues[definition.projectColumn] = value;
+    }
+    if (!allowedProjectValues.ownershipType) {
+      allowedProjectValues.ownershipType = OWNER_RELATIONSHIP_LABELS[opportunity.ownerRelationship] || opportunity.ownerRelationship;
     }
     const projectResult = await tx.insert(projects).values({
       userId: input.user.id,

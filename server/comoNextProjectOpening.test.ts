@@ -137,8 +137,14 @@ describe("COMO Next document-first project opening", () => {
     const approvedReplay = await approveProjectOpportunity({ user: owner as any, opportunityId });
     expect(approvedReplay).toMatchObject({ replayed: true, projectId, workFileId });
 
-    const [projects] = await connection.query<any[]>("SELECT name, is_test_project FROM projects WHERE id = ?", [projectId]);
-    expect(projects[0]).toMatchObject({ name: "مشروع اختبار بوابة الفتح", is_test_project: 0 });
+    const [projects] = await connection.query<any[]>("SELECT name, description, ownershipType, financingScenario, is_test_project FROM projects WHERE id = ?", [projectId]);
+    expect(projects[0]).toMatchObject({
+      name: "مشروع اختبار بوابة الفتح",
+      description: "اختبار قابل للعكس",
+      ownershipType: "أرض مملوكة للشركة",
+      financingScenario: "build_for_sale",
+      is_test_project: 0,
+    });
     const [files] = await connection.query<any[]>("SELECT work_file_status, source_system FROM como_next_work_files WHERE id = ? AND project_id = ?", [workFileId, projectId]);
     expect(files[0]).toMatchObject({ work_file_status: "open", source_system: "como_next_project_opportunity" });
     const [links] = await connection.query<any[]>("SELECT COUNT(*) AS count FROM como_next_work_memory_documents WHERE project_id = ? AND work_file_id = ? AND document_id = ?", [projectId, workFileId, documentId]);

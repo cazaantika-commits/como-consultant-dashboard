@@ -14,9 +14,12 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
+import { requireProjectAccess } from "../services/comoNextCommands";
+import { loadProjectFoundation } from "../services/comoNextProjectFoundation";
 
 type ReferenceSeed = {
   project: Record<string, unknown>;
+  foundation: Awaited<ReturnType<typeof loadProjectFoundation>>;
   officialDocuments: Array<{ sourceName: string; category: string | null; updatedAt: string; sourceType: string; sourceId: string | null; sourcePath: string | null }>;
   approvedMarketDecision?: { decidedAt: string; notes: string | null };
   verifiedEvidenceCount: number;
@@ -55,16 +58,14 @@ function getDocumentGate(category: string | null) {
 
 export function buildProjectReference(seed: ReferenceSeed) {
   const project = seed.project;
-  const factsChecks = [
-    hasValue(project.plotNumber),
-    hasValue(project.titleDeedNumber) || hasValue(project.ddaNumber),
-    hasValue(project.permittedUse),
-    hasValue(project.gfaSqft) || hasValue(project.manualBuaSqft) || hasValue(project.bua),
-    hasValue(project.driveFolderId),
-  ];
-  const factsStatus = statusFromChecks(factsChecks);
-  const marketReady = Boolean(seed.approvedMarketDecision) && seed.verifiedEvidenceCount > 0;
-  const programReady = seed.plannedServices > 0;
+  const gateById = new Map(seed.foundation.gates.map(gate => [gate.id, gate]));
+  const foundationStatus = (gateId: string): ReferenceStatus => {
+    const status = gateById.get(gateId)?.status;
+    return status === "complete" ? "ready" : status === "partial" ? "partial" : "not_ready";
+  };
+  const factsStatus = foundationStatus("facts");
+  const marketReady = foundationStatus("market") === "ready";
+  const programReady = foundationStatus("program") === "ready";
   const legalReady = Boolean(seed.legalRecord) && [
     seed.legalRecord?.titleDeedStatus,
     seed.legalRecord?.ddaRegistrationStatus,
@@ -77,15 +78,15 @@ export function buildProjectReference(seed: ReferenceSeed) {
     seed.permitRecord?.municipalityDesignApprovalStatus,
   ].some(hasValue);
   const contractReady = seed.activeContracts.length > 0;
-  const officialDocCount = seed.officialDocuments.length;
+  const officialDocCount = seed.foundation.evidence.totalDocumentReferences;
   const hasReferencePack = factsStatus === "ready" && officialDocCount > 0 && marketReady && programReady;
   const baselineStatus = seed.activeBaseline ? "active" : contractReady && hasReferencePack ? "ready_to_confirm" : hasReferencePack ? "waiting_for_appointment" : "preparing";
 
   const sourceCards = [
-    { id: "facts", title: "بطاقة المشروع", status: factsStatus, detail: `${factsChecks.filter(Boolean).length} من ${factsChecks.length} حقائق تأسيسية متاحة`, source: "بطاقة المشروع وخازن", href: `/project/${project.id}` },
-    { id: "documents", title: "الوثائق الرسمية", status: officialDocCount > 0 ? "ready" : "not_ready" as ReferenceStatus, detail: officialDocCount > 0 ? `${officialDocCount} مستند رسمي مفهرس من المصدر المعتمد` : "لا يوجد مستند رسمي مفهرس للمشروع بعد", source: "Google Drive وفهرس خازن", href: "/drive" },
-    { id: "market", title: "قرار السوق", status: marketReady ? "ready" : seed.verifiedEvidenceCount > 0 ? "partial" : "not_ready" as ReferenceStatus, detail: marketReady ? `قرار معتمد مع ${seed.verifiedEvidenceCount} دليل موثق` : `${seed.verifiedEvidenceCount} دليل موثق · قرار السوق لم يعتمد بعد`, source: "المعرفة والتحليل", href: "/knowledge-analysis" },
-    { id: "program", title: "البرنامج والمسار", status: programReady ? "ready" : "not_ready" as ReferenceStatus, detail: programReady ? `${seed.plannedServices} خدمة لها موعد مخطط` : "لا توجد خدمات بموعد مخطط بعد", source: "جولة مراحل التطوير", href: "/development-phases" },
+    { id: "facts", title: "بطاقة المشروع", status: factsStatus, detail: gateById.get("facts")?.detail || "لم تكتمل هوية المشروع", source: "بطاقة المشروع ووثائق COMO المحمية", href: `/project/${project.id}` },
+    { id: "documents", title: "الوثائق الرسمية", status: officialDocCount > 0 ? "ready" : "not_ready" as ReferenceStatus, detail: officialDocCount > 0 ? `${officialDocCount} مرجع وثيقة من COMO المحمي والفهرس المرجعي` : "لا توجد وثيقة مشروع محفوظة بعد", source: "وثائق COMO المحمية", href: `/como-next/projects/${project.id}` },
+    { id: "market", title: "قرار السوق", status: foundationStatus("market"), detail: gateById.get("market")?.detail || "لم يكتمل قرار السوق", source: "المعرفة والتحليل", href: `/knowledge-analysis?projectId=${project.id}` },
+    { id: "program", title: "البرنامج والمسار", status: foundationStatus("program"), detail: gateById.get("program")?.detail || "لم يسجل برنامج المشروع", source: "جولة مراحل التطوير", href: `/development-phases?projectId=${project.id}` },
     { id: "legal", title: "المرجعية القانونية", status: legalReady ? "ready" : Boolean(seed.legalRecord) ? "partial" : "not_ready" as ReferenceStatus, detail: legalReady ? "سجل قانوني موجود مع حالة مرجعية" : "السجل القانوني يحتاج استكمالًا أو توثيقًا", source: "الإعداد القانوني", href: "/development-phases" },
     { id: "permits", title: "التصاميم والتصاريح", status: permitReady ? "ready" : Boolean(seed.permitRecord) ? "partial" : "not_ready" as ReferenceStatus, detail: permitReady ? "سجل التصميم أو التصاريح متاح للمراجعة" : "لا توجد حالة تصميم أو تصريح موثقة بعد", source: "التصاميم والتصاريح", href: "/development-phases" },
   ];
@@ -93,6 +94,7 @@ export function buildProjectReference(seed: ReferenceSeed) {
   return {
     readOnly: true,
     project: { id: project.id, name: project.name, financingScenario: project.financingScenario ?? null },
+    foundation: seed.foundation,
     driveFolder: hasValue(project.driveFolderId) ? { configured: true, url: `https://drive.google.com/drive/folders/${project.driveFolderId}` } : { configured: false, url: null },
     sources: sourceCards,
     officialDocuments: seed.officialDocuments.slice(0, 5).map((document) => ({ ...document, driveUrl: getDriveDocumentUrl(document), gate: getDocumentGate(document.category) })),
@@ -120,7 +122,7 @@ export function buildProjectReference(seed: ReferenceSeed) {
 }
 
 async function loadReferenceSeed(db: any, projectId: number): Promise<ReferenceSeed> {
-  const [projectRows, documentRows, decisionRows, evidenceRows, serviceRows, legalRows, permitRows, contractRows, baselineRows] = await Promise.all([
+  const [projectRows, documentRows, decisionRows, evidenceRows, serviceRows, legalRows, permitRows, contractRows, baselineRows, foundation] = await Promise.all([
     db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
     db.select({ sourceName: documentIndex.sourceName, category: documentIndex.category, updatedAt: documentIndex.updatedAt, sourceType: documentIndex.sourceType, sourceId: documentIndex.sourceId, sourcePath: documentIndex.sourcePath }).from(documentIndex).where(and(eq(documentIndex.projectId, projectId), eq(documentIndex.indexStatus, "indexed"))).orderBy(desc(documentIndex.updatedAt)),
     db.select({ decidedAt: marketDecisionApprovals.decidedAt, notes: marketDecisionApprovals.notes }).from(marketDecisionApprovals).where(and(eq(marketDecisionApprovals.projectId, projectId), eq(marketDecisionApprovals.decisionStatus, "approved"))).orderBy(desc(marketDecisionApprovals.decidedAt)).limit(1),
@@ -130,44 +132,52 @@ async function loadReferenceSeed(db: any, projectId: number): Promise<ReferenceS
     db.select().from(designsAndPermits).where(eq(designsAndPermits.projectId, projectId)).orderBy(desc(designsAndPermits.updatedAt)).limit(1),
     db.select({ title: projectContracts.title, contractNumber: projectContracts.contractNumber, startDate: projectContracts.startDate }).from(projectContracts).where(and(eq(projectContracts.projectId, projectId), eq(projectContracts.contractStatus, "active"))),
     db.select({ id: projectBaselines.id, approvedAt: projectBaselines.approvedAt, notes: projectBaselines.notes }).from(projectBaselines).where(and(eq(projectBaselines.projectId, projectId), eq(projectBaselines.status, "active"))).orderBy(desc(projectBaselines.approvedAt)).limit(1),
+    loadProjectFoundation(db, projectId),
   ]);
   const project = projectRows[0];
   if (!project) throw new Error("لم يُعثر على المشروع المطلوب");
-  return { project, officialDocuments: documentRows, approvedMarketDecision: decisionRows[0], verifiedEvidenceCount: evidenceRows.length, plannedServices: serviceRows.length, legalRecord: legalRows[0], permitRecord: permitRows[0], activeContracts: contractRows, activeBaseline: baselineRows[0] };
+  return { project, foundation, officialDocuments: documentRows, approvedMarketDecision: decisionRows[0], verifiedEvidenceCount: evidenceRows.length, plannedServices: serviceRows.length, legalRecord: legalRows[0], permitRecord: permitRows[0], activeContracts: contractRows, activeBaseline: baselineRows[0] };
 }
 
 export const projectReferenceRouter = router({
-  get: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input }) => {
+  get: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
+    await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
     return buildProjectReference(await loadReferenceSeed(db, input.projectId));
   }),
   approveBaseline: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), notes: z.string().max(3000).optional() })).mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
+    await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
     const reference = buildProjectReference(await loadReferenceSeed(db, input.projectId));
     if (reference.baseline.status !== "ready_to_confirm") throw new Error("لا يمكن اعتماد خط الأساس قبل اكتمال المصادر وعقد نشط.");
-    const snapshot = JSON.stringify({ project: reference.project, sources: reference.sources, documents: reference.officialDocuments, activeContracts: reference.baseline.activeContracts, createdFrom: "project_reference" });
+    const snapshot = JSON.stringify({ project: reference.project, foundation: reference.foundation, sources: reference.sources, documents: reference.officialDocuments, activeContracts: reference.baseline.activeContracts, createdFrom: "project_reference" });
     const result = await db.insert(projectBaselines).values({ projectId: input.projectId, approvedByUserId: ctx.user.id, sourceSnapshotJson: snapshot, notes: input.notes ?? null });
     return { id: Number(result[0].insertId) };
   }),
-  getChangeRequests: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input }) => {
+  getChangeRequests: protectedProcedure.input(z.object({ projectId: z.number().int().positive() })).query(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
+    await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
     return db.select().from(projectChangeRequests).where(eq(projectChangeRequests.projectId, input.projectId)).orderBy(desc(projectChangeRequests.updatedAt));
   }),
   createChangeRequest: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), title: z.string().min(3).max(500), reason: z.string().min(5).max(5000), referenceUrl: z.string().url().optional().or(z.literal("")), scopeImpact: z.string().max(3000).optional(), scheduleImpact: z.string().max(3000).optional(), costImpact: z.string().max(3000).optional(), cashFlowImpact: z.string().max(3000).optional() })).mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
+    await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
     const [baseline] = await db.select({ id: projectBaselines.id }).from(projectBaselines).where(and(eq(projectBaselines.projectId, input.projectId), eq(projectBaselines.status, "active"))).orderBy(desc(projectBaselines.approvedAt)).limit(1);
     if (!baseline) throw new Error("لا يمكن إنشاء طلب تغيير قبل اعتماد خط أساس للمشروع.");
     const result = await db.insert(projectChangeRequests).values({ projectId: input.projectId, baselineId: baseline.id, createdByUserId: ctx.user.id, title: input.title, reason: input.reason, referenceUrl: input.referenceUrl || null, scopeImpact: input.scopeImpact ?? null, scheduleImpact: input.scheduleImpact ?? null, costImpact: input.costImpact ?? null, cashFlowImpact: input.cashFlowImpact ?? null });
     return { id: Number(result[0].insertId) };
   }),
-  approveChangeRequest: protectedProcedure.input(z.object({ changeRequestId: z.number().int().positive(), decisionNotes: z.string().max(3000).optional() })).mutation(async ({ input }) => {
+  approveChangeRequest: protectedProcedure.input(z.object({ changeRequestId: z.number().int().positive(), decisionNotes: z.string().max(3000).optional() })).mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
-    await db.update(projectChangeRequests).set({ decisionStatus: "approved", decisionNotes: input.decisionNotes ?? null, decidedAt: new Date().toISOString().slice(0, 19).replace("T", " ") }).where(eq(projectChangeRequests.id, input.changeRequestId));
+    const [change] = await db.select({ projectId: projectChangeRequests.projectId }).from(projectChangeRequests).where(eq(projectChangeRequests.id, input.changeRequestId)).limit(1);
+    if (!change) throw new Error("طلب التغيير غير موجود");
+    await requireProjectAccess(db, change.projectId, ctx.user.id, "write");
+    await db.update(projectChangeRequests).set({ decisionStatus: "approved", decisionNotes: input.decisionNotes ?? null, decidedAt: new Date().toISOString().slice(0, 19).replace("T", " ") }).where(and(eq(projectChangeRequests.id, input.changeRequestId), eq(projectChangeRequests.projectId, change.projectId)));
     return { success: true };
   }),
 });

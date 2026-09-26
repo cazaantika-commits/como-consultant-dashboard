@@ -164,7 +164,8 @@ function Router() {
       <Route path="/como-next/project-opening" component={ComoNextProjectOpeningPage} />
       <Route path="/como-next" component={ComoNextTodayPage} />
       <Route path="/sara" component={SaraPage} />
-      <Route path="/project-launch" component={ProjectLaunchGatePage} />
+      <Route path="/project-launch/:projectId" component={ProjectLaunchGatePage} />
+      <Route path="/project-launch"><Redirect to="/como-next?tab=work-files" /></Route>
       <Route path="/project-reference" component={ProjectReferencePage} />
       <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />
       <Route path="/contract-deliverables" component={ContractDeliverablesPage} />

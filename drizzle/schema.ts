@@ -1651,7 +1651,7 @@ export const projectBaselines = mysqlTable("project_baselines", {
 	id: int().autoincrement().notNull().primaryKey(),
 	projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
 	approvedByUserId: int("approved_by_user_id").notNull().references(() => users.id),
-	status: mysqlEnum("baseline_status", ["active", "superseded"]).default("active").notNull(),
+	status: mysqlEnum("status", ["active", "superseded"]).default("active").notNull(),
 	sourceSnapshotJson: longtext("source_snapshot_json").notNull(),
 	notes: text(),
 	approvedAt: timestamp("approved_at", { mode: "string" }).defaultNow().notNull(),

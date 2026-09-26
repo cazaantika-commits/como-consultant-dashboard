@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { requireProjectAccess } from "./comoNextCommands";
+import { loadProjectFoundation } from "./comoNextProjectFoundation";
 
 function rows<T>(result: unknown): T[] {
   if (Array.isArray(result) && Array.isArray(result[0])) return result[0] as T[];
@@ -68,6 +69,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
     lifecycleStagesResult,
     lifecycleServicesResult,
     lifecycleDocumentsResult,
+    foundation,
   ] = await Promise.all([
     db.execute(sql`
       SELECT id, name, description, plotNumber, areaCode, titleDeedNumber, ddaNumber,
@@ -277,6 +279,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       GROUP BY serviceCode, docStatus
       ORDER BY serviceCode, docStatus
     `),
+    loadProjectFoundation(db, input.projectId),
   ]);
 
   const project = rows<any>(projectResult)[0];
@@ -404,6 +407,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
   return {
     project,
     accessRole: access.role,
+    foundation,
     dossier: dossierRaw ? {
       id: asNumber(dossierRaw.id),
       executiveContext: dossierRaw.executiveContext,
