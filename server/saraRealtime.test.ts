@@ -77,6 +77,8 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).not.toContain("OPENAI_API_KEY");
     expect(roomSource).toContain("ابدأ الحديث مع سارة");
     expect(roomSource).toContain("تشغيل الصورة الحية");
+    expect(roomSource).toContain('peer.addTransceiver("audio", { direction: "recvonly" })');
+    expect(roomSource).toContain("فتحت سارة وضع الكتابة مع بقاء الرد الصوتي");
     expect(roomSource).toContain("لا إرسال خارجي · لا تنفيذ تلقائي");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");

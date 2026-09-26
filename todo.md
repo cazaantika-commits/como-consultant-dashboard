@@ -1764,3 +1764,12 @@
 - [x] Add reviewed minutes and closure gates: exclude `internal_only` material from minutes and external drafts, block minutes while required agenda or proposed outcomes remain unresolved, and block work-file closure while a meeting, proposal review, or draft minutes remain open. (2026-09-25)
 - [x] Validate the meeting lifecycle with 35/35 targeted tests, production build, `git diff --check`, authorized visual inspection of Today/work-file/meeting-room views, and a reversible end-to-end smoke test whose temporary meeting, sources, proposals, minutes, memory, and events were fully removed. (2026-09-25)
 - [x] Preserve the protected baseline after meeting implementation: projects 8, feasibilityStudies 11, financialData 34, costs_cash_flow 1, competition_pricing 1, cf_projects 33, project_cash_flow_settings 494, wael_sales_plans 6, portfolio_scenarios 2. No email, WhatsApp, Telegram, recording, transcription, LiveAvatar, scheduling, or automatic Manus execution was activated. (2026-09-25)
+
+## سارة — OpenAI Realtime وLiveAvatar
+- [x] اعتماد سارة هوية التواصل الوحيدة في الصفحة الرئيسية ومركز القيادة مع إبقاء Manus العقل التنفيذي للأعمال العميقة. (2026-09-26)
+- [x] ربط OpenAI Realtime 2.1 عبر WebRTC بمفتاح جلسة قصير من الخادم ومفتاح Service Account مخصص، دون كشف المفتاح الرئيسي للمتصفح. (2026-09-26)
+- [x] حصر أدوات سارة في القراءة من مركز القيادة وCOMO Next؛ لا إرسال خارجي ولا اعتماد أو تنفيذ تلقائي. (2026-09-26)
+- [x] إضافة مسار كتابة احتياطي عند غياب الميكروفون مع استمرار رد سارة الصوتي؛ الكلام يبقى الافتراضي على الأجهزة التي تملك ميكروفونًا. (2026-09-26)
+- [x] ربط LiveAvatar بسارة المعتمدة كطبقة مرئية اختيارية تبدأ بزر صريح، مع تمرير صوت Realtime لتحريك الشفاه وكتم الصوت المكرر. (2026-09-26)
+- [x] تحقق حي: اتصال WebRTC، تحية عربية، سؤال وجواب يثبت حدود سارة/Manus، ثم اتصال LiveAvatar وانتقاله إلى «متصلة/تتحدث» وحركة الوجه والشفاه؛ أوقفت الجلستان فورًا. (2026-09-26)
+- [x] تنظيف جميع رسائل smoke من سجل الدردشة؛ 31/31 اختبارًا مستهدفًا والبناء وdiff نجحت، والجداول المالية المحمية بقيت مطابقة للخط الأساس. (2026-09-26)

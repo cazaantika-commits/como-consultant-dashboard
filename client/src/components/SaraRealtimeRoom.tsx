@@ -62,6 +62,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
 
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [muted, setMuted] = useState(false);
+  const [microphoneAvailable, setMicrophoneAvailable] = useState(true);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [userSpeechSeconds, setUserSpeechSeconds] = useState(0);
   const [assistantSpeechSeconds, setAssistantSpeechSeconds] = useState(0);
@@ -114,6 +115,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
     assistantDraftRef.current = "";
     setPhase("idle");
     setMuted(false);
+    setMicrophoneAvailable(true);
     setElapsedSeconds(0);
     setUserSpeechSeconds(0);
     setAssistantSpeechSeconds(0);
@@ -275,11 +277,20 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
     try {
       const session = await createSession.mutateAsync({ token });
       sessionIdRef.current = session.sessionId;
-      const microphone = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-      localStreamRef.current = microphone;
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
-      microphone.getTracks().forEach(track => peer.addTrack(track, microphone));
+      try {
+        const microphone = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        localStreamRef.current = microphone;
+        microphone.getTracks().forEach(track => peer.addTrack(track, microphone));
+        setMicrophoneAvailable(true);
+        setMuted(false);
+      } catch {
+        peer.addTransceiver("audio", { direction: "recvonly" });
+        setMicrophoneAvailable(false);
+        setMuted(true);
+        setTranscript(items => mergeTranscript(items, { id: "system-microphone", role: "system", text: "لم يتوفر ميكروفون في هذا المتصفح؛ فتحت سارة وضع الكتابة مع بقاء الرد الصوتي." }));
+      }
 
       peer.ontrack = ({ streams }) => {
         const remoteStream = streams[0];
@@ -326,7 +337,10 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
 
   const toggleMute = useCallback(() => {
     const track = localStreamRef.current?.getAudioTracks()[0];
-    if (!track) return;
+    if (!track) {
+      toast.info("لا يوجد ميكروفون متاح في هذا المتصفح؛ استخدم الكتابة لسارة");
+      return;
+    }
     track.enabled = !track.enabled;
     setMuted(!track.enabled);
   }, []);
@@ -373,7 +387,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   const phaseLabel: Record<VoicePhase, string> = {
     idle: "جاهزة",
     connecting: "جارٍ الاتصال",
-    listening: muted ? "الميكروفون مكتوم" : "تستمع إليك",
+    listening: !microphoneAvailable ? "وضع الكتابة" : muted ? "الميكروفون مكتوم" : "تستمع إليك",
     thinking: "تفكر وتراجع المصدر",
     speaking: "تتحدث الآن",
     error: "الاتصال متوقف",
@@ -455,7 +469,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
               ) : (
                 <>
                   <Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">
-                    {muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{muted ? "فتح الميكروفون" : "كتم الميكروفون"}
+                    {!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}
                   </Button>
                   <Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button>
                 </>
