@@ -149,14 +149,6 @@ export default function ContractsRegistryPage() {
     },
   });
 
-  const analyzeMutation = trpc.contracts.analyzeContract.useMutation({
-    onSuccess: () => {
-      toast.success("تم تحليل العقد بنجاح");
-      utils.contracts.list.invalidate();
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const uploadFileMutation = trpc.contracts.uploadFile.useMutation();
 
   const saveToDriveMutation = trpc.contracts.saveToDrive.useMutation({
@@ -449,7 +441,7 @@ export default function ContractsRegistryPage() {
                   <ContractCard
                     key={contract.id}
                     contract={contract}
-                    onAnalyze={() => analyzeMutation.mutate({ contractId: contract.id })}
+                    onAnalyze={() => undefined}
                     onDelete={() => {
                       if (confirm("هل أنت متأكد من حذف هذا العقد؟")) {
                         deleteContractMutation.mutate({ id: contract.id });
@@ -460,7 +452,7 @@ export default function ContractsRegistryPage() {
                       setShowAnalysis(true);
                     }}
                     onSaveToDrive={() => saveToDriveMutation.mutate({ contractId: contract.id })}
-                    analyzing={analyzeMutation.isPending}
+                    analyzing={false}
                     savingToDrive={saveToDriveMutation.isPending}
                   />
                 ))}
@@ -701,15 +693,10 @@ function ContractCard({ contract, onAnalyze, onDelete, onViewAnalysis, onSaveToD
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs gap-1 text-blue-600"
-                  onClick={onAnalyze}
-                  disabled={analyzing || !contract.fileUrl || contract.analysisStatus === "analyzing"}
+                  disabled
                 >
-                  {analyzing || contract.analysisStatus === "analyzing" ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Brain className="w-3 h-3" />
-                  )}
-                  تحليل فاروق
+                  <Brain className="w-3 h-3" />
+                  ينتظر مدير العقود
                 </Button>
               )}
 
@@ -950,7 +937,7 @@ function AddContractForm({ projects, contractTypes, onSave, onCancel, saving, up
             </div>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">بعد رفع الملف، يمكنك طلب تحليل فاروق للعقد</p>
+        <p className="text-xs text-muted-foreground mt-1">يُحفظ الملف في السجل؛ التحليل الجديد سينفذه مدير العقود داخل ملف المشروع بعد اكتمال مسار الصلاحيات.</p>
       </div>
 
       <DialogFooter className="gap-2">

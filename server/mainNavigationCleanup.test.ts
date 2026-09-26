@@ -6,19 +6,22 @@ const appSource = readFileSync("client/src/App.tsx", "utf8");
 const unifiedProjectCardSource = readFileSync("client/src/pages/UnifiedProjectCardPage.tsx", "utf8");
 
 describe("rebuilt executive homepage navigation", () => {
-  it("keeps only four deliberate daily destinations on the authenticated homepage", () => {
+  it("keeps five deliberate destinations including the protected development tour", () => {
     const executiveIndex = homeSource.indexOf('id: "executive-office"');
     const financialIndex = homeSource.indexOf('id: "financial-studies"');
     const consultantsIndex = homeSource.indexOf('id: "consultants"');
     const knowledgeIndex = homeSource.indexOf('id: "knowledge"');
+    const tourIndex = homeSource.indexOf('id: "development-tour"');
     expect(executiveIndex).toBeGreaterThan(-1);
     expect(financialIndex).toBeGreaterThan(executiveIndex);
     expect(consultantsIndex).toBeGreaterThan(financialIndex);
     expect(knowledgeIndex).toBeGreaterThan(consultantsIndex);
+    expect(tourIndex).toBeGreaterThan(knowledgeIndex);
     expect(homeSource).toContain('path: "/como-next"');
     expect(homeSource).toContain('path: "/bateekha"');
     expect(homeSource).toContain('path: "/consultant-portal"');
     expect(homeSource).toContain('path: "/knowledge-analysis"');
+    expect(homeSource).toContain('path: "/development-phases"');
   });
 
   it("removes legacy draggable dashboards, news, agents, and old records from Home", () => {

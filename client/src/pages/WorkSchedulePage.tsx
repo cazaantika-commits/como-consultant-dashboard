@@ -1030,23 +1030,6 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                       </span>
                     )}
 
-                    {!isStage && !isReadOnly && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`هل تريد حذف المهمة "${row.name}"?`)) {
-                            deleteTaskMutation.mutate({
-                              serviceCode: row.serviceCode!,
-                              projectId: selectedProjectId!,
-                            });
-                          }
-                        }}
-                        className="p-0.5 rounded hover:bg-red-100 text-red-400 hover:text-red-600 flex-shrink-0 mr-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="حذف المهمة"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
                   </div>
 
                   {!compactMode && (<>
@@ -1163,69 +1146,6 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
             })}
           </div>
         </div>
-
-        {/* Add Task Dialog */}
-        {addingToStage && !isReadOnly && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setAddingToStage(null)}>
-            <div className="bg-white rounded-lg shadow-xl p-5 w-80" dir="rtl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-gray-800">إضافة مهمة جديدة</h3>
-                <button onClick={() => setAddingToStage(null)} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-4 h-4 text-gray-500" />
-                </button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 block">اسم المهمة</label>
-                  <input
-                    type="text"
-                    value={newTaskName}
-                    onChange={(e) => setNewTaskName(e.target.value)}
-                    placeholder="أدخل اسم المهمة..."
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600 mb-1 block">المدة (أيام عمل)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={newTaskDuration}
-                    onChange={(e) => setNewTaskDuration(Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                  />
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => {
-                      if (!newTaskName.trim()) {
-                        toast.error("يرجى إدخال اسم المهمة");
-                        return;
-                      }
-                      addTaskMutation.mutate({
-                        stageCode: addingToStage,
-                        nameAr: newTaskName.trim(),
-                        expectedDurationDays: newTaskDuration,
-                        projectId: selectedProjectId!,
-                      });
-                    }}
-                    disabled={addTaskMutation.isPending}
-                    className="flex-1 bg-cyan-600 text-white rounded-md py-2 text-sm font-medium hover:bg-cyan-700 disabled:opacity-50"
-                  >
-                    {addTaskMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "إضافة"}
-                  </button>
-                  <button
-                    onClick={() => setAddingToStage(null)}
-                    className="flex-1 bg-gray-100 text-gray-600 rounded-md py-2 text-sm font-medium hover:bg-gray-200"
-                  >
-                    إلغاء
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* RIGHT: Timeline / Gantt bars — single scroll container with sticky header (RTL) */}
         <div

@@ -11,7 +11,6 @@ import {
   projectStageStatus,
 } from "../../drizzle/schema";
 import { eq, and, sql, lte, gte, isNotNull, max } from "drizzle-orm";
-import { notifyOwner } from "../_core/notification";
 
 function rejectUnscopedCatalogueWrite(): never {
   throw new TRPCError({
@@ -136,6 +135,7 @@ export const lifecycleRouter = router({
       category: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const maxOrder = await db
         .select({ max: max(lifecycleStages.sortOrder) })
@@ -165,6 +165,7 @@ export const lifecycleRouter = router({
       sortOrder: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const { id, ...updates } = input;
       await db.update(lifecycleStages).set(updates).where(eq(lifecycleStages.id, id));
@@ -177,6 +178,7 @@ export const lifecycleRouter = router({
       stages: z.array(z.object({ id: z.number(), sortOrder: z.number() }))
     }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       for (const s of input.stages) {
         await db.update(lifecycleStages).set({ sortOrder: s.sortOrder }).where(eq(lifecycleStages.id, s.id));
@@ -537,7 +539,7 @@ export const lifecycleRouter = router({
       return { success: true };
     }),
 
-  /** Check all service deadlines and send notifications for overdue/upcoming services */
+  /** Read deadline counts only; outbound notifications remain disabled. */
   checkDeadlines: protectedProcedure.mutation(async () => {
     const db = await getDb();
     const now = new Date();
@@ -595,12 +597,13 @@ export const lifecycleRouter = router({
       lines.push(`🟡 خدمات تستحق خلال 3 أيام (${upcomingItems.length}):\n${upcomingItems.join('\n')}`);
     }
 
-    await notifyOwner({
-      title: `تنبيه مواعيد DLD/RERA — ${alerts.length} خدمة تحتاج متابعة`,
-      content: lines.join('\n\n'),
-    });
-
-    return { sent: true, count: alerts.length, overdue: overdueItems.length, upcoming: upcomingItems.length };
+    return {
+      sent: false,
+      count: alerts.length,
+      overdue: overdueItems.length,
+      upcoming: upcomingItems.length,
+      note: "قراءة فقط — لم يُرسل أي تنبيه خارجي.",
+    };
   }),
 
   /** Get upcoming and overdue services for a project (for UI display) */

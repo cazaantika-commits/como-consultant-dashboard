@@ -3531,3 +3531,49 @@ export const comoNextIntakeProposals = mysqlTable("como_next_intake_proposals", 
   index("como_next_intake_email_idx").on(table.sourceEmailId, table.sourceEmailAnalysisId),
   foreignKey({ name: "como_next_intake_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
 ]);
+
+
+// The only active specialist capabilities in COMO Next. They run on explicit
+// owner request, write a review draft, and never execute operational work.
+export const comoNextSpecialistCapabilities = mysqlTable("como_next_specialist_capabilities", {
+  id: int("id").autoincrement().primaryKey(),
+  capabilityCode: varchar("capability_code", { length: 64 }).notNull(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  scopeSummary: text("scope_summary").notNull(),
+  operatingMode: mysqlEnum("operating_mode", ["on_demand_only"]).notNull().default("on_demand_only"),
+  authorityMode: mysqlEnum("authority_mode", ["draft_review_only"]).notNull().default("draft_review_only"),
+  isEnabled: tinyint("is_enabled").notNull().default(1),
+  promptVersion: varchar("prompt_version", { length: 64 }).notNull().default("v1"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_specialist_capability_code_uq").on(table.capabilityCode),
+  index("como_next_specialist_enabled_idx").on(table.isEnabled, table.capabilityCode),
+]);
+
+export const comoNextSpecialistReviews = mysqlTable("como_next_specialist_reviews", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  workFileId: int("work_file_id"),
+  capabilityCode: varchar("capability_code", { length: 64 }).notNull().references(() => comoNextSpecialistCapabilities.capabilityCode, { onDelete: "restrict" }),
+  requestText: longtext("request_text").notNull(),
+  requestKey: varchar("request_key", { length: 128 }).notNull(),
+  contextSha256: varchar("context_sha256", { length: 64 }).notNull(),
+  modelId: varchar("model_id", { length: 128 }),
+  reviewStatus: mysqlEnum("review_status", ["requested", "draft", "reviewed", "dismissed", "failed"]).notNull().default("requested"),
+  riskLevel: mysqlEnum("risk_level", ["normal", "attention", "urgent"]),
+  executiveSummary: text("executive_summary"),
+  outputJson: longtext("output_json"),
+  errorMessage: text("error_message"),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewNote: text("review_note"),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_specialist_request_uq").on(table.userId, table.requestKey),
+  index("como_next_specialist_project_idx").on(table.projectId, table.capabilityCode, table.reviewStatus, table.createdAt),
+  index("como_next_specialist_work_file_idx").on(table.workFileId, table.reviewStatus, table.createdAt),
+  foreignKey({ name: "como_next_specialist_review_work_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+]);

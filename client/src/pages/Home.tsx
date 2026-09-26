@@ -19,6 +19,7 @@ import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as LockKeyhole } from "lucide-react/dist/esm/icons/lock-keyhole.js";
 import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as Route } from "lucide-react/dist/esm/icons/route.js";
 import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
 import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 
@@ -75,6 +76,16 @@ const EXECUTIVE_DESTINATIONS: ExecutiveDestination[] = [
     icon: BookOpen,
     tone: "from-[#4d456e] to-[#756a9d]",
     accent: "text-[#635b88]",
+  },
+  {
+    id: "development-tour",
+    title: "جولة مراحل التطوير",
+    eyebrow: "المسار المحمي للمشروع",
+    description: "بوابة الانطلاق والامتثال والجدول والعقود؛ أربع زوايا محفوظة حول ملف مشروع واحد.",
+    path: "/development-phases",
+    icon: Route,
+    tone: "from-[#5b3f75] to-[#8a63a7]",
+    accent: "text-[#6d4b88]",
   },
 ];
 
@@ -285,7 +296,7 @@ export default function Home() {
 
         <section className="mt-10 pb-10">
           <div className="mb-4"><p className="text-[11px] font-black text-[#825e44]">مساحات واضحة بلا تكرار</p><h2 className="mt-1 text-xl font-black text-slate-900">أين تريد أن تعمل؟</h2></div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {EXECUTIVE_DESTINATIONS.map(item => <DestinationCard key={item.id} item={item} onOpen={navigate} />)}
           </div>
           {user?.role === "admin" && (

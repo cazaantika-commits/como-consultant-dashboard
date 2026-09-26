@@ -192,9 +192,6 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
               <span className="text-green-600 font-semibold">مستلم {isJointVenture ? "لوائل" : "للمستثمر"}: {hasFinancialInputs ? fmt(totalCredit) : "—"}</span>
               <span className="text-blue-700 font-bold">الربح: {hasFinancialInputs ? fmt(profit) : "—"}</span>
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-xs font-semibold">
-              <Download className="w-3.5 h-3.5" /> تصدير
-            </button>
           </div>
         </div>
       </div>

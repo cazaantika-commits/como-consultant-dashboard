@@ -12,6 +12,13 @@ import { createTasksFromMeeting, executeTasksByAgents, generateExecutionReport, 
 
 const agentNameEnum = z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]);
 
+function rejectLegacyMeetingMutation(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "غرفة الاجتماعات القديمة مؤرشفة للقراءة فقط. استخدم غرفة الاجتماع المحكومة داخل ملف العمل في COMO Next.",
+  });
+}
+
 export const meetingsRouter = router({
   // Create a new meeting
   create: protectedProcedure
@@ -21,6 +28,7 @@ export const meetingsRouter = router({
       agentIds: z.array(z.number()).min(1), // At least 1 agent
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database not available" });
 
@@ -150,6 +158,7 @@ export const meetingsRouter = router({
   start: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: meetingId }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -173,6 +182,7 @@ export const meetingsRouter = router({
   end: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: meetingId }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -474,6 +484,7 @@ export const meetingsRouter = router({
   retryTaskExecution: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: meetingId }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -565,6 +576,7 @@ export const meetingsRouter = router({
       mimeType: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -656,6 +668,7 @@ export const meetingsRouter = router({
       message: z.string().min(1),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -678,6 +691,7 @@ export const meetingsRouter = router({
       userMessage: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -774,6 +788,7 @@ ${reversedMessages.map(m => `${m.speakerId === "user" ? "المدير" : m.speak
       mimeType: z.string().default("audio/webm"),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -801,6 +816,7 @@ ${reversedMessages.map(m => `${m.speakerId === "user" ? "المدير" : m.speak
   generateMinutes: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: meetingId }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -954,6 +970,7 @@ ${transcript}`
       })),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -985,6 +1002,7 @@ ${transcript}`
       fileId: z.number(),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
@@ -1051,6 +1069,7 @@ ${transcript}`
   delete: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: meetingId }) => {
+      rejectLegacyMeetingMutation();
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 

@@ -57,6 +57,13 @@ const WORKFLOW = [
 
 const SUPPORT_LINKS = [
   {
+    title: "التقييم الفني",
+    description: "أداة التقييم الفني القائمة محفوظة كما هي؛ تُستخدم كدليل قرار ولا تختار الاستشاري تلقائيًا.",
+    href: "/consultant-evaluation",
+    icon: ClipboardCheck,
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  },
+  {
     title: "سجل المكاتب الاستشارية",
     description: "إدارة بيانات المكاتب المرجعية؛ ليس خطوة موازية لمسار اختيار المشروع.",
     href: "/consultant-know",
@@ -120,7 +127,7 @@ export default function ConsultantPortalPage() {
 
         <section className="mt-6">
           <div className="mb-3"><h2 className="text-lg font-extrabold text-stone-900">مراجع مساندة</h2><p className="mt-1 text-sm text-stone-600">تفتح عند الحاجة فقط، ولا تعيدك إلى إدخال أو تقييم منفصل عن المشروع المختار.</p></div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {SUPPORT_LINKS.map((item) => {
               const Icon = item.icon;
               return <Link key={item.href} href={item.href} className="group block"><article className={`h-full rounded-2xl border bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${item.tone.split(" ")[0]}`}><div className={`flex h-11 w-11 items-center justify-center rounded-xl ${item.tone.split(" ").slice(1).join(" ")}`}><Icon className="h-5 w-5" /></div><h3 className="mt-4 font-extrabold text-stone-900">{item.title}</h3><p className="mt-2 text-sm leading-6 text-stone-600">{item.description}</p><span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-stone-700">فتح المرجع <ChevronLeft className="h-3.5 w-3.5" /></span></article></Link>;

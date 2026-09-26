@@ -17,7 +17,7 @@ it("uses COMO Next as the authenticated homepage's only operational source", () 
   expect(source).not.toContain("NewsTicker");
 });
 
-it("keeps the rebuilt homepage focused on Sara and four deliberate workspaces", () => {
+it("keeps the rebuilt homepage focused on Sara and five deliberate workspaces", () => {
   expect(source).toContain('id: "executive-office"');
   expect(source).toContain('path: "/como-next"');
   expect(source).toContain('id: "financial-studies"');
@@ -26,6 +26,8 @@ it("keeps the rebuilt homepage focused on Sara and four deliberate workspaces", 
   expect(source).toContain('path: "/consultant-portal"');
   expect(source).toContain('id: "knowledge"');
   expect(source).toContain('path: "/knowledge-analysis"');
+  expect(source).toContain('id: "development-tour"');
+  expect(source).toContain('path: "/development-phases"');
   expect(source).toContain("سارة · واجهة التواصل");
   expect(source).toContain("Manus · العقل التنفيذي عند التكليف");
   expect(source).not.toContain("فريق الوكلاء");

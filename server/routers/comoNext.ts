@@ -7,6 +7,7 @@ import {
   comoNextDecisions,
   comoNextEmailMessages,
   comoNextProjectAccess,
+  comoNextSpecialistReviews,
   comoNextWorkFileEvents,
   comoNextWorkFiles,
   projects,
@@ -41,6 +42,12 @@ import {
 } from "../services/comoNextMeetings";
 import { getProjectExecutiveFile } from "../services/comoNextProjectDossier";
 import { listPendingIntakeProposals, reviewIntakeProposalCommand } from "../services/comoNextIntake";
+import {
+  listSpecialistCapabilities,
+  listSpecialistReviews,
+  reviewSpecialistDraftCommand,
+  runSpecialistReviewCommand,
+} from "../services/comoNextSpecialists";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -93,6 +100,42 @@ export const comoNextRouter = router({
     .query(({ ctx, input }) => {
       assertComoNextEnabled();
       return getProjectExecutiveFile({ userId: ctx.user.id, projectId: input.projectId });
+    }),
+
+  listSpecialistCapabilities: protectedProcedure.query(({ ctx }) => {
+    assertComoNextEnabled();
+    return listSpecialistCapabilities(ctx.user);
+  }),
+
+  listSpecialistReviews: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), capabilityCode: z.enum(["project_monitor", "contract_manager"]).optional() }))
+    .query(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return listSpecialistReviews({ user: ctx.user, ...input });
+    }),
+
+  runSpecialistReview: protectedProcedure
+    .input(z.object({
+      projectId: z.number().int().positive(),
+      workFileId: z.number().int().positive().optional().nullable(),
+      capabilityCode: z.enum(["project_monitor", "contract_manager"]),
+      requestText: z.string().trim().min(8).max(20_000),
+      requestKey: z.string().trim().min(8).max(128),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return runSpecialistReviewCommand({ user: ctx.user, ...input });
+    }),
+
+  reviewSpecialistDraft: protectedProcedure
+    .input(z.object({
+      reviewId: z.number().int().positive(),
+      decision: z.enum(["reviewed", "dismissed"]),
+      reviewNote: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewSpecialistDraftCommand({ user: ctx.user, ...input });
     }),
 
   getOverview: protectedProcedure.query(async ({ ctx }) => {
@@ -276,6 +319,21 @@ export const comoNextRouter = router({
         .limit(12)
       : [];
     const intakeProposals = await listPendingIntakeProposals(ctx.user.id);
+    const specialistAttention = ctx.user.openId === process.env.OWNER_OPEN_ID
+      ? await db.select({
+          id: comoNextSpecialistReviews.id,
+          projectId: comoNextSpecialistReviews.projectId,
+          workFileId: comoNextSpecialistReviews.workFileId,
+          capabilityCode: comoNextSpecialistReviews.capabilityCode,
+          requestText: comoNextSpecialistReviews.requestText,
+          riskLevel: comoNextSpecialistReviews.riskLevel,
+          executiveSummary: comoNextSpecialistReviews.executiveSummary,
+          createdAt: comoNextSpecialistReviews.createdAt,
+        }).from(comoNextSpecialistReviews)
+          .where(and(eq(comoNextSpecialistReviews.userId, ctx.user.id), eq(comoNextSpecialistReviews.reviewStatus, "draft")))
+          .orderBy(desc(comoNextSpecialistReviews.createdAt))
+          .limit(12)
+      : [];
 
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
@@ -319,6 +377,7 @@ export const comoNextRouter = router({
       meetingAttention,
       emailAttention,
       intakeProposals,
+      specialistAttention,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };

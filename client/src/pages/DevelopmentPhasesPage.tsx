@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
@@ -315,17 +315,17 @@ function StageSettingsView() {
   );
 }
 
-function ContractsPlaceholder() {
+function ContractsGateway({ projectId, onOpen }: { projectId: number | null; onOpen: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center" dir="rtl">
       <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mb-5 shadow-xl shadow-emerald-500/20">
         <FileSignature className="w-10 h-10 text-white" />
       </div>
       <h2 className="text-xl font-bold text-foreground mb-2">العقود والاتفاقيات</h2>
-      <p className="text-sm text-muted-foreground max-w-sm">
-        هذا القسم قيد الإعداد. سيتيح لك إدارة عقود المشاريع واتفاقيات المقاولين والموردين بشكل متكامل.
+      <p className="text-sm text-muted-foreground max-w-md">
+        افتح سجل العقود المرتبط بالمشروع المختار. السجل الحالي مصدر انتقالي محفوظ، ولا ينفّذ تحليلًا أو التزامًا تلقائيًا.
       </p>
-      <Badge variant="outline" className="mt-4 text-xs">قريباً</Badge>
+      <Button onClick={onOpen} className="mt-5 bg-emerald-700 text-white hover:bg-emerald-600">فتح سجل العقود{projectId ? " لهذا المشروع" : ""}</Button>
     </div>
   );
 }
@@ -372,7 +372,11 @@ const SECTIONS = [
 export default function DevelopmentPhasesPage() {
   const [, navigate] = useLocation();
   const [activeView, setActiveView] = useState<View>("icons");
-  const [sharedProjectId, setSharedProjectId] = useState<number | null>(null);
+  const requestedProjectId = useMemo(() => {
+    const value = Number(new URLSearchParams(window.location.search).get("projectId"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }, []);
+  const [sharedProjectId, setSharedProjectId] = useState<number | null>(requestedProjectId);
   const activeSection = SECTIONS.find((s) => s.id === activeView);
 
   return (
@@ -441,9 +445,9 @@ export default function DevelopmentPhasesPage() {
         </main>
       )}
 
-      {activeView === "compliance" && <ProjectLifecyclePage embedded onProjectChange={setSharedProjectId} />}
+      {activeView === "compliance" && <ProjectLifecyclePage embedded initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
       {activeView === "schedule" && <WorkSchedulePage initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
-      {activeView === "contracts" && <ContractsPlaceholder />}
+      {activeView === "contracts" && <ContractsGateway projectId={sharedProjectId} onOpen={() => navigate(`/contracts${sharedProjectId ? `?projectId=${sharedProjectId}` : ""}`)} />}
       {activeView === "launch" && <ProjectLaunchGatePage embedded />}
     </div>
   );

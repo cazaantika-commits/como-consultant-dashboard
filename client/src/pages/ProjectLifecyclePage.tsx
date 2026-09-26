@@ -1,9 +1,8 @@
 import { useProjectContext } from "@/contexts/ProjectContext";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { StageDataTab } from "@/components/lifecycle/StageDataTab";
 import { StageDocumentsTab } from "@/components/lifecycle/StageDocumentsTab";
-import { LifecycleAdminPanel } from "@/components/lifecycle/LifecycleAdminPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -1072,9 +1071,15 @@ function ServicesListPanel({
 // -------------------------------------------------------------
 // Main ProjectLifecyclePage
 // -------------------------------------------------------------
-export default function ProjectLifecyclePage({ embedded, onProjectChange }: { embedded?: boolean; onProjectChange?: (id: number | null) => void } = {}) {
+export default function ProjectLifecyclePage({ embedded, initialProjectId, onProjectChange }: { embedded?: boolean; initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
   const { user, loading: authLoading } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const routeProjectId = useMemo(() => {
+    if (initialProjectId) return initialProjectId;
+    const raw = new URLSearchParams(window.location.search).get("projectId");
+    const parsed = raw ? Number(raw) : null;
+    return parsed && Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+  }, [initialProjectId]);
   const handleSetProjectId = (id: number | null) => {
     setSelectedProjectId(id);
     onProjectChange?.(id);
@@ -1083,7 +1088,9 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
   const [showAlerts, setShowAlerts] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [reportStageFilter, setReportStageFilter] = useState<string>("all");
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  useEffect(() => {
+    if (routeProjectId && routeProjectId !== selectedProjectId) setSelectedProjectId(routeProjectId);
+  }, [routeProjectId, selectedProjectId, setSelectedProjectId]);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const stagesQuery = trpc.lifecycle.getProjectStageStatuses.useQuery(
@@ -1098,17 +1105,6 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
     { projectId: selectedProjectId ?? undefined },
     { enabled: !!selectedProjectId }
   );
-  const checkDeadlinesMutation = trpc.lifecycle.checkDeadlines.useMutation({
-    onSuccess: (data) => {
-      if (data.sent) {
-        toast.success(`تم إرسال تنبيه: ${data.overdue} متأخرة، ${data.upcoming} قريبة`);
-      } else {
-        toast.info('لا توجد مواعيد استحقاق قريبة أو متأخرة');
-      }
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
   const projects = projectsQuery.data ?? [];
   const stages = stagesQuery.data ?? [];
   const summary = summaryQuery.data ?? [];
@@ -1190,14 +1186,6 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => setShowAdminPanel(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-white transition-all hover:scale-105"
-                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(8px)" }}
-              >
-                <Settings2 className="w-4 h-4" />
-                إدارة المسار
-              </button>
               {selectedProjectId && (
                 <button
                   onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
@@ -1351,11 +1339,11 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
                   variant="ghost"
                   size="sm"
                   className="text-xs h-7 px-2 text-red-600 hover:bg-red-200"
-                  onClick={(e) => { e.stopPropagation(); checkDeadlinesMutation.mutate(); }}
-                  disabled={checkDeadlinesMutation.isPending}
+                  onClick={(e) => { e.stopPropagation(); alertsQuery.refetch(); }}
+                  disabled={alertsQuery.isFetching}
                 >
-                  <RefreshCw className={`w-3 h-3 ml-1 ${checkDeadlinesMutation.isPending ? 'animate-spin' : ''}`} />
-                  إرسال تنبيه
+                  <RefreshCw className={`w-3 h-3 ml-1 ${alertsQuery.isFetching ? 'animate-spin' : ''}`} />
+                  تحديث القراءة
                 </Button>
               </div>
             </button>
@@ -1511,9 +1499,6 @@ export default function ProjectLifecyclePage({ embedded, onProjectChange }: { em
       </div>
 
       {/* Admin Panel Overlay */}
-      {showAdminPanel && (
-        <LifecycleAdminPanel onClose={() => { setShowAdminPanel(false); stagesQuery.refetch(); }} />
-      )}
     </div>
   );
 }

@@ -14,6 +14,14 @@ import { eq, and, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import { makeRequest, type PlacesSearchResult, type GeocodingResult } from "../_core/map";
 import { webSearch, fetchWebpageContent } from "../webSearchService";
+import { TRPCError } from "@trpc/server";
+
+function rejectUngovernedFeasibilityWrite(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "لا تُطبّق مخرجات السوق مباشرة على الدراسة المالية. يلزم اعتماد قرار السوق أولًا، ثم تطبيق القيم المختارة بمسار مراجعة موثق.",
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // JOELLE MARKET INTELLIGENCE ENGINE
@@ -2103,6 +2111,7 @@ ${results.map(r => `- ${r.success ? '✅' : '❌'} ${r.title}`).join('\n')}
   applyJoelleOutputs: publicProcedure
     .input(z.number()) // projectId
     .mutation(async ({ ctx, input: projectId }) => {
+      rejectUngovernedFeasibilityWrite();
       if (!ctx.user) throw new Error("Unauthorized");
       const db = await getDb();
       if (!db) throw new Error("Database not available");

@@ -229,9 +229,6 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
               <span className="text-green-600 font-medium">الإيرادات: {fmt(totalInflow)}</span>
               <span className={`font-bold ${finalBalance >= 0 ? "text-green-700" : "text-red-600"}`}>الرصيد: {fmt(finalBalance)}</span>
             </div>
-            <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-900 text-white text-[10px]">
-              <Download className="w-3 h-3" /> تصدير
-            </button>
           </div>
         </div>
       </div>

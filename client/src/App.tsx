@@ -41,6 +41,7 @@ import MarketReportsPage from "./pages/MarketReportsPage";
 import RiskDashboardPage from "./pages/RiskDashboardPage";
 import SelfLearningPage from "./pages/SelfLearningPage";
 import DevelopmentPhasesPage from "./pages/DevelopmentPhasesPage";
+import ProjectLifecyclePage from "./pages/ProjectLifecyclePage";
 import { ContractAuditPage } from "./pages/ContractAuditPage";
 import NewsTickerManagePage from "./pages/NewsTickerManagePage";
 import CostDistributionRulesPage from "./pages/CostDistributionRulesPage";
@@ -90,9 +91,9 @@ function Router() {
       {/* These pages are also accessible as tabs inside Project Management */}
       <Route path="/feasibility" component={FeasibilityStudyPage} />
       <Route path="/feasibility-study" component={FeasibilityStudyPage} />
-      <Route path="/development-stages" component={DevelopmentStagesPage} />
-      <Route path="/cash-flow" component={ExecutiveCashFlowPage} />
-      <Route path="/project-lifecycle" component={() => <Redirect to="/como-next?tab=work-files" />} />
+      <Route path="/development-stages" component={() => <Redirect to="/development-phases" />} />
+      <Route path="/cash-flow" component={() => <Redirect to="/bateekha" />} />
+      <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
       <Route path="/program-cashflow" component={ProgramCashFlowPage} />
       <Route path="/excel-cashflow" component={ExcelCashFlowPage} />
       <Route path="/escrow-cashflow" component={EscrowCashFlowPage} />
@@ -104,7 +105,7 @@ function Router() {
       <Route path="/consultant-guide" component={ConsultantGuidePage} />
       <Route path="/consultant-proposals" component={CPAPage} />
       <Route path="/consultant-know" component={ConsultantKnowPage} />
-      <Route path="/consultant-evaluation" component={() => <Redirect to="/consultant-proposals" />} />
+      <Route path="/consultant-evaluation" component={ConsultantEvaluationPage} />
       <Route path="/consultant-recommend" component={() => <Redirect to="/consultant-proposals" />} />
       <Route path="/consultant-committee" component={() => <Redirect to="/consultant-proposals" />} />
       <Route path="/committee-decision" component={CommitteeDecisionPage} />
@@ -136,7 +137,7 @@ function Router() {
       <Route path="/development-phases" component={DevelopmentPhasesPage} />
       <Route path="/work-schedule" component={WorkSchedulePage} />
       <Route path="/self-learning" component={SelfLearningPage} />
-      <Route path="/contract-audit" component={ContractAuditPage} />
+      <Route path="/contract-audit" component={() => <Redirect to="/contracts" />} />
       <Route path="/cost-distribution-rules" component={CostDistributionRulesPage} />
       <Route path="/cashflow-settings" component={CashFlowSettingsPage} />
       <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
@@ -154,7 +155,7 @@ function Router() {
       <Route path="/v2/feasibility" component={V2Feasibility} />
       <Route path="/v2/wael-sales" component={V2WaelSales} />
       <Route path="/v2/payment-plan" component={V2PaymentPlan} />
-      <Route path="/v2/timeline" component={V2Timeline} />
+      <Route path="/v2/timeline" component={() => <Redirect to="/development-phases" />} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/test-project" component={TestProjectPage} />

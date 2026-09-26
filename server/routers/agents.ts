@@ -8,6 +8,13 @@ import { transcribeAudio } from "../_core/voiceTranscription";
 import { storagePut } from "../storage";
 import { TRPCError } from "@trpc/server";
 
+function rejectLegacyAgentMutation(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "أُوقف مسار الوكلاء القديم. تُحفظ سجلاته للقراءة التاريخية فقط، وتعمل القدرات المعتمدة من خلال COMO Next تحت إشراف عبد الرحمن.",
+  });
+}
+
 export const agentsRouter = router({
   list: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
@@ -36,6 +43,7 @@ export const agentsRouter = router({
   updateStatus: publicProcedure
     .input(z.object({ id: z.number(), status: z.enum(["active", "inactive", "maintenance"]) }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new Error("Unauthorized");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
@@ -82,6 +90,7 @@ export const agentsRouter = router({
       agent: z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"])
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new Error("غير مصرح");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
@@ -113,6 +122,7 @@ export const agentsRouter = router({
       })).optional()
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new Error("غير مصرح");
       
       const db = await getDb();
@@ -163,6 +173,7 @@ export const agentsRouter = router({
       language: z.string().optional().default("ar"),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       // Decode base64 to buffer
@@ -200,6 +211,7 @@ export const agentsRouter = router({
       agent: z.enum(["salwa", "farouq", "khazen", "buraq", "khaled", "alina", "baz", "joelle"]),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       const openaiKey = process.env.OPENAI_API_KEY;
@@ -319,6 +331,7 @@ export const agentsRouter = router({
   deleteAssignment: publicProcedure
     .input(z.number())
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyAgentMutation();
       if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });

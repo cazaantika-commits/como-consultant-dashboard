@@ -5,6 +5,14 @@ import { sendReply } from "../emailMonitor";
 import { getPendingEmailDraft, clearPendingEmailDraft } from "../agentChat";
 import { getDb } from "../db";
 import { tasks } from "../../drizzle/schema";
+import { TRPCError } from "@trpc/server";
+
+function rejectLegacyOutboundEmail(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "الإرسال من سجل البريد القديم متوقف. راجع المسودة داخل COMO Next؛ لا يوجد إرسال خارجي في المرحلة الحالية.",
+  });
+}
 
 /**
  * Sent Emails Router - سجل الإيميلات المرسلة
@@ -63,6 +71,7 @@ export const sentEmailsRouter = router({
       cc: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyOutboundEmail();
       let status: "sent" | "failed" = "sent";
       let errorMessage: string | undefined;
 

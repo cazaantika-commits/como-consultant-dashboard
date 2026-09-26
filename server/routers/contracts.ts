@@ -6,6 +6,14 @@ import { eq, and, desc } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
 import { storagePut } from "../storage";
 import { uploadBinaryFile, searchFiles as driveSearchFiles, createFolder as driveCreateFolder, listFilesInFolder } from "../googleDrive";
+import { TRPCError } from "@trpc/server";
+
+function rejectLegacyContractAnalysis(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "أُوقف تحليل فاروق المنفصل. سيُراجع العقد من خلال مدير العقود داخل ملف المشروع وبصلاحية واضحة.",
+  });
+}
 
 // ═══════════════════════════════════════════════════
 // Default contract types (31 types for real estate development)
@@ -345,6 +353,7 @@ export const contractsRouter = router({
   analyzeContract: protectedProcedure
     .input(z.object({ contractId: z.number() }))
     .mutation(async ({ ctx, input }) => {
+      rejectLegacyContractAnalysis();
       const db = await getDb();
       
       // Get contract
