@@ -17,6 +17,19 @@ const currentMarketDecision = {
 	verifiedEvidenceCount: 2,
 	evidenceSetHash: "b".repeat(64),
 	latestApproved: { id: 91, decidedAt: "2026-09-25", notes: null, sourceSchemaVersion: "como.market-decision.v1", profileId: 12, profileVersion: 3, profileHash: "a".repeat(64), evidenceSetHash: "b".repeat(64), verifiedEvidenceCount: 2 },
+	};
+
+const currentProgram = {
+	status: "current_valid" as const,
+	isValid: true,
+	reason: "البرنامج مطابق للإصدار الحالي.",
+	nextAction: "متابعة حزمة التكليف.",
+	serviceCount: 3,
+	stageCount: 2,
+	scheduledServiceCount: 3,
+	earliestStartDate: "2026-10-01",
+	latestDueDate: "2027-03-01",
+	latestDecision: { id: 55, decisionStatus: "approved" as const, decidedAt: "2026-09-26" },
 };
 
 const completeSeed = {
@@ -33,8 +46,7 @@ const completeSeed = {
   protectedDocumentCount: 1,
   indexedDocumentCount: 1,
 	marketDecision: currentMarketDecision,
-  projectStageCount: 4,
-  plannedServices: 3,
+	program: currentProgram,
   proposalCount: 1,
   activeContractCount: 0,
 };
@@ -47,7 +59,7 @@ describe("Unified Project Foundation Gate", () => {
     expect(gate.nextDecision).toContain("راجع عروض الاستشاريين");
     expect(gate.gates[0].detail).toContain("وثيقة محمية");
     expect(serviceSource).not.toContain("driveFolderId");
-    expect(serviceSource).toContain("projectServiceInstances.projectId");
+	    expect(serviceSource).toContain("loadProjectProgramState");
   });
 
   it("blocks later preparation when identity, evidence, and strategy are incomplete", () => {
@@ -56,8 +68,7 @@ describe("Unified Project Foundation Gate", () => {
       protectedDocumentCount: 0,
       indexedDocumentCount: 0,
 		marketDecision: { status: "no_profile", isValid: false, reason: "لا توجد فلترة.", nextAction: "حدد الفلترة.", profile: null, verifiedEvidenceCount: 0, evidenceSetHash: "c".repeat(64), latestApproved: null },
-      projectStageCount: 0,
-      plannedServices: 0,
+	      program: { status: "no_program", isValid: false, reason: "لا يوجد برنامج.", nextAction: "حدد البرنامج.", serviceCount: 0, stageCount: 0, scheduledServiceCount: 0, earliestStartDate: null, latestDueDate: null, latestDecision: null },
       proposalCount: 0,
       activeContractCount: 0,
     });
@@ -91,10 +102,17 @@ describe("Unified Project Foundation Gate", () => {
 		expect(launchPageSource).toContain("قرار السوق والاستثمار · قراءة من المصدر");
   });
 
-	it("does not open tender readiness for a stale historical approval", () => {
+		it("does not open tender readiness for a stale historical approval", () => {
 		const gate = buildProjectFoundation({ ...completeSeed, marketDecision: { ...currentMarketDecision, status: "needs_reapproval", isValid: false, reason: "تغيرت الفلترة.", nextAction: "أعد الاعتماد." } });
 		expect(gate.readyForTender).toBe(false);
 		expect(gate.gates.find(item => item.id === "market")?.status).toBe("partial");
-		expect(gate.marketDecision.decisionId).toBe(91);
+			expect(gate.marketDecision.decisionId).toBe(91);
+		});
+
+		it("does not open tender readiness for a stale or merely dated program", () => {
+			const gate = buildProjectFoundation({ ...completeSeed, program: { ...currentProgram, status: "needs_reapproval", isValid: false, reason: "تغير موعد خدمة بعد الاعتماد.", nextAction: "أعد اعتماد البرنامج." } });
+			expect(gate.readyForTender).toBe(false);
+			expect(gate.gates.find(item => item.id === "program")?.status).toBe("partial");
+			expect(gate.program.decisionId).toBe(55);
+		});
 	});
-});

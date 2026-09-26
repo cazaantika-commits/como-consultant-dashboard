@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../_core/trpc";
+import { adminProcedure, router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
 import { documentIndex, projects } from "../../drizzle/schema";
 import { listFilesInFolder } from "../googleDrive";
@@ -12,9 +12,10 @@ import {
   parseOfficialProjectDocumentFilename,
   projectDocumentPrefix,
 } from "../officialDocumentIndexing";
+import { requireProjectAccess } from "../services/comoNextCommands";
 
 export const officialDocumentsRouter = router({
-  indexLandOwnershipSources: protectedProcedure.mutation(async ({ ctx }) => {
+  indexLandOwnershipSources: adminProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
 
@@ -70,9 +71,10 @@ export const officialDocumentsRouter = router({
     };
   }),
 
-  syncOfficialParkingFacts: protectedProcedure.input(z.object({ projectId: z.number() })).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	  syncOfficialParkingFacts: protectedProcedure.input(z.object({ projectId: z.number() })).mutation(async ({ input, ctx }) => {
+	    const db = await getDb();
+	    if (!db) throw new Error("قاعدة البيانات غير متاحة");
+	    await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
 
     const officialSources = await db.select({ sourceName: documentIndex.sourceName, extractedText: documentIndex.extractedText })
       .from(documentIndex)

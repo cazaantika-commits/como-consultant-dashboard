@@ -21,16 +21,23 @@ import {
   projects,
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { sdk } from "./_core/sdk";
+import { requireProjectAccess } from "./services/comoNextCommands";
 
 const router = Router();
 
-// Middleware: require API key or session (basic auth for AI agents)
-router.use((req, res, next) => {
-  const apiKey = req.headers["x-api-key"] || req.query.apiKey;
-  // Accept any request from internal server or with valid API key
-  // In production, validate against a stored key
-  // For now, allow all requests (auth is handled at the platform level)
-  next();
+router.use(async (req, res, next) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+    (req as any).lifecycleUser = user;
+    next();
+  } catch {
+    res.status(401).json({ error: "Authentication required" });
+  }
 });
 
 /**
@@ -47,13 +54,14 @@ router.get("/service-status", async (req, res) => {
       return;
     }
 
-    const db = await getDb();
-    if (!db) {
-      res.status(500).json({ error: "DB unavailable" });
-      return;
-    }
+	    const db = await getDb();
+	    if (!db) {
+	      res.status(500).json({ error: "DB unavailable" });
+	      return;
+	    }
+	    await requireProjectAccess(db, projectId, (req as any).lifecycleUser.id, "read");
 
-    // Get project info
+	    // Get project info
     const projectRows = await db.select().from(projects).where(eq(projects.id, projectId));
     const project = projectRows[0];
     if (!project) {
@@ -140,7 +148,7 @@ router.get("/service-status", async (req, res) => {
         return {
           requirementCode: req.requirementCode,
           nameAr: req.nameAr,
-          nameEn: req.nameEn,
+	          nameEn: null,
           reqType: req.reqType,
           isMandatory: req.isMandatory === 1,
           status: rStatus?.status ?? "not_started",
@@ -171,11 +179,11 @@ router.get("/service-status", async (req, res) => {
         serviceCode: svc.serviceCode,
         stageCode: svc.stageCode,
         nameAr: svc.nameAr,
-        nameEn: svc.nameEn,
+	        nameEn: null,
         operationalStatus: instance?.operationalStatus ?? "not_started",
         submittedAt: instance?.submittedAt ?? null,
-        completedAt: instance?.completedAt ?? null,
-        dueDate: instance?.dueDate ?? null,
+	        completedAt: instance?.actualCloseDate ?? null,
+	        dueDate: instance?.plannedDueDate ?? null,
         notes: instance?.notes ?? null,
         compliance: {
           totalRequirements: svcReqs.length,
@@ -227,13 +235,14 @@ router.get("/project-summary", async (req, res) => {
       return;
     }
 
-    const db = await getDb();
-    if (!db) {
-      res.status(500).json({ error: "DB unavailable" });
-      return;
-    }
+	    const db = await getDb();
+	    if (!db) {
+	      res.status(500).json({ error: "DB unavailable" });
+	      return;
+	    }
+	    await requireProjectAccess(db, projectId, (req as any).lifecycleUser.id, "read");
 
-    const projectRows = await db.select().from(projects).where(eq(projects.id, projectId));
+	    const projectRows = await db.select().from(projects).where(eq(projects.id, projectId));
     const project = projectRows[0];
     if (!project) {
       res.status(404).json({ error: "Project not found" });

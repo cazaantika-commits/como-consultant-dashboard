@@ -1,9 +1,21 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { stageItems, stageDocuments, projects, tasks, agents, agentActivityLog } from "../../drizzle/schema";
 import { eq, and, sql, desc, asc, inArray } from "drizzle-orm";
 import { storagePut } from "../storage";
+import { TRPCError } from "@trpc/server";
+import { requireProjectAccess } from "../services/comoNextCommands";
+
+function rejectLegacyStageWrite(): void {
+  throw new TRPCError({ code: "METHOD_NOT_SUPPORTED", message: "أغلق مسار جولة التطوير القديم. استخدم جولة مراحل التطوير المحكومة داخل المشروع." });
+}
+
+async function requireStagesDb() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة." });
+  return db;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Agent mapping per phase/section - which agent handles what
@@ -395,10 +407,11 @@ function countTotalTasks(): number {
 
 export const stagesRouter = router({
   // Initialize default tasks for a project (if not already initialized)
-  initializeProject: publicProcedure
+  initializeProject: protectedProcedure
     .input(z.number())
     .mutation(async ({ input: projectId }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       // Check if already initialized
@@ -447,11 +460,12 @@ export const stagesRouter = router({
     }),
 
   // Get all stage items for a project
-  getByProject: publicProcedure
+  getByProject: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       const items = await db
         .select()
@@ -465,18 +479,27 @@ export const stagesRouter = router({
         .from(stageDocuments)
         .where(eq(stageDocuments.projectId, projectId));
 
-      // Group documents by stageItemId
-      const docsByItem: Record<number, typeof docs> = {};
-      for (const doc of docs) {
-        if (!docsByItem[doc.stageItemId]) docsByItem[doc.stageItemId] = [];
-        docsByItem[doc.stageItemId].push(doc);
-      }
+	      // Group documents by stageItemId
+	      const docsByItem: Record<number, Array<{ id: number; stageItemId: number; projectId: number; fileName: string; mimeType: string | null; fileSize: number | null; uploadedAt: string; downloadUrl: string }>> = {};
+	      for (const doc of docs) {
+	        if (!docsByItem[doc.stageItemId]) docsByItem[doc.stageItemId] = [];
+	        docsByItem[doc.stageItemId].push({
+	          id: doc.id,
+	          stageItemId: doc.stageItemId,
+	          projectId: doc.projectId,
+	          fileName: doc.fileName,
+	          mimeType: doc.mimeType,
+	          fileSize: doc.fileSize,
+	          uploadedAt: doc.uploadedAt,
+	          downloadUrl: `/api/lifecycle/legacy-documents/${doc.id}`,
+	        });
+	      }
 
       return { items, documents: docsByItem };
     }),
 
   // Update task status - with automatic task creation for agents
-  updateStatus: publicProcedure
+  updateStatus: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -484,7 +507,8 @@ export const stagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       // Get the stage item details first
@@ -551,11 +575,12 @@ export const stagesRouter = router({
     }),
 
   // Get linked tasks for a project's stage items
-  getLinkedTasks: publicProcedure
+  getLinkedTasks: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       // Get all stage items with linked tasks
       const itemsWithTasks = await db
@@ -596,12 +621,12 @@ export const stagesRouter = router({
     }),
 
   // Get agent mapping info (for UI display)
-  getAgentMapping: publicProcedure.query(() => {
+  getAgentMapping: protectedProcedure.query(() => {
     return SECTION_AGENT_MAP;
   }),
 
   // Add custom task
-  addCustomTask: publicProcedure
+  addCustomTask: protectedProcedure
     .input(
       z.object({
         projectId: z.number(),
@@ -611,7 +636,8 @@ export const stagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       // Get the max itemIndex for this section
@@ -641,10 +667,11 @@ export const stagesRouter = router({
     }),
 
   // Delete custom task (only custom tasks can be deleted)
-  deleteTask: publicProcedure
+  deleteTask: protectedProcedure
     .input(z.number())
     .mutation(async ({ input: taskId }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       // Verify it's a custom task
@@ -668,7 +695,7 @@ export const stagesRouter = router({
     }),
 
   // Upload document for a task
-  uploadDocument: publicProcedure
+  uploadDocument: protectedProcedure
     .input(
       z.object({
         stageItemId: z.number(),
@@ -680,7 +707,8 @@ export const stagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       // Upload to S3
@@ -688,32 +716,36 @@ export const stagesRouter = router({
       const randomSuffix = Math.random().toString(36).substring(2, 10);
       const fileKey = `stages/${input.projectId}/${input.stageItemId}/${randomSuffix}-${input.fileName}`;
 
-      const { url } = await storagePut(fileKey, buffer, input.mimeType);
+	      await storagePut(fileKey, buffer, input.mimeType);
 
       // Save to database
       const result = await db.insert(stageDocuments).values({
         stageItemId: input.stageItemId,
         projectId: input.projectId,
         fileName: input.fileName,
-        fileUrl: url,
+	        fileUrl: "/api/lifecycle/legacy-documents/pending",
         fileKey,
         mimeType: input.mimeType,
         fileSize: input.fileSize,
       });
 
-      return {
-        success: true,
-        id: Number(result[0].insertId),
-        url,
+	      const documentId = Number(result[0].insertId);
+	      const downloadUrl = `/api/lifecycle/legacy-documents/${documentId}`;
+	      await db.update(stageDocuments).set({ fileUrl: downloadUrl }).where(eq(stageDocuments.id, documentId));
+	      return {
+	        success: true,
+	        id: documentId,
+	        downloadUrl,
         fileName: input.fileName,
       };
     }),
 
   // Delete document
-  deleteDocument: publicProcedure
+  deleteDocument: protectedProcedure
     .input(z.number())
     .mutation(async ({ input: docId }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       await db.delete(stageDocuments).where(eq(stageDocuments.id, docId));
@@ -722,11 +754,12 @@ export const stagesRouter = router({
     }),
 
   // Get progress statistics for a project
-  getProgress: publicProcedure
+  getProgress: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       const items = await db
         .select({
@@ -771,7 +804,7 @@ export const stagesRouter = router({
     }),
 
   // Set due date for a stage item
-  setDueDate: publicProcedure
+  setDueDate: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -779,7 +812,8 @@ export const stagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       const dueDate = input.dueDate ? new Date(input.dueDate) : null;
@@ -793,7 +827,7 @@ export const stagesRouter = router({
     }),
 
   // Bulk set due dates for multiple items
-  setBulkDueDates: publicProcedure
+  setBulkDueDates: protectedProcedure
     .input(
       z.object({
         items: z.array(
@@ -805,7 +839,8 @@ export const stagesRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await getDb();
+      rejectLegacyStageWrite();
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
 
       for (const item of input.items) {
@@ -820,11 +855,12 @@ export const stagesRouter = router({
     }),
 
   // Get overdue items for a project
-  getOverdueItems: publicProcedure
+  getOverdueItems: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       const now = new Date();
 
@@ -845,11 +881,12 @@ export const stagesRouter = router({
     }),
 
   // Get overdue stats for a project (counts by phase)
-  getOverdueStats: publicProcedure
+  getOverdueStats: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       const now = new Date();
 
@@ -890,11 +927,12 @@ export const stagesRouter = router({
     }),
 
   // Get critical path (in-progress tasks)
-  getCriticalPath: publicProcedure
+  getCriticalPath: protectedProcedure
     .input(z.number())
-    .query(async ({ input: projectId }) => {
-      const db = await getDb();
+    .query(async ({ input: projectId, ctx }) => {
+      const db = await requireStagesDb();
       if (!db) throw new Error("Database not available");
+      await requireProjectAccess(db, projectId, ctx.user.id, "read");
 
       const inProgressItems = await db
         .select()

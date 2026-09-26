@@ -20,8 +20,24 @@ import {
   projects,
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { sdk } from "./_core/sdk";
+import { requireProjectAccess } from "./services/comoNextCommands";
 
 const router = Router();
+
+router.use(async (req, res, next) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    if (!user) {
+      res.status(401).send("Authentication required");
+      return;
+    }
+    (req as any).lifecycleUser = user;
+    next();
+  } catch {
+    res.status(401).send("Authentication required");
+  }
+});
 
 const STATUS_AR: Record<string, string> = {
   not_started: "لم يبدأ",
@@ -60,10 +76,11 @@ router.get("/compliance-report", async (req, res) => {
     }
 
     const db = await getDb();
-    if (!db) {
-      res.status(500).send("DB unavailable");
-      return;
-    }
+	    if (!db) {
+	      res.status(500).send("DB unavailable");
+	      return;
+	    }
+	    await requireProjectAccess(db, projectId, (req as any).lifecycleUser.id, "read");
 
     // Fetch project info
     const projectRows = await db.select().from(projects).where(eq(projects.id, projectId));
@@ -197,7 +214,7 @@ router.get("/compliance-report", async (req, res) => {
               <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; font-size:11px;">
                 <span style="background:${rColor}20; color:${rColor}; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:500;">${rAr}</span>
               </td>
-              <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">${doc ? `<a href="${doc.fileUrl}" style="color:#3b82f6; text-decoration:none;">${doc.fileName}</a>` : "—"}</td>
+	              <td style="padding:6px 8px; border-bottom:1px solid #f1f5f9; font-size:11px; color:#64748b;">${doc ? `<a href="/api/lifecycle/documents/${doc.id}" style="color:#3b82f6; text-decoration:none;">${doc.fileName}</a>` : "—"}</td>
             </tr>
           `;
         }

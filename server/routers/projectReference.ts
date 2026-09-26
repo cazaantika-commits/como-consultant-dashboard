@@ -99,7 +99,7 @@ export function buildProjectReference(seed: ReferenceSeed) {
       checks: [
         { label: "حقائق المشروع والوثائق", present: factsStatus === "ready" && officialDocCount > 0 },
         { label: "قرار السوق المعتمد", present: marketReady },
-        { label: "برنامج أولي مؤرخ", present: programReady },
+	        { label: "برنامج أولي معتمد وساري", present: programReady },
         { label: "عقد أو تكليف نشط", present: contractReady },
       ],
       activeContracts: seed.activeContracts,

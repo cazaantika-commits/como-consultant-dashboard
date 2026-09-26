@@ -194,8 +194,8 @@ function RequirementUploadRow({
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 shrink-0">
-                  <a
-                    href={doc.fileUrl}
+	                  <a
+	                    href={doc.downloadUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 hover:bg-blue-50 rounded-md transition-colors"
@@ -205,7 +205,7 @@ function RequirementUploadRow({
                   </a>
                   <button
                     className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
-                    onClick={() => deleteMutation.mutate({ documentId: doc.id })}
+	                    onClick={() => deleteMutation.mutate({ docId: doc.id })}
                     disabled={deleteMutation.isPending}
                     title="حذف الملف"
                   >

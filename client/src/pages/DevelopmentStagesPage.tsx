@@ -103,10 +103,9 @@ const AGENT_COLORS: Record<string, { bg: string; text: string; border: string }>
 type StageDocument = {
   id: number;
   stageItemId: number;
-  projectId: number;
-  fileName: string;
-  fileUrl: string;
-  fileKey: string;
+	  projectId: number;
+	  fileName: string;
+	  downloadUrl: string;
   mimeType: string | null;
   fileSize: number | null;
   uploadedAt: Date;
@@ -619,7 +618,7 @@ function TaskItem({
               >
                 <FileText className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
                 <a
-                  href={doc.fileUrl}
+	                  href={doc.downloadUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline max-w-[150px] truncate"

@@ -1073,6 +1073,7 @@ function ServicesListPanel({
 // -------------------------------------------------------------
 export default function ProjectLifecyclePage({ embedded, initialProjectId, onProjectChange }: { embedded?: boolean; initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
   const { user, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const routeProjectId = useMemo(() => {
     if (initialProjectId) return initialProjectId;
@@ -1101,10 +1102,26 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId }
   );
-  const alertsQuery = trpc.lifecycle.getDeadlineAlerts.useQuery(
-    { projectId: selectedProjectId ?? undefined },
+  const programQuery = trpc.lifecycle.getProjectProgramState.useQuery(
+    { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId }
   );
+  const alertsQuery = trpc.lifecycle.getDeadlineAlerts.useQuery(
+    { projectId: selectedProjectId! },
+    { enabled: !!selectedProjectId }
+  );
+  const programDecisionMutation = trpc.lifecycle.recordProjectProgramDecision.useMutation({
+    onSuccess: async (_, input) => {
+      toast.success(input.decisionStatus === "approved" ? "تم اعتماد النسخة الحالية من البرنامج" : input.decisionStatus === "rejected" ? "تم تسجيل رفض النسخة الحالية" : "تم حفظ مراجعة البرنامج");
+      await Promise.all([
+        utils.lifecycle.getProjectProgramState.invalidate({ projectId: input.projectId }),
+        utils.projectLaunchGate.get.invalidate({ projectId: input.projectId }),
+        utils.consultantAppointmentPack.get.invalidate({ projectId: input.projectId }),
+        utils.consultantProcurement.getPackReview.invalidate({ projectId: input.projectId }),
+      ]);
+    },
+    onError: error => toast.error(error.message || "تعذر حفظ مراجعة البرنامج"),
+  });
   const projects = projectsQuery.data ?? [];
   const stages = stagesQuery.data ?? [];
   const summary = summaryQuery.data ?? [];
@@ -1309,10 +1326,45 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
-        </div>
+	          </Select>
+	        </div>
 
-        {/* --- تنبيهات المواعيد --- */}
+	        {selectedProjectId && programQuery.data && (() => {
+	          const program = programQuery.data;
+	          const tone = program.isValid
+	            ? "border-emerald-200 bg-emerald-50/80"
+	            : program.status === "needs_reapproval" || program.status === "invalid_program"
+	              ? "border-rose-200 bg-rose-50/80"
+	              : "border-amber-200 bg-amber-50/80";
+	          const title = program.isValid
+	            ? `برنامج أولي ساري${program.latestDecision ? ` · #${program.latestDecision.id}` : ""}`
+	            : program.status === "needs_reapproval"
+	              ? "تغير البرنامج ويحتاج إعادة اعتماد"
+	              : program.status === "no_approved_program"
+	                ? "البرنامج مكتمل ويحتاج اعتمادًا"
+	                : "البرنامج غير مكتمل";
+	          return <div className={`mb-5 rounded-2xl border p-4 ${tone}`}>
+	            <div className="flex flex-wrap items-start justify-between gap-4">
+	              <div className="min-w-0 flex-1">
+	                <p className="text-[10px] font-black text-slate-500">البرنامج الأولي · المصدر الحاكم</p>
+	                <h3 className="mt-1 text-base font-black text-slate-950">{title}</h3>
+	                <p className="mt-2 text-xs leading-6 text-slate-700">{program.reason}</p>
+	                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-slate-600">
+	                  <span className="rounded-full bg-white px-3 py-1">{program.scheduledServiceCount}/{program.serviceCount} خدمات مؤرخة</span>
+	                  <span className="rounded-full bg-white px-3 py-1">{program.stageCount} مراحل</span>
+	                  {program.earliestStartDate && program.latestDueDate ? <span className="rounded-full bg-white px-3 py-1"><bdi>{program.earliestStartDate}</bdi> — <bdi>{program.latestDueDate}</bdi></span> : null}
+	                </div>
+	              </div>
+	              {user?.role === "admin" ? <div className="flex shrink-0 flex-wrap gap-2">
+	                <Button size="sm" variant="outline" className="bg-white" disabled={programDecisionMutation.isPending || !program.serviceCount} onClick={() => programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "reviewed" })}>تسجيل مراجعة</Button>
+	                <Button size="sm" className="bg-emerald-700 text-white hover:bg-emerald-800" disabled={programDecisionMutation.isPending || !program.isSourceComplete} onClick={() => { if (window.confirm("اعتماد هذه النسخة من البرنامج الأولي؟ أي تغيير لاحق سيجعل الاعتماد بحاجة إلى مراجعة جديدة.")) programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "approved" }); }}>اعتماد النسخة الحالية</Button>
+	              </div> : null}
+	            </div>
+	            <p className="mt-3 text-[11px] leading-5 text-slate-500">الاعتماد يثبت لقطة الخدمات والمواعيد فقط؛ لا يرسل طلب عروض ولا ينشئ عقدًا أو أثرًا ماليًا.</p>
+	          </div>;
+	        })()}
+
+	        {/* --- تنبيهات المواعيد --- */}
         {selectedProjectId && (alertsQuery.data?.length ?? 0) > 0 && (
           <div className="mb-5">
             <button

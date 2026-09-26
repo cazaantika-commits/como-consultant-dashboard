@@ -14,8 +14,7 @@ function foundation(activeContractCount = 0) {
     protectedDocumentCount: 1,
     indexedDocumentCount: 1,
 		marketDecision: { status: "current_valid", isValid: true, reason: "القرار مطابق للمصدر الحالي.", nextAction: "متابعة التأسيس.", profile: { id: 3, version: 1, hash: "a".repeat(64), snapshot: {} }, verifiedEvidenceCount: 2, evidenceSetHash: "b".repeat(64), latestApproved: { id: 5, decidedAt: "2026-08-21", notes: null, sourceSchemaVersion: "como.market-decision.v1", profileId: 3, profileVersion: 1, profileHash: "a".repeat(64), evidenceSetHash: "b".repeat(64), verifiedEvidenceCount: 2 } },
-    projectStageCount: 2,
-    plannedServices: 3,
+	    program: { status: "current_valid", isValid: true, reason: "البرنامج مطابق للمصدر الحالي.", nextAction: "متابعة التأسيس.", serviceCount: 3, stageCount: 2, scheduledServiceCount: 3, earliestStartDate: "2026-09-01", latestDueDate: "2027-04-01", latestDecision: { id: 7, decisionStatus: "approved", decidedAt: "2026-09-26" } },
     proposalCount: 1,
     activeContractCount,
   });

@@ -14,6 +14,7 @@ import {
   lifecycleRequirements,
   projects,
 } from "../../drizzle/schema";
+import { requireProjectAccess } from "../services/comoNextCommands";
 
 export const stageDataRouter = router({
   // --- Field Definitions -----------------------------------------------------
@@ -32,9 +33,10 @@ export const stageDataRouter = router({
   // --- Field Values -----------------------------------------------------------
   getFieldValues: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       return db
         .select()
         .from(projectStageFieldValues)
@@ -52,6 +54,7 @@ export const stageDataRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
 
       const fieldDefs = await db
         .select()
@@ -122,14 +125,20 @@ export const stageDataRouter = router({
         serviceCode: z.string(),
         fieldKey: z.string(),
         value: z.string(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+	      })
+	    )
+	    .mutation(async ({ input, ctx }) => {
+	      const db = await getDb();
+	      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+	      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+	      const [fieldDefinition] = await db.select({ id: stageFieldDefinitions.id })
+	        .from(stageFieldDefinitions)
+	        .where(and(eq(stageFieldDefinitions.serviceCode, input.serviceCode), eq(stageFieldDefinitions.fieldKey, input.fieldKey)))
+	        .limit(1);
+	      if (!fieldDefinition) throw new TRPCError({ code: "BAD_REQUEST", message: "الحقل لا ينتمي إلى الخدمة المحددة." });
+	      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
 
-      const existing = await db
+	      const existing = await db
         .select({ id: projectStageFieldValues.id })
         .from(projectStageFieldValues)
         .where(
@@ -163,9 +172,10 @@ export const stageDataRouter = router({
   // --- Get Stage Record (fields + values combined) ----------------------------
   getStageRecord: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
 
       const fieldDefs = await db
         .select()
@@ -209,9 +219,10 @@ export const stageDataRouter = router({
   // --- Get Blocking Requirements ----------------------------------------------
   getBlockingRequirements: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
 
       const fieldDefs = await db
         .select()
@@ -279,23 +290,29 @@ export const stageDataRouter = router({
         fileBase64: z.string(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+	    .mutation(async ({ input, ctx }) => {
+	      const db = await getDb();
+	      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+	      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+	      const [requirement] = await db.select({ requirementCode: lifecycleRequirements.requirementCode })
+	        .from(lifecycleRequirements)
+	        .where(and(eq(lifecycleRequirements.serviceCode, input.serviceCode), eq(lifecycleRequirements.requirementCode, input.requirementCode)))
+	        .limit(1);
+	      if (!requirement) throw new TRPCError({ code: "BAD_REQUEST", message: "المتطلب لا ينتمي إلى الخدمة المحددة." });
 
-      const { storagePut } = await import("../storage");
+	      const { storagePut } = await import("../storage");
       const fileBuffer = Buffer.from(input.fileBase64, "base64");
       const ext = input.fileName.split(".").pop() ?? "bin";
       const fileKey = `stage-docs/${input.projectId}/${input.serviceCode}/${input.requirementCode}-${Date.now()}.${ext}`;
-      const { url } = await storagePut(fileKey, fileBuffer, input.mimeType ?? "application/octet-stream");
+	      await storagePut(fileKey, fileBuffer, input.mimeType ?? "application/octet-stream");
 
-      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-      await db.insert(projectStageDocuments).values({
+	      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+	      const result = await db.insert(projectStageDocuments).values({
         projectId: input.projectId,
         serviceCode: input.serviceCode,
         requirementCode: input.requirementCode,
         fileName: input.fileName,
-        fileUrl: url,
+	        fileUrl: "/api/lifecycle/documents/pending",
         fileKey,
         mimeType: input.mimeType ?? null,
         fileSizeBytes: fileBuffer.length,
@@ -304,7 +321,10 @@ export const stageDataRouter = router({
         uploadedAt: now,
       });
 
-      return { success: true, url };
+	      const documentId = Number(result[0].insertId);
+	      const downloadUrl = `/api/lifecycle/documents/${documentId}`;
+	      await db.update(projectStageDocuments).set({ fileUrl: downloadUrl }).where(eq(projectStageDocuments.id, documentId));
+	      return { success: true, documentId, downloadUrl };
     }),
 
   // --- Update Document Status -------------------------------------------------
@@ -316,10 +336,14 @@ export const stageDataRouter = router({
         rejectionReason: z.string().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+	    .mutation(async ({ input, ctx }) => {
+	      const db = await getDb();
+	      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+	      const [document] = await db.select({ id: projectStageDocuments.id, projectId: projectStageDocuments.projectId })
+	        .from(projectStageDocuments).where(eq(projectStageDocuments.id, input.docId)).limit(1);
+	      if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المستند." });
+	      await requireProjectAccess(db, document.projectId, ctx.user.id, "write");
+	      const now = new Date().toISOString().slice(0, 19).replace("T", " ");
       await db
         .update(projectStageDocuments)
         .set({
@@ -328,26 +352,31 @@ export const stageDataRouter = router({
           reviewedByUserId: ctx.user.id,
           reviewedAt: now,
         })
-        .where(eq(projectStageDocuments.id, input.docId));
+	        .where(and(eq(projectStageDocuments.id, input.docId), eq(projectStageDocuments.projectId, document.projectId)));
       return { success: true };
     }),
 
   // --- Delete Document ---------------------------------------------------------
-  deleteDocument: protectedProcedure
-    .input(z.object({ docId: z.number() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
-      await db.delete(projectStageDocuments).where(eq(projectStageDocuments.id, input.docId));
+	  deleteDocument: protectedProcedure
+	    .input(z.object({ docId: z.number() }))
+	    .mutation(async ({ input, ctx }) => {
+	      const db = await getDb();
+	      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+	      const [document] = await db.select({ id: projectStageDocuments.id, projectId: projectStageDocuments.projectId })
+	        .from(projectStageDocuments).where(eq(projectStageDocuments.id, input.docId)).limit(1);
+	      if (!document) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المستند." });
+	      await requireProjectAccess(db, document.projectId, ctx.user.id, "write");
+	      await db.delete(projectStageDocuments).where(and(eq(projectStageDocuments.id, input.docId), eq(projectStageDocuments.projectId, document.projectId)));
       return { success: true };
     }),
 
   // --- Get Documents (returns requirements + their docs + stats) ---------------
   getDocuments: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "DB unavailable" });
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
 
       const reqRows = await db
         .select()
@@ -377,10 +406,20 @@ export const stageDataRouter = router({
         docsByReq[doc.requirementCode].push(doc);
       }
 
-      const requirements = reqRows.map((req) => ({
-        ...req,
-        documents: docsByReq[req.requirementCode] ?? [],
-      }));
+	      const requirements = reqRows.map((req) => ({
+	        ...req,
+	        documents: (docsByReq[req.requirementCode] ?? []).map(doc => ({
+	          id: doc.id,
+	          fileName: doc.fileName,
+	          mimeType: doc.mimeType,
+	          fileSizeBytes: doc.fileSizeBytes,
+	          docStatus: doc.docStatus,
+	          rejectionReason: doc.rejectionReason,
+	          uploadedAt: doc.uploadedAt,
+	          reviewedAt: doc.reviewedAt,
+	          downloadUrl: `/api/lifecycle/documents/${doc.id}`,
+	        })),
+	      }));
 
       const uploaded = requirements.filter((r) => r.documents.length > 0).length;
       const missingMandatory = requirements.filter((r) => r.isMandatory && r.documents.length === 0).length;

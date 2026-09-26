@@ -1,11 +1,11 @@
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import {
   consultantProposals,
   projectContracts,
-  projectServiceInstances,
   projects,
 } from "../../drizzle/schema";
 import { loadMarketDecisionState, type MarketDecisionState } from "./comoNextMarketDecision";
+import { loadProjectProgramState, type ProjectProgramStatus } from "./comoNextProjectProgram";
 
 type GateStatus = "complete" | "partial" | "missing";
 
@@ -14,8 +14,18 @@ type FoundationSeed = {
 	protectedDocumentCount: number;
 	indexedDocumentCount: number;
 	marketDecision: Pick<MarketDecisionState, "status" | "isValid" | "reason" | "nextAction" | "profile" | "verifiedEvidenceCount" | "evidenceSetHash" | "latestApproved">;
-  projectStageCount: number;
-  plannedServices: number;
+	program: {
+		status: ProjectProgramStatus;
+		isValid: boolean;
+		reason: string;
+		nextAction: string;
+		serviceCount: number;
+		stageCount: number;
+		scheduledServiceCount: number;
+		earliestStartDate: string | null;
+		latestDueDate: string | null;
+		latestDecision: { id: number; decisionStatus: "reviewed" | "approved" | "rejected"; decidedAt: string } | null;
+	};
   proposalCount: number;
   activeContractCount: number;
 };
@@ -55,21 +65,16 @@ export function buildProjectFoundation(seed: FoundationSeed) {
 		: seed.marketDecision.profile || seed.marketDecision.verifiedEvidenceCount > 0 || seed.marketDecision.latestApproved
       ? "partial"
       : "missing";
-  const programStatus: GateStatus = seed.projectStageCount > 0 && seed.plannedServices > 0
-    ? "complete"
-    : seed.projectStageCount > 0 || seed.plannedServices > 0
-      ? "partial"
-      : "missing";
+	  const programStatus: GateStatus = seed.program.isValid
+	    ? "complete"
+	    : seed.program.serviceCount > 0
+	      ? "partial"
+	      : "missing";
   const appointmentStatus: GateStatus = seed.activeContractCount > 0
     ? "complete"
     : seed.proposalCount > 0
       ? "partial"
       : "missing";
-
-  const programMissing = [
-    seed.projectStageCount === 0 ? "مسار مشروع مسجل" : null,
-    seed.plannedServices === 0 ? "خدمة لها موعد مخطط" : null,
-  ].filter(Boolean) as string[];
 
   let nextDecision = "ثبّت هوية المشروع ووثائقه قبل الانتقال إلى الدراسات.";
   let nextActionHref = `/project/${projectId}`;
@@ -122,18 +127,19 @@ export function buildProjectFoundation(seed: FoundationSeed) {
       href: `/knowledge-analysis?projectId=${projectId}`,
       sourceLabel: "المعرفة والتحليل",
     },
-    {
-      id: "program",
-      title: "البرنامج والمسار التنظيمي",
-      description: "يعكس الخدمات والمراحل المسجلة لهذا المشروع فقط، لا المكتبة العامة.",
-      status: programStatus,
-      detail: `${seed.plannedServices} خدمة لها موعد مخطط ضمن ${seed.projectStageCount} مرحلة مستخدمة في المشروع`,
-      reason: programStatus === "complete" ? "يوجد مسار مشروع وخدمة واحدة على الأقل بموعد مخطط." : `ينقص: ${programMissing.join("، ")}.`,
-      nextAction: programStatus === "complete" ? "جهّز موجز ونطاق تكليف الاستشاري بالاستناد إلى البرنامج." : "افتح جولة المراحل وحدد البرنامج الأولي ومواعيد الخدمات الأساسية.",
-      items: [
-        { label: "مسار مشروع مسجل", present: seed.projectStageCount > 0 },
-        { label: "خدمة واحدة على الأقل لها موعد مخطط", present: seed.plannedServices > 0 },
-      ],
+	    {
+	      id: "program",
+	      title: "البرنامج الأولي للمشروع",
+	      description: "يعكس كامل خدمات المشروع ومواعيدها الحالية واعتمادها الصريح، لا مجرد وجود خدمة أو مرحلة في المكتبة العامة.",
+	      status: programStatus,
+	      detail: `${seed.program.scheduledServiceCount} من ${seed.program.serviceCount} خدمات مؤرخة ضمن ${seed.program.stageCount} مرحلة${seed.program.latestDecision ? ` · مراجعة #${seed.program.latestDecision.id}` : ""}`,
+	      reason: seed.program.reason,
+	      nextAction: seed.program.nextAction,
+	      items: [
+	        { label: "خدمات مشروع محددة", present: seed.program.serviceCount > 0 },
+	        { label: "كل الخدمات تحمل تاريخ بدء واستحقاق صالحين", present: seed.program.serviceCount > 0 && seed.program.scheduledServiceCount === seed.program.serviceCount },
+	        { label: "النسخة الحالية معتمدة", present: seed.program.isValid },
+	      ],
       href: `/development-phases?projectId=${projectId}`,
       sourceLabel: "جولة مراحل التطوير",
     },
@@ -165,7 +171,7 @@ export function buildProjectFoundation(seed: FoundationSeed) {
       indexedDocumentCount: seed.indexedDocumentCount,
 			totalDocumentReferences: documentCount,
 		},
-		marketDecision: {
+			marketDecision: {
 			status: seed.marketDecision.status,
 			isValid: seed.marketDecision.isValid,
 			reason: seed.marketDecision.reason,
@@ -176,18 +182,31 @@ export function buildProjectFoundation(seed: FoundationSeed) {
 			profileVersion: seed.marketDecision.profile?.version ?? null,
 			profileHash: seed.marketDecision.profile?.hash ?? null,
 			evidenceSetHash: seed.marketDecision.evidenceSetHash,
-			verifiedEvidenceCount: seed.marketDecision.verifiedEvidenceCount,
-		},
-    gates,
+				verifiedEvidenceCount: seed.marketDecision.verifiedEvidenceCount,
+			},
+			program: {
+				status: seed.program.status,
+				isValid: seed.program.isValid,
+				reason: seed.program.reason,
+				nextAction: seed.program.nextAction,
+				decisionId: seed.program.latestDecision?.id ?? null,
+				decisionStatus: seed.program.latestDecision?.decisionStatus ?? null,
+				decidedAt: seed.program.latestDecision?.decidedAt ?? null,
+				serviceCount: seed.program.serviceCount,
+				scheduledServiceCount: seed.program.scheduledServiceCount,
+				stageCount: seed.program.stageCount,
+				earliestStartDate: seed.program.earliestStartDate,
+				latestDueDate: seed.program.latestDueDate,
+			},
+	    gates,
   };
 }
 
 export async function loadProjectFoundation(db: any, projectId: number) {
-	const [projectRows, marketDecision, stageRows, plannedRows, proposalRows, contractRows, indexedRows, protectedResult] = await Promise.all([
-		db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
-		loadMarketDecisionState(db, projectId),
-    db.selectDistinct({ stageCode: projectServiceInstances.stageCode }).from(projectServiceInstances).where(eq(projectServiceInstances.projectId, projectId)),
-    db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
+		const [projectRows, marketDecision, program, proposalRows, contractRows, indexedRows, protectedResult] = await Promise.all([
+			db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
+			loadMarketDecisionState(db, projectId),
+			loadProjectProgramState(db, projectId),
     db.select({ id: consultantProposals.id }).from(consultantProposals).where(eq(consultantProposals.projectId, projectId)),
     db.select({ id: projectContracts.id }).from(projectContracts).where(and(eq(projectContracts.projectId, projectId), eq(projectContracts.contractStatus, "active"))),
     db.execute(sql`SELECT COUNT(*) AS count FROM documentIndex WHERE projectId = ${projectId} AND indexStatus = 'indexed'`),
@@ -209,10 +228,9 @@ export async function loadProjectFoundation(db: any, projectId: number) {
 		project,
 		protectedDocumentCount,
 		indexedDocumentCount,
-		marketDecision,
-      projectStageCount: stageRows.length,
-      plannedServices: plannedRows.length,
-      proposalCount: proposalRows.length,
+			marketDecision,
+			program,
+	      proposalCount: proposalRows.length,
       activeContractCount: contractRows.length,
     }),
   };

@@ -7,14 +7,21 @@ const packPage = readFileSync("client/src/pages/ConsultantAppointmentPackPage.ts
 
 describe("Consultant procurement workflow", () => {
   it("requires every appointment source before enabling an RFP draft", () => {
-    const incomplete = deriveAppointmentReview({ projectExists: true, factsReady: true, marketProfileReady: true, verifiedEvidenceCount: 1, approvedDecision: false, plannedServices: 3, scopeReady: true });
-    const complete = deriveAppointmentReview({ projectExists: true, factsReady: true, marketProfileReady: true, verifiedEvidenceCount: 1, approvedDecision: true, plannedServices: 3, scopeReady: true });
+	    const incomplete = deriveAppointmentReview({ projectExists: true, factsReady: true, marketProfileReady: true, verifiedEvidenceCount: 1, approvedDecision: false, programReady: true, programReason: "البرنامج ساري", scopeReady: true });
+	    const complete = deriveAppointmentReview({ projectExists: true, factsReady: true, marketProfileReady: true, verifiedEvidenceCount: 1, approvedDecision: true, programReady: true, programReason: "البرنامج ساري", scopeReady: true });
     expect(incomplete.complete).toBe(false);
     expect(incomplete.items.find((item) => item.key === "market")?.complete).toBe(false);
     expect(complete.complete).toBe(true);
 		expect(routerSource).toContain("loadMarketDecisionState");
-		expect(routerSource).toContain("approvedDecision: marketDecision.isValid");
-  });
+			expect(routerSource).toContain("approvedDecision: marketDecision.isValid");
+			expect(routerSource).toContain("loadProjectProgramState");
+	  });
+
+	  it("blocks RFP preparation when the program approval is stale even if services have dates", () => {
+	    const review = deriveAppointmentReview({ projectExists: true, factsReady: true, marketProfileReady: true, verifiedEvidenceCount: 2, approvedDecision: true, programReady: false, programReason: "تغيرت مواعيد البرنامج بعد الاعتماد.", scopeReady: true });
+	    expect(review.complete).toBe(false);
+	    expect(review.items.find(item => item.key === "program")).toMatchObject({ complete: false, action: "تغيرت مواعيد البرنامج بعد الاعتماد." });
+	  });
 
   it("writes only to the new RFP and deliverable records, not existing source records", () => {
     expect(routerSource).toContain("db.insert(consultantRfpDrafts)");

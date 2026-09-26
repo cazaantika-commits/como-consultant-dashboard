@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   consultantRfpDrafts,
   contractDeliverables,
@@ -7,12 +7,12 @@ import {
   projectConsultantRequirements,
   projectConsultantRequirementSets,
   projects,
-  projectServiceInstances,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireProjectAccess } from "../services/comoNextCommands";
 import { loadMarketDecisionState } from "../services/comoNextMarketDecision";
+import { loadProjectProgramState } from "../services/comoNextProjectProgram";
 
 export function deriveAppointmentReview(input: {
   projectExists: boolean;
@@ -20,13 +20,14 @@ export function deriveAppointmentReview(input: {
   marketProfileReady: boolean;
   verifiedEvidenceCount: number;
   approvedDecision: boolean;
-  plannedServices: number;
+  programReady: boolean;
+  programReason: string;
   scopeReady: boolean;
 }) {
   const items = [
     { key: "project_facts", label: "حقائق المشروع والوثائق المرجعية", source: "بطاقة المشروع وخازن", complete: input.projectExists && input.factsReady, action: "استكمل حقائق الأرض والاستخدام والمساحة في بطاقة المشروع." },
     { key: "market", label: "مرجع السوق وقرار المنتج", source: "المعرفة والتحليل", complete: input.marketProfileReady && input.verifiedEvidenceCount > 0 && input.approvedDecision, action: "احفظ فلترة السوق، وثّق دليلًا متوافقًا، ثم اعتمد قرار السوق." },
-    { key: "program", label: "البرنامج الأولي", source: "جولة مراحل التطوير", complete: input.plannedServices > 0, action: "ضع مواعيد أولية للخدمات الرئيسية في جولة مراحل التطوير." },
+    { key: "program", label: "البرنامج الأولي", source: "جولة مراحل التطوير", complete: input.programReady, action: input.programReady ? "البرنامج المعتمد ساري على النسخة الحالية." : input.programReason },
     { key: "scope", label: "نطاق التكليف المطلوب", source: "نطاق المشروع المستقل", complete: input.scopeReady, action: "اختر بنود التصميم والإشراف المطلوبة لهذا المشروع قبل طلب العروض." },
   ];
   return { items, complete: items.every((item) => item.complete) };
@@ -36,10 +37,10 @@ async function loadAppointmentReview(projectId: number, userId: number, required
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
 	await requireProjectAccess(db, projectId, userId, required);
-	const [projectRows, marketDecision, serviceRows, requirementSetRows] = await Promise.all([
-    db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
-		loadMarketDecisionState(db, projectId),
-    db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, projectId), isNotNull(projectServiceInstances.plannedDueDate))),
+	const [projectRows, marketDecision, program, requirementSetRows] = await Promise.all([
+	    db.select().from(projects).where(eq(projects.id, projectId)).limit(1),
+			loadMarketDecisionState(db, projectId),
+			loadProjectProgramState(db, projectId),
     db.select({ id: projectConsultantRequirementSets.id })
       .from(projectConsultantRequirementSets)
       .where(and(eq(projectConsultantRequirementSets.projectId, projectId), eq(projectConsultantRequirementSets.status, "DRAFT")))
@@ -67,10 +68,11 @@ async function loadAppointmentReview(projectId: number, userId: number, required
 		marketProfileReady: Boolean(marketDecision.profile),
 		verifiedEvidenceCount: marketDecision.verifiedEvidenceCount,
 		approvedDecision: marketDecision.isValid,
-    plannedServices: serviceRows.length,
-    scopeReady: selectedScopeRows.length > 0,
-  });
-	return { db, project, review, evidenceCount: marketDecision.verifiedEvidenceCount, plannedServices: serviceRows.length, approvedDecisionId: marketDecision.isValid ? marketDecision.latestApproved?.id ?? null : null, marketDecision };
+	    programReady: program.isValid,
+	    programReason: program.reason,
+	    scopeReady: selectedScopeRows.length > 0,
+	  });
+		return { db, project, review, evidenceCount: marketDecision.verifiedEvidenceCount, program, approvedDecisionId: marketDecision.isValid ? marketDecision.latestApproved?.id ?? null : null, marketDecision };
 }
 
 export const consultantProcurementRouter = router({
@@ -96,7 +98,13 @@ export const consultantProcurementRouter = router({
       project: { id: result.project.id, name: result.project.name, plotNumber: result.project.plotNumber, permittedUse: result.project.permittedUse },
       review: result.review,
       evidenceCount: result.evidenceCount,
-      plannedServices: result.plannedServices,
+	      program: {
+	        decisionId: result.program.latestDecision?.id ?? null,
+	        status: result.program.status,
+	        programHash: result.program.programHash,
+	        serviceCount: result.program.serviceCount,
+	        stageCount: result.program.stageCount,
+	      },
       approvedDecisionId: result.approvedDecisionId,
     };
     const insertResult = await result.db.insert(consultantRfpDrafts).values({

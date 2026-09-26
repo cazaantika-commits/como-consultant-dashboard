@@ -1,24 +1,33 @@
 import { z } from "zod";
-import { and, desc, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
-  lifecycleStages,
   projectConsultantRequirements,
   projectConsultantRequirementSets,
-  projectServiceInstances,
   projects,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { protectedProcedure, router } from "../_core/trpc";
 import { requireProjectAccess } from "../services/comoNextCommands";
 import { loadMarketDecisionState } from "../services/comoNextMarketDecision";
+import { loadProjectProgramState } from "../services/comoNextProjectProgram";
 
 type AppointmentPackSeed = {
 	project: Record<string, unknown>;
 	marketProfile?: Record<string, unknown>;
 	verifiedEvidenceCount: number;
 	approvedDecision?: { id: number; decidedAt: string; notes: string | null; isValid: boolean; status: string; reason: string };
-  activeLifecycleStages: number;
-  plannedServices: number;
+	program: {
+		status: string;
+		isValid: boolean;
+		reason: string;
+		nextAction: string;
+		serviceCount: number;
+		scheduledServiceCount: number;
+		stageCount: number;
+		earliestStartDate: string | null;
+		latestDueDate: string | null;
+		latestDecision: { id: number; decidedAt: string; decisionStatus: string } | null;
+	};
   scopeSections: Array<{ label: string; items: Array<{ label: string; status: string }> }>;
 };
 
@@ -52,7 +61,7 @@ export function buildConsultantAppointmentPack(seed: AppointmentPackSeed) {
     },
 		readiness: {
 			marketReady: Boolean(profile) && seed.verifiedEvidenceCount > 0 && Boolean(seed.approvedDecision?.isValid),
-      programReady: seed.activeLifecycleStages > 0 && seed.plannedServices > 0,
+	      programReady: seed.program.isValid,
       scopeReady: scopeCount > 0,
     },
     sections: {
@@ -72,10 +81,19 @@ export function buildConsultantAppointmentPack(seed: AppointmentPackSeed) {
         approvedAt: seed.approvedDecision?.decidedAt ?? null,
         note: seed.approvedDecision?.notes ?? null,
       },
-      program: {
-        activeLifecycleStages: seed.activeLifecycleStages,
-        plannedServices: seed.plannedServices,
-      },
+	      program: {
+	        status: seed.program.status,
+	        isValid: seed.program.isValid,
+	        reason: seed.program.reason,
+	        nextAction: seed.program.nextAction,
+	        serviceCount: seed.program.serviceCount,
+	        scheduledServiceCount: seed.program.scheduledServiceCount,
+	        stageCount: seed.program.stageCount,
+	        earliestStartDate: seed.program.earliestStartDate,
+	        latestDueDate: seed.program.latestDueDate,
+	        decisionId: seed.program.latestDecision?.id ?? null,
+	        decidedAt: seed.program.latestDecision?.decidedAt ?? null,
+	      },
       scope: {
         source: "نطاق مستقل خاص بالمشروع",
         itemCount: scopeCount,
@@ -93,11 +111,10 @@ export const consultantAppointmentPackRouter = router({
       if (!db) throw new Error("قاعدة البيانات غير متاحة");
 			await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
 
-			const [projectRows, marketDecision, stageRows, serviceRows, draftRequirementSetRows] = await Promise.all([
-        db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1),
-				loadMarketDecisionState(db, input.projectId),
-        db.select({ id: lifecycleStages.id }).from(lifecycleStages).where(eq(lifecycleStages.isActive, 1)),
-        db.select({ id: projectServiceInstances.id }).from(projectServiceInstances).where(and(eq(projectServiceInstances.projectId, input.projectId), isNotNull(projectServiceInstances.plannedDueDate))),
+				const [projectRows, marketDecision, program, draftRequirementSetRows] = await Promise.all([
+	        db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1),
+					loadMarketDecisionState(db, input.projectId),
+					loadProjectProgramState(db, input.projectId),
         db.select({ id: projectConsultantRequirementSets.id })
           .from(projectConsultantRequirementSets)
           .where(and(eq(projectConsultantRequirementSets.projectId, input.projectId), eq(projectConsultantRequirementSets.status, "DRAFT")))
@@ -141,9 +158,8 @@ export const consultantAppointmentPackRouter = router({
 				marketProfile: marketDecision.source.profile,
 				verifiedEvidenceCount: marketDecision.verifiedEvidenceCount,
 				approvedDecision: marketDecision.latestApproved ? { ...marketDecision.latestApproved, isValid: marketDecision.isValid, status: marketDecision.status, reason: marketDecision.reason } : undefined,
-        activeLifecycleStages: stageRows.length,
-        plannedServices: serviceRows.length,
-        scopeSections,
+	        program,
+	        scopeSections,
       });
     }),
 });

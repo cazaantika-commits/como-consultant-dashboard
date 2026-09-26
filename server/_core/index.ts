@@ -23,6 +23,7 @@ import cpaReportRoute from "../cpaReportRoute";
 import portfolioPdfRoute from "../portfolioPdfRoute";
 import { registerComoNextDocumentRoute } from "../comoNextDocumentRoute";
 import { registerComoNextProjectOpportunityRoute } from "../comoNextProjectOpportunityRoute";
+import { registerLifecycleDocumentRoute } from "../lifecycleDocumentRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -79,6 +80,8 @@ async function startServer() {
   app.use("/api/portfolio/pdf", portfolioPdfRoute);
   // Authenticated COMO Next document delivery with project-level access checks.
   registerComoNextDocumentRoute(app);
+  // Authenticated lifecycle document delivery; raw storage URLs are never exposed.
+  registerLifecycleDocumentRoute(app);
   // Owner-only protected intake for project opportunities and land documents.
   registerComoNextProjectOpportunityRoute(app);
 
@@ -133,8 +136,12 @@ async function startServer() {
     console.log("[EmailMonitor] Automatic polling disabled; manual read-only sync only");
   }
 
-  // Start lifecycle deadline checker (daily at 8 AM Dubai time)
-  startLifecycleDeadlineScheduler();
+  // Lifecycle deadline automation is opt-in; the current operating policy is manual review only.
+  if (process.env.COMO_LIFECYCLE_DEADLINE_SCHEDULER_ENABLED === "true") {
+    startLifecycleDeadlineScheduler();
+  } else {
+    console.log("[LifecycleScheduler] Disabled by COMO control policy");
+  }
 
   // These legacy schedulers can send email and therefore remain off until the
   // owner explicitly opens the outbound-email phase.

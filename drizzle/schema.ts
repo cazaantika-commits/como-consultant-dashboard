@@ -1869,6 +1869,29 @@ export const projectServiceInstances = mysqlTable("project_service_instances", {
 (table) => [
   index("psi_project").on(table.projectId),
   index("psi_service").on(table.serviceCode),
+  uniqueIndex("psi_project_service_unique").on(table.projectId, table.serviceCode),
+]);
+
+/**
+ * Append-only owner decisions over the current project-specific initial program.
+ * Current validity is derived by comparing programHash with the live service set.
+ */
+export const projectProgramApprovals = mysqlTable("project_program_approvals", {
+  id: int().autoincrement().notNull().primaryKey(),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  decisionStatus: mysqlEnum("decision_status", ["reviewed", "approved", "rejected"]).notNull(),
+  sourceSchemaVersion: varchar("source_schema_version", { length: 50 }).notNull(),
+  programHash: varchar("program_hash", { length: 64 }).notNull(),
+  serviceCount: int("service_count").notNull(),
+  stageCount: int("stage_count").notNull(),
+  earliestStartDate: varchar("earliest_start_date", { length: 10 }),
+  latestDueDate: varchar("latest_due_date", { length: 10 }),
+  programSnapshotJson: longtext("program_snapshot_json").notNull(),
+  notes: text(),
+  decidedAt: timestamp("decided_at", { mode: "string" }).defaultNow().notNull(),
+}, (table) => [
+  index("project_program_approvals_project_time_idx").on(table.projectId, table.decidedAt),
 ]);
 
 /** Per-project status of each requirement (the actual checklist) */
@@ -1888,6 +1911,7 @@ export const projectRequirementStatus = mysqlTable("project_requirement_status",
 (table) => [
   index("prs_project").on(table.projectId),
   index("prs_svc_req").on(table.serviceCode, table.requirementCode),
+  uniqueIndex("prs_project_service_requirement_unique").on(table.projectId, table.serviceCode, table.requirementCode),
 ]);
 
 /** Per-project stage status (overrides defaultStatus per project) */
@@ -1900,6 +1924,7 @@ export const projectStageStatus = mysqlTable("project_stage_status", {
 },
 (table) => [
   index("pss_project").on(table.projectId),
+  uniqueIndex("pss_project_stage_unique").on(table.projectId, table.stageCode),
 ]);
 
 /** Master list of data fields per service (with project card mapping) */
@@ -1937,6 +1962,7 @@ export const projectStageFieldValues = mysqlTable("project_stage_field_values", 
 },
 (table) => [
   index("psfv_project_svc").on(table.projectId, table.serviceCode),
+  uniqueIndex("psfv_project_service_field_unique").on(table.projectId, table.serviceCode, table.fieldKey),
 ]);
 
 /** Per-project documents for each requirement */

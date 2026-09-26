@@ -6,13 +6,59 @@ import {
   lifecycleStages,
   lifecycleServices,
   lifecycleRequirements,
+  projectProgramApprovals,
   projectServiceInstances,
   projectRequirementStatus,
   projectStageStatus,
 } from "../../drizzle/schema";
 import { eq, and, sql, lte, gte, isNotNull, max } from "drizzle-orm";
+import { ENV } from "../_core/env";
+import { requireProjectAccess } from "../services/comoNextCommands";
+import {
+  loadProjectProgramState,
+  normalizeProgramDate,
+  PROJECT_PROGRAM_SCHEMA_VERSION,
+} from "../services/comoNextProjectProgram";
 
-function rejectUnscopedCatalogueWrite(): never {
+function assertProgramOwner(user: { openId?: string | null; role?: string | null }) {
+  if (!ENV.ownerOpenId || user.openId !== ENV.ownerOpenId || user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "اعتماد البرنامج الأولي متاح لعبد الرحمن فقط." });
+  }
+}
+
+async function requireLifecycleDb() {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة." });
+  return db;
+}
+
+async function requireLifecycleService(db: any, serviceCode: string, stageCode?: string) {
+  const [service] = await db.select().from(lifecycleServices).where(eq(lifecycleServices.serviceCode, serviceCode)).limit(1);
+  if (!service) throw new TRPCError({ code: "BAD_REQUEST", message: "الخدمة غير موجودة في مكتبة دورة المشروع." });
+  if (stageCode && service.stageCode !== stageCode) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "الخدمة لا تنتمي إلى المرحلة المحددة." });
+  }
+  return service;
+}
+
+async function requireLifecycleRequirement(db: any, serviceCode: string, requirementCode: string) {
+  const [requirement] = await db.select().from(lifecycleRequirements).where(and(
+    eq(lifecycleRequirements.serviceCode, serviceCode),
+    eq(lifecycleRequirements.requirementCode, requirementCode),
+  )).limit(1);
+  if (!requirement) throw new TRPCError({ code: "BAD_REQUEST", message: "المتطلب لا ينتمي إلى الخدمة المحددة." });
+  return requirement;
+}
+
+function normalizedOptionalDate(value: string | undefined, label: string) {
+  if (value === undefined) return undefined;
+  if (!value.trim()) return null;
+  const normalized = normalizeProgramDate(value);
+  if (!normalized) throw new TRPCError({ code: "BAD_REQUEST", message: `${label} غير صالح. استخدم YYYY-MM-DD.` });
+  return normalized;
+}
+
+function rejectUnscopedCatalogueWrite(): void {
   throw new TRPCError({
     code: "PRECONDITION_FAILED",
     message: "أُوقف تعديل مكتبة دورة المشروع العامة. تُقرأ السجلات الحالية داخل ملف المشروع، وتحتاج التعديلات العامة إلى مسار حوكمة مستقل.",
@@ -110,7 +156,7 @@ export const lifecycleRouter = router({
 
   /** Get all active master stages */
   getStages: protectedProcedure.query(async () => {
-    const db = await getDb();
+    const db = await requireLifecycleDb();
     return db
       .select()
       .from(lifecycleStages)
@@ -120,7 +166,7 @@ export const lifecycleRouter = router({
 
   /** Get ALL stages including inactive (for settings UI) */
   getAllStages: protectedProcedure.query(async () => {
-    const db = await getDb();
+    const db = await requireLifecycleDb();
     return db
       .select()
       .from(lifecycleStages)
@@ -136,7 +182,7 @@ export const lifecycleRouter = router({
     }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const maxOrder = await db
         .select({ max: max(lifecycleStages.sortOrder) })
         .from(lifecycleStages);
@@ -166,7 +212,7 @@ export const lifecycleRouter = router({
     }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const { id, ...updates } = input;
       await db.update(lifecycleStages).set(updates).where(eq(lifecycleStages.id, id));
       return { success: true };
@@ -179,7 +225,7 @@ export const lifecycleRouter = router({
     }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       for (const s of input.stages) {
         await db.update(lifecycleStages).set({ sortOrder: s.sortOrder }).where(eq(lifecycleStages.id, s.id));
       }
@@ -189,8 +235,9 @@ export const lifecycleRouter = router({
   /** Get per-project stage statuses */
   getProjectStageStatuses: protectedProcedure
     .input(z.object({ projectId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const stages = await db
         .select()
         .from(lifecycleStages)
@@ -219,35 +266,17 @@ export const lifecycleRouter = router({
         status: z.enum(["not_started", "in_progress", "completed", "locked"]),
       })
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      const existing = await db
-        .select()
-        .from(projectStageStatus)
-        .where(
-          and(
-            eq(projectStageStatus.projectId, input.projectId),
-            eq(projectStageStatus.stageCode, input.stageCode)
-          )
-        );
-
-      if (existing.length > 0) {
-        await db
-          .update(projectStageStatus)
-          .set({ status: input.status })
-          .where(
-            and(
-              eq(projectStageStatus.projectId, input.projectId),
-              eq(projectStageStatus.stageCode, input.stageCode)
-            )
-          );
-      } else {
-        await db.insert(projectStageStatus).values({
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+      const [stage] = await db.select({ stageCode: lifecycleStages.stageCode }).from(lifecycleStages)
+        .where(eq(lifecycleStages.stageCode, input.stageCode)).limit(1);
+      if (!stage) throw new TRPCError({ code: "BAD_REQUEST", message: "المرحلة غير موجودة في دورة المشروع." });
+      await db.insert(projectStageStatus).values({
           projectId: input.projectId,
           stageCode: input.stageCode,
           status: input.status,
-        });
-      }
+        }).onDuplicateKeyUpdate({ set: { status: input.status } });
       return { success: true };
     }),
 
@@ -256,8 +285,9 @@ export const lifecycleRouter = router({
   /** Get services for a stage with computed dynamic status per project */
   getStageServices: protectedProcedure
     .input(z.object({ stageCode: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const services = await db
         .select()
         .from(lifecycleServices)
@@ -338,44 +368,47 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      const existing = await db
-        .select()
-        .from(projectServiceInstances)
-        .where(
-          and(
-            eq(projectServiceInstances.projectId, input.projectId),
-            eq(projectServiceInstances.serviceCode, input.serviceCode)
-          )
-        );
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+      await requireLifecycleService(db, input.serviceCode, input.stageCode);
 
       // Only include fields that are explicitly provided (not undefined)
       // This prevents accidental overwrites when only updating status
-      const data: Record<string, any> = {
+	      const data: typeof projectServiceInstances.$inferInsert = {
         projectId: input.projectId,
         serviceCode: input.serviceCode,
         stageCode: input.stageCode,
       };
-      if (input.plannedStartDate !== undefined) data.plannedStartDate = input.plannedStartDate;
-      if (input.plannedDueDate !== undefined) data.plannedDueDate = input.plannedDueDate;
-      if (input.actualStartDate !== undefined) data.actualStartDate = input.actualStartDate;
-      if (input.actualCloseDate !== undefined) data.actualCloseDate = input.actualCloseDate;
+      const plannedStartDate = normalizedOptionalDate(input.plannedStartDate, "تاريخ البدء المخطط");
+      const plannedDueDate = normalizedOptionalDate(input.plannedDueDate, "تاريخ الاستحقاق المخطط");
+      const actualStartDate = normalizedOptionalDate(input.actualStartDate, "تاريخ البدء الفعلي");
+      const actualCloseDate = normalizedOptionalDate(input.actualCloseDate, "تاريخ الإغلاق الفعلي");
+      if (plannedStartDate !== undefined) data.plannedStartDate = plannedStartDate;
+      if (plannedDueDate !== undefined) data.plannedDueDate = plannedDueDate;
+      if (actualStartDate !== undefined) data.actualStartDate = actualStartDate;
+      if (actualCloseDate !== undefined) data.actualCloseDate = actualCloseDate;
       if (input.notes !== undefined) data.notes = input.notes;
       if (input.operationalStatus) data.operationalStatus = input.operationalStatus;
-
-      if (existing.length > 0) {
-        await db
-          .update(projectServiceInstances)
-          .set(data)
-          .where(
-            and(
-              eq(projectServiceInstances.projectId, input.projectId),
-              eq(projectServiceInstances.serviceCode, input.serviceCode)
-            )
-          );
-      } else {
-        await db.insert(projectServiceInstances).values(data);
+      const [existing] = await db.select({
+        plannedStartDate: projectServiceInstances.plannedStartDate,
+        plannedDueDate: projectServiceInstances.plannedDueDate,
+        actualStartDate: projectServiceInstances.actualStartDate,
+        actualCloseDate: projectServiceInstances.actualCloseDate,
+      }).from(projectServiceInstances).where(and(
+        eq(projectServiceInstances.projectId, input.projectId),
+        eq(projectServiceInstances.serviceCode, input.serviceCode),
+      )).limit(1);
+      const nextPlannedStart = data.plannedStartDate === undefined ? normalizeProgramDate(existing?.plannedStartDate) : data.plannedStartDate;
+      const nextPlannedDue = data.plannedDueDate === undefined ? normalizeProgramDate(existing?.plannedDueDate) : data.plannedDueDate;
+      const nextActualStart = data.actualStartDate === undefined ? normalizeProgramDate(existing?.actualStartDate) : data.actualStartDate;
+      const nextActualClose = data.actualCloseDate === undefined ? normalizeProgramDate(existing?.actualCloseDate) : data.actualCloseDate;
+      if (nextPlannedStart && nextPlannedDue && nextPlannedStart > nextPlannedDue) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ بدء الخدمة بعد تاريخ استحقاقها." });
       }
+      if (nextActualStart && nextActualClose && nextActualStart > nextActualClose) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "تاريخ البدء الفعلي بعد تاريخ الإغلاق." });
+      }
+      await db.insert(projectServiceInstances).values(data).onDuplicateKeyUpdate({ set: data });
       return { success: true };
     }),
 
@@ -383,7 +416,9 @@ export const lifecycleRouter = router({
   submitService: protectedProcedure
     .input(z.object({ projectId: z.number(), serviceCode: z.string(), stageCode: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+      await requireLifecycleService(db, input.serviceCode, input.stageCode);
       // Verify all mandatory reqs are complete
       const reqs = await db
         .select()
@@ -412,38 +447,15 @@ export const lifecycleRouter = router({
         throw new Error(`يوجد ${incomplete.length} متطلبات إلزامية غير مكتملة`);
       }
 
-      // Upsert as submitted
-      const existing = await db
-        .select()
-        .from(projectServiceInstances)
-        .where(
-          and(
-            eq(projectServiceInstances.projectId, input.projectId),
-            eq(projectServiceInstances.serviceCode, input.serviceCode)
-          )
-        );
-
       const now = new Date().toISOString().slice(0, 19).replace("T", " ");
-      if (existing.length > 0) {
-        await db
-          .update(projectServiceInstances)
-          .set({ operationalStatus: "submitted", submittedAt: now, submittedByUserId: ctx.user.id })
-          .where(
-            and(
-              eq(projectServiceInstances.projectId, input.projectId),
-              eq(projectServiceInstances.serviceCode, input.serviceCode)
-            )
-          );
-      } else {
-        await db.insert(projectServiceInstances).values({
+      await db.insert(projectServiceInstances).values({
           projectId: input.projectId,
           serviceCode: input.serviceCode,
           stageCode: input.stageCode,
           operationalStatus: "submitted",
           submittedAt: now,
           submittedByUserId: ctx.user.id,
-        });
-      }
+        }).onDuplicateKeyUpdate({ set: { operationalStatus: "submitted", submittedAt: now, submittedByUserId: ctx.user.id } });
       return { success: true };
     }),
 
@@ -452,8 +464,10 @@ export const lifecycleRouter = router({
   /** Get requirements for a service with per-project status */
   getServiceRequirements: protectedProcedure
     .input(z.object({ serviceCode: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
+      await requireLifecycleService(db, input.serviceCode);
       const reqs = await db
         .select()
         .from(lifecycleRequirements)
@@ -475,7 +489,6 @@ export const lifecycleRouter = router({
         return {
           ...req,
           status: status?.status ?? "pending",
-          fileUrl: status?.fileUrl ?? null,
           notes: status?.notes ?? null,
           completedAt: status?.completedAt ?? null,
           statusId: status?.id ?? null,
@@ -491,23 +504,14 @@ export const lifecycleRouter = router({
         serviceCode: z.string(),
         requirementCode: z.string(),
         status: z.enum(["pending", "completed", "not_applicable"]),
-        fileUrl: z.string().optional(),
-        fileKey: z.string().optional(),
         notes: z.string().optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const db = await getDb();
-      const existing = await db
-        .select()
-        .from(projectRequirementStatus)
-        .where(
-          and(
-            eq(projectRequirementStatus.projectId, input.projectId),
-            eq(projectRequirementStatus.serviceCode, input.serviceCode),
-            eq(projectRequirementStatus.requirementCode, input.requirementCode)
-          )
-        );
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+      await requireLifecycleService(db, input.serviceCode);
+      await requireLifecycleRequirement(db, input.serviceCode, input.requirementCode);
 
       const now = new Date().toISOString().slice(0, 19).replace("T", " ");
       const data = {
@@ -515,33 +519,18 @@ export const lifecycleRouter = router({
         serviceCode: input.serviceCode,
         requirementCode: input.requirementCode,
         status: input.status,
-        fileUrl: input.fileUrl,
-        fileKey: input.fileKey,
         notes: input.notes,
-        completedByUserId: input.status === "completed" ? ctx.user.id : undefined,
-        completedAt: input.status === "completed" ? now : undefined,
+        completedByUserId: input.status === "completed" ? ctx.user.id : null,
+        completedAt: input.status === "completed" ? now : null,
       };
-
-      if (existing.length > 0) {
-        await db
-          .update(projectRequirementStatus)
-          .set(data)
-          .where(
-            and(
-              eq(projectRequirementStatus.projectId, input.projectId),
-              eq(projectRequirementStatus.serviceCode, input.serviceCode),
-              eq(projectRequirementStatus.requirementCode, input.requirementCode)
-            )
-          );
-      } else {
-        await db.insert(projectRequirementStatus).values(data);
-      }
+      await db.insert(projectRequirementStatus).values(data).onDuplicateKeyUpdate({ set: data });
       return { success: true };
     }),
 
   /** Read deadline counts only; outbound notifications remain disabled. */
-  checkDeadlines: protectedProcedure.mutation(async () => {
-    const db = await getDb();
+  checkDeadlines: protectedProcedure.mutation(async ({ ctx }) => {
+    assertProgramOwner(ctx.user);
+    const db = await requireLifecycleDb();
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
     const nowMs = now.getTime();
@@ -608,24 +597,20 @@ export const lifecycleRouter = router({
 
   /** Get upcoming and overdue services for a project (for UI display) */
   getDeadlineAlerts: protectedProcedure
-    .input(z.object({ projectId: z.number().optional() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const now = new Date();
       const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const nowMs = now.getTime();
       const sevenDaysMs = sevenDaysFromNow.getTime();
 
-      const whereClause = input.projectId
-        ? and(
-            eq(projectServiceInstances.projectId, input.projectId),
-            isNotNull(projectServiceInstances.plannedDueDate),
-            sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
-          )
-        : and(
-            isNotNull(projectServiceInstances.plannedDueDate),
-            sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
-          );
+      const whereClause = and(
+        eq(projectServiceInstances.projectId, input.projectId),
+        isNotNull(projectServiceInstances.plannedDueDate),
+        sql`${projectServiceInstances.operationalStatus} NOT IN ('completed', 'submitted', 'na')`
+      );
 
       const instances = await db
         .select()
@@ -637,7 +622,7 @@ export const lifecycleRouter = router({
       const { projects } = await import("../../drizzle/schema");
       const projectsList = await db.select({ id: projects.id, name: projects.name })
         .from(projects)
-        .where(input.projectId ? eq(projects.id, input.projectId) : eq(projects.isTestProject, 0));
+        .where(eq(projects.id, input.projectId));
       const visibleProjectIds = new Set(projectsList.map((project) => project.id));
 
       const alerts = instances
@@ -672,8 +657,9 @@ export const lifecycleRouter = router({
   /** Get full work schedule data: all stages + services + requirements + instances in one call */
   getWorkSchedule: protectedProcedure
     .input(z.object({ projectId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const stages = await db
         .select()
         .from(lifecycleStages)
@@ -771,8 +757,9 @@ export const lifecycleRouter = router({
   /** Get summary stats for a project across all stages */
   getProjectLifecycleSummary: protectedProcedure
     .input(z.object({ projectId: z.number() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
       const stages = await db
         .select()
         .from(lifecycleStages)
@@ -810,6 +797,61 @@ export const lifecycleRouter = router({
       });
     }),
 
+  /** Current project-specific initial program and its derived approval validity. */
+  getProjectProgramState: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "read");
+      return loadProjectProgramState(db, input.projectId);
+    }),
+
+  /** Append-only owner review. Approval is accepted only for a complete current program. */
+  recordProjectProgramDecision: protectedProcedure
+    .input(z.object({
+      projectId: z.number().int().positive(),
+      decisionStatus: z.enum(["reviewed", "approved", "rejected"]),
+      notes: z.string().trim().max(4000).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      assertProgramOwner(ctx.user);
+      const db = await requireLifecycleDb();
+      await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
+      const state = await loadProjectProgramState(db, input.projectId);
+      if (!state.serviceCount) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "لا يوجد برنامج مشروع يمكن مراجعته." });
+      }
+      if (input.decisionStatus === "approved" && !state.isSourceComplete) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: state.reason });
+      }
+      const snapshot = {
+        ...state.snapshot,
+        projectId: input.projectId,
+        summary: {
+          serviceCount: state.serviceCount,
+          stageCount: state.stageCount,
+          scheduledServiceCount: state.scheduledServiceCount,
+          earliestStartDate: state.earliestStartDate,
+          latestDueDate: state.latestDueDate,
+          issues: state.issues,
+        },
+      };
+      const [result] = await db.insert(projectProgramApprovals).values({
+        projectId: input.projectId,
+        userId: ctx.user.id,
+        decisionStatus: input.decisionStatus,
+        sourceSchemaVersion: PROJECT_PROGRAM_SCHEMA_VERSION,
+        programHash: state.programHash,
+        serviceCount: state.serviceCount,
+        stageCount: state.stageCount,
+        earliestStartDate: state.earliestStartDate,
+        latestDueDate: state.latestDueDate,
+        programSnapshotJson: JSON.stringify(snapshot),
+        notes: input.notes || null,
+      });
+      return { id: Number(result.insertId), decisionStatus: input.decisionStatus, programHash: state.programHash };
+    }),
+
   /** Add a custom service (task) to a stage */
   addCustomService: protectedProcedure
     .input(
@@ -823,7 +865,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
 
       // Get the max sortOrder for this stage to append at end
       const existing = await db
@@ -881,7 +923,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
 
       // Delete project instance first
       await db
@@ -932,7 +974,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const { serviceCode, ...rest } = input;
       const data: Record<string, any> = {};
       for (const [k, v] of Object.entries(rest)) {
@@ -962,7 +1004,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const existing = await db
         .select({ maxSort: max(lifecycleServices.sortOrder) })
         .from(lifecycleServices)
@@ -988,7 +1030,7 @@ export const lifecycleRouter = router({
     .input(z.object({ serviceCode: z.string() }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.serviceCode, input.serviceCode));
       await db.delete(projectServiceInstances).where(eq(projectServiceInstances.serviceCode, input.serviceCode));
       await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.serviceCode, input.serviceCode));
@@ -1001,7 +1043,7 @@ export const lifecycleRouter = router({
     .input(z.object({ stageCode: z.string() }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const services = await db.select().from(lifecycleServices).where(eq(lifecycleServices.stageCode, input.stageCode));
       for (const svc of services) {
         await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.serviceCode, svc.serviceCode));
@@ -1018,7 +1060,7 @@ export const lifecycleRouter = router({
   getServiceRequirementsAdmin: protectedProcedure
     .input(z.object({ serviceCode: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       return db
         .select()
         .from(lifecycleRequirements)
@@ -1042,7 +1084,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const existing = await db
         .select({ maxSort: max(lifecycleRequirements.sortOrder) })
         .from(lifecycleRequirements)
@@ -1081,7 +1123,7 @@ export const lifecycleRouter = router({
     )
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       const { requirementCode, ...rest } = input;
       const data: Record<string, any> = {};
       for (const [k, v] of Object.entries(rest)) {
@@ -1101,7 +1143,7 @@ export const lifecycleRouter = router({
     .input(z.object({ requirementCode: z.string() }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.requirementCode, input.requirementCode));
       await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.requirementCode, input.requirementCode));
       return { success: true };
@@ -1111,7 +1153,7 @@ export const lifecycleRouter = router({
   getStageServicesAdmin: protectedProcedure
     .input(z.object({ stageCode: z.string() }))
     .query(async ({ input }) => {
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       return db
         .select()
         .from(lifecycleServices)
@@ -1126,7 +1168,7 @@ export const lifecycleRouter = router({
     }))
     .mutation(async ({ input }) => {
       rejectUnscopedCatalogueWrite();
-      const db = await getDb();
+      const db = await requireLifecycleDb();
       for (const s of input.services) {
         await db.update(lifecycleServices).set({ sortOrder: s.sortOrder }).where(eq(lifecycleServices.serviceCode, s.serviceCode));
       }
