@@ -1501,7 +1501,7 @@
 - [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design
 - [x] Add owner review and correction controls for each extracted offer item before a reading becomes usable in financial comparison
 - [x] Build a separate project-specific supervision scope and fee comparison using the same approved-review principle
-- [ ] [مؤجل بقرار المالك] بناء المقارنة المالية الجديدة داخل النظام: يحدد عبد الرحمن نطاق كل مشروع، ويرفع عروضه الجديدة، ثم يحللها Manus ويخرج التقرير المالي والتقرير الذكي بعد المراجعة؛ لا تستخدم العروض أو الأسعار القديمة، ويُحتفظ فقط بهوية وأسماء الاستشاريين.
+- [x] [مؤجل بقرار المالك — خارج قائمة التنفيذ الحالية] بناء المقارنة المالية الجديدة داخل النظام: يحدد عبد الرحمن نطاق كل مشروع، ويرفع عروضه الجديدة، ثم يحللها Manus ويخرج التقرير المالي والتقرير الذكي بعد المراجعة؛ لا تستخدم العروض أو الأسعار القديمة، ويُحتفظ فقط بهوية وأسماء الاستشاريين. أُغلق كبند نشط إلى أن يطلب المالك بدء هذه المرحلة.
 - [x] [أُلغي كمسار قديم] عدم مراجعة أو نقل ملفات العروض والأسعار وبيانات JSON القديمة إلى المقارنة الجديدة؛ يُحتفظ فقط بسجل أسماء وهويات الاستشاريين. (قرار المالك 2026-09-26)
 - [x] [دُمج في المسار المؤجل] يبدأ تحليل عروض أي مشروع فقط بعد أن يحدد عبد الرحمن نطاقه ويرفع العروض الجديدة داخل النظام؛ لا حاجة إلى مهمة انتظار مستقلة. (قرار المالك 2026-09-26)
 - [x] Add Studio, two-bedroom-with-maid, and three-bedroom-with-maid unit types without changing existing unit records or calculations
