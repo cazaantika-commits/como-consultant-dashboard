@@ -15,6 +15,7 @@ import { default as CircleAlert } from "lucide-react/dist/esm/icons/circle-alert
 import { default as FileClock } from "lucide-react/dist/esm/icons/file-clock.js";
 import { default as FilePlus2 } from "lucide-react/dist/esm/icons/file-plus-2.js";
 import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as FolderKanban } from "lucide-react/dist/esm/icons/folder-kanban.js";
 import { default as Inbox } from "lucide-react/dist/esm/icons/inbox.js";
 import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
@@ -38,6 +39,16 @@ type ExecutiveDestination = {
 };
 
 const EXECUTIVE_DESTINATIONS: ExecutiveDestination[] = [
+  {
+    id: "project-management",
+    title: "إدارة المشاريع",
+    eyebrow: "مشروع واحد في كل مرة",
+    description: "اختر المشروع ثم افتح ملفه التنفيذي أو جدواه أو تدفقاته أو جولة تطويره من سياق واحد.",
+    path: "/project-management",
+    icon: FolderKanban,
+    tone: "from-[#254c5a] to-[#4b7f8b]",
+    accent: "text-[#356879]",
+  },
   {
     id: "executive-office",
     title: "المكتب التنفيذي",
@@ -298,7 +309,7 @@ export default function Home() {
 
         <section className="mt-10 pb-10">
           <div className="mb-4"><p className="text-[11px] font-black text-[#825e44]">مساحات واضحة بلا تكرار</p><h2 className="mt-1 text-xl font-black text-slate-900">أين تريد أن تعمل؟</h2></div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {EXECUTIVE_DESTINATIONS.map(item => <DestinationCard key={item.id} item={item} onOpen={navigate} />)}
           </div>
           {user?.role === "admin" && (

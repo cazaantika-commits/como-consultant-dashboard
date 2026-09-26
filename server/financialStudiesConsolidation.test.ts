@@ -17,12 +17,12 @@ describe("approved Financial Studies navigation consolidation", () => {
     expect(homeSource).not.toContain('id: "tool-wael-sales"');
   });
 
-  it("keeps Knowledge and Analysis as one deliberate workspace while removing retired launchers", () => {
+  it("keeps Knowledge and Analysis while the new project hub orchestrates, rather than duplicates, Financial Studies", () => {
     expect(homeSource).toContain('id: "knowledge"');
     expect(homeSource).toContain('title: "المعرفة والتحليل"');
     expect(homeSource).toContain('path: "/knowledge-analysis"');
     expect(homeSource).not.toContain('id: "main-projects"');
-    expect(routerSource).not.toContain('path="/project-management"');
+    expect(routerSource).toContain('<Route path="/project-management" component={ProjectManagementPage} />');
     expect(routerSource).not.toContain('path="/fact-sheet"');
   });
 

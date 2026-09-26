@@ -14,7 +14,7 @@ describe("legacy financial feature cleanup", () => {
     expect(homeSource).not.toContain('id: "main-projects"');
     expect(homeSource).toContain('id: "knowledge"');
     expect(homeSource).toContain('title: "المعرفة والتحليل"');
-    expect(appSource).not.toContain('path="/project-management"');
+    expect(appSource).toContain('<Route path="/project-management" component={ProjectManagementPage} />');
     expect(appSource).not.toContain('path="/fact-sheet"');
   });
 
@@ -23,6 +23,7 @@ describe("legacy financial feature cleanup", () => {
     expect(appSource).not.toContain('path="/portfolio-scenarios"');
     expect(appSource).not.toContain('path="/capital-portfolio"');
     expect(appSource).toContain('path="/bateekha"');
+    expect(fs.existsSync(path.resolve(process.cwd(), "client/src/pages/ProjectManagementPage.tsx"))).toBe(true);
   });
 
   it("removes the legacy feature launchers rather than merely hiding their cards", () => {

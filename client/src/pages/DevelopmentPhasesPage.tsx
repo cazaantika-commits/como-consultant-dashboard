@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
@@ -23,6 +23,8 @@ import ProjectLifecyclePage from "./ProjectLifecyclePage";
 import WorkSchedulePage from "./WorkSchedulePage";
 import ProjectLaunchGatePage from "./ProjectLaunchGatePage";
 import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
+import { ProjectSelector } from "@/components/ProjectSelector";
+import { useProjectContext } from "@/contexts/ProjectContext";
 
 type View = "icons" | "launch" | "compliance" | "schedule" | "contracts";
 
@@ -371,13 +373,28 @@ const SECTIONS = [
 
 export default function DevelopmentPhasesPage() {
   const [, navigate] = useLocation();
+  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const [activeView, setActiveView] = useState<View>("icons");
   const requestedProjectId = useMemo(() => {
     const value = Number(new URLSearchParams(window.location.search).get("projectId"));
     return Number.isInteger(value) && value > 0 ? value : null;
   }, []);
-  const [sharedProjectId, setSharedProjectId] = useState<number | null>(requestedProjectId);
+  const [sharedProjectId, setSharedProjectId] = useState<number | null>(requestedProjectId || selectedProjectId);
   const activeSection = SECTIONS.find((s) => s.id === activeView);
+
+  useEffect(() => {
+    if (requestedProjectId && requestedProjectId !== selectedProjectId) {
+      setSelectedProjectId(requestedProjectId);
+    } else if (!sharedProjectId && selectedProjectId) {
+      setSharedProjectId(selectedProjectId);
+    }
+  }, [requestedProjectId, selectedProjectId, setSelectedProjectId, sharedProjectId]);
+
+  const chooseProject = (projectId: number) => {
+    setSharedProjectId(projectId);
+    setSelectedProjectId(projectId);
+    navigate(`/development-phases?projectId=${projectId}`);
+  };
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-background" dir="rtl">
@@ -385,9 +402,9 @@ export default function DevelopmentPhasesPage() {
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           {activeView === "icons" ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5">
+              <Button variant="ghost" size="sm" onClick={() => navigate(sharedProjectId ? `/project-management?projectId=${sharedProjectId}` : "/project-management")} className="gap-1.5">
                 <ArrowRight className="w-4 h-4" />
-                الرئيسية
+                إدارة المشاريع
               </Button>
               <div className="h-5 w-px bg-border" />
               <div className="flex items-center gap-2">
@@ -426,10 +443,16 @@ export default function DevelopmentPhasesPage() {
             <h2 className="text-2xl font-bold text-foreground mb-2">جولة في مراحل التطوير</h2>
             <p className="text-sm text-muted-foreground">متابعة الامتثال التنظيمي وإدارة المراحل والعقود</p>
           </div>
+          <div className="mb-7 rounded-2xl border border-violet-200 bg-violet-50/60 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-right"><p className="text-xs font-black text-violet-800">المشروع المشترك بين البطاقات الأربع</p><p className="mt-1 text-[11px] leading-5 text-slate-500">اختره مرة واحدة؛ لا تعرض الجولة حالة عامة أو تنتقل إلى مشروع آخر تلقائيًا.</p></div>
+              <ProjectSelector selectedId={sharedProjectId} onSelect={chooseProject} />
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
             {SECTIONS.map((item) => (
-              <button key={item.id} onClick={() => setActiveView(item.id)}
-                className="group relative min-w-0 flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden">
+              <button key={item.id} disabled={!sharedProjectId} onClick={() => sharedProjectId && setActiveView(item.id)}
+                className="group relative min-w-0 flex flex-col items-center text-center p-6 rounded-2xl bg-card border border-border/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] overflow-hidden disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0 disabled:hover:shadow-none">
                 <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl" style={{ backgroundColor: item.borderColor }} />
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl pointer-events-none"
                   style={{ background: `radial-gradient(circle at 50% 0%, ${item.shadow} 0%, transparent 70%)` }} />
@@ -448,7 +471,7 @@ export default function DevelopmentPhasesPage() {
       {activeView === "compliance" && <ProjectLifecyclePage embedded initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
       {activeView === "schedule" && <WorkSchedulePage initialProjectId={sharedProjectId} onProjectChange={setSharedProjectId} />}
       {activeView === "contracts" && <ContractsGateway projectId={sharedProjectId} onOpen={() => navigate(`/contracts${sharedProjectId ? `?projectId=${sharedProjectId}` : ""}`)} />}
-      {activeView === "launch" && <ProjectLaunchGatePage embedded />}
+      {activeView === "launch" && <ProjectLaunchGatePage embedded initialProjectId={sharedProjectId} />}
     </div>
   );
 }

@@ -6,13 +6,15 @@ const appSource = readFileSync("client/src/App.tsx", "utf8");
 const unifiedProjectCardSource = readFileSync("client/src/pages/UnifiedProjectCardPage.tsx", "utf8");
 
 describe("rebuilt executive homepage navigation", () => {
-  it("keeps five deliberate destinations including the protected development tour", () => {
+  it("keeps six deliberate destinations including project management and the protected development tour", () => {
+    const projectManagementIndex = homeSource.indexOf('id: "project-management"');
     const executiveIndex = homeSource.indexOf('id: "executive-office"');
     const financialIndex = homeSource.indexOf('id: "financial-studies"');
     const consultantsIndex = homeSource.indexOf('id: "consultants"');
     const knowledgeIndex = homeSource.indexOf('id: "knowledge"');
     const tourIndex = homeSource.indexOf('id: "development-tour"');
-    expect(executiveIndex).toBeGreaterThan(-1);
+    expect(projectManagementIndex).toBeGreaterThan(-1);
+    expect(executiveIndex).toBeGreaterThan(projectManagementIndex);
     expect(financialIndex).toBeGreaterThan(executiveIndex);
     expect(consultantsIndex).toBeGreaterThan(financialIndex);
     expect(knowledgeIndex).toBeGreaterThan(consultantsIndex);
@@ -34,8 +36,8 @@ describe("rebuilt executive homepage navigation", () => {
     expect(homeSource).not.toContain('path: "/agent-dashboard"');
   });
 
-  it("keeps retired strategic routes absent while preserving the document-derived project card", () => {
-    expect(appSource).not.toContain('path="/project-management"');
+  it("keeps the new project-management orchestrator while preserving the document-derived project card", () => {
+    expect(appSource).toContain('<Route path="/project-management" component={ProjectManagementPage} />');
     expect(appSource).not.toContain('path="/fact-sheet"');
     expect(appSource).toContain('<Route path="/knowledge-analysis"');
     expect(appSource).toContain('<Route path="/sara" component={SaraPage} />');

@@ -26,29 +26,30 @@ const statusMeta = {
   missing: { label: "غير مسجل", icon: CircleDot, badge: "border-rose-200 bg-rose-50 text-rose-700", panel: "border-rose-100 bg-rose-50/25" },
 } as const;
 
-export default function ProjectLaunchGatePage() {
+export default function ProjectLaunchGatePage({ embedded = false, initialProjectId = null }: { embedded?: boolean; initialProjectId?: number | null } = {}) {
   const { projectId: projectIdParam } = useParams<{ projectId: string }>();
   const [, navigate] = useLocation();
-  const projectId = Number(projectIdParam);
+  const routeProjectId = Number(projectIdParam);
+  const projectId = Number.isInteger(routeProjectId) && routeProjectId > 0 ? routeProjectId : Number(initialProjectId);
   const gateQuery = trpc.projectLaunchGate.get.useQuery(
     { projectId },
     { enabled: Number.isInteger(projectId) && projectId > 0, retry: false },
   );
 
   if (!Number.isInteger(projectId) || projectId <= 0) {
-    return <div dir="rtl" className="flex min-h-screen items-center justify-center bg-[#f4f6f4] p-5"><Card className="w-full max-w-lg rounded-3xl p-8 text-center"><AlertTriangle className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-4 text-xl font-black">تعذر تحديد المشروع</h1><Button className="mt-6 rounded-xl" onClick={() => navigate("/como-next?tab=work-files")}>العودة إلى المكتب التنفيذي</Button></Card></div>;
+    return <div dir="rtl" className={`flex items-center justify-center bg-[#f4f6f4] p-5 ${embedded ? "min-h-[420px]" : "min-h-screen"}`}><Card className="w-full max-w-lg rounded-3xl p-8 text-center"><AlertTriangle className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-4 text-xl font-black">اختر المشروع أولًا</h1><p className="mt-2 text-sm text-slate-500">بوابة التأسيس تقرأ حالة مشروع محدد ولا تعرض حالة عامة.</p>{!embedded ? <Button className="mt-6 rounded-xl" onClick={() => navigate("/project-management")}>إدارة المشاريع</Button> : null}</Card></div>;
   }
   if (gateQuery.isLoading) return <div dir="rtl" className="min-h-screen bg-[#f4f6f4] p-6"><div className="mx-auto max-w-6xl animate-pulse space-y-5"><div className="h-64 rounded-[36px] bg-slate-200" /><div className="grid gap-5 lg:grid-cols-2">{[1,2,3,4].map(item => <div key={item} className="h-72 rounded-[30px] bg-slate-200" />)}</div></div></div>;
   if (gateQuery.isError || !gateQuery.data) return <div dir="rtl" className="flex min-h-screen items-center justify-center bg-[#f4f6f4] p-5"><Card className="w-full max-w-lg rounded-3xl p-8 text-center"><LockKeyhole className="mx-auto h-8 w-8 text-rose-600" /><h1 className="mt-4 text-xl font-black">تعذر فتح بوابة التأسيس</h1><p className="mt-2 text-sm text-slate-500">{gateQuery.error?.message || "البيانات غير متاحة."}</p><Button variant="outline" className="mt-6 rounded-xl bg-white" onClick={() => navigate(`/como-next/projects/${projectId}`)}>العودة إلى ملف المشروع</Button></Card></div>;
 
   const gate = gateQuery.data;
   return <div dir="rtl" className="w-full min-w-0 max-w-full overflow-x-hidden min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e8_0,#f7faf8_36%,#eef4f3_100%)] text-slate-900">
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
+    {!embedded ? <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-7">
         <button type="button" onClick={() => navigate(`/como-next/projects/${projectId}`)} className="inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft className="h-4 w-4" />ملف المشروع</button>
         <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700"><ShieldCheck className="ml-1 h-3.5 w-3.5" />مصادر المشروع الفعلية</Badge><Badge variant="outline" className="rounded-full bg-white">قراءة فقط</Badge></div>
       </div>
-    </header>
+    </header> : null}
 
     <main className="mx-auto max-w-6xl px-4 py-7 sm:px-7 sm:py-10">
       <section className="relative overflow-hidden rounded-[38px] bg-[#102d36] text-white shadow-[0_30px_90px_rgba(15,36,45,.20)]">

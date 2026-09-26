@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import { useLocation } from "wouter";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
@@ -99,9 +99,20 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const requestedProjectId = useMemo(() => {
+    if (mode === "test") return null;
+    const value = Number(new URLSearchParams(window.location.search).get("projectId"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }, [mode]);
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
   const financingScenario = (projectQuery.data as any)?.financingScenario;
   const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" || financingScenario === "joint_venture_land_for_units" ? financingScenario : undefined;
+
+  useEffect(() => {
+    if (requestedProjectId && requestedProjectId !== selectedProjectId) {
+      setSelectedProjectId(requestedProjectId);
+    }
+  }, [requestedProjectId, selectedProjectId, setSelectedProjectId]);
 
   useEffect(() => {
     setActiveTab((currentTab) => currentTab ? getFallbackFinancialStudiesTab(currentTab, projectType) : null);
@@ -129,7 +140,13 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   // project so the project picker never makes the three consolidated reports vanish.
   // Project-specific cards remain disabled until the project is selected.
   const isTestMode = mode === "test";
-  const basePath = isTestMode && testProjectId ? `/test-project?projectId=${testProjectId}` : isTestMode ? "/test-project" : "/bateekha";
+  const basePath = isTestMode && testProjectId
+    ? `/test-project?projectId=${testProjectId}`
+    : isTestMode
+      ? "/test-project"
+      : selectedProjectId
+        ? `/bateekha?projectId=${selectedProjectId}`
+        : "/bateekha";
   const visibleTabs = TABS.filter((tab) =>
     isFinancialStudiesTabVisible(tab.id, projectType) && (!isTestMode || tab.projectScoped)
   );
@@ -141,7 +158,9 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
     setActiveTab(tab.id);
     const tabPath = isTestMode && testProjectId
       ? `/test-project?projectId=${testProjectId}&tab=${tab.id}`
-      : `${basePath}?tab=${tab.id}`;
+      : selectedProjectId
+        ? `/bateekha?projectId=${selectedProjectId}&tab=${tab.id}`
+        : `/bateekha?tab=${tab.id}`;
     navigate(withReturnPath(tabPath, basePath));
   };
 

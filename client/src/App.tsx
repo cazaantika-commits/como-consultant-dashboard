@@ -78,6 +78,7 @@ import ComoNextTodayPage from "./pages/ComoNextTodayPage";
 import SaraPage from "./pages/SaraPage";
 import ComoNextProjectPage from "./pages/ComoNextProjectPage";
 import ComoNextProjectOpeningPage from "./pages/ComoNextProjectOpeningPage";
+import ProjectManagementPage from "./pages/ProjectManagementPage";
 
 function Router() {
   return (
@@ -160,6 +161,7 @@ function Router() {
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/test-project" component={TestProjectPage} />
+      <Route path="/project-management" component={ProjectManagementPage} />
       <Route path="/como-next/projects/:id" component={ComoNextProjectPage} />
       <Route path="/como-next/project-opening" component={ComoNextProjectOpeningPage} />
       <Route path="/como-next" component={ComoNextTodayPage} />
