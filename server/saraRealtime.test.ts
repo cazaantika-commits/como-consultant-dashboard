@@ -55,7 +55,7 @@ describe("Sara Realtime architecture", () => {
       return new Response(JSON.stringify({ value: "ek_test", expires_at: 123, session: { id: "sess_1", model: SARA_REALTIME_MODEL } }), { status: 200 });
     });
     globalThis.fetch = fetchMock as typeof fetch;
-    await expect(createSaraRealtimeClientSecret("server-secret", abdulrahman)).resolves.toEqual({
+    await expect(createSaraRealtimeClientSecret("  server-secret\n", abdulrahman)).resolves.toEqual({
       clientSecret: "ek_test",
       expiresAt: 123,
       sessionId: "sess_1",
@@ -87,5 +87,6 @@ describe("Sara Realtime architecture", () => {
     expect(routerSource).toContain("await verifyToken(input.token)");
     expect(routerSource).toContain("externalActionsEnabled: false");
     expect(routerSource).toContain("manusDelegationConfigured: false");
+    expect(routerSource).toContain("process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY");
   });
 });

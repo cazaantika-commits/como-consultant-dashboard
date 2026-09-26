@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 describe("OpenAI Realtime project credential", () => {
   it("can read the configured Realtime model without exposing the key", async () => {
-    const apiKey = process.env.OPENAI_API_KEY;
-    expect(apiKey, "OPENAI_API_KEY must be configured in the WebDev runtime").toBeTruthy();
+    const apiKey = (process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY || "").trim();
+    expect(apiKey, "COMO_OPENAI_REALTIME_API_KEY must be configured in the WebDev runtime").toBeTruthy();
 
     const response = await fetch("https://api.openai.com/v1/models/gpt-realtime-2.1", {
       headers: { Authorization: `Bearer ${apiKey}` },

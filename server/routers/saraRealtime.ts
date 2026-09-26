@@ -19,6 +19,10 @@ import {
 const tokenInput = z.object({ token: z.string().trim().min(1).max(256) });
 const realtimeToolName = z.enum(["lookup_command_center", "lookup_executive_workspace"]);
 
+function getSaraOpenAiKey() {
+  return process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY || "";
+}
+
 function publicFailure(reason: unknown, fallback: string) {
   if (reason instanceof TRPCError) throw reason;
   const message = reason instanceof Error ? reason.message : fallback;
@@ -31,7 +35,7 @@ export const saraRealtimeRouter = router({
     return {
       identity: "Sara" as const,
       member: { memberId: member.memberId, nameAr: member.nameAr, role: member.role },
-      realtimeConfigured: Boolean(process.env.OPENAI_API_KEY),
+      realtimeConfigured: Boolean(getSaraOpenAiKey().trim()),
       liveAvatarConfigured: Boolean(ENV.liveAvatarApiKey),
       avatarId: SARA_LIVE_AVATAR_ID,
       model: SARA_REALTIME_MODEL,
@@ -44,7 +48,7 @@ export const saraRealtimeRouter = router({
   createSession: publicProcedure.input(tokenInput).mutation(async ({ input }) => {
     const member = await verifyToken(input.token);
     try {
-      return await createSaraRealtimeClientSecret(process.env.OPENAI_API_KEY || "", {
+      return await createSaraRealtimeClientSecret(getSaraOpenAiKey(), {
         memberId: member.memberId,
         nameAr: member.nameAr,
         role: member.role,

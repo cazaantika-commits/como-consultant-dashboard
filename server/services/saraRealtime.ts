@@ -96,14 +96,15 @@ export function buildSaraRealtimeSession(member: SaraMember) {
 }
 
 export async function createSaraRealtimeClientSecret(apiKey: string, member: SaraMember) {
-  if (!apiKey) {
+  const normalizedApiKey = apiKey.trim();
+  if (!normalizedApiKey) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لم يتم ربط OpenAI Realtime بالتطبيق" });
   }
   const safetyIdentifier = createHash("sha256").update(`como-sara:${member.memberId}`).digest("hex");
   const response = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${normalizedApiKey}`,
       "Content-Type": "application/json",
       "OpenAI-Safety-Identifier": safetyIdentifier,
     },
