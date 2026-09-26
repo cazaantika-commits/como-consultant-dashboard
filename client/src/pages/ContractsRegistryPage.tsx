@@ -81,7 +81,10 @@ export default function ContractsRegistryPage() {
 
   // State
   const [activeTab, setActiveTab] = useState("contracts");
-  const [filterProject, setFilterProject] = useState<string>("all");
+  const [filterProject, setFilterProject] = useState<string>(() => {
+    const requested = Number(new URLSearchParams(window.location.search).get("projectId"));
+    return Number.isInteger(requested) && requested > 0 ? String(requested) : "all";
+  });
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");

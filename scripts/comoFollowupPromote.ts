@@ -451,6 +451,7 @@ async function main() {
         targetId = Number(result.insertId);
         created = true;
       }
+      await updateStageTarget(connection, Number(batch.id), "meetingParticipants", row.source_record_id, targetId);
       bump("meetingParticipants", created);
     }
 
@@ -471,6 +472,7 @@ async function main() {
         targetId = Number(result.insertId);
         created = true;
       }
+      await updateStageTarget(connection, Number(batch.id), "meetingAgendaItems", row.source_record_id, targetId);
       bump("meetingAgendaItems", created);
     }
     console.log(`[promotion] meetings=${stats.meetings?.resolved || 0} agenda=${stats.meetingAgendaItems?.resolved || 0}`);

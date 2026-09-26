@@ -17,17 +17,24 @@ import {
   CheckCircle2,
   ChevronLeft,
   CircleAlert,
+  ClipboardList,
   Clock3,
+  DraftingCompass,
+  ExternalLink,
   FileCheck2,
+  FileSignature,
   FileStack,
   Landmark,
   Link2,
+  ListChecks,
   LockKeyhole,
   Mail,
   MapPinned,
+  Route,
   Scale,
   ShieldCheck,
   Sparkles,
+  TimerReset,
   UsersRound,
 } from "lucide-react";
 
@@ -40,6 +47,27 @@ const workFileStatus: Record<string, { label: string; className: string }> = {
   closed: { label: "مغلق", className: "border-slate-200 bg-slate-100 text-slate-600" },
   cancelled: { label: "ملغي", className: "border-slate-200 bg-slate-50 text-slate-500" },
 };
+
+const contractStatusLabels: Record<string, string> = {
+  draft: "مسودة",
+  active: "نشط",
+  expired: "منتهي",
+  terminated: "منهى",
+  renewed: "مجدد",
+  pending: "بانتظار الاعتماد",
+};
+
+const lifecycleStatusLabels: Record<string, string> = {
+  not_started: "لم يبدأ",
+  in_progress: "قيد التنفيذ",
+  completed: "مكتمل في المصدر",
+  submitted: "مقدم في المصدر",
+  locked: "مقفل",
+};
+
+function ReadOnlySourceBadge() {
+  return <Badge variant="outline" className="rounded-full border-[#b7d5d2] bg-[#f2faf8] text-[#216b66]">سجل المصدر — قراءة فقط</Badge>;
+}
 
 function formatDate(value: string | null | undefined) {
   if (!value) return "—";
@@ -94,6 +122,7 @@ export default function ComoNextProjectPage() {
     { label: "المساحة الطابقية", value: formatArea(data.project.gfaSqm, "م²") || formatArea(data.project.gfaSqft, "قدم²"), icon: Building2 },
   ].filter(item => item.value);
   const visibleMemory = showAllMemory ? data.reviewedMemory : data.reviewedMemory.slice(0, 8);
+  const sourceRegister = data.sourceRegister;
 
   const openWorkFile = (workFileId: number) => navigate(`/como-next?tab=work-files&workFileId=${workFileId}`);
 
@@ -135,6 +164,41 @@ export default function ComoNextProjectPage() {
         <Card className="rounded-[30px] border-slate-200 bg-white p-6 shadow-sm"><div className="mb-5 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><Link2 className="h-5 w-5" /></div><div><p className="text-[10px] font-black text-slate-500">المسار الذي قطعه المشروع</p><h2 className="text-lg font-black">دورة الحياة الموثقة</h2></div></div><NumberedList items={data.dossier.lifecyclePhases} /></Card>
         <Card className="rounded-[30px] border-teal-100 bg-[#f6fbfa] p-6 shadow-sm"><div className="mb-5 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-100 text-teal-800"><Sparkles className="h-5 w-5" /></div><div><p className="text-[10px] font-black text-teal-700">موضوعات لا تزال مفتوحة</p><h2 className="text-lg font-black">ما الذي يستحق الانتباه لاحقًا؟</h2></div></div>{data.dossier.openThreads.length ? <NumberedList items={data.dossier.openThreads} tone="teal" /> : <p className="rounded-2xl bg-white p-4 text-sm text-slate-500">لا توجد موضوعات مفتوحة مثبتة في الذاكرة المراجعة.</p>}</Card>
       </section> : null}
+
+      <section className="mt-8">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-black text-[#216b66]">مصدر حقيقة واحد من دون نسخ السجلات</p>
+            <h2 className="mt-1 text-2xl font-black">العقد والتسليم والتصميم ودورة المشروع</h2>
+            <p className="mt-1 max-w-3xl text-sm leading-7 text-slate-500">هذه مرآة قراءة فقط لما هو مسجل في مصادر المشروع الحالية. لا تغيّر عقدًا أو موعدًا، ولا تنشئ إجراءً، ولا تعتبر «مقدم» مساويًا لـ«متحقق».</p>
+          </div>
+          <ReadOnlySourceBadge />
+        </div>
+
+        <div className="grid gap-5 xl:grid-cols-2">
+          <Card className="rounded-[30px] border-sky-100 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><FileSignature className="h-5 w-5" /></div><div><p className="text-[10px] font-black text-sky-700">السجل التعاقدي</p><h3 className="text-lg font-black">العقود وتسليماتها</h3></div></div>
+              <Button variant="outline" size="sm" className="rounded-xl bg-white text-xs" onClick={() => navigate(`/contracts?projectId=${projectId}`)}>فتح المصدر <ExternalLink className="mr-1 h-3.5 w-3.5" /></Button>
+            </div>
+            <div className="mt-5 space-y-3">
+              {sourceRegister.contracts.length ? sourceRegister.contracts.map((contract: any) => <div key={contract.id} className="rounded-2xl border border-slate-100 bg-[#fbfbf9] p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-black text-slate-900">{contract.title}</p><p className="mt-1 text-[10px] text-slate-500">{contract.contractTypeName || "نوع غير محدد"}{contract.contractNumber ? ` · ${contract.contractNumber}` : ""}</p></div><Badge variant="outline" className="rounded-full bg-white">{contractStatusLabels[contract.contractStatus] || contract.contractStatus}</Badge></div>{contract.partyA || contract.partyB ? <p className="mt-3 text-xs leading-6 text-slate-600">{[contract.partyA, contract.partyB].filter(Boolean).join(" ↔ ")}</p> : null}<div className="mt-3 flex flex-wrap gap-2 text-[10px] text-slate-500">{contract.startDate ? <span>البداية: {contract.startDate}</span> : null}{contract.endDate ? <span>النهاية: {contract.endDate}</span> : null}{contract.hasProtectedFile ? <span className="font-bold text-emerald-700">ملف مرفق</span> : <span>لا ملف مرفق</span>}</div></div>) : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">لا يوجد عقد مسجل لهذا المشروع في مصدر العقود.</div>}
+            </div>
+            <div className="mt-4 border-t border-slate-100 pt-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-emerald-700" /><p className="text-sm font-black">التسليمات والاستثناءات</p></div><Button variant="ghost" size="sm" className="h-8 text-xs text-[#216b66]" onClick={() => navigate(`/contract-deliverables?projectId=${projectId}`)}>فتح السجل</Button></div>{sourceRegister.deliverables.length ? <div className="mt-3 space-y-2">{sourceRegister.deliverables.slice(0, 5).map((item: any) => <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 p-3"><div><p className="text-xs font-bold text-slate-800">{item.title}</p><p className="mt-1 text-[10px] text-slate-500">{item.contractTitle}{item.dueDate ? ` · ${item.dueDate}` : ""}</p></div><Badge variant="outline" className={item.isException ? "rounded-full border-rose-200 bg-rose-50 text-rose-700" : "rounded-full bg-white"}>{item.isOverdue ? "متأخر بحسب التاريخ" : item.status}</Badge></div>)}</div> : <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">لا توجد تسليمات مسجلة؛ لا يفترض النظام وجودها.</p>}</div>
+          </Card>
+
+          <Card className="rounded-[30px] border-violet-100 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><DraftingCompass className="h-5 w-5" /></div><div><p className="text-[10px] font-black text-violet-700">التعيين والتصميم</p><h3 className="text-lg font-black">نطاق الاستشاري والتصاريح</h3></div></div><Button variant="outline" size="sm" className="rounded-xl bg-white text-xs" onClick={() => navigate(`/consultant-appointment-pack?projectId=${projectId}`)}>فتح المصدر <ExternalLink className="mr-1 h-3.5 w-3.5" /></Button></div>
+            {sourceRegister.consultantScope.currentRequirementSet ? <div className="mt-5 rounded-2xl border border-violet-100 bg-[#fbfaff] p-4"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="font-black text-slate-900">{sourceRegister.consultantScope.currentRequirementSet.title}</p><p className="mt-1 text-[10px] text-slate-500">المراجعة {sourceRegister.consultantScope.currentRequirementSet.revisionNo} · {sourceRegister.consultantScope.currentRequirementSet.itemCount} بندًا · {sourceRegister.consultantScope.currentRequirementSet.requiredCount} مطلوبًا</p></div><Badge variant="outline" className={sourceRegister.consultantScope.currentRequirementSet.status === "APPROVED" ? "rounded-full border-emerald-200 bg-emerald-50 text-emerald-700" : "rounded-full border-amber-200 bg-amber-50 text-amber-800"}>{sourceRegister.consultantScope.currentRequirementSet.status === "APPROVED" ? "معتمد" : "مسودة في المصدر"}</Badge></div><div className="mt-3 flex flex-wrap gap-2">{sourceRegister.consultantScope.currentRequirementSet.workstreams.map((stream: any) => <span key={stream.workstream} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600">{stream.workstream}: {stream.itemCount}</span>)}</div><p className="mt-3 text-[10px] text-slate-500">مسودات طلب العروض الداخلية: {sourceRegister.consultantScope.rfpDrafts.length} · لا إرسال تلقائي.</p></div> : <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">لا توجد قائمة نطاق مسجلة لهذا المشروع.</div>}
+            <div className="mt-4 border-t border-slate-100 pt-4"><div className="flex items-center gap-2"><FileCheck2 className="h-4 w-4 text-violet-700" /><p className="text-sm font-black">التصميم والتصاريح</p></div>{sourceRegister.permits ? <div className="mt-3 grid gap-2 sm:grid-cols-2">{[["المعماري", sourceRegister.permits.architecturalDesignStatus], ["الهندسي", sourceRegister.permits.engineeringDesignStatus], ["رخصة البناء", sourceRegister.permits.buildingPermitStatus], ["اعتماد البلدية", sourceRegister.permits.municipalityDesignApprovalStatus]].map(([label, value]) => <div key={label as string} className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] font-bold text-slate-400">{label}</p><p className="mt-1 text-xs font-black text-slate-700">{value || "غير مسجل"}</p></div>)}</div> : <p className="mt-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">لا يوجد سجل تصميم وتصاريح لهذا المشروع؛ لم تُختلق حالة بديلة.</p>}</div>
+          </Card>
+
+          <Card className="rounded-[30px] border-emerald-100 bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><Route className="h-5 w-5" /></div><div><p className="text-[10px] font-black text-emerald-700">الدورة والامتثال والبرنامج</p><h3 className="text-lg font-black">موضع المشروع في السجل التشغيلي</h3></div></div><Button variant="outline" size="sm" className="rounded-xl bg-white text-xs" onClick={() => navigate(sourceRegister.lifecycle.sourcePath)}>فتح الجدول <ExternalLink className="mr-1 h-3.5 w-3.5" /></Button></div>
+            {sourceRegister.lifecycle.services.length ? <div className="mt-5 grid gap-4 lg:grid-cols-[.9fr_1.1fr]"><div className="space-y-3"><div className="rounded-2xl border border-emerald-100 bg-[#f6fbfa] p-4"><p className="text-[10px] font-black text-emerald-700">المرحلة الحالية بحسب المصدر</p><p className="mt-2 text-lg font-black text-slate-900">{sourceRegister.lifecycle.currentStage?.stageName || sourceRegister.lifecycle.currentStage?.stageCode || "غير محددة"}</p><p className="mt-2 text-xs text-slate-500">{sourceRegister.lifecycle.services.length} خدمة مسجلة · {sourceRegister.lifecycle.documentSummary.reduce((sum: number, item: any) => sum + item.documentCount, 0)} مستندات مرحلة</p></div><div className="grid gap-2 sm:grid-cols-2">{sourceRegister.lifecycle.stages.map((stage: any) => <div key={stage.stageCode} className="rounded-xl border border-slate-100 bg-slate-50 p-3"><div className="flex items-center justify-between gap-2"><p className="text-xs font-bold text-slate-800">{stage.stageName || stage.stageCode}</p><span className="text-[10px] text-slate-500">{stage.completedCount}/{stage.serviceCount}</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-emerald-500" style={{ width: `${stage.serviceCount ? Math.round((stage.completedCount / stage.serviceCount) * 100) : 0}%` }} /></div></div>)}</div></div><div><div className="mb-3 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><TimerReset className="h-4 w-4 text-amber-700" /><p className="text-sm font-black">استثناءات تحتاج انتباهًا</p></div><Badge variant="outline" className="rounded-full bg-white">{sourceRegister.lifecycle.scheduleExceptions.length}</Badge></div><div className="space-y-2">{sourceRegister.lifecycle.scheduleExceptions.length ? sourceRegister.lifecycle.scheduleExceptions.slice(0, 8).map((service: any) => <div key={service.id} className="rounded-xl border border-slate-100 bg-[#fbfbf9] p-3"><div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-bold text-slate-800">{service.serviceName || service.serviceCode}</p><p className="mt-1 text-[10px] text-slate-500">{service.plannedDueDate ? `الاستحقاق المسجل: ${service.plannedDueDate}` : "لا تاريخ استحقاق"}{service.externalParty ? ` · ${service.externalParty}` : ""}</p></div><Badge variant="outline" className={service.isOverdue ? "rounded-full border-rose-200 bg-rose-50 text-rose-700" : "rounded-full border-amber-200 bg-amber-50 text-amber-800"}>{service.isOverdue ? "متأخر بحسب التاريخ" : lifecycleStatusLabels[service.operationalStatus] || service.operationalStatus}</Badge></div>{service.mandatoryGapCount ? <p className="mt-2 text-[10px] font-bold text-rose-700">{service.mandatoryGapCount} متطلب إلزامي غير مكتمل في المصدر</p> : null}</div>) : <div className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">لا توجد استثناءات مسجلة.</div>}</div></div></div> : <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-500">لا توجد خدمات دورة حياة مسجلة لهذا المشروع؛ الملف لا يفترض مرحلة من تلقاء نفسه.</div>}
+          </Card>
+        </div>
+      </section>
 
       <section className="mt-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black text-[#1f6478]">غرف العمل داخل المشروع</p><h2 className="mt-1 text-2xl font-black">ملفات العمل النشطة</h2><p className="mt-1 text-sm text-slate-500">كل موضوع يحتفظ بسؤاله وقراراته وإجراءاته ومراسلاته واجتماعاته، لكنه يبقى جزءًا من هذا المشروع.</p></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{activeWorkFiles.length}</bdi> نشط</Badge></div>

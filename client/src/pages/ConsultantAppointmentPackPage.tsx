@@ -19,7 +19,10 @@ function SourceTag({ children }: { children: React.ReactNode }) {
 
 export default function ConsultantAppointmentPackPage() {
   const [, navigate] = useLocation();
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const [projectId, setProjectId] = useState<number | null>(() => {
+    const requested = Number(new URLSearchParams(window.location.search).get("projectId"));
+    return Number.isInteger(requested) && requested > 0 ? requested : null;
+  });
   const { data: projects = [], isLoading: isLoadingProjects } = trpc.projects.list.useQuery();
   const packQuery = trpc.consultantAppointmentPack.get.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });
   const reviewQuery = trpc.consultantProcurement.getPackReview.useQuery({ projectId: projectId ?? 0 }, { enabled: projectId !== null });

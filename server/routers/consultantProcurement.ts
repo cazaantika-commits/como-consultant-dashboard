@@ -136,10 +136,12 @@ export const consultantProcurementRouter = router({
     return { success: true, id: Number(result[0].insertId) };
   }),
 
-  updateDeliverableStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["not_started", "submitted", "accepted", "returned", "overdue"]) })).mutation(async ({ input }) => {
+  updateDeliverableStatus: protectedProcedure.input(z.object({ projectId: z.number().int().positive(), contractId: z.number().int().positive(), id: z.number().int().positive(), status: z.enum(["not_started", "submitted", "accepted", "returned", "overdue"]) })).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new Error("قاعدة البيانات غير متاحة");
-    await db.update(contractDeliverables).set({ status: input.status }).where(eq(contractDeliverables.id, input.id));
+    const [deliverable] = await db.select({ id: contractDeliverables.id }).from(contractDeliverables).where(and(eq(contractDeliverables.id, input.id), eq(contractDeliverables.projectId, input.projectId), eq(contractDeliverables.contractId, input.contractId))).limit(1);
+    if (!deliverable) throw new Error("التسليم المختار لا يرتبط بالعقد والمشروع المحددين.");
+    await db.update(contractDeliverables).set({ status: input.status }).where(and(eq(contractDeliverables.id, input.id), eq(contractDeliverables.projectId, input.projectId), eq(contractDeliverables.contractId, input.contractId)));
     return { success: true };
   }),
 });

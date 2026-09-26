@@ -101,7 +101,9 @@ describe("COMO Next meeting workspace reads", () => {
     expect(workspace.meeting).toMatchObject({ projectId: 1, workFileId: 60017, meetingStatus: "completed" });
     expect(workspace.participants).toHaveLength(2);
     expect(workspace.agenda).toHaveLength(7);
-    expect(workspace.sources).toEqual([]);
+    expect(workspace.sources).toHaveLength(2);
+    expect(workspace.sources.every(source => source.sourceStatus === "archived")).toBe(true);
+    expect(workspace.sources.map(source => source.visibility).sort()).toEqual(["internal_only", "meeting_record"]);
     expect(workspace.safeguards).toEqual({ automaticOutcomeCreation: false, externalSending: false, recordingActive: false, transcriptionActive: false });
   });
 

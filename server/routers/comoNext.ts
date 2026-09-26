@@ -493,8 +493,7 @@ export const comoNextRouter = router({
       const events = await getRecentWorkFileEvents(input.workFileId);
       const memoryResult = await db.execute(sql`
         SELECT id, memory_type AS memoryType, entry_type AS entryType, title, body,
-          source_status AS sourceStatus, source_url AS sourceUrl,
-          source_file_key AS sourceFileKey, source_file_name AS sourceFileName,
+          source_status AS sourceStatus, source_file_name AS sourceFileName,
           mime_type AS mimeType, is_current AS isCurrent, occurred_at AS occurredAt
         FROM como_next_work_memory
         WHERE work_file_id = ${input.workFileId}

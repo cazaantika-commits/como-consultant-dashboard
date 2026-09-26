@@ -189,7 +189,11 @@ type RowData = {
 export default function WorkSchedulePage({ initialProjectId, onProjectChange }: { initialProjectId?: number | null; onProjectChange?: (id: number | null) => void } = {}) {
   const { isReadOnly } = useAuth();
   const { selectedProjectId: ctxProjectId, setSelectedProjectId } = useProjectContext();
-  const selectedProjectId = initialProjectId ?? ctxProjectId;
+  const requestedProjectId = useMemo(() => {
+    const requested = Number(new URLSearchParams(window.location.search).get("projectId"));
+    return Number.isInteger(requested) && requested > 0 ? requested : null;
+  }, []);
+  const selectedProjectId = initialProjectId ?? requestedProjectId ?? ctxProjectId;
   const handleSetProjectId = (id: number | null) => {
     setSelectedProjectId(id);
     onProjectChange?.(id);

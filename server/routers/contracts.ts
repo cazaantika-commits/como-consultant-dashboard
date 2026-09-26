@@ -173,7 +173,7 @@ export const contractsRouter = router({
       
       if (input?.projectId) conditions.push(eq(projectContracts.projectId, input.projectId));
       if (input?.contractTypeId) conditions.push(eq(projectContracts.contractTypeId, input.contractTypeId));
-      if (input?.status) conditions.push(eq(projectContracts.status, input.status as any));
+      if (input?.status) conditions.push(eq(projectContracts.contractStatus, input.status as any));
 
       const contracts = await db.select().from(projectContracts)
         .where(and(...conditions))
@@ -193,6 +193,8 @@ export const contractsRouter = router({
 
       return contracts.filter(c => projectsList.some(p => p.id === c.projectId)).map(c => ({
         ...c,
+        status: c.contractStatus,
+        analysisStatus: c.contractAnalysisStatus,
         contractType: types.find(t => t.id === c.contractTypeId),
         project: projectsList.find(p => p.id === c.projectId),
       }));
@@ -212,7 +214,13 @@ export const contractsRouter = router({
       const [project] = await db.select().from(projects)
         .where(eq(projects.id, contract.projectId));
 
-      return { ...contract, contractType: type, project };
+      return {
+        ...contract,
+        status: contract.contractStatus,
+        analysisStatus: contract.contractAnalysisStatus,
+        contractType: type,
+        project,
+      };
     }),
 
   add: protectedProcedure
@@ -250,7 +258,7 @@ export const contractsRouter = router({
         signDate: input.signDate || null,
         startDate: input.startDate || null,
         endDate: input.endDate || null,
-        status: (input.status as any) || "draft",
+        contractStatus: (input.status as any) || "draft",
         notes: input.notes || null,
         fileUrl: input.fileUrl || null,
         fileKey: input.fileKey || null,
@@ -282,11 +290,12 @@ export const contractsRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      const { id, ...updates } = input;
+      const { id, status, ...updates } = input;
       const cleanUpdates: any = {};
       for (const [key, value] of Object.entries(updates)) {
         if (value !== undefined) cleanUpdates[key] = value;
       }
+      if (status !== undefined) cleanUpdates.contractStatus = status;
       
       await db.update(projectContracts)
         .set(cleanUpdates)
@@ -353,7 +362,7 @@ export const contractsRouter = router({
 
       // Mark as analyzing
       await db.update(projectContracts)
-        .set({ analysisStatus: "analyzing" })
+        .set({ contractAnalysisStatus: "analyzing" })
         .where(eq(projectContracts.id, input.contractId));
 
       try {
@@ -422,7 +431,7 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
         // Save analysis
         await db.update(projectContracts)
           .set({
-            analysisStatus: "completed",
+            contractAnalysisStatus: "completed",
             analysisSummary: analysis.summary || null,
             analysisKeyDates: JSON.stringify(analysis.keyDates || []),
             analysisPenalties: JSON.stringify(analysis.penalties || []),
@@ -439,7 +448,7 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
         return { success: true, analysis };
       } catch (err: any) {
         await db.update(projectContracts)
-          .set({ analysisStatus: "failed" })
+          .set({ contractAnalysisStatus: "failed" })
           .where(eq(projectContracts.id, input.contractId));
         throw new Error(`فشل تحليل العقد: ${err.message}`);
       }
@@ -526,10 +535,10 @@ ${contract.contractValue ? `قيمة العقد: ${contract.contractValue} ${con
     const allContracts = await db.select().from(projectContracts);
     
     const total = allContracts.length;
-    const active = allContracts.filter(c => c.status === "active").length;
-    const analyzed = allContracts.filter(c => c.analysisStatus === "completed").length;
-    const pending = allContracts.filter(c => c.analysisStatus === "not_analyzed").length;
-    const expired = allContracts.filter(c => c.status === "expired").length;
+    const active = allContracts.filter(c => c.contractStatus === "active").length;
+    const analyzed = allContracts.filter(c => c.contractAnalysisStatus === "completed").length;
+    const pending = allContracts.filter(c => c.contractAnalysisStatus === "not_analyzed").length;
+    const expired = allContracts.filter(c => c.contractStatus === "expired").length;
 
     return { total, active, analyzed, pending, expired };
   }),

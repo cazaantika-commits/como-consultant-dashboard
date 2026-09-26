@@ -150,13 +150,6 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
     onSuccess: () => { toast({ title: "تم الحذف" }); setSelectedId(null); utils.internalMessages.getAll.invalidate(); },
   });
 
-  const convertMutation = trpc.internalMessages.convertToTask.useMutation({
-    onSuccess: (data) => {
-      if (data.success) { toast({ title: `تم تحويلها لمهمة: ${data.taskRef}` }); utils.internalMessages.getAll.invalidate(); }
-      else toast({ title: "فشل التحويل", variant: "destructive" });
-    },
-  });
-
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -367,9 +360,6 @@ export default function InternalMessages({ ccTokenProp, memberIdProp }: { ccToke
                   <h3 className="font-bold text-base text-foreground flex-1">{selectedMsg.subject}</h3>
                   <div className="flex gap-1 shrink-0">
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleReply(selectedMsg)} title="رد"><Reply className="w-3.5 h-3.5" /></Button>
-                    {!selectedMsg.isConvertedToTask && (
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" onClick={() => convertMutation.mutate({ ccToken, id: selectedMsg.id })} title="تحويل لمهمة"><CheckSquare className="w-3.5 h-3.5" /></Button>
-                    )}
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => archiveMutation.mutate({ ccToken, id: selectedMsg.id, archive: !selectedMsg.is_archived })} title="أرشفة">
                       {selectedMsg.is_archived ? <ArchiveX className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5" />}
                     </Button>

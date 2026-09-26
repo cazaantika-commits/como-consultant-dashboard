@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Express } from "express";
 import { asc, eq } from "drizzle-orm";
-import { comoNextDocumentChunks, comoNextDocuments, comoNextWorkMemoryDocuments } from "../drizzle/schema";
+import { comoNextDocumentChunks, comoNextDocuments, comoNextMeetingSources, comoNextMeetings, comoNextWorkMemoryDocuments } from "../drizzle/schema";
 import { getDb } from "./db";
 import { requireProjectAccess } from "./services/comoNextCommands";
 import { storageGet } from "./storage";
@@ -31,7 +31,7 @@ export function registerComoNextDocumentRoute(app: Express) {
         res.status(503).send("Database unavailable");
         return;
       }
-      const links = await db
+      const memoryLinks = await db
         .select({
           projectId: comoNextWorkMemoryDocuments.projectId,
           storageKey: comoNextDocuments.storageKey,
@@ -43,6 +43,20 @@ export function registerComoNextDocumentRoute(app: Express) {
         .from(comoNextWorkMemoryDocuments)
         .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextWorkMemoryDocuments.documentId))
         .where(eq(comoNextWorkMemoryDocuments.documentId, documentId));
+      const meetingLinks = await db
+        .select({
+          projectId: comoNextMeetings.projectId,
+          storageKey: comoNextDocuments.storageKey,
+          fileName: comoNextDocuments.fileName,
+          mimeType: comoNextDocuments.mimeType,
+          byteSize: comoNextDocuments.byteSize,
+          sha256: comoNextDocuments.sha256,
+        })
+        .from(comoNextMeetingSources)
+        .innerJoin(comoNextMeetings, eq(comoNextMeetings.id, comoNextMeetingSources.meetingId))
+        .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextMeetingSources.sourceDocumentId))
+        .where(eq(comoNextMeetingSources.sourceDocumentId, documentId));
+      const links = [...memoryLinks, ...meetingLinks];
       if (!links.length) {
         res.status(404).send("Document not found");
         return;

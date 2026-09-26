@@ -283,7 +283,7 @@ export const internalMessagesRouter = router({
       }
     }),
 
-  // Convert message to task
+  // Legacy task conversion is retired. New work must be created inside a project work file.
   convertToTask: publicProcedure
     .input(z.object({
       ccToken: z.string(),
@@ -291,39 +291,11 @@ export const internalMessagesRouter = router({
       taskRef: z.string().optional(),
     }))
     .mutation(async ({ input }) => {
-      const memberId = await verifyCCToken(input.ccToken);
-      const db = await getDb();
-      if (!db) return { success: false };
-      try {
-        // Get the message
-        const result = await db.execute(
-          sql`SELECT * FROM internal_messages WHERE id = ${input.id}`
-        );
-        const rows = (result[0] as unknown as any[]) || [];
-        if (!rows.length) throw new TRPCError({ code: "NOT_FOUND" });
-        const msg = rows[0];
-
-        // Create a task in the tasks table if it exists
-        let taskRef = input.taskRef || `TASK-MSG-${input.id}`;
-        try {
-          const taskResult = await db.execute(
-            sql`INSERT INTO tasks (title, description, status, priority, assigned_to, created_by, due_date, source_ref)
-                VALUES (${msg.subject}, ${msg.body}, 'pending', ${msg.priority}, ${msg.to_member}, ${msg.from_member}, ${msg.deadline}, ${`MSG-${input.id}`})`
-          );
-          const taskRes = taskResult[0] as any;
-          taskRef = `TASK-${taskRes.insertId}`;
-        } catch {
-          // tasks table may not exist or have different schema — just mark message
-        }
-
-        await db.execute(
-          sql`UPDATE internal_messages SET is_converted_to_task = 1, task_ref = ${taskRef} WHERE id = ${input.id}`
-        );
-        return { success: true, taskRef };
-      } catch (e) {
-        console.error("[internalMessages.convertToTask] error:", e);
-        return { success: false };
-      }
+      await verifyCCToken(input.ccToken);
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "أُلغي مسار المهام القديم. افتح ملف المشروع التنفيذي وأنشئ الإجراء هناك بعد تحديد المشروع وملف العمل.",
+      });
     }),
 
   // Delete message

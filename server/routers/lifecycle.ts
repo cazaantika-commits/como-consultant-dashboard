@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
@@ -11,6 +12,13 @@ import {
 } from "../../drizzle/schema";
 import { eq, and, sql, lte, gte, isNotNull, max } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
+
+function rejectUnscopedCatalogueWrite(): never {
+  throw new TRPCError({
+    code: "PRECONDITION_FAILED",
+    message: "أُوقف تعديل مكتبة دورة المشروع العامة. تُقرأ السجلات الحالية داخل ملف المشروع، وتحتاج التعديلات العامة إلى مسار حوكمة مستقل.",
+  });
+}
 
 // -------------------------------------------------------------
 // Helper: compute dynamic operational status for a service
@@ -811,6 +819,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
 
       // Get the max sortOrder for this stage to append at end
@@ -868,6 +877,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
 
       // Delete project instance first
@@ -918,6 +928,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const { serviceCode, ...rest } = input;
       const data: Record<string, any> = {};
@@ -947,6 +958,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const existing = await db
         .select({ maxSort: max(lifecycleServices.sortOrder) })
@@ -972,6 +984,7 @@ export const lifecycleRouter = router({
   deleteService: protectedProcedure
     .input(z.object({ serviceCode: z.string() }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.serviceCode, input.serviceCode));
       await db.delete(projectServiceInstances).where(eq(projectServiceInstances.serviceCode, input.serviceCode));
@@ -984,6 +997,7 @@ export const lifecycleRouter = router({
   deleteStage: protectedProcedure
     .input(z.object({ stageCode: z.string() }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const services = await db.select().from(lifecycleServices).where(eq(lifecycleServices.stageCode, input.stageCode));
       for (const svc of services) {
@@ -1024,6 +1038,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const existing = await db
         .select({ maxSort: max(lifecycleRequirements.sortOrder) })
@@ -1062,6 +1077,7 @@ export const lifecycleRouter = router({
       })
     )
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       const { requirementCode, ...rest } = input;
       const data: Record<string, any> = {};
@@ -1081,6 +1097,7 @@ export const lifecycleRouter = router({
   deleteRequirement: protectedProcedure
     .input(z.object({ requirementCode: z.string() }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       await db.delete(projectRequirementStatus).where(eq(projectRequirementStatus.requirementCode, input.requirementCode));
       await db.delete(lifecycleRequirements).where(eq(lifecycleRequirements.requirementCode, input.requirementCode));
@@ -1105,6 +1122,7 @@ export const lifecycleRouter = router({
       services: z.array(z.object({ serviceCode: z.string(), sortOrder: z.number() }))
     }))
     .mutation(async ({ input }) => {
+      rejectUnscopedCatalogueWrite();
       const db = await getDb();
       for (const s of input.services) {
         await db.update(lifecycleServices).set({ sortOrder: s.sortOrder }).where(eq(lifecycleServices.serviceCode, s.serviceCode));
