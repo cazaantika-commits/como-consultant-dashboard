@@ -39,11 +39,34 @@ export const saraRealtimeTools = [
       properties: {
         category: {
           type: "string",
-          enum: ["overview", "project_memory", "work_files", "actions", "decisions", "communications", "meetings"],
+          enum: ["overview", "project_memory", "work_files", "actions", "decisions", "communications", "meetings", "proposals"],
         },
         project_name: { type: "string", description: "اسم المشروع اختياري لتضييق النتيجة" },
       },
       required: ["category"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function" as const,
+    name: "capture_intake_proposal",
+    description: "سجّلي كلام عبدالرحمن كمقترح واحد ينتظر مراجعته داخل ملف العمل. هذه الأداة لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية ولا تنفذ أو ترسل شيئًا. استخدميها فقط عندما يطلب عبدالرحمن صراحة حفظ أو متابعة أو إعداد شيء، وبعد تحديد المشروع وملف العمل من أداة القراءة.",
+    parameters: {
+      type: "object",
+      properties: {
+        project_id: { type: "integer", description: "معرّف المشروع من COMO Next" },
+        work_file_id: { type: "integer", description: "معرّف ملف العمل من COMO Next" },
+        kind: { type: "string", enum: ["action", "decision", "communication_draft", "note"] },
+        title: { type: "string" },
+        content: { type: ["string", "null"] },
+        acceptance_criteria: { type: ["string", "null"] },
+        owner_type: { type: ["string", "null"], enum: ["human", "manus", "team", null] },
+        priority: { type: "string", enum: ["normal", "important", "urgent"] },
+        due_at: { type: ["string", "null"], description: "ISO 8601 فقط إذا ذكر المستخدم موعدًا واضحًا" },
+        channel: { type: ["string", "null"], enum: ["email", "whatsapp", "letter", "phone_note", "internal", null] },
+        to_text: { type: ["string", "null"] },
+      },
+      required: ["project_id", "work_file_id", "kind", "title", "content", "acceptance_criteria", "owner_type", "priority", "due_at", "channel", "to_text"],
       additionalProperties: false,
     },
   },
@@ -59,7 +82,8 @@ export function buildSaraRealtimeInstructions(member: SaraMember) {
 - استخدمي أدوات القراءة عند السؤال عن الحالة الحالية أو الأرقام أو المشاريع. لا تخمّني ولا تستخدمي ذاكرة المحادثة بدل المصدر المتاح.
 - مع عبدالرحمن، ابدئي التفاعل العملي بعد التحية بموجز قصير عن أهم المستجدات الموثقة عندما تكون بيانات COMO Next متاحة؛ لا تملئي الموجز بمعلومات قديمة أو غير مؤكدة، ولا تكرريه إذا لم يطلبه.
 - عند السؤال عن خلفية مشروع أو ما الذي حدث سابقًا، استخدمي فئة project_memory من مكتب COMO Next؛ فهي الذاكرة المراجعة المرتبطة بالمصادر، وليست مجرد ملخص محادثة.
-- لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تعتمدي قرارًا أو محضرًا، ولا تنشئي التزامًا خارجيًا. لا توجد في هذه الجلسة أي أداة كتابة أو إرسال.
+- لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تعتمدي قرارًا أو محضرًا، ولا تنشئي التزامًا خارجيًا. الأداة الوحيدة التي تكتب شيئًا هي capture_intake_proposal، وهي تسجل مقترحًا فقط ينتظر مراجعة عبدالرحمن ولا تنفذه.
+- إذا قال عبدالرحمن «ذكّريني»، «تابعي»، «اعملي»، «حضّري»، أو طلب قرارًا أو مسودة: حددي المشروع وملف العمل من مصدر COMO أولًا، ثم استخدمي capture_intake_proposal. بعد نجاحها قولي بوضوح «سجلته كمقترح للمراجعة»، ولا تقولي «أنجزت» أو «تم التنفيذ».
 - القرار ليس تنفيذًا، والمسودة ليست إرسالًا، والتحليل ليس اعتمادًا.
 - عند عدم وجود دليل كافٍ قولي ذلك مباشرة واسألي عن المصدر أو الخطوة المطلوبة.
 - لا تقرئي القوائم الطويلة حرفيًا؛ أعطي الزبدة ثم اقترحي خطوة واحدة تالية.
@@ -197,7 +221,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       })),
     };
   }
-  const [workFilesResult, actionsResult, decisionsResult, communicationsResult, meetingsResult] = await Promise.all([
+  const [workFilesResult, actionsResult, decisionsResult, communicationsResult, meetingsResult, proposalsResult] = await Promise.all([
     db.execute(sql`
       SELECT wf.id, p.name AS project, wf.title, wf.governing_question AS governingQuestion,
         wf.work_file_status AS status, wf.priority, wf.updated_at AS updatedAt
@@ -244,6 +268,17 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
         OR EXISTS (SELECT 1 FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id=m.id AND minutes.minutes_status='draft'))
       ORDER BY m.starts_at ASC, m.id ASC LIMIT 25
     `),
+    db.execute(sql`
+      SELECT proposal.id, p.name AS project, wf.title AS workFile,
+        proposal.source_kind AS sourceKind, proposal.proposal_kind AS proposalKind,
+        proposal.title, proposal.priority, proposal.created_at AS createdAt
+      FROM como_next_intake_proposals proposal
+      JOIN como_next_work_files wf ON wf.id = proposal.work_file_id AND wf.project_id = proposal.project_id
+      JOIN projects p ON p.id = proposal.project_id AND p.is_test_project = 0
+      WHERE proposal.review_status = 'pending' AND p.name LIKE ${filter}
+      ORDER BY CASE proposal.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
+        proposal.created_at ASC LIMIT 25
+    `),
   ]);
   const datasets = {
     work_files: rows<Record<string, unknown>>(workFilesResult),
@@ -251,6 +286,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     decisions: rows<Record<string, unknown>>(decisionsResult),
     communications: rows<Record<string, unknown>>(communicationsResult),
     meetings: rows<Record<string, unknown>>(meetingsResult),
+    proposals: rows<Record<string, unknown>>(proposalsResult),
   };
   if (category === "overview") {
     return {

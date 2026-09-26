@@ -42,10 +42,11 @@ describe("Sara Realtime architecture", () => {
     expect(session.audio.input.turn_detection).toMatchObject({ type: "semantic_vad", interrupt_response: true });
   });
 
-  it("exposes read-only lookup tools and no send, approve, or execute function", () => {
-    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_command_center", "lookup_executive_workspace"]);
+  it("exposes read-only lookups plus proposal-only capture and no send, approve, or execute function", () => {
+    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_command_center", "lookup_executive_workspace", "capture_intake_proposal"]);
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
+    expect(saraRealtimeTools[2].description).toContain("لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية");
   });
 
   it("creates a short-lived client secret on the server without exposing the API key", async () => {
@@ -80,7 +81,7 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("تشغيل الصورة الحية");
     expect(roomSource).toContain('peer.addTransceiver("audio", { direction: "recvonly" })');
     expect(roomSource).toContain("فتحت سارة وضع الكتابة مع بقاء الرد الصوتي");
-    expect(roomSource).toContain("لا إرسال خارجي · لا تنفيذ تلقائي");
+    expect(roomSource).toContain("المقترح ليس تنفيذًا · لا إرسال خارجي");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");
   });

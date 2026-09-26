@@ -1,0 +1,42 @@
+-- COMO Next intelligent intake proposal register
+-- Additive only. Email analysis and Sara can create review-only proposals here.
+-- A proposal is not an action, decision, communication, or external commitment.
+
+CREATE TABLE IF NOT EXISTS `como_next_intake_proposals` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `project_id` INT NOT NULL,
+  `work_file_id` INT NOT NULL,
+  `source_kind` ENUM('email','sara') NOT NULL,
+  `source_record_id` VARCHAR(255) NOT NULL,
+  `source_email_id` BIGINT NULL,
+  `source_email_analysis_id` BIGINT NULL,
+  `requested_by_member_id` VARCHAR(64) NULL,
+  `proposal_kind` ENUM('action','decision','communication_draft','note') NOT NULL,
+  `title` VARCHAR(1000) NOT NULL,
+  `content` LONGTEXT NULL,
+  `acceptance_criteria` TEXT NULL,
+  `owner_type` ENUM('human','manus','team') NULL,
+  `priority` ENUM('normal','important','urgent') NOT NULL DEFAULT 'normal',
+  `due_at` TIMESTAMP NULL,
+  `channel` ENUM('email','whatsapp','letter','phone_note','internal') NULL,
+  `to_text` TEXT NULL,
+  `evidence_excerpt` TEXT NOT NULL,
+  `review_status` ENUM('pending','applied','dismissed') NOT NULL DEFAULT 'pending',
+  `target_id` BIGINT NULL,
+  `review_note` TEXT NULL,
+  `reviewed_by_user_id` INT NULL,
+  `reviewed_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `como_next_intake_source_uq` (`source_kind`,`source_record_id`),
+  KEY `como_next_intake_review_idx` (`user_id`,`review_status`,`created_at`),
+  KEY `como_next_intake_file_idx` (`project_id`,`work_file_id`,`review_status`,`created_at`),
+  KEY `como_next_intake_email_idx` (`source_email_id`,`source_email_analysis_id`),
+  CONSTRAINT `como_next_intake_user_fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `como_next_intake_file_fk` FOREIGN KEY (`project_id`,`work_file_id`) REFERENCES `como_next_work_files` (`project_id`,`id`) ON DELETE RESTRICT,
+  CONSTRAINT `como_next_intake_email_fk` FOREIGN KEY (`source_email_id`) REFERENCES `como_next_email_messages` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `como_next_intake_email_analysis_fk` FOREIGN KEY (`source_email_analysis_id`) REFERENCES `como_next_email_analyses` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `como_next_intake_reviewer_fk` FOREIGN KEY (`reviewed_by_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT
+);

@@ -182,6 +182,7 @@ export default function Home() {
   const communications = overview?.draftCommunications ?? [];
   const meetings = overview?.meetingAttention ?? [];
   const emailAttention = overview?.emailAttention ?? [];
+  const intakeProposals = overview?.intakeProposals ?? [];
   const workFiles = overview?.workFiles ?? [];
   const firstDecision = decisions[0];
   const firstAction = overview?.today.sections.mine[0]
@@ -259,12 +260,13 @@ export default function Home() {
             <div className="rounded-[24px] border border-red-200 bg-red-50 p-6 text-center"><CircleAlert className="mx-auto h-6 w-6 text-red-600" /><p className="mt-3 text-sm font-black text-red-900">تعذر قراءة COMO Next الآن</p><p className="mt-1 text-xs text-red-700">لم تُستخدم أي بيانات قديمة كبديل.</p></div>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 <MetricCard label="قرارات تنتظر اعتمادك" value={decisions.length} note="قرارات مسجلة داخل ملفات العمل فقط." icon={CircleAlert} tone="bg-rose-50 text-rose-700" />
                 <MetricCard label="استحقاقات اليوم" value={todaySummary?.dueToday ?? 0} note={`${todaySummary?.overdue ?? 0} متأخر ضمن إجراءات COMO Next.`} icon={FileClock} tone="bg-amber-50 text-amber-700" />
                 <MetricCard label="مسودات للمراجعة" value={communications.length} note="المسودة لا تعني إرسالًا أو التزامًا خارجيًا." icon={MessageSquare} tone="bg-sky-50 text-sky-700" />
                 <MetricCard label="اجتماعات تحتاج متابعة" value={meetings.length} note="تحضير أو مخرجات أو محضر ينتظر المراجعة." icon={CalendarCheck} tone="bg-emerald-50 text-emerald-700" />
                 <MetricCard label="بريد يحتاج مراجعتك" value={emailAttention.length} note="قراءة فقط؛ الربط أو التحليل أو المسودة يحتاج اختيارك." icon={Inbox} tone="bg-violet-50 text-violet-700" />
+                <MetricCard label="مقترحات تنتظر قرارك" value={intakeProposals.length} note="من البريد أو سارة؛ لا تتحول إلى عمل قبل اعتمادك." icon={Sparkles} tone="bg-fuchsia-50 text-fuchsia-700" />
               </div>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_.95fr]">

@@ -7,6 +7,7 @@ import {
   comoNextEmailAnalyses,
   comoNextEmailAttachments,
   comoNextEmailMessages,
+  comoNextIntakeProposals,
   comoNextProjectParties,
   comoNextWorkFiles,
   comoNextWorkMemory,
@@ -23,6 +24,7 @@ import {
 } from "../emailMonitor";
 import { storagePut } from "../storage";
 import { appendEvent, createCommunicationDraftCommand, requireProjectAccess } from "./comoNextCommands";
+import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
 const rowsOf = <T>(result: unknown): T[] => Array.isArray(result) && Array.isArray(result[0]) ? result[0] as T[] : result as T[];
@@ -228,10 +230,12 @@ export async function getEmailMessage(emailId: number, userId: number) {
   if (message.linkedProjectId) await requireProjectAccess(db, message.linkedProjectId, userId, "read");
   const attachments = await db.select().from(comoNextEmailAttachments).where(eq(comoNextEmailAttachments.emailMessageId, emailId)).orderBy(comoNextEmailAttachments.ordinal);
   const analyses = await db.select().from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.emailMessageId, emailId)).orderBy(desc(comoNextEmailAnalyses.id));
+  const proposals = await db.select().from(comoNextIntakeProposals).where(eq(comoNextIntakeProposals.sourceEmailId, emailId)).orderBy(desc(comoNextIntakeProposals.id));
   return {
     message,
     attachments: attachments.map(item => ({ ...item, downloadPath: item.documentId ? `/api/como-next/documents/${item.documentId}` : null })),
     analysis: analyses.find(item => item.analysisStatus === "draft") || null,
+    proposals,
   };
 }
 
@@ -387,8 +391,28 @@ const emailAnalysisSchema = {
     shouldReply: { type: "boolean" },
     replyDraftText: { anyOf: [{ type: "string" }, { type: "null" }] },
     evidenceExcerpts: { type: "array", items: { type: "string" } },
+    proposals: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          kind: { type: "string", enum: ["action", "decision", "communication_draft", "note"] },
+          title: { type: "string" },
+          content: { anyOf: [{ type: "string" }, { type: "null" }] },
+          acceptanceCriteria: { anyOf: [{ type: "string" }, { type: "null" }] },
+          ownerType: { anyOf: [{ type: "string", enum: ["human", "manus", "team"] }, { type: "null" }] },
+          priority: { type: "string", enum: ["normal", "important", "urgent"] },
+          dueAt: { anyOf: [{ type: "string" }, { type: "null" }] },
+          channel: { anyOf: [{ type: "string", enum: ["email", "whatsapp", "letter", "phone_note", "internal"] }, { type: "null" }] },
+          toText: { anyOf: [{ type: "string" }, { type: "null" }] },
+          evidenceExcerpt: { type: "string" },
+        },
+        required: ["kind", "title", "content", "acceptanceCriteria", "ownerType", "priority", "dueAt", "channel", "toText", "evidenceExcerpt"],
+        additionalProperties: false,
+      },
+    },
   },
-  required: ["summaryAr", "importance", "whyImportant", "suggestedNextStep", "shouldReply", "replyDraftText", "evidenceExcerpts"],
+  required: ["summaryAr", "importance", "whyImportant", "suggestedNextStep", "shouldReply", "replyDraftText", "evidenceExcerpts", "proposals"],
   additionalProperties: false,
 } as const;
 
@@ -402,8 +426,8 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const response = await invokeLLM({
     model: EMAIL_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. حلل البريد اعتمادًا على نصه فقط. لا تنشئ إجراءً أو قرارًا أو التزامًا، ولا ترسل أو تعتمد أي رد. أخرج JSON مطابقًا للمخطط، واجعل اقتباسات الدليل حرفية وقصيرة." },
-      { role: "user", content: `حلل البريد الوارد التالي كمسودة للمراجعة. لخصه بالعربية، قدر أهميته، واقترح الخطوة التالية. إذا احتاج ردًا فاكتب مسودة فقط ولا تعتبرها معتمدة أو مرسلة.\n\nمن: ${email.fromName || ""} <${email.fromEmail}>\nالموضوع: ${email.subject}\nالتاريخ: ${email.receivedAt}\n\n${email.bodyText}` },
+      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. حلل البريد اعتمادًا على نصه فقط. لا تنشئ إجراءً أو قرارًا أو التزامًا تشغيليًا، ولا ترسل أو تعتمد أي رد. أخرج JSON مطابقًا للمخطط. إذا احتوى البريد طلبًا أو قرارًا أو متابعة فعلية، ضعها كمقترحات review-only مع اقتباس حرفي قصير؛ لا تنشئ مقترحًا لمجرد ملء القائمة." },
+      { role: "user", content: `حلل البريد الوارد التالي كمسودة للمراجعة. لخصه بالعربية، قدر أهميته، واقترح الخطوة التالية. إذا احتاج ردًا فاكتب مسودة فقط ولا تعتبرها معتمدة أو مرسلة. اقترح فقط ما تدعمه الرسالة: action يحتاج معيار قبول، decision يحتاج سؤالًا واضحًا، communication_draft يبقى مسودة، وnote للحفظ المرجعي.\n\nمن: ${email.fromName || ""} <${email.fromEmail}>\nالموضوع: ${email.subject}\nالتاريخ: ${email.receivedAt}\n\n${email.bodyText}` },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_email_analysis", strict: true, schema: emailAnalysisSchema as unknown as Record<string, unknown> } },
   });
@@ -411,7 +435,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   if (typeof content !== "string") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "لم يُرجع Manus تحليلاً قابلاً للمراجعة" });
   let parsed: any;
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة مسودة تحليل Manus" }); }
-  return db.transaction(async tx => {
+  const analysisResult = await db.transaction(async tx => {
     const [replay] = await tx.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
     if (replay) return { id: Number(replay.id), replayed: true as const };
     await tx.update(comoNextEmailAnalyses).set({ analysisStatus: "superseded" }).where(and(eq(comoNextEmailAnalyses.emailMessageId, input.emailId), eq(comoNextEmailAnalyses.analysisStatus, "draft")));
@@ -432,6 +456,20 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
     await tx.update(comoNextEmailMessages).set({ importance: parsed.importance }).where(eq(comoNextEmailMessages.id, input.emailId));
     return { id, replayed: false as const, externalSideEffect: false as const, operationalRecordsCreated: 0 as const };
   });
+  let proposalResult = { created: 0, duplicates: 0, ids: [] as number[] };
+  if (email.linkedProjectId && email.linkedWorkFileId) {
+    proposalResult = await createIntakeProposalsCommand({
+      userId: input.userId,
+      projectId: Number(email.linkedProjectId),
+      workFileId: Number(email.linkedWorkFileId),
+      sourceKind: "email",
+      sourcePrefix: `email-analysis:${analysisResult.id}`,
+      sourceEmailId: Number(email.id),
+      sourceEmailAnalysisId: Number(analysisResult.id),
+      proposals: (Array.isArray(parsed.proposals) ? parsed.proposals : []) as IntakeProposalDraft[],
+    });
+  }
+  return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created };
 }
 
 export async function createReplyDraftFromEmailCommand(input: { userId: number; emailId: number; body: string; ccText?: string | null }) {

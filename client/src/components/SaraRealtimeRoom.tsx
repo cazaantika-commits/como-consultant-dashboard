@@ -83,6 +83,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   const sessionIdRef = useRef<string | null>(null);
   const cueCounterRef = useRef(0);
   const assistantDraftRef = useRef("");
+  const lastMemberTextRef = useRef("");
   const avatarTokenRef = useRef<string | null>(null);
   const avatarConnectedRef = useRef(false);
 
@@ -113,6 +114,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
     sessionIdRef.current = null;
     outputItemIdRef.current = null;
     assistantDraftRef.current = "";
+    lastMemberTextRef.current = "";
     setPhase("idle");
     setMuted(false);
     setMicrophoneAvailable(true);
@@ -150,7 +152,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
 
   const handleToolCall = useCallback(async (event: RealtimeEvent) => {
     if (!event.call_id || !event.name) return;
-    if (event.name !== "lookup_command_center" && event.name !== "lookup_executive_workspace") {
+    if (event.name !== "lookup_command_center" && event.name !== "lookup_executive_workspace" && event.name !== "capture_intake_proposal") {
       sendRealtimeEvent({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ found: false, reason: "الأداة المطلوبة غير مسموحة" }) },
@@ -159,7 +161,14 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
       return;
     }
     try {
-      const result = await runTool.mutateAsync({ token, toolName: event.name, arguments: event.arguments || "{}" });
+      const result = await runTool.mutateAsync({
+        token,
+        toolName: event.name,
+        arguments: event.arguments || "{}",
+        sourceText: event.name === "capture_intake_proposal" ? lastMemberTextRef.current : undefined,
+        sessionId: sessionIdRef.current,
+        eventId: event.call_id,
+      });
       sendRealtimeEvent({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(result) },
@@ -190,6 +199,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
         const text = event.transcript?.trim();
         if (!text) break;
         const id = event.item_id || event.event_id || `member-${Date.now()}`;
+        lastMemberTextRef.current = text;
         setTranscript(items => mergeTranscript(items, { id, role: "member", text }));
         persistTranscript("member", text, id);
         break;
@@ -356,6 +366,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
     try {
       sendRealtimeEvent({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text }] } });
       sendRealtimeEvent({ type: "response.create" });
+      lastMemberTextRef.current = text;
       setTranscript(items => mergeTranscript(items, { id, role: "member", text }));
       persistTranscript("member", text, id);
       setTextInput("");
@@ -426,7 +437,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
                   <Badge className="border-0 bg-slate-900 text-[10px] text-white">واجهة COMO</Badge>
                   <Badge className="border-0 bg-amber-100 text-[10px] text-amber-900">Manus للتنفيذ العميق</Badge>
                 </div>
-                <p className="mt-1 text-xs text-slate-500">محادثة مباشرة عبر WebRTC · أدوات البيانات للقراءة فقط</p>
+                <p className="mt-1 text-xs text-slate-500">محادثة مباشرة عبر WebRTC · القراءة فورية · الحفظ كمقترح للمراجعة فقط</p>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => { stopSession(); setAvatarToken(null); onClose(); }} className="rounded-xl"><X className="h-5 w-5" /></Button>
@@ -443,7 +454,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
               <div className="mx-auto mt-10 max-w-md text-center">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-lg"><Sparkles className="h-7 w-7" /></div>
                 <h3 className="mt-4 text-lg font-black text-slate-900">صوت سارة أصبح مباشرًا</h3>
-                <p className="mt-2 text-sm leading-7 text-slate-500">ابدأ الجلسة ثم تحدث بطبيعتك. تستطيع مقاطعتها، وهي تقرأ مصادر COMO المسموح بها دون تنفيذ أو إرسال خارجي.</p>
+                <p className="mt-2 text-sm leading-7 text-slate-500">ابدأ الجلسة ثم تحدث بطبيعتك. تستطيع مقاطعتها، وهي تقرأ مصادر COMO. إذا طلبت منها متابعة أمر، تسجله كمقترح ينتظر اعتمادك ولا تنفذه تلقائيًا.</p>
               </div>
             )}
             {transcript.map(entry => (
@@ -484,7 +495,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
             </div>
             <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400">
               <span><Volume2 className="ml-1 inline h-3 w-3" /> التقدير لا يشمل تفريغ الصوت أو LiveAvatar</span>
-              <span>لا إرسال خارجي · لا تنفيذ تلقائي</span>
+              <span>المقترح ليس تنفيذًا · لا إرسال خارجي</span>
             </div>
           </footer>
           <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />

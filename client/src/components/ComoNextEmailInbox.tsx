@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { ComoNextIntakeProposals } from "@/components/ComoNextIntakeProposals";
 import {
   Archive,
   ArrowLeft,
@@ -130,9 +131,10 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
 
   const analyze = async () => {
     if (!emailId) return;
+    if (detail?.message.inboxStatus !== "linked") { toast.error("اعتمد ربط الرسالة بالمشروع وملف العمل أولًا"); return; }
     try {
       await analyzeMutation.mutateAsync({ emailId, requestKey: crypto.randomUUID() });
-      toast.success("أعد Manus مسودة التحليل دون إنشاء أي إجراء أو رد");
+      toast.success("أعد Manus التحليل ومقترحاته للمراجعة دون إنشاء أي عمل تشغيلي");
       await refresh();
     } catch (error: any) { toast.error(error?.message || "تعذر تحليل الرسالة"); }
   };
@@ -175,9 +177,11 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
             {detail.attachments.length ? <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><h3 className="flex items-center gap-2 text-sm font-black"><Paperclip className="h-4 w-4 text-[#1f6478]" />المرفقات</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{detail.attachments.map((attachment: any) => <div key={attachment.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-[#fafaf7] p-3"><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{attachment.fileName}</p><p className="mt-1 text-[10px] text-slate-400"><bdi>{Math.ceil(Number(attachment.byteSize) / 1024)}</bdi> KB · {attachment.storageStatus === "stored" ? "محفوظ داخل الملف" : "يُحفظ بعد اعتماد الربط"}</p></div>{attachment.downloadPath ? <a href={attachment.downloadPath} className="text-[11px] font-bold text-[#1f6478]">تنزيل</a> : <FileLock2 className="h-4 w-4 text-slate-300" />}</div>)}</div></Card> : null}
 
             <Card className="rounded-3xl border-violet-100 bg-[#fbf9ff] p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="flex items-center gap-2 text-sm font-black text-violet-950"><Bot className="h-4 w-4" />مسودة Manus</h3><p className="mt-1 text-xs text-violet-700">تحليل عند التكليف فقط؛ لا ينشئ قرارًا أو إجراءً أو مراسلة.</p></div><Button onClick={analyze} disabled={analyzeMutation.isPending} variant="outline" className="rounded-xl border-violet-200 bg-white text-violet-800">{analyzeMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}تكليف Manus</Button></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="flex items-center gap-2 text-sm font-black text-violet-950"><Bot className="h-4 w-4" />مسودة Manus</h3><p className="mt-1 text-xs text-violet-700">بعد اعتماد الربط فقط؛ أي إجراء أو قرار أو مراسلة يبقى مقترحًا حتى تراجعه وتحوله بنفسك.</p></div><Button onClick={analyze} disabled={analyzeMutation.isPending || detail.message.inboxStatus !== "linked"} variant="outline" className="rounded-xl border-violet-200 bg-white text-violet-800">{analyzeMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}تكليف Manus</Button></div>
               {detail.analysis ? <div className="mt-4 space-y-3"><p className="text-sm leading-7 text-slate-700">{detail.analysis.summaryAr}</p>{detail.analysis.whyImportant ? <div className="rounded-xl bg-white px-3 py-2 text-xs leading-6 text-slate-600"><strong>لماذا تهم:</strong> {detail.analysis.whyImportant}</div> : null}{detail.analysis.suggestedNextStep ? <div className="rounded-xl bg-white px-3 py-2 text-xs leading-6 text-slate-600"><strong>الخطوة المقترحة:</strong> {detail.analysis.suggestedNextStep}</div> : null}</div> : <p className="mt-4 text-xs text-slate-500">لم يُطلب تحليل هذه الرسالة بعد.</p>}
             </Card>
+
+            <ComoNextIntakeProposals proposals={detail.proposals || []} onChanged={refresh} title="مقترحات Manus المستخرجة من الرسالة" />
 
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="flex items-center gap-2 text-sm font-black"><Link2 className="h-4 w-4 text-[#1f6478]" />الربط بمصدر الحقيقة</h3>

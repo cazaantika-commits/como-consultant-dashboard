@@ -40,6 +40,7 @@ import {
   updateMeetingAgendaItemCommand,
 } from "../services/comoNextMeetings";
 import { getProjectExecutiveFile } from "../services/comoNextProjectDossier";
+import { listPendingIntakeProposals, reviewIntakeProposalCommand } from "../services/comoNextIntake";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -274,6 +275,7 @@ export const comoNextRouter = router({
         .orderBy(desc(comoNextEmailMessages.receivedAt))
         .limit(12)
       : [];
+    const intakeProposals = await listPendingIntakeProposals(ctx.user.id);
 
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
@@ -316,6 +318,7 @@ export const comoNextRouter = router({
       draftCommunications,
       meetingAttention,
       emailAttention,
+      intakeProposals,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };
@@ -540,6 +543,7 @@ export const comoNextRouter = router({
         .from(comoNextCommunications)
         .where(eq(comoNextCommunications.workFileId, input.workFileId))
         .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id));
+      const intakeProposals = await listPendingIntakeProposals(ctx.user.id, input.workFileId);
       const documentsByMemory = new Map<number, any[]>();
       for (const row of getRows<any>(documentsResult)) {
         const memoryId = Number(row.memoryId);
@@ -571,6 +575,7 @@ export const comoNextRouter = router({
           pendingProposalCount: Number(row.pendingProposalCount || 0),
         })),
         communications,
+        intakeProposals,
         parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
         accessRole: access.role,
       };
@@ -605,6 +610,25 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return createActionCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  reviewIntakeProposal: protectedProcedure
+    .input(z.object({
+      proposalId: z.number().int().positive(),
+      decision: z.enum(["apply", "dismiss"]),
+      reviewNote: z.string().trim().max(5000).optional().nullable(),
+      title: z.string().trim().min(3).max(1000).optional().nullable(),
+      content: z.string().trim().max(100_000).optional().nullable(),
+      acceptanceCriteria: z.string().trim().max(5000).optional().nullable(),
+      ownerType: ownerTypeSchema.optional().nullable(),
+      priority: prioritySchema.optional().nullable(),
+      dueAt: z.string().optional().nullable(),
+      channel: communicationChannelSchema.optional().nullable(),
+      toText: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewIntakeProposalCommand({ userId: ctx.user.id, ...input });
     }),
 
   createCommunicationDraft: protectedProcedure

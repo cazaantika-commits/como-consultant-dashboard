@@ -4,6 +4,7 @@ import {
   comoNextActions,
   comoNextCommunications,
   comoNextDecisions,
+  comoNextIntakeProposals,
   comoNextMeetings,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
@@ -576,6 +577,14 @@ export async function closeWorkFileCommand(input: {
     .where(eq(comoNextCommunications.workFileId, input.workFileId));
   if (communications.some(communication => ["draft", "approved_for_send"].includes(communication.status))) {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف وفيه مسودة أو مراسلة معتمدة لم يُسجل إرسالها" });
+  }
+  const intakeProposals = await db
+    .select({ id: comoNextIntakeProposals.id })
+    .from(comoNextIntakeProposals)
+    .where(and(eq(comoNextIntakeProposals.workFileId, input.workFileId), eq(comoNextIntakeProposals.reviewStatus, "pending")))
+    .limit(1);
+  if (intakeProposals.length) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إغلاق الملف قبل مراجعة المقترحات الواردة من البريد أو سارة" });
   }
   const meetings = await db
     .select({ id: comoNextMeetings.id, status: comoNextMeetings.meetingStatus })

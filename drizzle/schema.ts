@@ -3493,3 +3493,41 @@ export const comoNextOwnerPreferences = mysqlTable("como_next_owner_preferences"
   uniqueIndex("como_next_owner_preference_source_uq").on(table.sourceSystem, table.sourceRecordId),
   index("como_next_owner_preference_current_idx").on(table.memberId, table.isCurrent, table.updatedAt),
 ]);
+
+
+// Review-only intake queue shared by email analysis and Sara. Rows in this table
+// have no operational effect until Abdulrahman applies one proposal explicitly.
+export const comoNextIntakeProposals = mysqlTable("como_next_intake_proposals", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  sourceKind: mysqlEnum("source_kind", ["email", "sara"]).notNull(),
+  sourceRecordId: varchar("source_record_id", { length: 255 }).notNull(),
+  sourceEmailId: bigint("source_email_id", { mode: "number" }).references(() => comoNextEmailMessages.id, { onDelete: "restrict" }),
+  sourceEmailAnalysisId: bigint("source_email_analysis_id", { mode: "number" }).references(() => comoNextEmailAnalyses.id, { onDelete: "restrict" }),
+  requestedByMemberId: varchar("requested_by_member_id", { length: 64 }),
+  proposalKind: mysqlEnum("proposal_kind", ["action", "decision", "communication_draft", "note"]).notNull(),
+  title: varchar("title", { length: 1000 }).notNull(),
+  content: longtext("content"),
+  acceptanceCriteria: text("acceptance_criteria"),
+  ownerType: mysqlEnum("owner_type", ["human", "manus", "team"]),
+  priority: mysqlEnum("priority", ["normal", "important", "urgent"]).notNull().default("normal"),
+  dueAt: timestamp("due_at", { mode: "string" }),
+  channel: mysqlEnum("channel", ["email", "whatsapp", "letter", "phone_note", "internal"]),
+  toText: text("to_text"),
+  evidenceExcerpt: text("evidence_excerpt").notNull(),
+  reviewStatus: mysqlEnum("review_status", ["pending", "applied", "dismissed"]).notNull().default("pending"),
+  targetId: bigint("target_id", { mode: "number" }),
+  reviewNote: text("review_note"),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_intake_source_uq").on(table.sourceKind, table.sourceRecordId),
+  index("como_next_intake_review_idx").on(table.userId, table.reviewStatus, table.createdAt),
+  index("como_next_intake_file_idx").on(table.projectId, table.workFileId, table.reviewStatus, table.createdAt),
+  index("como_next_intake_email_idx").on(table.sourceEmailId, table.sourceEmailAnalysisId),
+  foreignKey({ name: "como_next_intake_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+]);
