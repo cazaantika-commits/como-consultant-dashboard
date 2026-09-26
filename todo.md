@@ -1501,9 +1501,9 @@
 - [x] Define per-item on/off controls, editable price basis, and project-level price overrides as requirements for the flexible reference design
 - [x] Add owner review and correction controls for each extracted offer item before a reading becomes usable in financial comparison
 - [x] Build a separate project-specific supervision scope and fee comparison using the same approved-review principle
-- [ ] Define and implement the approved financial comparison as the single source for financial evaluation while preserving legacy financial records as read-only history
-- [ ] Verify the latest original offer for each consultant and exclude legacy financial values and JSON data from the new financial evaluation source
-- [ ] Await the owner's approved project scope and updated original consultant-offer files for each project before beginning offer review or financial comparison
+- [ ] [مؤجل بقرار المالك] بناء المقارنة المالية الجديدة داخل النظام: يحدد عبد الرحمن نطاق كل مشروع، ويرفع عروضه الجديدة، ثم يحللها Manus ويخرج التقرير المالي والتقرير الذكي بعد المراجعة؛ لا تستخدم العروض أو الأسعار القديمة، ويُحتفظ فقط بهوية وأسماء الاستشاريين.
+- [x] [أُلغي كمسار قديم] عدم مراجعة أو نقل ملفات العروض والأسعار وبيانات JSON القديمة إلى المقارنة الجديدة؛ يُحتفظ فقط بسجل أسماء وهويات الاستشاريين. (قرار المالك 2026-09-26)
+- [x] [دُمج في المسار المؤجل] يبدأ تحليل عروض أي مشروع فقط بعد أن يحدد عبد الرحمن نطاقه ويرفع العروض الجديدة داخل النظام؛ لا حاجة إلى مهمة انتظار مستقلة. (قرار المالك 2026-09-26)
 - [x] Add Studio, two-bedroom-with-maid, and three-bedroom-with-maid unit types without changing existing unit records or calculations
 - [x] Fix direct typed entry for the editable unit price-per-square-foot field in pricing so values can be replaced without arrow controls
 - [x] Show per-unit price alongside the existing total value for each unit type in the pricing view
@@ -1560,26 +1560,12 @@
 - [x] Add a dedicated "المدفوع مسبقًا" column before the first calendar month and include its total in the final monthly net and cumulative rows
 - [x] Give the dedicated "المدفوع مسبقًا" column a distinct restrained color to separate it from calendar months
 - [x] Apply the owner-approved standard buyer payment plan to every off-plan project using the existing payment-plan structure and preserve an audit trail
-- [ ] Audit the three consolidated portfolio reports for source linkage, arithmetic consistency, and meeting-readiness before the Sheikh Issa meeting
-- [ ] Redesign the Capital & Return Portfolio report around investor cash paid, cash returned, capital-recovery month, and profit after recovery while excluding build-for-rent projects
-- [ ] Audit the current Capital & Return Portfolio report for scope, source linkage, arithmetic totals, and sign consistency before redesigning it
-- [ ] Reconcile and explain the difference between future investor funding and net remaining capital in the current Capital Portfolio report
-- [ ] Replace parallel capital measures in the Capital Portfolio with one calendar-aligned net-investor-cash metric after owner approval
-- [ ] Match the displayed remaining-capital total to the exact report query and project set before presenting it as meeting-ready
 - [x] Trace one off-plan project from investor payments and returns through to the displayed Capital Portfolio totals before generalizing findings
 - [x] Audit the investor cash-flow report for Majan Mixed Use only, read-only, before any report or data change
-- [ ] Define remaining investor funding as the scheduled personal funding required until the first investor cash recovery begins, subject to owner approval before any report change
 - [x] Ensure the Investor Portfolio aggregates only off-plan and build-for-sale investor cash-flow reports, excluding build-for-rent projects
-- [ ] Preserve the current Capital Portfolio visual layout, labels, columns, order, and colors unless the owner explicitly approves a specific visual change
-- [ ] Add a profit column after revenue and total cost in the Capital Portfolio, calculated as revenue minus cost with a total-row value
-- [ ] Decide whether the current Capital Portfolio should remain a funding-only view and whether a separate investor cash-cycle report should show credits and cash profit, without changing either report until owner approval
-- [ ] Keep the current Capital Portfolio as a funding-distribution view without credit columns, and reserve credits for the separate Investor Cash Flow portfolio report
 - [x] Build the separate Investor Cash Flow portfolio as a faithful monthly aggregation of each eligible project's investor debit, credit, and cumulative balance lines
 - [x] Audit each off-plan and build-for-sale investor cash-flow report before aggregation; exclude all build-for-rent projects
 - [x] Display investor-portfolio monetary amounts as rounded full values without K or M abbreviations
-- [ ] Complete owner review of the current Investor Portfolio before discussing or building any additional report
-- [ ] Distinguish the purposes of Project Aggregation and Investor Portfolio while leaving the vertical report unchanged during the current discussion
-- [ ] Wait for the owner to define the existing report identities before making further report assumptions or changes
 - [x] Restore the Investor Portfolio to one final net cash-flow row per eligible project, excluding build-for-rent and postponing the second portfolio type
 - [x] Develop the shown Capital Portfolio by replacing monthly cells with final investor cash-flow values for eligible projects while preserving its current layout, labels, columns, order, and colors
 - [x] Show the accounting sign for final monthly investor cash-flow values in the shown Capital Portfolio and its exports without changing the protected column labels or structure
@@ -1725,13 +1711,6 @@
 
 - [x] Replace the unreliable cross-origin LiveAvatar iframe with a user-initiated standalone Sandbox window, preserving Salwa's Arabic context and the existing COMO chat fallback; verify the new window reaches live audio/video before delivery.
 
-- [ ] Prevent reuse of expired LiveAvatar embed URLs: every Salwa launch or retry must request a fresh Sandbox session, clear the previous URL/window state, and never present an expired session as connected.
-
-- [ ] Attempt to create a HeyGen Photo/Custom LiveAvatar from Salwa's current approved image; if the account or image is ineligible, select a clearly more attractive official preset, and do not place either candidate in COMO until Sandbox motion and Arabic speech are verified.
-
-- [ ] Prepare Salwa's approved square portrait as a content-preserving 9:16 LiveAvatar source, submit it only through the logged-in LiveAvatar dashboard, and record the processing status before making any application change.
-
-- [ ] Select one clearly attractive, polished female preset from the existing LiveAvatar public library, configure it with Salwa's Arabic context, test it in Sandbox, and only then make it the active Salwa avatar in COMO.
 
 - [x] Create an isolated Nad Al Sheba Plot 2 (6182776) feasibility workspace inside the permanent test laboratory for the proposed Joint Venture Off-Plan — Land for Units offer: copy only saved land/planning facts from the official card, keep the source official project unchanged, set the landowner share to 35% of saleable residential/commercial area and final unit-registration fee to 4%, and leave pricing, costs, unit mix, sales plan, and financial inputs blank for the test workspace.
 
