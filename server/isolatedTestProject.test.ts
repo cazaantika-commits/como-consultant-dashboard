@@ -74,8 +74,8 @@ describe("isolated test project contract", () => {
     expect(testPage).toContain("projectId=");
     expect(testPage).toContain("حصة مالك الأرض (%)");
     expect(app).toContain('<Route path="/test-project" component={TestProjectPage} />');
-    expect(home).toContain('path: "/test-project"');
-    expect(home).toContain("المشروع التجريبي");
+    expect(home).toContain('navigate("/test-project")');
+    expect(home).toContain("مختبر المشاريع المعزول");
   });
 
   it("keeps every existing study card available in test mode plus the consultant-scope card", () => {

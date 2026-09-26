@@ -12,7 +12,8 @@ describe("legacy financial feature cleanup", () => {
 
   it("removes the retired Strategic Studies launcher while retaining Knowledge and Analysis", () => {
     expect(homeSource).not.toContain('id: "main-projects"');
-    expect(homeSource).toContain('id: "main-kb", label: "المعرفة والتحليل"');
+    expect(homeSource).toContain('id: "knowledge"');
+    expect(homeSource).toContain('title: "المعرفة والتحليل"');
     expect(appSource).not.toContain('path="/project-management"');
     expect(appSource).not.toContain('path="/fact-sheet"');
   });

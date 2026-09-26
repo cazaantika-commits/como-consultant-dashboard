@@ -9,15 +9,17 @@ describe("approved Financial Studies navigation consolidation", () => {
   const homeSource = readSource("client/src/pages/Home.tsx");
   const routerSource = readSource("client/src/App.tsx");
 
-  it("removes only the approved V2 duplicate icon from the main dashboard", () => {
+  it("keeps one protected Financial Studies destination on the rebuilt homepage", () => {
     expect(homeSource).not.toContain('id: "main-v2"');
-    expect(homeSource).toContain('id: "main-bateekha"');
+    expect(homeSource).toContain('id: "financial-studies"');
+    expect(homeSource).toContain('path: "/bateekha"');
     expect(homeSource).not.toContain('id: "main-portfolio"');
     expect(homeSource).not.toContain('id: "tool-wael-sales"');
   });
 
-  it("moves Knowledge and Analysis into the main dashboard while removing the retired Strategic Studies launcher", () => {
-    expect(homeSource).toContain('id: "main-kb", label: "المعرفة والتحليل"');
+  it("keeps Knowledge and Analysis as one deliberate workspace while removing retired launchers", () => {
+    expect(homeSource).toContain('id: "knowledge"');
+    expect(homeSource).toContain('title: "المعرفة والتحليل"');
     expect(homeSource).toContain('path: "/knowledge-analysis"');
     expect(homeSource).not.toContain('id: "main-projects"');
     expect(routerSource).not.toContain('path="/project-management"');

@@ -1,1115 +1,297 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useCCAuth } from "@/contexts/CCAuthContext";
-import { useOwner } from "@/contexts/OwnerContext";
-import { useState, useMemo, useCallback, useEffect } from "react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
-import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
-import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
-import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
-import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
-import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
-import { default as Users } from "lucide-react/dist/esm/icons/users.js";
-import { default as Zap } from "lucide-react/dist/esm/icons/zap.js";
-import { default as Crown } from "lucide-react/dist/esm/icons/crown.js";
-import { default as Archive } from "lucide-react/dist/esm/icons/archive.js";
-import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
-import { default as Gauge } from "lucide-react/dist/esm/icons/gauge.js";
-import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
-import { default as Calculator } from "lucide-react/dist/esm/icons/calculator.js";
-import { default as ShieldAlert } from "lucide-react/dist/esm/icons/shield-alert.js";
-import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
-import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
-import { default as Rocket } from "lucide-react/dist/esm/icons/rocket.js";
-import { default as BarChart2 } from "lucide-react/dist/esm/icons/chart-no-axes-column.js";
-import { default as Send } from "lucide-react/dist/esm/icons/send.js";
-import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
-import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
-import { default as LogOut } from "lucide-react/dist/esm/icons/log-out.js";
-import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
-import { default as BrainCircuit } from "lucide-react/dist/esm/icons/brain-circuit.js";
-import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
-import { default as Target } from "lucide-react/dist/esm/icons/target.js";
-import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
-import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
-import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
-import { default as Mail } from "lucide-react/dist/esm/icons/mail.js";
-import { default as Mic } from "lucide-react/dist/esm/icons/mic.js";
-import { default as Calendar } from "lucide-react/dist/esm/icons/calendar.js";
-import { default as CalendarPlus } from "lucide-react/dist/esm/icons/calendar-plus.js";
-import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
-import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
-import { default as X } from "lucide-react/dist/esm/icons/x.js";
-import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
-import { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.js";
-import { default as Newspaper } from "lucide-react/dist/esm/icons/newspaper.js";
-import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
-import { default as Clock } from "lucide-react/dist/esm/icons/clock.js";
-import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
-import { default as Wallet } from "lucide-react/dist/esm/icons/wallet.js";
-import { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.js";
-import { default as BriefcaseBusiness } from "lucide-react/dist/esm/icons/briefcase-business.js";
 import { useLocation } from "wouter";
-import { AgentChatBox, AgentType } from "@/components/AgentChatBox";
-import { Streamdown } from "streamdown";
-import NotificationBell from "@/components/NotificationBell";
+import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
+import { default as BookOpen } from "lucide-react/dist/esm/icons/book-open.js";
+import { default as BrainCircuit } from "lucide-react/dist/esm/icons/brain-circuit.js";
+import { default as BriefcaseBusiness } from "lucide-react/dist/esm/icons/briefcase-business.js";
+import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { default as CalendarCheck } from "lucide-react/dist/esm/icons/calendar-check.js";
+import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left.js";
+import { default as CircleAlert } from "lucide-react/dist/esm/icons/circle-alert.js";
+import { default as FileClock } from "lucide-react/dist/esm/icons/file-clock.js";
+import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
+import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { default as LockKeyhole } from "lucide-react/dist/esm/icons/lock-keyhole.js";
+import { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.js";
+import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
 
 const SARA_AVATAR_URL = "/sara/sara-approved-5256847d.webp";
 
-const AGENT_ICONS: Record<string, any> = {
-  crown: Crown,
-  archive: Archive,
-  scale: Scale,
-  gauge: Gauge,
-  "shield-check": ShieldCheck,
-  calculator: Calculator,
-  rocket: Rocket,
-  "bar-chart-2": BarChart2,
+type ExecutiveDestination = {
+  id: string;
+  title: string;
+  eyebrow: string;
+  description: string;
+  path: string;
+  icon: typeof BriefcaseBusiness;
+  tone: string;
+  accent: string;
 };
 
-/* Quick Action Button */
-function QuickActionButton({
-  icon: Icon,
+const EXECUTIVE_DESTINATIONS: ExecutiveDestination[] = [
+  {
+    id: "executive-office",
+    title: "المكتب التنفيذي",
+    eyebrow: "مصدر الحقيقة التشغيلي",
+    description: "ملفات العمل، القرارات، الإجراءات، الاجتماعات والمراسلات في سياق واحد.",
+    path: "/como-next",
+    icon: BriefcaseBusiness,
+    tone: "from-[#173d4b] to-[#256378]",
+    accent: "text-[#1f6478]",
+  },
+  {
+    id: "financial-studies",
+    title: "الدراسات والتخطيط المالي",
+    eyebrow: "محركات محمية",
+    description: "دراسات الجدوى والتدفقات والمبيعات والضمان كما تم اعتمادها، بلا تعديل تلقائي.",
+    path: "/bateekha",
+    icon: Layers,
+    tone: "from-[#3f5e4e] to-[#63876f]",
+    accent: "text-[#4c705a]",
+  },
+  {
+    id: "consultants",
+    title: "مساحة الاستشاريين",
+    eyebrow: "نطاق وعروض وتقييم",
+    description: "مسار خاص للاستشاريين من نطاق المشروع حتى التحليل والتوصية والتكليف.",
+    path: "/consultant-portal",
+    icon: Building2,
+    tone: "from-[#6b4d38] to-[#9a7150]",
+    accent: "text-[#825e44]",
+  },
+  {
+    id: "knowledge",
+    title: "المعرفة والتحليل",
+    eyebrow: "ذاكرة العمل",
+    description: "المراجع والتقارير والدروس التي يحتاجها Manus عندما يُكلّف بالتحليل.",
+    path: "/knowledge-analysis",
+    icon: BookOpen,
+    tone: "from-[#4d456e] to-[#756a9d]",
+    accent: "text-[#635b88]",
+  },
+];
+
+function MetricCard({
   label,
-  color,
-  borderColor,
-  isLoading,
-  onClick,
+  value,
+  note,
+  icon: Icon,
+  tone,
 }: {
-  icon: any;
   label: string;
-  color: string;
-  borderColor: string;
-  isLoading: boolean;
-  onClick: () => void;
+  value: number;
+  note: string;
+  icon: typeof CircleAlert;
+  tone: string;
 }) {
   return (
+    <div className="rounded-[22px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold text-slate-500">{label}</p>
+          <p className="mt-2 text-3xl font-black tracking-tight text-slate-900">{value}</p>
+        </div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      <p className="mt-3 text-[11px] leading-5 text-slate-500">{note}</p>
+    </div>
+  );
+}
+
+function DestinationCard({ item, onOpen }: { item: ExecutiveDestination; onOpen: (path: string) => void }) {
+  const Icon = item.icon;
+  return (
     <button
-      onClick={onClick}
-      disabled={isLoading}
-      className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait ${color} ${borderColor}`}
+      type="button"
+      onClick={() => onOpen(item.path)}
+      className="group relative overflow-hidden rounded-[26px] border border-slate-200/80 bg-white p-5 text-right shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_55px_rgba(15,23,42,0.10)] active:scale-[0.98]"
     >
-      {isLoading ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : (
-        <Icon className="w-3.5 h-3.5" />
-      )}
-      {label}
+      <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-l ${item.tone}`} />
+      <div className="flex items-start justify-between gap-4">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-lg`}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <ChevronLeft className={`mt-2 h-5 w-5 transition-transform duration-200 group-hover:-translate-x-1 ${item.accent}`} />
+      </div>
+      <p className={`mt-5 text-[10px] font-black tracking-wide ${item.accent}`}>{item.eyebrow}</p>
+      <h3 className="mt-1 text-lg font-black text-slate-900">{item.title}</h3>
+      <p className="mt-2 text-xs leading-6 text-slate-500">{item.description}</p>
     </button>
   );
 }
 
-/* Quick Action Result Panel */
-function QuickActionResult({
-  title,
-  content,
-  onClose,
-}: {
-  title: string;
-  content: string;
-  onClose: () => void;
-}) {
+function PublicHome() {
+  const [, navigate] = useLocation();
   return (
-    <div className="mt-4 bg-white dark:bg-card rounded-2xl border border-amber-200/60 dark:border-amber-800/30 shadow-lg overflow-hidden animate-in slide-in-from-top-2 duration-300">
-      <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-b border-amber-200/40">
-        <div className="flex items-center gap-2">
-          <img src={SARA_AVATAR_URL} alt="سارة" className="w-6 h-6 rounded-full ring-2 ring-amber-400/50" />
-          <span className="font-bold text-sm text-foreground">{title}</span>
-        </div>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-amber-200/30 transition-colors">
-          <X className="w-4 h-4 text-muted-foreground" />
-        </button>
-      </div>
-      <div className="p-5 text-sm text-foreground leading-relaxed max-h-[400px] overflow-y-auto" dir="rtl">
-        <Streamdown>{content}</Streamdown>
-      </div>
-    </div>
-  );
-}
-
-/* -- Sortable Main Card (big cards) -- */
-type NavItem = { id: string; label: string; icon: any; path: string; borderColor: string; iconBg: string; shadow: string; badge?: number };
-type ToolLayerId = "owner" | "intelligence" | "services";
-type ToolNavItem = NavItem & { layer: ToolLayerId; ownerOnly?: boolean };
-
-function SortableMainCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const isCommandCenter = item.id === "main-cmd";
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.85 : 1,
-    background: `linear-gradient(180deg, ${item.borderColor}08 0%, transparent 60%)`,
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.97] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-manipulation animate-card-stagger ${
-        isCommandCenter
-          ? 'border-border/60 py-8 px-6 hover:shadow-2xl hover:-translate-y-1.5 hover:border-border/80 before:absolute before:inset-0 before:bg-gradient-to-br before:from-purple-500/5 before:to-transparent before:opacity-0 before:group-hover:opacity-100 before:transition-opacity before:duration-300'
-          : 'border-border/40 px-3 py-4'
-      } ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
-    >
-      <div className="absolute top-0 left-0 right-0 h-[4px] rounded-t-2xl" style={{ background: item.iconBg }} />
-      <div className={`absolute -top-8 -right-8 rounded-full opacity-[0.07] blur-2xl transition-all duration-300 group-hover:opacity-[0.15] ${
-        isCommandCenter ? 'w-32 h-32 group-hover:w-40 group-hover:h-40' : 'w-24 h-24'
-      }`} style={{ background: item.borderColor }} />
-      {isCommandCenter && (
-        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{
-          background: 'radial-gradient(circle at 30% 30%, rgba(139, 92, 246, 0.1), transparent 50%)',
-        }} />
-      )}
-      <div className="flex flex-col items-center gap-2.5 relative z-10">
-        <div
-          className={`rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg ring-4 ring-white/80 dark:ring-card/80 relative ${
-            isCommandCenter
-              ? 'w-20 h-20 group-hover:scale-125 group-hover:shadow-2xl after:absolute after:inset-0 after:rounded-2xl after:opacity-0 after:group-hover:opacity-100 after:transition-opacity after:duration-300 after:bg-gradient-to-br after:from-white/20 after:to-transparent'
-              : 'h-12 w-12 rounded-xl'
-          }`}
-          style={{ background: item.iconBg, boxShadow: `0 ${isCommandCenter ? '8px 24px' : '6px 20px'} ${item.shadow}` }}
-        >
-          <item.icon className={`text-white ${
-              isCommandCenter ? 'w-9 h-9 group-hover:animate-pulse' : 'h-5 w-5'
-          }`} />
-          {item.badge !== undefined && item.badge > 0 && (
-            <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
-              {item.badge > 99 ? '99+' : item.badge}
-            </div>
-          )}
-        </div>
-        <span className={`font-bold text-foreground transition-all duration-300 ${
-          isCommandCenter ? 'text-base group-hover:text-purple-600 dark:group-hover:text-purple-400' : 'text-[13px]'
-        }`}>{item.label}</span>
-      </div>
-    </div>
-  );
-}
-
-/* -- Sortable Tool Card (smaller cards) -- */
-function SortableToolCard({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.85 : 1,
-  };
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => !isDragging && onNavigate(item.path)}
-      className={`group relative bg-card hover:bg-card/90 rounded-xl border border-border/50 p-4 text-right transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] overflow-hidden cursor-grab active:cursor-grabbing select-none touch-manipulation animate-card-stagger ${isDragging ? 'shadow-2xl scale-105 ring-2 ring-primary/30' : ''}`}
-    >
-      <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ backgroundColor: item.borderColor }} />
-      <div className="flex items-center gap-3 flex-row-reverse">
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-          style={{ background: item.iconBg, boxShadow: `0 4px 14px ${item.shadow}` }}
-        >
-          <item.icon className="w-5 h-5 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-bold text-foreground block">{item.label}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function NewsTicker({ navigate, isOwner }: { navigate: (path: string) => void; isOwner?: boolean }) {
-  const { data: newsItems } = trpc.newsTicker.getActive.useQuery();
-  const { data: liveEvents } = trpc.newsTicker.getLiveEvents.useQuery(undefined, {
-    refetchInterval: 60_000, // refresh every 60 seconds
-  });
-
-  const fallbackItems = [
-    { id: "fallback-0", title: "جاري تحميل الأخبار...", color: "#f59e0b" },
-  ];
-
-  // Merge manual announcements (first) + live events from Command Center
-  const manualItems = (newsItems || []).map((n: any) => ({ id: `manual-${n.id}`, title: n.title, color: n.color || "#f59e0b" }));
-  const liveItems = (liveEvents || []).map((e: any) => ({ id: e.id, title: e.title, color: e.color }));
-  const allItems = [...manualItems, ...liveItems];
-  const items = allItems.length > 0 ? allItems : fallbackItems;
-
-  return (
-    <section className="pb-4">
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-l from-amber-50/60 to-orange-50/40 dark:from-amber-950/10 dark:to-orange-950/10 border border-amber-200/30 dark:border-amber-800/20 py-2.5 px-4">
-        <div className="flex items-center gap-3">
-          <div className="shrink-0 flex items-center gap-1.5 pl-3 border-l border-amber-300/40">
-            <Megaphone className="w-4 h-4 text-amber-600" />
-            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 whitespace-nowrap">آخر الأخبار</span>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#ffffff_42%,#f5f7f8_100%)]" dir="rtl">
+      <header className="border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg"><Building2 className="h-5 w-5" /></div>
+            <div><p className="text-sm font-black text-slate-900">COMO Developments</p><p className="text-[10px] text-slate-500">المكتب التنفيذي الذكي</p></div>
           </div>
-          <div className="overflow-hidden flex-1">
-            <div className="animate-marquee whitespace-nowrap flex gap-12">
-              {[...Array(2)].map((_, rep) =>
-                items.map((item) => (
-                  <span key={`${rep}-${item.id}`} className="text-xs text-foreground/80 inline-flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color || '#f59e0b' }} />
-                    {item.title}
-                  </span>
-                ))
-              )}
+          <Button onClick={() => (window.location.href = getLoginUrl())} className="rounded-xl bg-slate-900 px-5 text-white hover:bg-slate-800">تسجيل الدخول</Button>
+        </div>
+      </header>
+      <main className="mx-auto grid min-h-[calc(100vh-65px)] max-w-6xl items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[1.05fr_.95fr]">
+        <section>
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800"><Sparkles className="h-4 w-4" /> COMO Next</div>
+          <h1 className="mt-6 text-4xl font-black leading-[1.25] text-slate-950 sm:text-6xl">عقلٌ مساعد لإدارة العمل،<br /><span className="text-[#b7791f]">لا لوحة أرقام أخرى.</span></h1>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-slate-600">سارة هي واجهة التواصل، وManus هو العقل التنفيذي عند التكليف. المعرفة والقرارات والاجتماعات والوثائق تبقى مرتبطة بالمشروع وملف العمل.</p>
+          <Button size="lg" onClick={() => (window.location.href = getLoginUrl())} className="mt-8 h-12 rounded-2xl bg-slate-900 px-7 text-white hover:bg-slate-800">الدخول إلى COMO <ArrowLeft className="mr-2 h-4 w-4" /></Button>
+        </section>
+        <section className="relative mx-auto w-full max-w-md">
+          <div className="absolute -inset-8 rounded-[44px] bg-gradient-to-br from-amber-200/50 via-white to-slate-200/60 blur-2xl" />
+          <div className="relative overflow-hidden rounded-[36px] border border-white bg-white p-3 shadow-[0_35px_100px_rgba(15,23,42,.18)]">
+            <img src={SARA_AVATAR_URL} alt="سارة" className="aspect-[4/5] w-full rounded-[29px] object-cover object-top" />
+            <div className="absolute inset-x-7 bottom-7 rounded-2xl border border-white/30 bg-slate-950/75 p-4 text-white backdrop-blur-xl">
+              <p className="text-sm font-black">سارة · واجهة COMO</p>
+              <p className="mt-1 text-xs text-slate-300">تستمع، تتحدث، وتضع المعرفة في سياقها الصحيح.</p>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/news-manage")}
-            className="shrink-0 text-[10px] text-amber-600 hover:text-amber-800 dark:text-amber-400 hover:underline whitespace-nowrap"
-            title="إدارة الأخبار"
-            style={{ display: isOwner ? undefined : 'none' }}
-          >
-            إدارة
-          </button>
-        </div>
-      </div>
-    </section>
+        </section>
+      </main>
+    </div>
   );
 }
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
-  const { ccMember, isCCAuth, isOwner: isCCOwner } = useCCAuth();
-  const { isOwner } = useOwner();
-  // CC members see the full platform (read-only)
-  const effectivelyAuthenticated = isAuthenticated || isCCAuth;
-  const ccToken = isCCAuth ? window.localStorage.getItem("cc_token") || undefined : undefined;
-  const effectiveUser = user ?? (ccMember ? { name: ccMember.nameAr, role: ccMember.role } : null);
+  const { ccMember, ccLoading, isCCAuth } = useCCAuth();
   const [, navigate] = useLocation();
-  const [activeAgent, setActiveAgent] = useState<AgentType | null>(null);
-  const [quickActionLoading, setQuickActionLoading] = useState<string | null>(null);
-  const [quickActionResult, setQuickActionResult] = useState<{ title: string; content: string } | null>(null);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const effectivelyAuthenticated = isAuthenticated || isCCAuth;
+  const effectiveName = user?.name || ccMember?.nameAr || "عبد الرحمن";
 
-  /* -- Drag & Drop order state -- */
-  const [mainOrder, setMainOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("como_main_order");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+  const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 30_000,
+    retry: false,
   });
-  const [toolsOrder, setToolsOrder] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("como_tools_order");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+  const overview = overviewQuery.data;
+  const todaySummary = overview?.today.summary;
+  const decisions = overview?.decisions ?? [];
+  const communications = overview?.draftCommunications ?? [];
+  const meetings = overview?.meetingAttention ?? [];
+  const workFiles = overview?.workFiles ?? [];
+  const firstDecision = decisions[0];
+  const firstAction = overview?.today.sections.mine[0]
+    ?? overview?.today.sections.manus[0]
+    ?? overview?.today.sections.team[0]
+    ?? overview?.today.sections.waitingExternal[0];
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
-    useSensor(KeyboardSensor)
-  );
-  const { data: agentsList = [] } = trpc.agents.list.useQuery(undefined, {
-    enabled: effectivelyAuthenticated,
-  });
-  const chatMutation = trpc.agents.chat.useMutation();
+  if (loading || ccLoading) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#f7f8f6]"><Loader2 className="h-7 w-7 animate-spin text-amber-600" /></div>;
+  }
 
-  // Overdue tasks count for the tour card badge
-  const { data: deadlineAlerts = [] } = trpc.lifecycle.getDeadlineAlerts.useQuery(
-    {},
-    { enabled: effectivelyAuthenticated, staleTime: 60_000 }
-  );
-  const overdueCount = deadlineAlerts.filter((a: any) => a.severity === 'overdue').length;
-  const { data: homepageProjects = [] } = trpc.projects.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
-  const { data: homepageTaskStats } = trpc.tasks.stats.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
-  const { data: homepageMeetings = [] } = trpc.meetings.list.useQuery(undefined, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
-  const ownerSummaryQuery = trpc.projectLaunchGate.getOwnerSummary.useQuery({ ccToken }, { enabled: effectivelyAuthenticated, staleTime: 60_000 });
-  const ownerSummary = ownerSummaryQuery.data ?? { today: [], decisions: [] };
-  const ownerSummaryError = ownerSummaryQuery.isError ? ownerSummaryQuery.error.message : null;
-  const openTaskCount = (homepageTaskStats?.new ?? 0) + (homepageTaskStats?.progress ?? 0) + (homepageTaskStats?.hold ?? 0);
-  const preparingMeetingCount = homepageMeetings.filter((meeting: any) => (meeting.meetingStatus || meeting.status) === "preparing").length;
-
-  const coordinator = agentsList.find((a: any) => a.isCoordinator === 1);
-  const teamAgents = agentsList.filter((a: any) => a.isCoordinator !== 1);
-
-  const executeQuickAction = async (actionId: string, message: string, title: string) => {
-    setQuickActionLoading(actionId);
-    setQuickActionResult(null);
-    try {
-      const result = await chatMutation.mutateAsync({
-        agent: "salwa",
-        message,
-        conversationHistory: [],
-      });
-      setQuickActionResult({ title, content: (result as any).response || result.text || "" });
-    } catch (err: any) {
-      setQuickActionResult({ title: "خطأ", content: `حدث خطأ: ${err.message || "حاول مرة أخرى"}` });
-    } finally {
-      setQuickActionLoading(null);
-    }
-  };
-
-  const QUICK_ACTIONS = [
-    {
-      id: "check-email",
-      icon: Mail,
-      label: "البريد الإلكتروني",
-      color: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
-      borderColor: "border-blue-200 dark:border-blue-800",
-      message: "شيكي على البريد الإلكتروني",
-      resultTitle: "📧 البريد الإلكتروني",
-    },
-    {
-      id: "task-summary",
-      icon: FileText,
-      label: "ملخص المهام",
-      color: "bg-cyan-50 text-cyan-700 dark:bg-cyan-950/30 dark:text-cyan-400",
-      borderColor: "border-cyan-200 dark:border-cyan-800",
-      message: "لخصي لي وضع المهام الحالية",
-      resultTitle: "📝 ملخص المهام",
-    },
-    {
-      id: "agent-tasks-summary",
-      icon: Bot,
-      label: "ملخص تكليفات الوكلاء",
-      color: "bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400",
-      borderColor: "border-purple-200 dark:border-purple-800",
-      message: "لخصي لي وضع مهام وتكليفات الوكلاء",
-      resultTitle: "🤖 ملخص تكليفات الوكلاء",
-    },
-    {
-      id: "schedule-meeting",
-      icon: CalendarPlus,
-      label: "حجز موعد",
-      color: "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400",
-      borderColor: "border-green-200 dark:border-green-800",
-      message: "أريد حجز موعد اجتماع عبر Google Calendar",
-      resultTitle: "📅 حجز موعد",
-    },
-    {
-      id: "drive-status",
-      icon: Archive,
-      label: "وضع ملفات Drive",
-      color: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400",
-      borderColor: "border-amber-200 dark:border-amber-800",
-      message: "شو وضع ملفات Drive؟ لخصي لي آخر الملفات",
-      resultTitle: "📂 ملفات Drive",
-    },
-  ];
-
-  /* -- Navigation items organized in groups -- */
-  const NAV_MAIN = [
-    { id: "main-next", label: "المكتب التنفيذي", icon: BriefcaseBusiness, path: "/como-next", borderColor: "#1e6478", iconBg: "linear-gradient(135deg, #1e6478, #28556d)", shadow: "rgba(30, 100, 120, 0.25)" },
-    { id: "main-bateekha", label: "الدراسات والتخطيط المالي", icon: Layers, path: "/bateekha", borderColor: "#16a34a", iconBg: "linear-gradient(135deg, #16a34a, #15803d)", shadow: "rgba(22, 163, 74, 0.25)" },
-    { id: "main-dev", label: "جولة في مراحل التطوير", icon: HardHat, path: "/development-phases", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)", badge: overdueCount > 0 ? overdueCount : undefined },
-    { id: "main-cmd", label: "مركز القيادة", icon: Crown, path: "/command-center", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.3)" },
-    { id: "main-kb", label: "المعرفة والتحليل", icon: BookOpen, path: "/knowledge-analysis", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)", shadow: "rgba(139, 92, 246, 0.25)" },
-    { id: "main-audit", label: "تدقيق وتحليل العقود", icon: FileText, path: "/contract-audit", borderColor: "#dc2626", iconBg: "linear-gradient(135deg, #dc2626, #b91c1c)", shadow: "rgba(220, 38, 38, 0.25)" },
-  ];
-
-  const NAV_TOOLS: ToolNavItem[] = [
-    { id: "tool-tasks", label: "المهام", icon: FileText, path: "/tasks", borderColor: "#06b6d4", iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)", shadow: "rgba(6, 182, 212, 0.25)", layer: "owner" },
-    { id: "tool-meetings", label: "غرفة الاجتماعات", icon: Users, path: "/meetings", borderColor: "#a855f7", iconBg: "linear-gradient(135deg, #a855f7, #7c3aed)", shadow: "rgba(168, 85, 247, 0.25)", layer: "owner" },
-    { id: "main-consult", label: "المكاتب الاستشارية", icon: Users, path: "/consultant-portal", borderColor: "#78716c", iconBg: "linear-gradient(135deg, #78716c, #57534e)", shadow: "rgba(120, 113, 108, 0.25)", layer: "owner" },
-    { id: "tool-knowledge-base", label: "قاعدة المعرفة", icon: BookOpen, path: "/knowledge-base", borderColor: "#8b5cf6", iconBg: "linear-gradient(135deg, #8b5cf6, #6d28d9)", shadow: "rgba(139, 92, 246, 0.25)", layer: "intelligence" },
-    { id: "tool-market", label: "تقارير السوق", icon: BarChart3, path: "/market-reports", borderColor: "#0891b2", iconBg: "linear-gradient(135deg, #0891b2, #06b6d4)", shadow: "rgba(8, 145, 178, 0.25)", layer: "intelligence" },
-    { id: "tool-learn", label: "التعلم الذاتي", icon: Brain, path: "/self-learning", borderColor: "#ec4899", iconBg: "linear-gradient(135deg, #ec4899, #db2777)", shadow: "rgba(236, 72, 153, 0.25)", layer: "intelligence" },
-    { id: "tool-drive", label: "ملفات Drive", icon: Archive, path: "/drive", borderColor: "#10b981", iconBg: "linear-gradient(135deg, #10b981, #059669)", shadow: "rgba(16, 185, 129, 0.25)", layer: "services" },
-    { id: "main-agents", label: "لوحة الوكلاء", icon: Bot, path: "/agent-dashboard", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", layer: "services" },
-    { id: "tool-assign", label: "ملخص التكليفات", icon: ClipboardList, path: "/agent-assignments-summary", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services" },
-    { id: "tool-news", label: "إدارة الأخبار", icon: Newspaper, path: "/news-manage", borderColor: "#f59e0b", iconBg: "linear-gradient(135deg, #f59e0b, #d97706)", shadow: "rgba(245, 158, 11, 0.25)", layer: "services", ownerOnly: true },
-    { id: "tool-users", label: "إدارة المستخدمين", icon: Users, path: "/user-management", borderColor: "#6366f1", iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)", shadow: "rgba(99, 102, 241, 0.25)", layer: "services", ownerOnly: true },
-    { id: "tool-test-project", label: "المشروع التجريبي", icon: FlaskConical, path: "/test-project", borderColor: "#7c3aed", iconBg: "linear-gradient(135deg, #7c3aed, #6d28d9)", shadow: "rgba(124, 58, 237, 0.25)", layer: "services", ownerOnly: true },
-  ];
-
-  /* -- Sorted arrays based on saved order -- */
-  const sortedMain = useMemo(() => {
-    const financialStudies = NAV_MAIN.find((item) => item.id === "main-bateekha")!;
-    const remainingItems = NAV_MAIN.filter((item) => item.id !== "main-bateekha");
-    if (!mainOrder.length) return [financialStudies, ...remainingItems];
-    const map = new Map(NAV_MAIN.map(item => [item.id, item]));
-    const ordered = mainOrder.filter((id) => id !== "main-bateekha" && map.has(id)).map((id) => map.get(id)!);
-    remainingItems.forEach((item) => { if (!ordered.some((current) => current.id === item.id)) ordered.push(item); });
-    return [financialStudies, ...ordered];
-  }, [mainOrder]);
-
-  const sortedTools = useMemo(() => {
-    if (!toolsOrder.length) return NAV_TOOLS;
-    const map = new Map(NAV_TOOLS.map(item => [item.id, item]));
-    const ordered = toolsOrder.filter(id => map.has(id)).map(id => map.get(id)!);
-    NAV_TOOLS.forEach(item => { if (!toolsOrder.includes(item.id)) ordered.push(item); });
-    return ordered;
-  }, [toolsOrder]);
-
-  const visibleSortedTools = useMemo(
-    () => sortedTools.filter((item) => !item.ownerOnly || isOwner || isCCOwner),
-    [isCCOwner, isOwner, sortedTools]
-  );
-
-  const TOOL_LAYERS: Array<{ id: ToolLayerId; title: string; description: string; source: string; icon: any; tone: string }> = [
-    {
-      id: "owner",
-      title: "تشغيل المالك",
-      description: "أدوات العمل اليومي والقرارات والمتابعة داخل دورة المشروع.",
-      source: "مصادر حية: المهام، الاجتماعات، وعروض الاستشاريين.",
-      icon: Target,
-      tone: "from-emerald-500 to-teal-600",
-    },
-    {
-      id: "intelligence",
-      title: "استخبارات المشروع",
-      description: "أدلة السوق والمعرفة والدروس التي تدعم قرارك قبل التنفيذ.",
-      source: "مصادر مرجعية: تقارير السوق، المعرفة، وسجل الدقة.",
-      icon: BrainCircuit,
-      tone: "from-violet-500 to-purple-600",
-    },
-    {
-      id: "services",
-      title: "خدمات النظام",
-      description: "مصادر الملفات والمراقبة والإدارة التي تدعم العمل ولا تزاحم قراراتك اليومية.",
-      source: "مصادر خلفية: Google Drive، الوكلاء، والتكليفات والإدارة.",
-      icon: Shield,
-      tone: "from-sky-500 to-blue-600",
-    },
-  ];
-
-  const handleMainDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    if (active.id === "main-bateekha" || over.id === "main-bateekha") return;
-    const oldIndex = sortedMain.findIndex(i => i.id === active.id);
-    const newIndex = sortedMain.findIndex(i => i.id === over.id);
-    const newArr = arrayMove(sortedMain, oldIndex, newIndex);
-    const newOrder = newArr.map(i => i.id);
-    setMainOrder(newOrder);
-    localStorage.setItem("como_main_order", JSON.stringify(newOrder));
-  }, [sortedMain]);
-
-  const handleToolsDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = sortedTools.findIndex(i => i.id === active.id);
-    const newIndex = sortedTools.findIndex(i => i.id === over.id);
-    const newArr = arrayMove(sortedTools, oldIndex, newIndex);
-    const newOrder = newArr.map(i => i.id);
-    setToolsOrder(newOrder);
-    localStorage.setItem("como_tools_order", JSON.stringify(newOrder));
-  }, [sortedTools]);
-
-  const NAV_RECORDS = [
-    { label: "سجل التكليفات", path: "/agent-assignments" },
-    { label: "سجل المحادثات", path: "/conversation-history" },
-    { label: "سجل العقود", path: "/contracts" },
-    { label: "سجل الإيميلات المرسلة", path: "/sent-emails" },
-    { label: "سجل الاستشاريين", path: "/consultants-registry" },
-    { label: "سجل الشركاء والمتعاملين", path: "/business-partners-registry" },
-    { label: "طلبات الصرف", path: "/payment-requests" },
-    { label: "الاعتمادات الرسمية", path: "/general-requests" },
-    { label: "التواصل الداخلي", path: "/internal-messages" },
-  ];
+  if (!effectivelyAuthenticated) return <PublicHome />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20" dir="rtl">
-      {/* ══════════════════════════════════════════════════════════════ */}
-      {/* -- Header -- */}
-      {/* ══════════════════════════════════════════════════════════════ */}
-      <header className="border-b border-border/60 bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center shadow-md">
-              <Building2 className="w-4.5 h-4.5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-foreground leading-tight">COMO Developments</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">منصة إدارة المشاريع الذكية</p>
-            </div>
-          </div>
-
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#fbfcfb_36%,#f2f5f5_100%)] text-slate-900" dir="rtl">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-7">
+          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3 text-right">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-md"><Building2 className="h-5 w-5" /></div>
+            <div><p className="text-sm font-black">COMO Developments</p><p className="text-[10px] text-slate-500">مكتب عبد الرحمن التنفيذي</p></div>
+          </button>
           <div className="flex items-center gap-2">
-            {loading ? (
-              <div className="w-20 h-8 rounded-md shimmer" />
-            ) : effectivelyAuthenticated ? (
-              <>
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  مرحباً، <span className="font-medium text-foreground">{effectiveUser?.name}</span>
-                </span>
-                <NotificationBell />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/agent-dashboard")}
-                  className="text-xs gap-1.5"
-                >
-                  <Bot className="w-3.5 h-3.5" />
-                  لوحة التحكم
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => (window.location.href = getLoginUrl())}
-                className="text-xs gap-1.5"
-              >
-                تسجيل الدخول
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </Button>
-            )}
+            <span className="hidden text-xs text-slate-500 sm:block">مرحبًا، <strong className="text-slate-800">{effectiveName}</strong></span>
+            <Button variant="outline" onClick={() => navigate("/como-next")} className="rounded-xl border-slate-200 bg-white text-xs"><BriefcaseBusiness className="ml-2 h-4 w-4" /> COMO Next</Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6">
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- Hero Section (for non-authenticated) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {!effectivelyAuthenticated && (
-          <section className="relative py-20 lg:py-28 overflow-hidden">
-            <div className="absolute inset-0 pattern-overlay opacity-40" />
-            <div className="absolute top-10 right-1/4 w-[400px] h-[400px] rounded-full bg-amber-500/8 blur-[100px]" />
-            <div className="absolute bottom-10 left-1/4 w-[300px] h-[300px] rounded-full bg-stone-500/8 blur-[100px]" />
-
-            <div className="relative max-w-3xl mx-auto text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm font-medium mb-6">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                </span>
-                <Sparkles className="w-3.5 h-3.5" />
-                منصة ذكية لإدارة المشاريع
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-7 sm:py-9">
+        <section className="relative overflow-hidden rounded-[34px] border border-[#eadbb9] bg-[#102832] shadow-[0_30px_90px_rgba(15,36,45,.18)]">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(222,178,92,.22),transparent_34%),linear-gradient(120deg,transparent_15%,rgba(255,255,255,.03)_70%,rgba(222,178,92,.10))]" />
+          <div className="relative grid min-h-[390px] lg:grid-cols-[1.15fr_.85fr]">
+            <div className="flex flex-col justify-center px-6 py-9 sm:px-10 lg:px-14 lg:py-12">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-[11px] font-black text-amber-200">سارة · واجهة التواصل</span>
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-bold text-slate-300">Manus · العقل التنفيذي عند التكليف</span>
               </div>
-
-              <h1 className="text-4xl lg:text-5xl font-extrabold text-foreground leading-tight mb-5">
-                إدارة مشاريع كومو بذكاء
-                <br />
-                <span className="text-gold-gradient">مع فريق الوكلاء الفنيين</span>
-              </h1>
-
-              <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-2xl mx-auto">
-                منصة متكاملة تجمع بين الذكاء الاصطناعي وإدارة المشاريع لتقديم تجربة
-                احترافية لفريق التطوير العقاري
-              </p>
-
-              <Button
-                size="lg"
-                onClick={() => (window.location.href = getLoginUrl())}
-                className="gap-2 px-8 shadow-lg shadow-primary/20 bg-gradient-to-r from-stone-700 to-stone-900 hover:from-stone-800 hover:to-stone-950"
-              >
-                ابدأ الآن
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- SARA - THE SINGLE USER-FACING ASSISTANT -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && (
-          <section className="pt-8 pb-6">
-            <div className="relative rounded-2xl bg-gradient-to-l from-amber-50/80 via-white to-yellow-50/50 dark:from-amber-950/15 dark:via-card dark:to-yellow-950/10 border border-amber-200/40 dark:border-amber-800/20 shadow-sm overflow-hidden">
-              {/* Subtle gold accent */}
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-300" />
-
-              <div className="flex items-center gap-5 p-5 lg:p-6">
-                {/* Avatar - compact */}
-                <div className="relative shrink-0">
-                  <div className="w-36 h-44 lg:w-40 lg:h-48 rounded-2xl overflow-hidden ring-3 ring-amber-300/50 ring-offset-2 ring-offset-background shadow-lg">
-                    <img src={SARA_AVATAR_URL} alt="سارة" className="w-full h-full object-cover object-top" />
-                  </div>
-                  <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-card shadow-sm">
-                    <span className="absolute inset-0 w-full h-full rounded-full bg-emerald-500 animate-ping opacity-40" />
-                  </span>
-                </div>
-
-                {/* Info + Quick Actions */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-                    <h2 className="text-xl lg:text-2xl font-extrabold text-foreground">سارة</h2>
-                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/15 text-amber-700 dark:text-amber-400 font-bold border border-amber-300/40">
-                      واجهة التواصل
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    تستمع وتتحدث وتعرض معرفة COMO؛ وManus هو العقل التنفيذي عند التكليف
-                  </p>
-
-                  {/* Controlled assistant entry points */}
-                  <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">صوت مباشر ومقاطعة طبيعية</span>
-                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">لا إرسال خارجي تلقائي</span>
-                  </div>
-                  <button
-                    onClick={() => navigate("/command-center")}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-bold shadow-md shadow-amber-500/20 transition-all duration-200 hover:shadow-lg hover:from-amber-600 hover:to-amber-700 text-xs"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    تحدث مع سارة
-                    <ArrowLeft className="w-3 h-3" />
-                  </button>
-                </div>
+              <h1 className="mt-6 max-w-3xl text-3xl font-black leading-[1.25] text-white sm:text-5xl">ابدأ من السؤال،<br /><span className="text-amber-300">ودع سارة ترتّب طريق العمل.</span></h1>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">سارة تستمع وتتحدث وتقرأ ما هو معتمد في COMO. وعندما يحتاج الأمر تحليلًا عميقًا أو إعداد تقرير أو تنفيذ خطوة، يُكلّف Manus بوضوح وتحت إشرافك.</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Button onClick={() => navigate("/sara")} className="h-12 rounded-2xl bg-amber-400 px-6 font-black text-slate-950 shadow-lg shadow-amber-400/20 hover:bg-amber-300"><MessageSquare className="ml-2 h-5 w-5" /> تحدث مع سارة</Button>
+                <Button variant="outline" onClick={() => navigate("/como-next")} className="h-12 rounded-2xl border-white/20 bg-white/5 px-6 font-bold text-white hover:bg-white/10"><BriefcaseBusiness className="ml-2 h-5 w-5" /> افتح المكتب التنفيذي</Button>
               </div>
-
-              {/* Quick Action Result */}
-              {quickActionResult && (
-                <div className="px-5 pb-5">
-                  <QuickActionResult
-                    title={quickActionResult.title}
-                    content={quickActionResult.content}
-                    onClose={() => setQuickActionResult(null)}
-                  />
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- NEWS TICKER (Authenticated) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && (
-          <NewsTicker navigate={navigate} isOwner={isOwner} />
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- QUICK STATS BAR (Authenticated) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && (
-          <section className="pb-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 to-teal-500 rounded-t-xl" />
-                <div className="flex items-center gap-3 flex-row-reverse">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-                    <FolderOpen className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">{homepageProjects.length}</p>
-                    <p className="text-[10px] text-muted-foreground">مشاريع مسجلة</p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 to-indigo-500 rounded-t-xl" />
-                <div className="flex items-center gap-3 flex-row-reverse">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                    <ClipboardList className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">{openTaskCount}</p>
-                    <p className="text-[10px] text-muted-foreground">مهام مفتوحة</p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-amber-500 to-orange-500 rounded-t-xl" />
-                <div className="flex items-center gap-3 flex-row-reverse">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-sm">
-                    <Clock className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">{preparingMeetingCount}</p>
-                    <p className="text-[10px] text-muted-foreground">اجتماعات قيد التحضير</p>
-                  </div>
-                </div>
-              </div>
-              <div className="relative bg-card rounded-xl border border-border/40 p-4 overflow-hidden group hover:shadow-md transition-shadow animate-stat-bounce">
-                <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-rose-500 to-pink-500 rounded-t-xl" />
-                <div className="flex items-center gap-3 flex-row-reverse">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-sm">
-                    <AlertTriangle className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 text-right">
-                    <p className="text-xl font-extrabold text-foreground">{overdueCount}</p>
-                    <p className="text-[10px] text-muted-foreground">تنبيهات تأخير</p>
-                  </div>
-                </div>
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-slate-400">
+                <span><ShieldCheck className="ml-1.5 inline h-4 w-4 text-emerald-400" /> لا إرسال خارجي تلقائي</span>
+                <span><LockKeyhole className="ml-1.5 inline h-4 w-4 text-amber-300" /> القرارات لا تتحول إلى تنفيذ دون اعتماد</span>
               </div>
             </div>
-          </section>
-        )}
 
-        {effectivelyAuthenticated && (
-          <section className="pb-6" aria-label="ملخص المالك اليومي">
-            <div className="mb-3 flex items-end justify-between gap-3">
-              <div><p className="text-xs font-bold text-rose-700">قراءة تشغيلية من المصادر القائمة</p><h2 className="mt-1 text-lg font-bold text-foreground">اليوم / يحتاج قرارًا</h2></div>
-              <span className="rounded-full border border-border bg-card px-2.5 py-1 text-[10px] font-medium text-muted-foreground">لا توجد أرقام تقديرية أو سجلات جديدة</span>
-            </div>
-            <div className="grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/35 p-4">
-                <div className="mb-3 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600 text-white"><AlertTriangle className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">يحتاج قرارًا</h3><p className="text-[10px] text-muted-foreground">خطوة المشروع التالية بحسب بوابة الانطلاق.</p></div></div>
-                <div className="space-y-2">{ownerSummary.decisions.length > 0 ? ownerSummary.decisions.map((item: any) => <button key={`${item.projectId}-${item.title}`} onClick={() => navigate(item.href)} className="w-full rounded-xl border border-white bg-white/90 p-3 text-right transition-colors hover:bg-rose-50"><p className="text-xs font-bold text-foreground">{item.projectName}: {item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.detail}</p></button>) : <p className="rounded-xl border border-dashed border-rose-200 bg-white/70 px-3 py-5 text-center text-xs text-muted-foreground">{ownerSummaryError ? `تعذر تحميل القرارات: ${ownerSummaryError}` : "لا توجد خطوة تأسيسية معلقة في المشاريع المسجلة."}</p>}</div>
-              </div>
-              <div className="rounded-2xl border border-sky-200 bg-sky-50/35 p-4">
-                <div className="mb-3 flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-600 text-white"><Activity className="h-4 w-4" /></div><div><h3 className="text-sm font-bold text-foreground">المتابعة الحالية</h3><p className="text-[10px] text-muted-foreground">تفصل المهام عن متابعات الاجتماعات والتغييرات حتى لا تختلط المسؤوليات.</p></div></div>
-                <div className="space-y-3">{(["task", "meeting", "change"] as const).map((kind) => { const items = ownerSummary.today.filter((item: any) => item.kind === kind); const label = kind === "task" ? "مهام عمل" : kind === "meeting" ? "متابعات اجتماعات" : "تغييرات معتمدة"; const tone = kind === "task" ? "text-rose-800" : kind === "meeting" ? "text-amber-800" : "text-emerald-800"; return <div key={kind} className="border-t border-sky-200/80 pt-3 first:border-t-0 first:pt-0"><div className={`mb-2 text-[11px] font-bold ${tone}`}>{label}</div>{items.length > 0 ? <div className="space-y-2">{items.map((item: any, index: number) => <button key={`${item.kind}-${item.projectId || "general"}-${index}`} onClick={() => navigate(item.href)} className="w-full rounded-xl border border-white bg-white/90 p-3 text-right transition-colors hover:bg-sky-50"><p className="text-xs font-bold text-foreground">{item.title}</p><p className="mt-1 text-[10px] text-muted-foreground">{item.detail}</p></button>)}</div> : <p className="rounded-lg border border-dashed border-sky-100 bg-white/60 px-3 py-2 text-center text-[11px] text-muted-foreground">لا يوجد</p>}</div>; })}{ownerSummary.today.length === 0 && <p className="rounded-xl border border-dashed border-sky-200 bg-white/70 px-3 py-5 text-center text-xs text-muted-foreground">{ownerSummaryError ? "راجع حالة مصدر الملخص أعلاه قبل الاعتماد على هذه الخانة." : "لا توجد متابعة عاجلة أو تغيير معتمد ظاهر الآن."}</p>}</div>
+            <div className="relative min-h-[330px] overflow-hidden lg:min-h-full">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#102832] via-transparent to-transparent lg:bg-gradient-to-r" />
+              <img src={SARA_AVATAR_URL} alt="سارة، واجهة COMO" className="h-full w-full object-cover object-top" />
+              <div className="absolute bottom-6 right-6 left-6 rounded-2xl border border-white/15 bg-slate-950/65 p-4 text-white backdrop-blur-xl">
+                <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-black">سارة جاهزة</p><p className="mt-1 text-[11px] text-slate-300">الصوت والصورة الحية يعملان فقط عندما تبدأ الجلسة.</p></div><span className="relative flex h-3 w-3"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" /></span></div>
               </div>
             </div>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- CAPABILITIES (moved above main sections) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        <section className="pb-6">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 shadow-md shadow-orange-500/20 mb-3">
-              <Rocket className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">قدرات المنصة</h2>
-            <p className="text-sm text-muted-foreground">أدوات متقدمة لإدارة كل جانب من جوانب مشاريعك</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                icon: BrainCircuit,
-                title: "وكلاء ذكيون",
-                desc: "فريق من الوكلاء المتخصصين يعملون على مدار الساعة",
-                borderColor: "#6366f1",
-                iconBg: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                shadow: "rgba(99, 102, 241, 0.3)",
-              },
-              {
-                icon: Shield,
-                title: "تدقيق العقود",
-                desc: "مراجعة قانونية ذكية للعقود واكتشاف المخاطر",
-                borderColor: "#06b6d4",
-                iconBg: "linear-gradient(135deg, #06b6d4, #0891b2)",
-                shadow: "rgba(6, 182, 212, 0.3)",
-              },
-              {
-                icon: TrendingUp,
-                title: "تحليل مالي",
-                desc: "تحليل الميزانيات والمستخلصات المالية بدقة",
-                borderColor: "#10b981",
-                iconBg: "linear-gradient(135deg, #10b981, #059669)",
-                shadow: "rgba(16, 185, 129, 0.3)",
-              },
-              {
-                icon: Layers,
-                title: "أرشفة ذكية",
-                desc: "تنظيم وأرشفة الملفات تلقائياً بتسمية احترافية",
-                borderColor: "#f59e0b",
-                iconBg: "linear-gradient(135deg, #f59e0b, #d97706)",
-                shadow: "rgba(245, 158, 11, 0.3)",
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className="relative bg-card rounded-xl border border-border/50 p-5 overflow-hidden hover:shadow-md transition-shadow duration-200"
-              >
-                <div
-                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl"
-                  style={{ backgroundColor: feature.borderColor }}
-                />
-                <div className="flex items-center gap-3.5 flex-row-reverse">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                    style={{
-                      background: feature.iconBg,
-                      boxShadow: `0 4px 14px ${feature.shadow}`,
-                    }}
-                  >
-                    <feature.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 pt-0.5">
-                    <h3 className="font-bold text-foreground mb-1 text-sm">{feature.title}</h3>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.desc}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </section>
 
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- MAIN NAVIGATION - Big Cards (Authenticated) -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && (
-          <section className="pb-8">
-            {/* Section Title */}
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
-                <Target className="w-4 h-4 text-white" />
-              </div>
-              <h2 className="text-base font-bold text-foreground">الأقسام الرئيسية</h2>
+        <section className="mt-7" aria-label="موجز COMO Next">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-[11px] font-black text-[#1f6478]">من COMO Next فقط</p><h2 className="mt-1 text-xl font-black text-slate-900">ما يحتاج انتباهك الآن</h2></div>
+            <button type="button" onClick={() => navigate("/como-next")} className="inline-flex items-center gap-1 text-xs font-bold text-[#1f6478] hover:underline">عرض المكتب التنفيذي <ArrowLeft className="h-4 w-4" /></button>
+          </div>
+
+          {!isAuthenticated ? (
+            <div className="rounded-[24px] border border-dashed border-slate-300 bg-white/70 p-6 text-center">
+              <LockKeyhole className="mx-auto h-6 w-6 text-slate-400" />
+              <p className="mt-3 text-sm font-black text-slate-800">الملخص التنفيذي مخصص لدخول المالك المعتمد</p>
+              <p className="mt-1 text-xs text-slate-500">لن نعرض بديلًا من بيانات النظام القديم.</p>
             </div>
-
-            {/* Command Center — Full-width Hero Banner */}
-            <div
-              onClick={() => navigate('/command-center')}
-              className="group relative mb-5 rounded-2xl overflow-hidden cursor-pointer select-none transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl active:scale-[0.99]"
-              style={{
-                background: 'linear-gradient(160deg, #7f0000 0%, #b91c1c 40%, #dc2626 75%, #ef4444 100%)',
-                boxShadow: '0 8px 32px rgba(185,28,28,0.5), 0 2px 8px rgba(0,0,0,0.25)',
-              }}
-            >
-              {/* Animated shimmer overlay */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                style={{background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.07) 50%, transparent 60%)'}} />
-              {/* Decorative circles */}
-              <div className="absolute -top-10 -left-10 w-48 h-48 rounded-full opacity-10" style={{background: 'radial-gradient(circle, #fca5a5, transparent)'}} />
-              <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full opacity-15" style={{background: 'radial-gradient(circle, #f87171, transparent)'}} />
-              <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-64 h-64 rounded-full opacity-5" style={{background: 'radial-gradient(circle, #ef4444, transparent)'}} />
-
-              <div className="relative z-10 flex items-center gap-5 px-7 py-5">
-                {/* Icon */}
-                <div className="relative shrink-0">
-                  <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3"
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.1))',
-                      backdropFilter: 'blur(8px)',
-                      border: '1.5px solid rgba(255,255,255,0.3)',
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)',
-                    }}
-                  >
-                    <Crown className="w-8 h-8 drop-shadow-lg" style={{color:'#fbbf24', filter:'drop-shadow(0 0 6px rgba(251,191,36,0.8)) drop-shadow(0 2px 4px rgba(0,0,0,0.3))'}} />
-                  </div>
-                  {/* Pulse ring */}
-                  <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{background: 'rgba(251,191,36,0.4)'}} />
-                </div>
-
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-black text-white tracking-wide">مركز القيادة</h3>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold" style={{background:'rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.9)', border:'1px solid rgba(255,255,255,0.2)'}}>COMMAND CENTER</span>
-                  </div>
-                  <p className="text-sm" style={{color:'rgba(255,255,255,0.7)'}}>المحفظة المالية · التقارير · التقييمات · المراحل · الطلبات</p>
-                </div>
-
-                {/* Arrow */}
-                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:translate-x-[-4px]" style={{background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.2)'}}>
-                  <ChevronLeft className="w-5 h-5 text-white" />
-                </div>
+          ) : overviewQuery.isLoading ? (
+            <div className="flex min-h-40 items-center justify-center rounded-[24px] border border-slate-200 bg-white"><Loader2 className="h-6 w-6 animate-spin text-[#1f6478]" /></div>
+          ) : overviewQuery.isError ? (
+            <div className="rounded-[24px] border border-red-200 bg-red-50 p-6 text-center"><CircleAlert className="mx-auto h-6 w-6 text-red-600" /><p className="mt-3 text-sm font-black text-red-900">تعذر قراءة COMO Next الآن</p><p className="mt-1 text-xs text-red-700">لم تُستخدم أي بيانات قديمة كبديل.</p></div>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <MetricCard label="قرارات تنتظر اعتمادك" value={decisions.length} note="قرارات مسجلة داخل ملفات العمل فقط." icon={CircleAlert} tone="bg-rose-50 text-rose-700" />
+                <MetricCard label="استحقاقات اليوم" value={todaySummary?.dueToday ?? 0} note={`${todaySummary?.overdue ?? 0} متأخر ضمن إجراءات COMO Next.`} icon={FileClock} tone="bg-amber-50 text-amber-700" />
+                <MetricCard label="مسودات للمراجعة" value={communications.length} note="المسودة لا تعني إرسالًا أو التزامًا خارجيًا." icon={MessageSquare} tone="bg-sky-50 text-sky-700" />
+                <MetricCard label="اجتماعات تحتاج متابعة" value={meetings.length} note="تحضير أو مخرجات أو محضر ينتظر المراجعة." icon={CalendarCheck} tone="bg-emerald-50 text-emerald-700" />
               </div>
-            </div>
 
-            {/* Compact main cards in one desktop row, excluding the Command Center hero */}
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleMainDragEnd}>
-              <SortableContext items={sortedMain.filter(i => i.id !== 'main-cmd').map(i => i.id)} strategy={rectSortingStrategy}>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {sortedMain.filter(i => i.id !== 'main-cmd').map((item) => (
-                    <SortableMainCard key={item.id} item={item} onNavigate={navigate} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- TOOLS & REPORTS - Owner Operations, Intelligence, Services -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && (
-          <section className="pb-8">
-            <div className="flex items-center gap-2.5 mb-5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-sm">
-                <Zap className="w-4 h-4 text-white" />
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+                <button type="button" onClick={() => navigate("/como-next")} className="rounded-[24px] border border-slate-200 bg-white p-5 text-right shadow-[0_14px_36px_rgba(15,23,42,.04)] transition hover:border-[#8fb7c2] hover:shadow-md">
+                  <p className="text-[10px] font-black text-rose-700">أولوية القرار</p>
+                  {firstDecision ? <><h3 className="mt-2 text-base font-black text-slate-900">{firstDecision.title}</h3><p className="mt-2 text-xs leading-6 text-slate-500">{firstDecision.projectName} · {firstDecision.workFileTitle}</p></> : <><h3 className="mt-2 text-base font-black text-slate-900">لا يوجد قرار معلق</h3><p className="mt-2 text-xs text-slate-500">لن نصنع قرارًا تقديريًا لملء الصفحة.</p></>}
+                </button>
+                <button type="button" onClick={() => navigate("/como-next")} className="rounded-[24px] border border-slate-200 bg-white p-5 text-right shadow-[0_14px_36px_rgba(15,23,42,.04)] transition hover:border-[#8fb7c2] hover:shadow-md">
+                  <p className="text-[10px] font-black text-[#1f6478]">الإجراء الأقرب</p>
+                  {firstAction ? <><h3 className="mt-2 text-base font-black text-slate-900">{firstAction.title}</h3><p className="mt-2 text-xs leading-6 text-slate-500">{firstAction.projectName} · {firstAction.workFileTitle}</p></> : <><h3 className="mt-2 text-base font-black text-slate-900">لا يوجد إجراء مستحق اليوم</h3><p className="mt-2 text-xs text-slate-500">ملفات العمل المفتوحة حاليًا: {workFiles.length}</p></>}
+                </button>
               </div>
-              <h2 className="text-base font-bold text-foreground">الأدوات والتقارير</h2>
-            </div>
+            </>
+          )}
+        </section>
 
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleToolsDragEnd}>
-              <div className="space-y-5">
-                {TOOL_LAYERS.map((layer) => {
-                  const layerTools = visibleSortedTools.filter((item) => item.layer === layer.id);
-                  const LayerIcon = layer.icon;
-                  return (
-                    <div key={layer.id} className="rounded-2xl border border-border/55 bg-card/50 p-4 sm:p-5">
-                      <div className="mb-4 flex items-start gap-3">
-                        <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${layer.tone} shadow-sm`}>
-                          <LayerIcon className="h-5 w-5 text-white" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-bold text-foreground">{layer.title}</h3>
-                          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{layer.description}</p>
-                          <p className="mt-1 text-[10px] font-medium text-muted-foreground">{layer.source}</p>
-                        </div>
-                      </div>
-
-                      <SortableContext items={layerTools.map((item) => item.id)} strategy={rectSortingStrategy}>
-                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                          {layerTools.map((item) => (
-                            <SortableToolCard key={item.id} item={item} onNavigate={navigate} />
-                          ))}
-                        </div>
-                      </SortableContext>
-
-                      {layer.id === "services" && (
-                        <div className="mt-3 relative">
-                          <button
-                            onClick={() => setOpenDropdown(openDropdown === "records" ? null : "records")}
-                            className="group relative w-full overflow-hidden rounded-xl border border-border/50 bg-card p-3 text-right transition-all duration-200 hover:bg-card/90 hover:shadow-md"
-                          >
-                            <div className="absolute left-0 right-0 top-0 h-[3px] rounded-t-xl bg-gradient-to-r from-sky-500 to-blue-600" />
-                            <div className="flex flex-row-reverse items-center gap-3">
-                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 shadow-sm" style={{ boxShadow: "0 4px 14px rgba(14, 165, 233, 0.25)" }}>
-                                <ClipboardList className="h-4 w-4 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <span className="block text-sm font-bold text-foreground">السجلات والأرشيف</span>
-                                <span className="block text-[10px] text-muted-foreground">سجلات مرجعية وإدارية لا تحتاج فتحها يوميًا.</span>
-                              </div>
-                              <ChevronLeft className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${openDropdown === "records" ? "rotate-90" : ""}`} />
-                            </div>
-                          </button>
-                          {openDropdown === "records" && (
-                            <div className="mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-lg animate-in slide-in-from-top-1 duration-200">
-                              {NAV_RECORDS.map((item, j) => (
-                                <button
-                                  key={j}
-                                  onClick={() => { navigate(item.path); setOpenDropdown(null); }}
-                                  className="flex w-full items-center gap-2 border-b border-border/30 px-5 py-3 text-right text-sm font-medium text-foreground transition-colors last:border-b-0 hover:bg-muted/60"
-                                >
-                                  <div className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-                                  {item.label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </DndContext>
-          </section>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {/* -- Agent Team Section -- */}
-        {/* ══════════════════════════════════════════════════════════════ */}
-        {effectivelyAuthenticated && teamAgents.length > 0 && (
-          <section className="py-10 border-t border-border/30">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
-                  <Users className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-foreground">فريق الوكلاء</h2>
-                  <p className="text-[10px] text-muted-foreground">{teamAgents.length} تخصصًا مساندًا؛ Manus يبقى العقل التنفيذي المركزي</p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/agent-dashboard")}
-                className="gap-1.5 text-xs"
-              >
-                عرض التفاصيل
-                <ArrowLeft className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-4">
-              {teamAgents.map((agent: any, i: number) => {
-                const IconComp = AGENT_ICONS[agent.icon || "bot"] || Bot;
-                const agentColor = agent.color || '#6366f1';
-                return (
-                  <button
-                    key={agent.id}
-                    onClick={() => setActiveAgent((agent.nameEn || agent.name).toLowerCase() as AgentType)}
-                    className="group relative bg-card rounded-xl border border-border/50 p-4 overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 text-center cursor-pointer"
-                  >
-                    {/* Top accent */}
-                    <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ background: agentColor }} />
-
-                    {/* Avatar */}
-                    {agent.avatarUrl && (
-                      <div className="mx-auto mb-3 relative">
-                        <div className="w-16 h-16 rounded-full overflow-hidden ring-3 ring-offset-2 ring-offset-background shadow-md mx-auto transition-transform duration-200 group-hover:scale-105" style={{ borderColor: agentColor }}>
-                          <img src={agent.avatarUrl} alt={agent.name} className="w-full h-full object-cover" />
-                        </div>
-                        <span className="absolute bottom-0 right-1/2 translate-x-1/2 translate-y-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-sm" />
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110 shadow-sm"
-                        style={{
-                          background: `linear-gradient(135deg, ${agentColor}, ${agentColor}cc)`,
-                          boxShadow: `0 4px 12px ${agentColor}30`,
-                        }}
-                      >
-                        <IconComp className="w-4.5 h-4.5 text-white" />
-                      </div>
-                      <div className="min-w-0 text-right">
-                        <h4 className="font-bold text-foreground text-xs">{agent.name}</h4>
-                        <p className="text-[10px] text-muted-foreground truncate">{agent.nameEn}</p>
-                      </div>
-                    </div>
-
-                    <p className="text-[10px] text-muted-foreground leading-relaxed mb-2 line-clamp-2">{agent.role}</p>
-
-                    <div className="flex items-center gap-1.5 justify-center mb-2">
-                      <div className="relative">
-                        <div className={`w-1.5 h-1.5 rounded-full ${agent.status === "active" ? "bg-emerald-500" : agent.status === "maintenance" ? "bg-amber-500" : "bg-gray-400"}`} />
-                        {agent.status === "active" && <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping opacity-50" />}
-                      </div>
-                      <span className={`text-[10px] font-medium ${agent.status === "active" ? "text-emerald-600" : agent.status === "maintenance" ? "text-amber-600" : "text-gray-400"}`}>
-                        {agent.status === "active" ? "نشط" : agent.status === "maintenance" ? "صيانة" : "غير نشط"}
-                      </span>
-                    </div>
-
-                    <div className="w-full gap-1.5 text-[10px] flex items-center justify-center rounded-lg border border-input bg-transparent px-2.5 py-1.5 hover:bg-accent hover:text-accent-foreground transition-colors">
-                      <Send className="w-3 h-3" />
-                      تحدث مع {agent.name}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
+        <section className="mt-10 pb-10">
+          <div className="mb-4"><p className="text-[11px] font-black text-[#825e44]">مساحات واضحة بلا تكرار</p><h2 className="mt-1 text-xl font-black text-slate-900">أين تريد أن تعمل؟</h2></div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {EXECUTIVE_DESTINATIONS.map(item => <DestinationCard key={item.id} item={item} onOpen={navigate} />)}
+          </div>
+          {user?.role === "admin" && (
+            <button type="button" onClick={() => navigate("/test-project")} className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-[11px] font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"><FolderOpen className="h-4 w-4" /> مختبر المشاريع المعزول</button>
+          )}
+        </section>
       </main>
 
-      {/* -- Footer -- */}
-      <footer className="border-t border-border/40 py-5 mt-4">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <p className="text-[10px] text-muted-foreground">
-            COMO Developments &copy; {new Date().getFullYear()}
-          </p>
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-            <span className="inline-flex w-3.5 h-3.5 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 items-center justify-center">
-              <Sparkles className="w-2 h-2 text-white" />
-            </span>
-            مدعوم بالذكاء الاصطناعي
-          </p>
-        </div>
+      <footer className="border-t border-slate-200/70 bg-white/70 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 text-[10px] text-slate-500 sm:px-7"><span>COMO Developments © 2026</span><span><BrainCircuit className="ml-1 inline h-3.5 w-3.5" /> سارة للتواصل · Manus للتنفيذ عند التكليف</span></div>
       </footer>
-
-      {/* -- Agent Chat Box -- */}
-      {activeAgent && (
-        <AgentChatBox
-          key={activeAgent}
-          agent={activeAgent}
-          agentData={agentsList.find((a: any) => (a.nameEn || a.name).toLowerCase() === activeAgent)}
-          onClose={() => setActiveAgent(null)}
-        />
-      )}
     </div>
   );
 }

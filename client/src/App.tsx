@@ -90,6 +90,7 @@ import ConsultantAppointmentPackPage from "./pages/ConsultantAppointmentPackPage
 import ContractDeliverablesPage from "./pages/ContractDeliverablesPage";
 import TestProjectPage from "./pages/TestProjectPage";
 import ComoNextTodayPage from "./pages/ComoNextTodayPage";
+import SaraPage from "./pages/SaraPage";
 
 function Router() {
   return (
@@ -173,6 +174,7 @@ function Router() {
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/test-project" component={TestProjectPage} />
       <Route path="/como-next" component={ComoNextTodayPage} />
+      <Route path="/sara" component={SaraPage} />
       <Route path="/project-launch" component={ProjectLaunchGatePage} />
       <Route path="/project-reference" component={ProjectReferencePage} />
       <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />

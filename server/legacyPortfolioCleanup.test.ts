@@ -31,7 +31,8 @@ describe("external portfolio consolidation", () => {
     expect(financialStudiesSource).not.toContain('id: "portfolio_monthly"');
     expect(financialStudiesSource).not.toContain('id: "portfolio_escrow_liquidity"');
     expect(financialStudiesSource).not.toContain("V2PortfolioMonthly");
-    expect(financialStudiesSource).toContain('const visibleTabs = TABS.filter((tab) => isFinancialStudiesTabVisible(tab.id, projectType));');
+    expect(financialStudiesSource).toContain('const visibleTabs = TABS.filter((tab) =>');
+    expect(financialStudiesSource).toContain('isFinancialStudiesTabVisible(tab.id, projectType)');
     expect(financialStudiesSource).not.toContain('(!selectedProjectId || tab.projectScoped)');
   });
 

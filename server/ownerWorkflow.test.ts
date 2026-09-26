@@ -27,7 +27,7 @@ describe("owner workflow references", () => {
     expect(saveBlock).not.toContain("db.update(meetings)");
   });
 
-  it("builds the owner digest as an authorized read-only composition of existing records", () => {
+  it("keeps the legacy owner digest read-only but removes it completely from the rebuilt homepage", () => {
     expect(launchSource).toContain("getOwnerSummary: publicProcedure");
     expect(launchSource).toContain("ccToken: z.string().min(1).optional()");
     expect(launchSource).toContain("رمز مركز القيادة غير صالح");
@@ -36,8 +36,10 @@ describe("owner workflow references", () => {
     expect(digestBlock).toContain("db.select().from(meetings)");
     expect(digestBlock).toContain("FROM project_change_requests");
     expect(digestBlock).not.toMatch(/\.insert\(|\.update\(|\.delete\(/);
-    expect(homeSource).toContain("projectLaunchGate.getOwnerSummary.useQuery");
-    expect(homeSource).toContain("اليوم / يحتاج قرارًا");
-    expect(homeSource).toContain("لا توجد أرقام تقديرية أو سجلات جديدة");
+    expect(homeSource).not.toContain("projectLaunchGate.getOwnerSummary.useQuery");
+    expect(homeSource).not.toContain("اليوم / يحتاج قرارًا");
+    expect(homeSource).not.toContain("قراءة تشغيلية من المصادر القائمة");
+    expect(homeSource).toContain("trpc.comoNext.getOverview.useQuery");
+    expect(homeSource).toContain("من COMO Next فقط");
   });
 });

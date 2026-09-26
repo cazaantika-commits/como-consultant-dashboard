@@ -13,10 +13,12 @@ describe("task source separation and preservation", () => {
     expect(summaryRouter).toContain("recentMeetingCutoff");
   });
 
-  it("separates work tasks, meeting follow-ups, and approved changes in the home summary", () => {
-    expect(home).toContain("مهام عمل");
-    expect(home).toContain("متابعات اجتماعات");
-    expect(home).toContain("تغييرات معتمدة");
+  it("keeps legacy task and meeting sources out of the rebuilt homepage", () => {
+    expect(home).not.toContain("trpc.tasks.stats.useQuery");
+    expect(home).not.toContain("trpc.meetings.list.useQuery");
+    expect(home).not.toContain("projectLaunchGate.getOwnerSummary.useQuery");
+    expect(home).toContain("trpc.comoNext.getOverview.useQuery");
+    expect(home).toContain("من COMO Next فقط");
   });
 
   it("cancels or renews tasks without exposing permanent task deletion", () => {

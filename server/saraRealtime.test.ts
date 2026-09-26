@@ -14,6 +14,7 @@ const abdulrahman = { memberId: "abdulrahman", nameAr: "عبدالرحمن", rol
 const wael = { memberId: "wael", nameAr: "وائل", role: "executive" };
 const roomSource = readFileSync("client/src/components/SaraRealtimeRoom.tsx", "utf8");
 const avatarSource = readFileSync("client/src/components/SaraLiveAvatarView.tsx", "utf8");
+const pageSource = readFileSync("client/src/pages/SaraPage.tsx", "utf8");
 const routerSource = readFileSync("server/routers/saraRealtime.ts", "utf8");
 const rootRouterSource = readFileSync("server/routers.ts", "utf8");
 
@@ -82,6 +83,14 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("لا إرسال خارجي · لا تنفيذ تلقائي");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");
+  });
+
+  it("gives Sara a direct persona-scoped login page without routing through the legacy dashboard", () => {
+    expect(pageSource).toContain("getCommandCenterTokenKey");
+    expect(pageSource).toContain("commandCenter.verifyAccess.useQuery");
+    expect(pageSource).toContain("التحقق وفتح سارة");
+    expect(pageSource).toContain("لا يبدأ OpenAI Realtime أو LiveAvatar أثناء التحقق");
+    expect(pageSource).not.toContain('navigate("/command-center")');
   });
 
   it("registers the authenticated Sara router and reuses the existing Command Center access token", () => {
