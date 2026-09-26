@@ -39,7 +39,7 @@ export const saraRealtimeTools = [
       properties: {
         category: {
           type: "string",
-          enum: ["overview", "work_files", "actions", "decisions", "communications", "meetings"],
+          enum: ["overview", "project_memory", "work_files", "actions", "decisions", "communications", "meetings"],
         },
         project_name: { type: "string", description: "اسم المشروع اختياري لتضييق النتيجة" },
       },
@@ -57,6 +57,8 @@ export function buildSaraRealtimeInstructions(member: SaraMember) {
 - سارة هي واجهة الحديث والاستماع والوصول السريع إلى معلومات COMO، وليست العقل التنفيذي البديل.
 - Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. إذا طلب المستخدم عملاً من هذا النوع فقولي بوضوح إنه يحتاج تكليف Manus داخل ملف العمل، ولا تدّعي أن التنفيذ بدأ ما لم توجد أداة صريحة أعادت نتيجة نجاح.
 - استخدمي أدوات القراءة عند السؤال عن الحالة الحالية أو الأرقام أو المشاريع. لا تخمّني ولا تستخدمي ذاكرة المحادثة بدل المصدر المتاح.
+- مع عبدالرحمن، ابدئي التفاعل العملي بعد التحية بموجز قصير عن أهم المستجدات الموثقة عندما تكون بيانات COMO Next متاحة؛ لا تملئي الموجز بمعلومات قديمة أو غير مؤكدة، ولا تكرريه إذا لم يطلبه.
+- عند السؤال عن خلفية مشروع أو ما الذي حدث سابقًا، استخدمي فئة project_memory من مكتب COMO Next؛ فهي الذاكرة المراجعة المرتبطة بالمصادر، وليست مجرد ملخص محادثة.
 - لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تعتمدي قرارًا أو محضرًا، ولا تنشئي التزامًا خارجيًا. لا توجد في هذه الجلسة أي أداة كتابة أو إرسال.
 - القرار ليس تنفيذًا، والمسودة ليست إرسالًا، والتحليل ليس اعتمادًا.
 - عند عدم وجود دليل كافٍ قولي ذلك مباشرة واسألي عن المصدر أو الخطوة المطلوبة.
@@ -150,6 +152,51 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
   const { category, projectName } = normalizeToolArgs(rawArguments);
   const filter = projectName ? `%${projectName}%` : "%";
+  if (category === "project_memory") {
+    const [dossiersResult, memoryResult] = await Promise.all([
+      db.execute(sql`
+        SELECT p.id AS projectId, p.name AS project, dossier.executive_context AS executiveContext,
+          dossier.current_position AS currentPosition, dossier.lifecycle_phases_json AS lifecyclePhases,
+          dossier.key_parties_json AS keyParties, dossier.dependencies_json AS dependencies,
+          dossier.open_threads_json AS openThreads, dossier.reviewed_at AS reviewedAt
+        FROM como_next_project_dossiers dossier
+        JOIN projects p ON p.id = dossier.project_id AND p.is_test_project = 0
+        WHERE dossier.brief_status = 'reviewed' AND p.name LIKE ${filter}
+        ORDER BY dossier.updated_at DESC LIMIT 8
+      `),
+      db.execute(sql`
+        SELECT p.name AS project, wf.title AS workFile, memory.title, memory.body,
+          memory.entry_type AS entryType, annotation.confidence,
+          annotation.evidence_refs_json AS evidenceRefs
+        FROM como_next_work_memory memory
+        JOIN como_next_memory_annotations annotation ON annotation.memory_id = memory.id
+        JOIN como_next_work_files wf ON wf.id = memory.work_file_id AND wf.project_id = memory.project_id
+        JOIN projects p ON p.id = memory.project_id AND p.is_test_project = 0
+        WHERE memory.is_current = 1 AND p.name LIKE ${filter}
+        ORDER BY annotation.reviewed_at DESC, memory.id DESC LIMIT 40
+      `),
+    ]);
+    const parseList = (value: unknown) => {
+      try { const parsed = JSON.parse(String(value || "[]")); return Array.isArray(parsed) ? parsed : []; }
+      catch { return []; }
+    };
+    return {
+      found: rows<any>(dossiersResult).length > 0,
+      source: "COMO Next reviewed project memory",
+      generatedAt: new Date().toISOString(),
+      dossiers: rows<any>(dossiersResult).map(item => ({
+        ...item,
+        lifecyclePhases: parseList(item.lifecyclePhases),
+        keyParties: parseList(item.keyParties),
+        dependencies: parseList(item.dependencies),
+        openThreads: parseList(item.openThreads),
+      })),
+      reviewedMemory: rows<any>(memoryResult).map(item => ({
+        ...item,
+        evidenceRefs: parseList(item.evidenceRefs),
+      })),
+    };
+  }
   const [workFilesResult, actionsResult, decisionsResult, communicationsResult, meetingsResult] = await Promise.all([
     db.execute(sql`
       SELECT wf.id, p.name AS project, wf.title, wf.governing_question AS governingQuestion,

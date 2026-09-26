@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "sourceAuditJob": "8f770b85d006",
+  "sourceReport": "/home/ubuntu/reports/como-project-memory-audit/COMO_PROJECT_MEMORY_RECONCILIATION_AR.md",
+  "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4",
+  "auditedAt": "2026-09-26",
+  "workFilesAudited": 13,
+  "workFilesFailed": 0,
+  "projectBlueprints": [
+    {
+      "currentPosition": "قرار MDL الحاكم currentComoNext.decision:1 ما زال required وdecision_text فارغ، وإجراء 60082 ينتظر حسمه قبل العودة إلى MDL. Colliers: طلب الصرف والتذكير أرسلا لكن السداد غير مثبت. DI: طلب العرض المعدل Sent UID 184 للمقارنة فقط ولا رد لاحق مثبت. Benoy: تحليل داخلي مفتوح فقط. Khatib & Alami: انتظار موروث بلا دليل أحدث على رد أو تعيين. Ontario مغلق وغير نشط، وChapman Taylor أرشيفي بعد طلب التوضيح.",
+      "dependencies": [
+        "قرار مالك موثق قبل حسم MDL أو أي تعيين.",
+        "دليل مالي مستقل وعقد/PO/جدول دفعات لمطابقة فاتورة Colliers 7314002290 مع معلم المرحلة وإثبات السداد إن وجد.",
+        "رد أو عرض معدل أصلي من Design International قبل تغيير حالتها أو افتراض قبول الهيكل المطلوب.",
+        "موجز مكتوب نهائي ومصفوفة نطاق ومسؤوليات وArchitect of Record محلي قبل أي تعيين متعلق بـBenoy أو DI أو Chapman Taylor.",
+        "رد وائل أو قرار موثق لاحق قبل اعتبار انتظار Khatib & Alami نشطاً أو حسم نطاق Concept.",
+        "نموذج مالي Colliers موثق يشمل الإيجارات والإشغال والعائد والحساسية قبل القرار الاستثماري النهائي."
+      ],
+      "executiveContext": "مجان برنامج مراجعة عروض واستشاريين، لا سجل تعيينات مثبتة. العروض والتقييمات والمراسلات محفوظة، لكن لا يجوز رفعها إلى قبول أو تعيين أو التزام بلا قرار مالك أو مستند تعاقدي مستقل.",
+      "keyParties": [
+        "COMO / عبدالرحمن",
+        "Wael",
+        "MDL / Sandro Giorgi",
+        "Colliers",
+        "Design International",
+        "Benoy",
+        "Khatib & Alami",
+        "Chapman Taylor",
+        "Ontario (علاقة Majan غير نشطة)"
+      ],
+      "lifecyclePhases": [
+        "استكشاف وطلبات عروض متعددة.",
+        "استلام عروض ومواد مهنية.",
+        "مراجعات وتحليلات ومراسلات غير ملزمة.",
+        "طلبات توضيح أو عرض معدل.",
+        "إغلاق مسارات مرشحين محددين وأرشفتهم.",
+        "قرارات وتعاقدات غير مثبتة لا يجوز ملؤها بالاستنتاج."
+      ],
+      "memoryGaps": [
+        "فرق المخاطَب الوثائقي بين MDL Rev01 وRev04.",
+        "جهات اتصال MDL المصدرية المؤرخة.",
+        "قيد مطابقة معلم فاتورة Colliers مع نطاق قبول دراسة السوق.",
+        "خيارات Benoy وأسعارها وقيودها التعاقدية/النطاقية والفريق المقترح.",
+        "حالة Khatib & Alami كمرشح، وغموض Concept وشروط ما قبل التعيين."
+      ],
+      "nextStep": "لا إجراء أو قرار أو مراسلة جديدة من التدقيق. عند إدخال المرشحين، استخدم dedupeKey أولاً، ولا تغيّر الحالات التشغيلية إلا بدليل أحدث أصلي مرتبط بالمصدر.",
+      "openThreads": [
+        "قرار MDL الداخلي فقط؛ العودة الخارجية لا تكون إلا وفق النتيجة المسجلة.",
+        "التحقق من تسوية فاتورة Colliers ومن استلام نموذج مالي موثق.",
+        "تحليل Benoy الداخلي ضمن ملف 60020 دون افتراض اجتماع أو تعيين.",
+        "أي رد موثق لاحق على Sent UID 184 (DI) أو Sent UID 179 (Khatib & Alami) فقط."
+      ],
+      "projectName": "Majan Lifestyle Centre"
+    },
+    {
+      "currentPosition": "Realistic: عرض REC57 مؤرخ 24 سبتمبر 2026، ورسالة Reply All اقترحت لقاء يوم 28 سبتمبر إذا كان مناسباً؛ لا يوجد رد وارد أو اجتماع أو قبول تجاري مثبت. ECCE: ملف 60021 مغلق، الطرف inactive، وSent UID 183 يثبت عدم المضي؛ يبقى أرشيفياً فقط.",
+      "dependencies": [
+        "رسالة أو دعوة أو محضر أصلي بعد 24 سبتمبر لتثبيت وضع التواصل مع Realistic.",
+        "توضيح مكتوب لنطاق المشروع: أربع فلل أم مبنى سكني واحد B+G+1+Roof كما ورد في العرض.",
+        "مطابقة النطاق والاستثناءات ومدد الإشراف والتكلفة الفعلية والرسوم التنظيمية في مستند تعاقدي قبل أي تعيين."
+      ],
+      "executiveContext": "يتضمن المشروع مسار Realistic Engineering Consultant (REC57) بعرض وتواصل مشروط بلا تأكيد لاحق، ومسار ECCE المغلق بعد عدم المضي. لا يثبت أي مسار تعييناً أو قبولاً تجارياً أو اعتماد نطاق نهائي.",
+      "keyParties": [
+        "COMO / عبدالرحمن",
+        "Wael",
+        "Realistic Engineering Consultant LLC / طارق سماك",
+        "ECCE (غير نشط لهذا المشروع)"
+      ],
+      "lifecyclePhases": [
+        "استلام عرض Realistic ومراجعته أولياً.",
+        "اقتراح لقاء مشروط بلا إثبات تأكيد.",
+        "انتظار تاريخي بلا دليل لاحق.",
+        "مسار ECCE منفصل اكتمل بعد عدم المضي والإبلاغ.",
+        "لا قرار أو تعيين يمكن استنتاجه."
+      ],
+      "memoryGaps": [
+        "شروط أتعاب وسداد REC57 بوصفها شروط عرض لا اتفاقاً نافذاً.",
+        "استثناءات REC57 وحدود التغييرات.",
+        "بيانات جهة الاتصال المصدرية لطارق سماك للاستخدام الداخلي فقط."
+      ],
+      "nextStep": "لا يفتح التدقيق ملفاً أو ينشئ موعداً. يُدخل فقط مرشحو ذاكرة REC57 المقيدة بعد منع التكرار؛ ولا تتغير حالة العرض أو الموعد إلا بسجل أصلي أحدث.",
+      "openThreads": [
+        "فقط التحقق من وجود سجل أصلي بعد 24 سبتمبر يثبت تأكيد/اعتذار/تعديل Realistic؛ لا ينشئ التدقيق متابعة.",
+        "توضيح تعارض نطاق أربع فلل مقابل وصف المبنى الواحد، إذا أعيد تنشيط عرض REC57."
+      ],
+      "projectName": "Four Residential Villas – Nad Al Sheba (Plot 6180578)"
+    }
+  ],
+  "promotionCandidates": [
+    {
+      "body": "للاستخدام المرجعي الداخلي: Rev01 المؤرخ 3 سبتمبر 2026 كان موجهاً إلى Ontario، بينما Rev04 المؤرخ 9 سبتمبر 2026 موجّه إلى COMO. هذا فرق وثائقي في بنية العرض، ولا يثبت عقداً نافذاً أو تعيين Ontario أو MDL.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-1:rev01-rev04-addressee-change",
+      "evidenceRefs": [
+        "ebc10f4ba71e_P260903Rev01MDLFeeProposalPre-ConceptandConceptONTARIOMajanRT-040_04f88862.pdf ص1 و3",
+        "bc1756642b57_P260902Rev04_MDL_Revised_Fee_Proposal_COMO_Majan_RT040_605e251f.pdf ص1 و3",
+        "currentComoNext.memory:241",
+        "currentComoNext.memory:227"
+      ],
+      "memoryType": "context",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-1",
+      "targetWorkFileId": 60012,
+      "title": "تغير جهة المخاطب بين Rev01 وRev04",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "يسمي سجل Follow-up Desk ساندرو جورجي (sandro@mdl.studio) جهة الاتصال الأساسية لـMDL، ويورد كيمبرلي ليو (kimberly.liu@mdl.studio) وMassimo ضمن الفريق. هذه بيانات اتصال مصدرية بتاريخ 15 سبتمبر 2026، وليست إثباتاً لصلاحية قانونية أو لتوفرهم الحالي.",
+      "confidence": "medium",
+      "dedupeKey": "source-memory:work-file-2:mdl-source-contacts",
+      "evidenceRefs": [
+        "sourceContacts:15",
+        "sourceContacts:16",
+        "sourceContacts:17",
+        "currentComoNext.parties:32"
+      ],
+      "memoryType": "relationship",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-2",
+      "targetWorkFileId": 60015,
+      "title": "جهات اتصال MDL الواردة في سجل المصدر",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "تظهر الفاتورة 7314002290 باعتبارها Second fee لخدمة Financial Feasibility & Design Review، بينما تصف رسالة القبول المرسلة المعلم المدفوع بأنه مرحلة دراسة السوق. لا يظهر في الدوسييه عقد أو أمر شراء أو جدول دفعات يفسر المطابقة؛ هذا قيد تدقيقي للمراجعة المالية/التعاقدية، لا حكم بصحة الفاتورة أو استحقاقها.",
+      "confidence": "medium",
+      "dedupeKey": "source-memory:legacy-3:colliers-invoice-milestone-reconciliation",
+      "evidenceRefs": [
+        "2nd Invoice - 7314002290.pdf، الصفحة 1",
+        "currentComoNext.memory:187",
+        "currentComoNext.memory:185",
+        "currentComoNext.communications:19"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "legacy-3",
+      "targetWorkFileId": 60017,
+      "title": "مطابقة معلم الفاتورة مع نطاق القبول قبل اعتبارها دفعة مرحلة دراسة السوق",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "وثّق كعرض غير معتمد: الخيار الأول يشمل Pre-Concept بقيمة 215,000 درهم وConcept بقيمة 862,906 درهم وSchematic بقيمة 1,588,534 درهماً، بإجمالي 2,666,440 درهماً.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-option-1-fees",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص109",
+        "currentComoNext.memory:222"
+      ],
+      "memoryType": "fact",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "عرض Benoy — الخيار الأول والأتعاب بحسب المرحلة",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "وثّق كعرض غير معتمد: الخيار الثاني يمتد من Pre-Concept حتى IFC بإجمالي 5,846,677 درهماً؛ ومراحله: 215,000 و862,906 و1,588,534 و1,879,491 و250,000 و405,373 و95,000 و550,373 درهماً، بالترتيب الوارد في العرض.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-option-2-fees",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص110",
+        "currentComoNext.memory:222"
+      ],
+      "memoryType": "fact",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "عرض Benoy — الخيار الثاني الكامل والأتعاب بحسب المرحلة",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "برنامجا العرض لا يشملان اعتمادات العميل: 19 أسبوعاً للخيار الأول و47 أسبوعاً للخيار الثاني. لا تشمل الأتعاب اللقطات الاحترافية أو السفر أو VAT/TDS/WHT؛ وقد تطلب Benoy أتعاباً إضافية عند زيادة GFA/BUA أو تمدد البرنامج. هذه قيود عرض غير معتمدة.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-programme-cost-constraints",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص6",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص109",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص110"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "قيود البرنامج والتكلفة في عرض Benoy",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "الاستثناءات الصريحة من نطاق التصميم الداخلي تشمل wayfinding وتطبيق رسوماته وحسابات ومواصفات الإضاءة والتصميمين MEP والإنشائي وFF&E التفصيلي ومساحات المستأجرين والخدمات الخلفية ومرافق الموظفين والإدارة. كما تتطلب الشروط Architect of Record محلياً، وخدمات BIM إن لزمت تخضع لاتفاق منفصل. هذه حدود عرض لا موافقة عليها.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-interior-aor-bim-boundaries",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص63",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص118"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "حدود تصميم Benoy الداخلي ومسؤوليات المشروع المكملة",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "العرض صالح 60 يوماً، ويحكمه قانون الإمارات ولغته الإنجليزية مع LCIA في لندن لحل النزاع. بدء كل مرحلة مشروط باعتماد المرحلة السابقة وسداد مستحقاتها؛ الفواتير مستحقة خلال 15 يوماً، وقد تعد التعليمات أو استمرارها قبولاً للشروط. يلزم تدقيق هذه البنود قبل أي تعليمات تشغيلية.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-appointment-terms",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص117",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص119",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص120",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص121"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "نقاط التعيين التعاقدية غير المحسومة في عرض Benoy",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "يسمي العرض Neil Serridge ممثل الاستشاري/Design Director، ويعرض قيادة من استوديو دبي مع Steve Barnes لتصميم الداخل وAngus Palmer لتصميم اللاندسكيب من استوديو لندن. هذا توصيف فريق مقترح في العرض، وليس تأكيداً لتخصيصهم التعاقدي أو تعيينهم.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-5:benoy-proposed-team",
+      "evidenceRefs": [
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص2",
+        "e466a8cf2809_260923 A Benoy Proposal for Majan Lifestyle Centre, Dubai, United Arab Emirates.pdf:ص117"
+      ],
+      "memoryType": "relationship",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-5",
+      "targetWorkFileId": 60020,
+      "title": "ممثل Benoy والفريق المقترح في العرض",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "ينبغي حفظ حالة العلاقة بصياغة صريحة: Khatib & Alami استشاري هندسي مدعو إلى RFP وحالته under_review/consultant_candidate. لا يوجد في الملف قرار تعيين. يمنع هذا القيد قراءة حفظ العرض أو إرسال إقرار الاستلام كقبول تجاري.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:legacy-150001:khatib-alami-candidate-status",
+      "evidenceRefs": [
+        "sourceProjectConsultant:30002",
+        "currentComoNext.parties:38",
+        "currentComoNext.decisions: لا سجلات"
+      ],
+      "memoryType": "relationship",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "legacy-150001",
+      "targetWorkFileId": 60014,
+      "title": "حالة Khatib & Alami في المنافسة: مرشح قيد المراجعة لا استشاري مُعيّن",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "يعرض جدول الرسوم الإجمالي 12,700,000 درهم قبل الضريبة، وفيه 889,000 درهم لمرحلة Concept موصوفة بأنها اختيارية. لا يمثل الرقم رسوماً ثابتة نهائية غير مشروطة قبل توثيق ما إذا كانت المرحلة مشمولة وما هو الخصم إن قدّم العميل مفهوماً معتمداً.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:legacy-150001:khatib-alami-concept-fee-ambiguity",
+      "evidenceRefs": [
+        "Khatib_Alami_Majan_Independent_Proposal_Analysis_2026-09-22_81512f96.pdf:ص2",
+        "Khatib_Alami_Majan_Independent_Proposal_Analysis_2026-09-22_81512f96.pdf:ص5"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "legacy-150001",
+      "targetWorkFileId": 60014,
+      "title": "رسوم التصميم 12.7 مليون تتضمن بند Concept موصوفاً بالاختياري",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "يوثق التحليل أن تعييناً محتملاً لا ينبغي أن يتجاوز التفاوض قبل توحيد المشمولات والاستثناءات والمبالغ المؤقتة ومدخلات العميل ومسؤوليات الاعتمادات، مع إقفال جدول الدفع والتغييرات والمسؤولية والتأمين والإنهاء. هذا قيد قرار، لا إجراء منشأ أو موافقة على التعيين.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:legacy-150001:khatib-alami-preappointment-conditions",
+      "evidenceRefs": [
+        "Khatib_Alami_Majan_Independent_Proposal_Analysis_2026-09-22_81512f96.pdf:ص5-8",
+        "currentComoNext.memory:202"
+      ],
+      "memoryType": "constraint",
+      "project": "Majan Lifestyle Centre",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "legacy-150001",
+      "targetWorkFileId": 60014,
+      "title": "شرط ما قبل التعيين: مصفوفة نطاق ومسؤوليات موحدة وشروط تجارية مكتملة",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "شروط قابلة للرجوع إليها في العرض المؤرخ 24 سبتمبر 2026: أتعاب الدراسة والتصميم 1.5% من إجمالي كلفة الإنشاء الفعلية، تدفع 20% عند توقيع العقد و20% عند موافقة السلطة على التصميم المبدئي و30% عند تقديم التصميم النهائي للسلطة و15% عند موافقة السلطة النهائية و15% عند تقديم تقرير تقييم العطاء. أتعاب الإشراف 1.5% من كلفة الإنشاء الفعلية وتدفع شهرياً؛ الدفع خلال 14 يوماً وتضاف 5% VAT. هذه شروط عرض وليست اتفاقاً نافذاً.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-240001:realistic-fee-payment-terms",
+      "evidenceRefs": [
+        "f8355b30ebaf_REC57 (24-09-2026) COMO Real Estate Development  4 villas.pdf، ص4"
+      ],
+      "memoryType": "constraint",
+      "project": "Four Residential Villas – Nad Al Sheba (Plot 6180578)",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-240001",
+      "targetWorkFileId": 60016,
+      "title": "شروط الأتعاب والسداد في عرض رياليستيك REC57",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "العرض يستثني رسوم التقديم وإعادة التقديم للجهات وأتعاب المسح الطبوغرافي/التسوية وتحقيق التربة والدراسات الجيوتقنية أو المرورية والدراسة البيئية/المباني الخضراء أو LEED والتصميم الداخلي والأثاث واللاندسكيب والعناصر المائية والمواد ثلاثية الأبعاد والموفي والرندرات المتخصصة. تعد التعديلات على تصميم أعده الاستشاري وأقره العميل أعمالاً إضافية بأتعاب يتفق عليها الطرفان وتفوتر منفصلة. هذه حدود عرض وليست موافقة عليها.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-240001:realistic-exclusions-change-boundaries",
+      "evidenceRefs": [
+        "f8355b30ebaf_REC57 (24-09-2026) COMO Real Estate Development  4 villas.pdf، ص5"
+      ],
+      "memoryType": "constraint",
+      "project": "Four Residential Villas – Nad Al Sheba (Plot 6180578)",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-240001",
+      "targetWorkFileId": 60016,
+      "title": "استثناءات عرض رياليستيك وحدود التغييرات",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "طارق سماك هو General Manager وجهة الاتصال الأساسية لدى Realistic Engineering Consultants؛ البريد المسجل tariq@realistic.ae والهاتف 04 269 6940. هذه بيانات مصدرية داخلية ولا تتحقق من التوفر أو الصلاحية الحالية.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:work-file-240001:realistic-primary-contact",
+      "evidenceRefs": [
+        "sourceContacts:180001",
+        "currentComoNext.parties:42"
+      ],
+      "memoryType": "relationship",
+      "project": "Four Residential Villas – Nad Al Sheba (Plot 6180578)",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "work-file-240001",
+      "targetWorkFileId": 60016,
+      "title": "جهة اتصال رياليستيك للعرض",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    },
+    {
+      "body": "يفضل المالك أن تبدأ سارة التفاعل العملي بتحديث موجز عن آخر المستجدات والتفاصيل ذات الصلة، لا بمجرد تحية. لا يحدد هذا السجل صيغة ثابتة أو وتيرة أو مصادر للموجز؛ ويجب أن يعتمد أي تطبيق مستقبلي على بيانات حالية مكتملة فقط.",
+      "confidence": "high",
+      "dedupeKey": "source-memory:global-sara-manus-memory:proactive-owner-briefing",
+      "evidenceRefs": [
+        "sourceAgentRequests:1080002"
+      ],
+      "memoryType": "owner_preference",
+      "project": "ذاكرة COMO العامة",
+      "sensitivity": "internal_only",
+      "sourceWorkFileId": "global-sara-manus-memory",
+      "targetWorkFileId": null,
+      "title": "موجز استباقي عند بدء تواصل المالك",
+      "sourceReportSha256": "e8a2341357f2a9777fe7197861f0c2347167eb94844f8b119d05d18787d806a4"
+    }
+  ],
+  "archiveOnly": [
+    "work-file-6 / 60021 — ECCE، Four Residential Villas: غير مختار، أُبلغ عدم المضي، الملف مغلق والطرف inactive.",
+    "legacy-30001 / 60018 — Ontario، Majan: غير مختار، العلاقة التشغيلية غير نشطة، مغلق؛ لا يعاد فتحه من المسودات أو السجل التاريخي.",
+    "legacy-90001 / 60022 — Chapman Taylor، Majan: أرشيف آخر طلب توضيح بعد Sent UID 185، ولا رد أو تعيين مثبت في الدوسييه.",
+    "legacy-120001 / 60013 — سجل المتابعة الجماعي لمكاتب التصميم: ألغي بعد فصل كل شركة في ملف مستقل.",
+    "work-file-60001 — Deluxe Hotel Apartment – Al Satwa: archive_only؛ المطالبة 420,000 درهم والعطاءات والمواعيد التاريخية لا تدخل الذاكرة الحية.",
+    "global-sara-manus-memory — سجل تاريخي عام: محتوى السطوة excluded_project ولا يستخدم لإثبات حالة تشغيلية؛ يستثنى منه فقط تفضيل المالك المقيد المدرج كمرشح."
+  ]
+}

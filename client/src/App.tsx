@@ -91,6 +91,7 @@ import ContractDeliverablesPage from "./pages/ContractDeliverablesPage";
 import TestProjectPage from "./pages/TestProjectPage";
 import ComoNextTodayPage from "./pages/ComoNextTodayPage";
 import SaraPage from "./pages/SaraPage";
+import ComoNextProjectPage from "./pages/ComoNextProjectPage";
 
 function Router() {
   return (
@@ -173,6 +174,7 @@ function Router() {
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/test-project" component={TestProjectPage} />
+      <Route path="/como-next/projects/:id" component={ComoNextProjectPage} />
       <Route path="/como-next" component={ComoNextTodayPage} />
       <Route path="/sara" component={SaraPage} />
       <Route path="/project-launch" component={ProjectLaunchGatePage} />

@@ -39,6 +39,7 @@ import {
   reviewMeetingProposalCommand,
   updateMeetingAgendaItemCommand,
 } from "../services/comoNextMeetings";
+import { getProjectExecutiveFile } from "../services/comoNextProjectDossier";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -85,6 +86,13 @@ export const comoNextRouter = router({
       )
       .orderBy(projects.name);
   }),
+
+  getProjectExecutiveFile: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return getProjectExecutiveFile({ userId: ctx.user.id, projectId: input.projectId });
+    }),
 
   getOverview: protectedProcedure.query(async ({ ctx }) => {
     assertComoNextEnabled();

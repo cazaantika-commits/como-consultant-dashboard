@@ -3432,3 +3432,64 @@ export const comoNextEmailAnalyses = mysqlTable("como_next_email_analyses", {
   uniqueIndex("como_next_email_analysis_request_uq").on(table.requestKey),
   index("como_next_email_analysis_message_idx").on(table.emailMessageId, table.analysisStatus, table.createdAt),
 ]);
+
+
+// Reviewed, evidence-bound project memory. These tables summarize existing
+// operational records; they never replace source documents or mutate workflow state.
+export const comoNextProjectDossiers = mysqlTable("como_next_project_dossiers", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("project_id").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  executiveContext: longtext("executive_context").notNull(),
+  currentPosition: longtext("current_position").notNull(),
+  lifecyclePhasesJson: longtext("lifecycle_phases_json").notNull(),
+  keyPartiesJson: longtext("key_parties_json").notNull(),
+  dependenciesJson: longtext("dependencies_json").notNull(),
+  openThreadsJson: longtext("open_threads_json").notNull(),
+  memoryGapsJson: longtext("memory_gaps_json").notNull(),
+  briefStatus: mysqlEnum("brief_status", ["reviewed", "superseded"]).notNull().default("reviewed"),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }).notNull(),
+  sourceSha256: varchar("source_sha256", { length: 64 }).notNull(),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_project_dossier_project_uq").on(table.projectId),
+  uniqueIndex("como_next_project_dossier_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_project_dossier_status_idx").on(table.briefStatus, table.updatedAt),
+]);
+
+export const comoNextMemoryAnnotations = mysqlTable("como_next_memory_annotations", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  memoryId: bigint("memory_id", { mode: "number" }).notNull().references(() => comoNextWorkMemory.id, { onDelete: "restrict" }),
+  confidence: mysqlEnum("confidence", ["medium", "high"]).notNull(),
+  sensitivity: mysqlEnum("sensitivity", ["internal_only"]).notNull().default("internal_only"),
+  evidenceRefsJson: longtext("evidence_refs_json").notNull(),
+  sourceReportSha256: varchar("source_report_sha256", { length: 64 }).notNull(),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  uniqueIndex("como_next_memory_annotation_memory_uq").on(table.memoryId),
+  index("como_next_memory_annotation_confidence_idx").on(table.confidence, table.reviewedAt),
+]);
+
+export const comoNextOwnerPreferences = mysqlTable("como_next_owner_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  memberId: varchar("member_id", { length: 64 }).notNull(),
+  preferenceKey: varchar("preference_key", { length: 128 }).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  body: longtext("body").notNull(),
+  sensitivity: mysqlEnum("sensitivity", ["internal_only"]).notNull().default("internal_only"),
+  evidenceRefsJson: longtext("evidence_refs_json").notNull(),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }).notNull(),
+  sourceSha256: varchar("source_sha256", { length: 64 }).notNull(),
+  isCurrent: tinyint("is_current").notNull().default(1),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_owner_preference_member_key_uq").on(table.memberId, table.preferenceKey),
+  uniqueIndex("como_next_owner_preference_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_owner_preference_current_idx").on(table.memberId, table.isCurrent, table.updatedAt),
+]);
