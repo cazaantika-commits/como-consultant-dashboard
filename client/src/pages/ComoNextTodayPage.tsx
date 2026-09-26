@@ -16,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkFileMeetingsSection } from "@/components/ComoNextMeetingWorkspace";
+import { ComoNextEmailInbox } from "@/components/ComoNextEmailInbox";
 import {
   AlertCircle,
   ArrowLeft,
@@ -41,6 +42,7 @@ import {
   Loader2,
   LogIn,
   Mail,
+  Inbox,
   MessagesSquare,
   Paperclip,
   Plus,
@@ -53,7 +55,7 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type ExecutiveTab = "today" | "work-files" | "transfer";
+type ExecutiveTab = "today" | "work-files" | "email" | "transfer";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
@@ -760,7 +762,7 @@ export default function ComoNextTodayPage() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, navigate] = useLocation();
   const requestedTab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
-  const initialTab: ExecutiveTab = requestedTab === "work-files" || requestedTab === "transfer" ? requestedTab : "today";
+  const initialTab: ExecutiveTab = requestedTab === "work-files" || requestedTab === "email" || requestedTab === "transfer" ? requestedTab : "today";
   const [activeTab, setActiveTab] = useState<ExecutiveTab>(initialTab);
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(null);
   const utils = trpc.useUtils();
@@ -809,12 +811,12 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <Tabs value={activeTab} onValueChange={updateTab}>
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className={`grid h-12 w-full ${user.role === "admin" ? "grid-cols-3 sm:w-[540px]" : "grid-cols-2 sm:w-[360px]"} rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200`}><TabsTrigger value="today" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><CalendarClock className="ms-2 h-4 w-4" />اليوم</TabsTrigger><TabsTrigger value="work-files" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><FileStack className="ms-2 h-4 w-4" />ملفات العمل</TabsTrigger>{user.role === "admin" ? <TabsTrigger value="transfer" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Database className="ms-2 h-4 w-4" />منطقة النقل</TabsTrigger> : null}</TabsList>
+            <TabsList className={`grid h-12 w-full ${user.role === "admin" ? "grid-cols-4 sm:w-[720px]" : "grid-cols-2 sm:w-[360px]"} rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200`}><TabsTrigger value="today" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><CalendarClock className="ms-2 h-4 w-4" />اليوم</TabsTrigger><TabsTrigger value="work-files" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><FileStack className="ms-2 h-4 w-4" />ملفات العمل</TabsTrigger>{user.role === "admin" ? <TabsTrigger value="email" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Inbox className="ms-2 h-4 w-4" />البريد</TabsTrigger> : null}{user.role === "admin" ? <TabsTrigger value="transfer" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Database className="ms-2 h-4 w-4" />منطقة النقل</TabsTrigger> : null}</TabsList>
             <p className="text-xs text-slate-500">آخر قراءة <bdi dir="ltr">{formatDateTime(data.today.generatedAt)}</bdi> · توقيت دبي</p>
           </div>
 
           <TabsContent value="today" className="mt-0 space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-7">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مستحق اليوم</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{data.today.summary.dueToday}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><CalendarClock className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">متأخر</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.today.summary.overdue}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><AlertCircle className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">قرارات مطلوبة</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.decisions.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-6 w-6" /></div></div></Card>
@@ -822,7 +824,10 @@ export default function ComoNextTodayPage() {
               <Card className="rounded-3xl border-teal-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">اجتماعات تحتاج انتباهًا</p><p className="mt-2 text-3xl font-black text-teal-700"><bdi>{data.meetingAttention.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><CalendarDays className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بانتظار الخارج</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.today.summary.waitingExternal}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Clock3 className="h-6 w-6" /></div></div></Card>
               <Card className="rounded-3xl border-violet-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">لدى Manus</p><p className="mt-2 text-3xl font-black text-violet-700"><bdi>{data.today.summary.manus}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><Sparkles className="h-6 w-6" /></div></div></Card>
+              <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بريد يحتاج مراجعة</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.emailAttention.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Inbox className="h-6 w-6" /></div></div></Card>
             </section>
+
+            {data.emailAttention.length ? <Card className="rounded-3xl border-amber-100 bg-[#fffdf7] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Inbox className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">بريد وارد يحتاج مراجعتك</h2><p className="text-xs text-slate-500">سارة تعرض التنبيه؛ الربط أو تكليف Manus أو إنشاء مسودة يحتاج اختيارك.</p></div></div><Button variant="ghost" onClick={() => updateTab("email")} className="rounded-xl text-amber-800">فتح الصندوق<ChevronLeft className="me-1 h-4 w-4" /></Button></div><div className="grid gap-3 lg:grid-cols-2">{data.emailAttention.slice(0, 4).map((item: any) => <button key={item.id} type="button" onClick={() => updateTab("email")} className="rounded-2xl border border-amber-100 bg-white p-4 text-right transition hover:border-amber-300"><p className="line-clamp-1 text-sm font-black text-slate-900">{item.subject}</p><p className="mt-2 text-xs text-slate-500">{item.fromName || item.fromEmail} · {formatDateTime(item.receivedAt)}</p></button>)}</div></Card> : null}
 
             {data.decisions.length ? <Card className="rounded-3xl border-rose-100 bg-[#fffafa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">قرارات تنتظر الحسم</h2><p className="text-xs text-slate-500">لا تتحول إلى إجراء خارجي قبل تسجيل القرار وسلطته.</p></div></div><Badge variant="outline" className="rounded-full border-rose-200 bg-white text-rose-700"><bdi>{data.decisions.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
 
@@ -830,7 +835,7 @@ export default function ComoNextTodayPage() {
 
             {data.meetingAttention.length ? <Card className="rounded-3xl border-teal-100 bg-[#f6fbfa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><CalendarDays className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">غرف اجتماعات تحتاج انتباهك</h2><p className="text-xs text-slate-500">تحضير أو مقترحات Manus أو مسودة محضر تنتظر مراجعة واضحة.</p></div></div><Badge variant="outline" className="rounded-full border-teal-200 bg-white text-teal-700"><bdi>{data.meetingAttention.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
 
-            {data.today.summary.dueToday === 0 && data.decisions.length === 0 && data.draftCommunications.length === 0 && data.meetingAttention.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات أو مسودات أو اجتماعات مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
+            {data.today.summary.dueToday === 0 && data.decisions.length === 0 && data.draftCommunications.length === 0 && data.meetingAttention.length === 0 && data.emailAttention.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات أو مسودات أو اجتماعات أو رسائل مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
 
             <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-black">نبض ملفات العمل</h2><p className="mt-1 text-sm text-slate-500">أهم الملفات النشطة وما الذي ينتظرها.</p></div><Button variant="ghost" onClick={() => updateTab("work-files")} className="rounded-xl text-[#1e6478]">عرض الكل<ChevronLeft className="me-1 h-4 w-4" /></Button></div>{data.workFiles.length === 0 ? <EmptyState title="لم تفتح ملفات عمل بعد" description="ابدأ بموضوع حقيقي له سؤال حاكم ونتيجة مطلوبة، ثم أضف إجراءه التالي." action={<NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />} /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.slice(0, 3).map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}</section>
           </TabsContent>
@@ -839,6 +844,10 @@ export default function ComoNextTodayPage() {
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-xl font-black">ملفات العمل النشطة</h2><p className="mt-1 text-sm leading-6 text-slate-500">كل ملف يبدأ بسؤال، وينتهي بدليل، وبينهما إجراءات ومسؤوليات واضحة.</p></div><div className="flex items-center gap-2 text-xs text-slate-500"><BriefcaseBusiness className="h-4 w-4" /><bdi>{data.workFiles.length}</bdi> ملف نشط</div></div>
             {data.workFiles.length === 0 ? <EmptyState title="لا توجد ملفات عمل" description="افتح أول ملف من زر «فتح ملف عمل» في أعلى الصفحة." /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}
           </TabsContent>
+
+          {user.role === "admin" ? <TabsContent value="email" className="mt-0">
+            <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} />
+          </TabsContent> : null}
 
           {user.role === "admin" ? <TabsContent value="transfer" className="mt-0">
             <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} />

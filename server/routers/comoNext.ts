@@ -5,6 +5,7 @@ import {
   comoNextActions,
   comoNextCommunications,
   comoNextDecisions,
+  comoNextEmailMessages,
   comoNextProjectAccess,
   comoNextWorkFileEvents,
   comoNextWorkFiles,
@@ -243,6 +244,29 @@ export const comoNextRouter = router({
       ORDER BY CASE WHEN meeting.starts_at IS NULL THEN 1 ELSE 0 END, meeting.starts_at ASC, meeting.id ASC
     `);
 
+    const emailAttention = ctx.user.role === "admin"
+      ? await db.select({
+          id: comoNextEmailMessages.id,
+          fromEmail: comoNextEmailMessages.fromEmail,
+          fromName: comoNextEmailMessages.fromName,
+          subject: comoNextEmailMessages.subject,
+          receivedAt: comoNextEmailMessages.receivedAt,
+          serverSeen: comoNextEmailMessages.serverSeen,
+          importance: comoNextEmailMessages.importance,
+          inboxStatus: comoNextEmailMessages.inboxStatus,
+          suggestedProjectId: comoNextEmailMessages.suggestedProjectId,
+          suggestedWorkFileId: comoNextEmailMessages.suggestedWorkFileId,
+        })
+        .from(comoNextEmailMessages)
+        .where(and(
+          eq(comoNextEmailMessages.userId, ctx.user.id),
+          or(eq(comoNextEmailMessages.inboxStatus, "unmatched"), eq(comoNextEmailMessages.inboxStatus, "suggested")),
+          or(eq(comoNextEmailMessages.serverSeen, 0), eq(comoNextEmailMessages.importance, "important"), eq(comoNextEmailMessages.importance, "urgent")),
+        ))
+        .orderBy(desc(comoNextEmailMessages.receivedAt))
+        .limit(12)
+      : [];
+
     const workFiles = getRows<any>(workFilesResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -283,6 +307,7 @@ export const comoNextRouter = router({
       decisions,
       draftCommunications,
       meetingAttention,
+      emailAttention,
       workFiles,
       filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
     };

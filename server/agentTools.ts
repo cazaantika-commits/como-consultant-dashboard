@@ -2616,6 +2616,9 @@ async function _executeToolInternal(
       case "compose_email": {
         const { to: cTo, subject: cSubject, body: cBody, cc: cCc } = args;
         try {
+          if (process.env.COMO_OUTBOUND_EMAIL_ENABLED !== "true") {
+            return JSON.stringify({ error: "الإرسال الخارجي مقفل خلال مرحلة القراءة فقط في COMO Next" });
+          }
           const EMAIL_HOST = process.env.EMAIL_HOST || "mail.privateemail.com";
           const EMAIL_USER = process.env.EMAIL_USER || "a.zaqout@comodevelopments.com";
           const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || "";

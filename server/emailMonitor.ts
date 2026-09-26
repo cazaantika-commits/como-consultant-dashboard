@@ -3,9 +3,9 @@ import { simpleParser, ParsedMail, Attachment } from "mailparser";
 import nodemailer from "nodemailer";
 
 /**
- * Email Monitor Service for Salwa
+ * Email Monitor Service for COMO
  * Reads emails via IMAP from Namecheap Private Email
- * Sends replies via SMTP
+ * Legacy SMTP helpers are locked by default during the read-only phase.
  */
 
 // --- Config ----------------------------------------------------
@@ -34,6 +34,30 @@ export interface EmailAttachment {
   contentType: string;
   size: number;
   content?: Buffer;
+  contentId?: string | null;
+  disposition?: string | null;
+}
+
+export interface ReadonlyMailboxBatch {
+  mailbox: string;
+  uidValidity: string;
+  messages: EmailMessage[];
+}
+
+export function getConfiguredMailboxAddress() {
+  return EMAIL_USER.trim().toLowerCase();
+}
+
+export function assertMailboxWritesEnabled() {
+  if (process.env.COMO_MAILBOX_WRITE_ENABLED !== "true") {
+    throw new Error("Mailbox write operations are disabled during the COMO Next read-only phase");
+  }
+}
+
+export function assertOutboundEmailEnabled() {
+  if (process.env.COMO_OUTBOUND_EMAIL_ENABLED !== "true") {
+    throw new Error("Outbound email is disabled during the COMO Next read-only phase");
+  }
 }
 
 // --- Track processed emails ------------------------------------
@@ -192,6 +216,100 @@ export function fetchNewEmails(): Promise<EmailMessage[]> {
 }
 
 /**
+ * Strict read-only mailbox snapshot for COMO Next.
+ * The folder is opened read-only and markSeen is explicitly disabled.
+ */
+export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number = 100): Promise<ReadonlyMailboxBatch> {
+  return new Promise((resolve, reject) => {
+    if (!EMAIL_PASSWORD) {
+      reject(new Error("EMAIL_PASSWORD not configured"));
+      return;
+    }
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      connTimeout: 15000,
+      authTimeout: 10000,
+    });
+    const messages: EmailMessage[] = [];
+    let uidValidity = "0";
+    let settled = false;
+    const fail = (error: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+    imap.once("ready", () => {
+      imap.openBox("INBOX", true, (openError, box) => {
+        if (openError) { imap.end(); fail(openError); return; }
+        uidValidity = String(box.uidvalidity ?? "0");
+        const since = new Date(Date.now() - Math.max(1, Math.min(hours, 24 * 365)) * 60 * 60 * 1000);
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const sinceValue = `${since.getDate()}-${months[since.getMonth()]}-${since.getFullYear()}`;
+        imap.search([["SINCE", sinceValue]], (searchError, found) => {
+          if (searchError) { imap.end(); fail(searchError); return; }
+          const limit = Math.max(1, Math.min(maxMessages, 250));
+          const uids = (found || []).slice(-limit);
+          if (!uids.length) { imap.end(); return; }
+          let pending = uids.length;
+          const fetch = imap.fetch(uids, { bodies: "", struct: true });
+          fetch.on("message", msg => {
+            let uid = 0;
+            let flags: string[] = [];
+            const chunks: Buffer[] = [];
+            msg.on("attributes", attrs => { uid = attrs.uid; flags = attrs.flags || []; });
+            msg.on("body", stream => stream.on("data", (chunk: Buffer) => chunks.push(chunk)));
+            msg.once("end", async () => {
+              try {
+                const parsed = await simpleParser(Buffer.concat(chunks));
+                messages.push({
+                  uid,
+                  messageId: parsed.messageId || "",
+                  from: parsed.from?.value?.[0]?.address || "",
+                  fromName: parsed.from?.value?.[0]?.name || parsed.from?.value?.[0]?.address || "",
+                  to: parsed.to ? (Array.isArray(parsed.to) ? parsed.to : [parsed.to]).map(item => item.value.map(value => value.address).join(", ")).join(", ") : "",
+                  cc: parsed.cc ? (Array.isArray(parsed.cc) ? parsed.cc : [parsed.cc]).map(item => item.value.map(value => value.address).join(", ")).join(", ") : "",
+                  subject: parsed.subject || "(بدون عنوان)",
+                  date: parsed.date || new Date(),
+                  textBody: parsed.text || "",
+                  htmlBody: "",
+                  attachments: (parsed.attachments || []).map((attachment: Attachment) => ({
+                    filename: attachment.filename || "unnamed",
+                    contentType: attachment.contentType || "application/octet-stream",
+                    size: attachment.size || 0,
+                    contentId: attachment.contentId || null,
+                    disposition: attachment.contentDisposition || null,
+                  })),
+                  isRead: flags.includes("\\Seen"),
+                });
+              } catch (parseError) {
+                console.error("[EmailMonitor] Read-only parse error:", parseError);
+              } finally {
+                pending -= 1;
+                if (pending === 0) imap.end();
+              }
+            });
+          });
+          fetch.once("error", error => { imap.end(); fail(error); });
+        });
+      });
+    });
+    imap.once("error", fail);
+    imap.once("end", () => {
+      if (settled) return;
+      settled = true;
+      messages.sort((a, b) => b.date.getTime() - a.date.getTime());
+      resolve({ mailbox: getConfiguredMailboxAddress(), uidValidity, messages });
+    });
+    imap.connect();
+  });
+}
+
+/**
  * Fetch emails from the last N hours (both read and unread)
  * Used for the 48-hour check feature
  */
@@ -307,7 +425,7 @@ export function fetchEmailsSince(hours: number = 48): Promise<EmailMessage[]> {
 /**
  * Fetch a single email by UID with full attachments
  */
-export function fetchEmailByUID(targetUID: number): Promise<EmailMessage | null> {
+export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string): Promise<EmailMessage | null> {
   return new Promise((resolve, reject) => {
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
@@ -330,6 +448,11 @@ export function fetchEmailByUID(targetUID: number): Promise<EmailMessage | null>
     imap.once("ready", () => {
       imap.openBox("INBOX", true, (err, box) => {
         if (err) { imap.end(); reject(err); return; }
+        if (expectedUidValidity && String(box.uidvalidity ?? "0") !== expectedUidValidity) {
+          imap.end();
+          reject(new Error("Mailbox UIDVALIDITY changed; refresh the inbox before linking this message"));
+          return;
+        }
 
         const fetch = imap.fetch([targetUID], { bodies: "", struct: true });
 
@@ -526,6 +649,7 @@ export function markAsProcessed(uid: number): void {
  */
 export function markAsSeen(uid: number): Promise<void> {
   return new Promise((resolve, reject) => {
+    try { assertMailboxWritesEnabled(); } catch (error) { reject(error); return; }
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
       return;
@@ -571,6 +695,7 @@ export async function sendReply(
   inReplyTo?: string,
   cc?: string
 ): Promise<boolean> {
+  assertOutboundEmailEnabled();
   if (!EMAIL_PASSWORD) {
     throw new Error("EMAIL_PASSWORD not configured");
   }

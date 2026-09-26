@@ -14,6 +14,7 @@ import { default as ChevronLeft } from "lucide-react/dist/esm/icons/chevron-left
 import { default as CircleAlert } from "lucide-react/dist/esm/icons/circle-alert.js";
 import { default as FileClock } from "lucide-react/dist/esm/icons/file-clock.js";
 import { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.js";
+import { default as Inbox } from "lucide-react/dist/esm/icons/inbox.js";
 import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as LockKeyhole } from "lucide-react/dist/esm/icons/lock-keyhole.js";
@@ -180,6 +181,7 @@ export default function Home() {
   const decisions = overview?.decisions ?? [];
   const communications = overview?.draftCommunications ?? [];
   const meetings = overview?.meetingAttention ?? [];
+  const emailAttention = overview?.emailAttention ?? [];
   const workFiles = overview?.workFiles ?? [];
   const firstDecision = decisions[0];
   const firstAction = overview?.today.sections.mine[0]
@@ -257,11 +259,12 @@ export default function Home() {
             <div className="rounded-[24px] border border-red-200 bg-red-50 p-6 text-center"><CircleAlert className="mx-auto h-6 w-6 text-red-600" /><p className="mt-3 text-sm font-black text-red-900">تعذر قراءة COMO Next الآن</p><p className="mt-1 text-xs text-red-700">لم تُستخدم أي بيانات قديمة كبديل.</p></div>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <MetricCard label="قرارات تنتظر اعتمادك" value={decisions.length} note="قرارات مسجلة داخل ملفات العمل فقط." icon={CircleAlert} tone="bg-rose-50 text-rose-700" />
                 <MetricCard label="استحقاقات اليوم" value={todaySummary?.dueToday ?? 0} note={`${todaySummary?.overdue ?? 0} متأخر ضمن إجراءات COMO Next.`} icon={FileClock} tone="bg-amber-50 text-amber-700" />
                 <MetricCard label="مسودات للمراجعة" value={communications.length} note="المسودة لا تعني إرسالًا أو التزامًا خارجيًا." icon={MessageSquare} tone="bg-sky-50 text-sky-700" />
                 <MetricCard label="اجتماعات تحتاج متابعة" value={meetings.length} note="تحضير أو مخرجات أو محضر ينتظر المراجعة." icon={CalendarCheck} tone="bg-emerald-50 text-emerald-700" />
+                <MetricCard label="بريد يحتاج مراجعتك" value={emailAttention.length} note="قراءة فقط؛ الربط أو التحليل أو المسودة يحتاج اختيارك." icon={Inbox} tone="bg-violet-50 text-violet-700" />
               </div>
 
               <div className="mt-4 grid gap-4 lg:grid-cols-[1.05fr_.95fr]">

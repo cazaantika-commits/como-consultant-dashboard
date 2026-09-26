@@ -105,33 +105,43 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
   });
 
-  // Initialize Telegram bot (Salwa)
-  try {
-    const telegramBot = await initTelegramBot();
-    if (telegramBot) {
-      registerCallbackHandler(telegramBot);
-      const info = await getBotInfo();
-      if (info) {
-        console.log(`[TelegramBot] \u2705 @${info.username} (${info.firstName}) is running`);
+  // External automation is opt-in. COMO Next currently uses Sara in-app only.
+  if (process.env.COMO_TELEGRAM_ENABLED === "true") {
+    try {
+      const telegramBot = await initTelegramBot();
+      if (telegramBot) {
+        registerCallbackHandler(telegramBot);
+        const info = await getBotInfo();
+        if (info) {
+          console.log(`[TelegramBot] ✅ @${info.username} (${info.firstName}) is running`);
+        }
       }
+    } catch (error) {
+      console.warn("[TelegramBot] Failed to start:", error);
     }
-  } catch (error) {
-    console.warn("[TelegramBot] Failed to start:", error);
+  } else {
+    console.log("[TelegramBot] Disabled by COMO control policy");
   }
 
-  // Start email notification background service
-  startEmailNotificationService();
+  // Mailbox polling remains manual until the owner approves automatic sync.
+  if (process.env.COMO_AUTOMATIC_EMAIL_POLLING_ENABLED === "true") {
+    startEmailNotificationService();
+  } else {
+    console.log("[EmailMonitor] Automatic polling disabled; manual read-only sync only");
+  }
 
   // Start lifecycle deadline checker (daily at 8 AM Dubai time)
   startLifecycleDeadlineScheduler();
 
-  // Start payment request reminder (every 36 hours for pending requests)
-  startPaymentReminderScheduler();
-
-  // Start general request reminder (every 36 hours for pending non-financial requests)
-  startGeneralRequestReminderScheduler();
-  // Start weekly summary report (every Monday at 9:00 AM Dubai time)
-  startWeeklyReportScheduler();
+  // These legacy schedulers can send email and therefore remain off until the
+  // owner explicitly opens the outbound-email phase.
+  if (process.env.COMO_OUTBOUND_EMAIL_ENABLED === "true") {
+    startPaymentReminderScheduler();
+    startGeneralRequestReminderScheduler();
+    startWeeklyReportScheduler();
+  } else {
+    console.log("[EmailOutbound] Reminder and weekly-report schedulers disabled");
+  }
 }
 
 startServer().catch(console.error);
