@@ -16,7 +16,7 @@ import {
   SARA_REALTIME_VOICE,
 } from "../services/saraRealtime";
 
-const tokenInput = z.object({ token: z.string().min(20) });
+const tokenInput = z.object({ token: z.string().trim().min(1).max(256) });
 const realtimeToolName = z.enum(["lookup_command_center", "lookup_executive_workspace"]);
 
 function publicFailure(reason: unknown, fallback: string) {
