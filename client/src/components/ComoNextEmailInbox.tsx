@@ -21,11 +21,12 @@ import {
   MailQuestion,
   Paperclip,
   RefreshCw,
+  Send,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 
-type InboxFilter = "attention" | "linked" | "dismissed";
+type InboxFilter = "attention" | "sent" | "linked" | "dismissed";
 
 function normalizeUtc(value: string | null | undefined) {
   if (!value) return null;
@@ -53,9 +54,10 @@ const importanceMeta: Record<string, { label: string; className: string }> = {
 };
 
 function MailCard({ item, onOpen }: { item: any; onOpen: (id: number) => void }) {
+  const isSent = item.folderName !== "INBOX";
   return (
     <button type="button" onClick={() => onOpen(item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md">
-      <p className="min-w-0 flex-1 truncate text-sm font-black text-slate-900">{item.subject}</p>
+      <div className="min-w-0 flex-1"><Badge variant="outline" className={`mb-1 rounded-full text-[9px] ${isSent ? "border-sky-100 bg-sky-50 text-sky-700" : "border-emerald-100 bg-emerald-50 text-emerald-700"}`}>{isSent ? "صادر" : "وارد"}</Badge><p className="truncate text-sm font-black text-slate-900">{item.subject}</p></div>
       <ArrowLeft className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:-translate-x-1 group-hover:text-[#1f6478]" />
     </button>
   );
@@ -148,7 +150,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
         {detailQuery.isLoading ? <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : detail ? <>
           <DialogHeader className="border-b border-slate-200 bg-white px-4 py-5 text-right sm:px-6">
             <div className="flex flex-wrap items-start justify-between gap-3 pe-8">
-              <div className="min-w-0"><DialogTitle className="text-xl leading-8">{detail.message.subject}</DialogTitle><DialogDescription className="mt-2"><bdi dir="ltr">{detail.message.fromEmail}</bdi> · {formatDateTime(detail.message.receivedAt)}</DialogDescription></div>
+              <div className="min-w-0"><DialogTitle className="text-xl leading-8">{detail.message.subject}</DialogTitle><DialogDescription className="mt-2">{detail.message.folderName === "INBOX" ? "من" : "إلى"} <bdi dir="ltr">{detail.message.folderName === "INBOX" ? detail.message.fromEmail : detail.message.toText || "غير محدد"}</bdi> · {formatDateTime(detail.message.receivedAt)}</DialogDescription></div>
               <div className="flex gap-2"><Badge variant="outline" className={`rounded-full ${statusMeta[detail.message.inboxStatus]?.className}`}>{statusMeta[detail.message.inboxStatus]?.label}</Badge><Badge variant="outline" className={`rounded-full ${importanceMeta[detail.message.importance]?.className}`}>{importanceMeta[detail.message.importance]?.label}</Badge></div>
             </div>
           </DialogHeader>
@@ -161,7 +163,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
             {detail.attachments.length ? <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><h3 className="flex items-center gap-2 text-sm font-black"><Paperclip className="h-4 w-4 text-[#1f6478]" />المرفقات</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{detail.attachments.map((attachment: any) => <div key={attachment.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-[#fafaf7] p-3"><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{attachment.fileName}</p><p className="mt-1 text-[10px] text-slate-400"><bdi>{Math.ceil(Number(attachment.byteSize) / 1024)}</bdi> KB · {attachment.storageStatus === "stored" ? "محفوظ داخل الملف" : "يُحفظ بعد اعتماد الربط"}</p></div>{attachment.downloadPath ? <a href={attachment.downloadPath} className="text-[11px] font-bold text-[#1f6478]">تنزيل</a> : <FileLock2 className="h-4 w-4 text-slate-300" />}</div>)}</div></Card> : null}
 
             <Card className="rounded-3xl border-violet-100 bg-[#fbf9ff] p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="flex items-center gap-2 text-sm font-black text-violet-950"><Bot className="h-4 w-4" />مسودة Manus</h3><p className="mt-1 text-xs text-violet-700">بعد اعتماد الربط فقط؛ أي إجراء أو قرار أو مراسلة يبقى مقترحًا حتى تراجعه وتحوله بنفسك.</p></div><Button onClick={analyze} disabled={analyzeMutation.isPending || detail.message.inboxStatus !== "linked"} variant="outline" className="rounded-xl border-violet-200 bg-white text-violet-800">{analyzeMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}تكليف Manus</Button></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="flex items-center gap-2 text-sm font-black text-violet-950"><Bot className="h-4 w-4" />قراءة Manus السياقية</h3><p className="mt-1 text-xs text-violet-700">يقرأ Manus الرسالة الجديدة مع تسلسل ملف الموضوع. لا يتحول أي استنتاج إلى إجراء أو قرار قبل اعتمادك.</p></div><Button onClick={analyze} disabled={analyzeMutation.isPending || detail.message.inboxStatus !== "linked"} variant="outline" className="rounded-xl border-violet-200 bg-white text-violet-800">{analyzeMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}{detail.message.inboxStatus === "linked" ? "إعادة التحليل" : "اعتمد الربط لإعادة التحليل"}</Button></div>
               {detail.analysis ? <div className="mt-4 space-y-3"><p className="text-sm leading-7 text-slate-700">{detail.analysis.summaryAr}</p>{detail.analysis.whyImportant ? <div className="rounded-xl bg-white px-3 py-2 text-xs leading-6 text-slate-600"><strong>لماذا تهم:</strong> {detail.analysis.whyImportant}</div> : null}{detail.analysis.suggestedNextStep ? <div className="rounded-xl bg-white px-3 py-2 text-xs leading-6 text-slate-600"><strong>الخطوة المقترحة:</strong> {detail.analysis.suggestedNextStep}</div> : null}</div> : <p className="mt-4 text-xs text-slate-500">لم يُطلب تحليل هذه الرسالة بعد.</p>}
             </Card>
 
@@ -178,7 +180,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
               <Button onClick={linkMessage} disabled={linkMutation.isPending || detail.message.inboxStatus === "linked"} className="mt-4 rounded-xl bg-[#153746] text-white hover:bg-[#1f5266]">{linkMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailCheck className="ms-2 h-4 w-4" />}{detail.message.inboxStatus === "linked" ? "مرتبطة بملف العمل" : "اعتماد الربط وحفظ المرفقات"}</Button>
             </Card>
 
-            {detail.message.inboxStatus === "linked" ? <Card className="rounded-3xl border-sky-100 bg-[#f7fbfd] p-5 shadow-sm"><h3 className="text-sm font-black text-sky-950">مسودة رد داخلية</h3><p className="mt-1 text-xs text-sky-700">يمكنك تعديلها وحفظها في ملف العمل. لا يوجد زر إرسال في هذا الصندوق.</p><Textarea value={replyBody} onChange={event => setReplyBody(event.target.value)} className="mt-4 min-h-40 rounded-2xl bg-white leading-7" placeholder="اكتب أو راجع مسودة الرد..." /><Button onClick={createDraft} disabled={draftMutation.isPending || Boolean(detail.message.replyDraftCommunicationId)} variant="outline" className="mt-3 rounded-xl border-sky-200 bg-white text-sky-800">{draftMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailQuestion className="ms-2 h-4 w-4" />}{detail.message.replyDraftCommunicationId ? "المسودة محفوظة للمراجعة" : "حفظ مسودة — دون إرسال"}</Button></Card> : null}
+            {detail.message.inboxStatus === "linked" && detail.message.folderName === "INBOX" ? <Card className="rounded-3xl border-sky-100 bg-[#f7fbfd] p-5 shadow-sm"><h3 className="text-sm font-black text-sky-950">مسودة رد داخلية</h3><p className="mt-1 text-xs text-sky-700">يمكنك تعديلها وحفظها في ملف العمل. لا يوجد زر إرسال في هذا الصندوق.</p><Textarea value={replyBody} onChange={event => setReplyBody(event.target.value)} className="mt-4 min-h-40 rounded-2xl bg-white leading-7" placeholder="اكتب أو راجع مسودة الرد..." /><Button onClick={createDraft} disabled={draftMutation.isPending || Boolean(detail.message.replyDraftCommunicationId)} variant="outline" className="mt-3 rounded-xl border-sky-200 bg-white text-sky-800">{draftMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailQuestion className="ms-2 h-4 w-4" />}{detail.message.replyDraftCommunicationId ? "المسودة محفوظة للمراجعة" : "حفظ مسودة — دون إرسال"}</Button></Card> : null}
 
             {detail.message.inboxStatus !== "linked" && detail.message.inboxStatus !== "dismissed" ? <div className="flex justify-end"><Button onClick={dismiss} disabled={dismissMutation.isPending} variant="ghost" className="rounded-xl text-slate-500"><Archive className="ms-2 h-4 w-4" />استبعاد من صندوق المطابقة</Button></div> : null}
           </div>
@@ -195,9 +197,14 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
   const scheduledStatusQuery = trpc.comoNextEmail.scheduledStatus.useQuery(undefined, { staleTime: 30_000 });
   const syncMutation = trpc.comoNextEmail.syncReadonly.useMutation();
   const items = listQuery.data || [];
-  const filtered = items.filter((item: any) => filter === "attention" ? ["unmatched", "suggested"].includes(item.inboxStatus) : item.inboxStatus === filter);
+  const filtered = items.filter((item: any) => filter === "attention"
+    ? item.folderName === "INBOX" && ["unmatched", "suggested"].includes(item.inboxStatus)
+    : filter === "sent"
+      ? item.folderName !== "INBOX" && item.inboxStatus !== "dismissed"
+      : item.inboxStatus === filter);
   const counts = {
-    attention: items.filter((item: any) => ["unmatched", "suggested"].includes(item.inboxStatus)).length,
+    attention: items.filter((item: any) => item.folderName === "INBOX" && ["unmatched", "suggested"].includes(item.inboxStatus)).length,
+    sent: items.filter((item: any) => item.folderName !== "INBOX" && item.inboxStatus !== "dismissed").length,
     linked: items.filter((item: any) => item.inboxStatus === "linked").length,
     dismissed: items.filter((item: any) => item.inboxStatus === "dismissed").length,
   };
@@ -205,17 +212,18 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
   const sync = async () => {
     try {
       const result = await syncMutation.mutateAsync({ hours: 168, maxMessages: 100 });
-      toast.success(`فُحصت ${result.scanned} رسالة: ${result.imported} جديدة، ${result.duplicates} دون تكرار`);
+      toast.success(`فُحصت ${result.scanned} رسالة واردة وصادرة: ${result.imported} جديدة، وحُللت ${result.analyzed} ضمن السياق`);
       await refresh();
     } catch (error: any) { toast.error(error?.message || "تعذرت قراءة صندوق البريد"); }
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>تحديث مقروء فقط يوميًا: 06:00 · 11:00 · 17:00 بتوقيت دبي{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">المراسلات البريدية</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>قراءة الوارد والمرسل وفهم الجديد ضمن السياق: 06:00 · 11:00 · 17:00 بتوقيت دبي{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
 
-      <div className="grid grid-cols-3 gap-2">{[
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention, icon: MailQuestion, tone: "text-amber-800 bg-amber-50" },
+        { key: "sent", label: "صادر موثق", value: counts.sent, icon: Send, tone: "text-sky-800 bg-sky-50" },
         { key: "linked", label: "داخل ملفات العمل", value: counts.linked, icon: MailCheck, tone: "text-emerald-800 bg-emerald-50" },
         { key: "dismissed", label: "مستبعدة", value: counts.dismissed, icon: Archive, tone: "text-slate-600 bg-slate-100" },
       ].map(item => <button key={item.key} type="button" onClick={() => setFilter(item.key as InboxFilter)} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition ${filter === item.key ? "border-[#7eaeb5] bg-white shadow-sm" : "border-slate-200 bg-white/70"}`}><span className="block text-[10px] font-bold text-slate-500">{item.label}</span><bdi className="mt-1 block text-lg font-black text-slate-900">{item.value}</bdi></button>)}</div>

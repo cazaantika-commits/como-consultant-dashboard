@@ -320,6 +320,7 @@ export const comoNextRouter = router({
         .from(comoNextEmailMessages)
         .where(and(
           eq(comoNextEmailMessages.userId, ctx.user.id),
+          eq(comoNextEmailMessages.folderName, "INBOX"),
           or(eq(comoNextEmailMessages.inboxStatus, "unmatched"), eq(comoNextEmailMessages.inboxStatus, "suggested")),
           or(eq(comoNextEmailMessages.serverSeen, 0), eq(comoNextEmailMessages.importance, "important"), eq(comoNextEmailMessages.importance, "urgent")),
         ))

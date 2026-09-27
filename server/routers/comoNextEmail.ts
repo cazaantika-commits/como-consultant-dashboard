@@ -12,7 +12,7 @@ import {
   linkEmailToWorkFileCommand,
   listEmailInbox,
   listEmailLinkingOptions,
-  syncReadonlyInboxCommand,
+  syncAndAnalyzeReadonlyMailboxCommand,
 } from "../services/comoNextEmailInbox";
 
 function assertOwner(role?: string) {
@@ -62,7 +62,7 @@ export const comoNextEmailRouter = router({
     .input(z.object({ hours: z.number().int().min(1).max(8760).default(168), maxMessages: z.number().int().min(1).max(250).default(100) }))
     .mutation(({ ctx, input }) => {
       assertOwner(ctx.user.role);
-      return syncReadonlyInboxCommand({ userId: ctx.user.id, ...input });
+      return syncAndAnalyzeReadonlyMailboxCommand({ userId: ctx.user.id, ...input, analysisLimit: 10 });
     }),
 
   linkToWorkFile: protectedProcedure

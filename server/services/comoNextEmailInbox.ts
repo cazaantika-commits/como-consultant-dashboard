@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
+  comoNextActions,
   comoNextCommunications,
   comoNextDocuments,
   comoNextEmailAnalyses,
@@ -18,6 +19,7 @@ import { getDb } from "../db";
 import {
   fetchEmailByUID,
   fetchReadonlyInboxSince,
+  fetchReadonlySentSince,
   getConfiguredMailboxAddress,
   type EmailMessage,
   type ReadonlyMailboxBatch,
@@ -32,7 +34,49 @@ const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 const toSqlTimestamp = (date: Date) => date.toISOString().slice(0, 19).replace("T", " ");
 const sha256 = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const normalizeEmail = (value?: string | null) => String(value || "").trim().toLowerCase();
+const extractEmails = (value?: string | null) => (String(value || "").toLowerCase().match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/g) || []).map(normalizeEmail);
 const normalizeText = (value?: string | null) => String(value || "").normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const parseStoredUtc = (value: string) => new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(" ", "T")}Z`);
+const genericWorkTokens = new Set(["design", "project", "review", "analysis", "offer", "proposal", "consultant", "architectural", "meeting", "scope", "work"]);
+
+export function scoreEmailSuggestionCandidate(row: any, message: Pick<EmailMessage, "from" | "to" | "cc" | "subject" | "textBody">) {
+  const haystack = normalizeText(`${message.subject}\n${message.textBody.slice(0, 20_000)}`);
+  const participantEmails = new Set([normalizeEmail(message.from), ...extractEmails(message.to), ...extractEmails(message.cc)].filter(Boolean));
+  let score = 0;
+  const reasons: string[] = [];
+  const contactEmail = normalizeEmail(row.contactEmail);
+  if (contactEmail && participantEmails.has(contactEmail)) {
+    score += 100;
+    reasons.push(`عنوان ${row.partyName || "الطرف المسجل"} ظاهر في المرسل أو المستلمين`);
+  }
+  const projectTokens = meaningfulTokens(`${row.projectName || ""} ${row.plotNumber || ""}`);
+  const projectMatches = projectTokens.filter(token => haystack.includes(token)).length;
+  if (projectMatches) {
+    score += Math.min(40, projectMatches * 12);
+    reasons.push("اسم المشروع أو رقم القطعة ظاهر في الرسالة");
+  }
+  const workTokens = meaningfulTokens(row.workFileTitle);
+  const matchedWorkTokens = workTokens.filter(token => haystack.includes(token));
+  if (matchedWorkTokens.length) {
+    score += Math.min(24, matchedWorkTokens.length * 6);
+    reasons.push("موضوع الرسالة يطابق ملف العمل");
+  }
+  const partyPhrase = normalizeText(row.partyName);
+  if (partyPhrase && partyPhrase.length >= 4 && haystack.includes(partyPhrase)) {
+    score += Number(row.partyLinkedToFile) === 1 ? 55 : 10;
+    reasons.push(`اسم الطرف ${row.partyName} ظاهر في نص الرسالة`);
+  }
+  const distinctiveFileMatch = matchedWorkTokens.find(token => /^[a-z0-9]+$/.test(token) && token.length >= 5 && !genericWorkTokens.has(token));
+  if (distinctiveFileMatch) {
+    score += 40;
+    reasons.push(`معرّف مميز لملف العمل ظاهر: ${distinctiveFileMatch}`);
+  }
+  if (Number(row.partyLinkedToFile) === 1 && contactEmail && participantEmails.has(contactEmail)) {
+    score += 30;
+    reasons.push("الطرف مرتبط بملف العمل نفسه");
+  }
+  return { score, reasons };
+}
 const meaningfulTokens = (value?: string | null) => normalizeText(value).split(/\s+/).filter(token => token.length >= 4);
 
 function databaseUnavailable(): never {
@@ -71,31 +115,8 @@ async function buildSuggestion(db: any, userId: number, message: EmailMessage) {
     LEFT JOIN como_next_work_file_parties wfp ON wfp.work_file_id = wf.id AND wfp.project_party_id = pp.id
     WHERE p.is_test_project = 0 AND (p.userId = ${userId} OR access_row.user_id = ${userId})
   `);
-  const haystack = normalizeText(`${message.subject}\n${message.textBody.slice(0, 20_000)}`);
-  const sender = normalizeEmail(message.from);
   const scored = rowsOf<any>(candidatesResult).map(row => {
-    let score = 0;
-    const reasons: string[] = [];
-    if (sender && normalizeEmail(row.contactEmail) === sender) {
-      score += 100;
-      reasons.push(`بريد المرسل مطابق لجهة الاتصال ${row.partyName || "المسجلة"}`);
-    }
-    const projectTokens = meaningfulTokens(`${row.projectName || ""} ${row.plotNumber || ""}`);
-    const projectMatches = projectTokens.filter(token => haystack.includes(token)).length;
-    if (projectMatches) {
-      score += Math.min(40, projectMatches * 12);
-      reasons.push("اسم المشروع أو رقم القطعة ظاهر في الرسالة");
-    }
-    const workTokens = meaningfulTokens(row.workFileTitle);
-    const workMatches = workTokens.filter(token => haystack.includes(token)).length;
-    if (workMatches) {
-      score += Math.min(24, workMatches * 6);
-      reasons.push("موضوع الرسالة يطابق ملف العمل");
-    }
-    if (Number(row.partyLinkedToFile) === 1 && normalizeEmail(row.contactEmail) === sender) {
-      score += 30;
-      reasons.push("الطرف مرتبط بملف العمل نفسه");
-    }
+    const { score, reasons } = scoreEmailSuggestionCandidate(row, message);
     return { ...row, score, reasons };
   }).filter(row => row.score > 0).sort((a, b) => b.score - a.score);
   const best = scored[0];
@@ -109,19 +130,59 @@ async function buildSuggestion(db: any, userId: number, message: EmailMessage) {
   };
 }
 
+export async function reclassifyUnlinkedEmailSuggestionsCommand(input: { userId: number; emailIds?: number[]; limit?: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const allowedIds = input.emailIds?.length ? new Set(input.emailIds) : null;
+  const rows = await db.select().from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.userId, input.userId),
+    or(eq(comoNextEmailMessages.inboxStatus, "unmatched"), eq(comoNextEmailMessages.inboxStatus, "suggested")),
+  )).orderBy(desc(comoNextEmailMessages.receivedAt), desc(comoNextEmailMessages.id)).limit(Math.max(1, Math.min(input.limit || 250, 250)));
+  let updated = 0;
+  for (const email of rows) {
+    if (allowedIds && !allowedIds.has(Number(email.id))) continue;
+    const suggestion = await buildSuggestion(db, input.userId, {
+      uid: email.imapUid,
+      messageId: email.messageIdRaw || "",
+      from: email.fromEmail,
+      fromName: email.fromName || "",
+      to: email.toText || "",
+      cc: email.ccText || "",
+      subject: email.subject,
+      date: parseStoredUtc(email.receivedAt),
+      textBody: email.bodyText,
+      htmlBody: "",
+      attachments: [],
+      isRead: email.wasSeen === 1,
+    });
+    if (!suggestion) continue;
+    await db.update(comoNextEmailMessages).set({
+      inboxStatus: "suggested",
+      suggestedProjectId: suggestion.projectId,
+      suggestedWorkFileId: suggestion.workFileId,
+      suggestedProjectPartyId: suggestion.projectPartyId,
+      suggestionReason: suggestion.reason,
+    }).where(and(eq(comoNextEmailMessages.id, email.id), eq(comoNextEmailMessages.userId, input.userId)));
+    updated += 1;
+  }
+  return { updated, operationalRecordsCreated: 0, externalSideEffect: false as const };
+}
+
 export async function importReadonlyBatch(userId: number, batch: ReadonlyMailboxBatch) {
   const db = await getDb();
   if (!db) databaseUnavailable();
   const mailboxKey = mailboxKeyFor(batch.mailbox);
+  const folderName = batch.folderName || "INBOX";
   let imported = 0;
   let duplicates = 0;
   let suggested = 0;
   let unmatched = 0;
+  const importedIds: number[] = [];
 
   for (const message of batch.messages) {
     const identitySha = messageIdentitySha(message, batch.uidValidity);
     const existing = await db.select({ id: comoNextEmailMessages.id }).from(comoNextEmailMessages).where(or(
-      and(eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.folderName, "INBOX"), eq(comoNextEmailMessages.uidValidity, batch.uidValidity), eq(comoNextEmailMessages.imapUid, message.uid)),
+      and(eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.folderName, folderName), eq(comoNextEmailMessages.uidValidity, batch.uidValidity), eq(comoNextEmailMessages.imapUid, message.uid)),
       and(eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.messageIdSha256, identitySha)),
     )).limit(1);
     if (existing.length) { duplicates += 1; continue; }
@@ -131,7 +192,7 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
     const result = await db.insert(comoNextEmailMessages).values({
       userId,
       mailboxKey,
-      folderName: "INBOX",
+      folderName,
       uidValidity: batch.uidValidity,
       imapUid: message.uid,
       messageId: message.messageId.trim() || null,
@@ -153,6 +214,7 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
       suggestionReason: suggestion?.reason ?? null,
     });
     const emailId = Number(result[0].insertId);
+    importedIds.push(emailId);
     if (message.attachments.length) {
       await db.insert(comoNextEmailAttachments).values(message.attachments.map((attachment, index) => ({
         emailMessageId: emailId,
@@ -167,12 +229,66 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
     imported += 1;
     if (suggestion) suggested += 1; else unmatched += 1;
   }
-  return { imported, duplicates, suggested, unmatched, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
+  return { imported, duplicates, suggested, unmatched, importedIds, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
 }
 
 export async function syncReadonlyInboxCommand(input: { userId: number; hours: number; maxMessages: number }) {
-  const batch = await fetchReadonlyInboxSince(input.hours, input.maxMessages);
-  return { ...(await importReadonlyBatch(input.userId, batch)), scanned: batch.messages.length, uidValidity: batch.uidValidity };
+  const [inboxBatch, sentBatch] = await Promise.all([
+    fetchReadonlyInboxSince(input.hours, input.maxMessages),
+    fetchReadonlySentSince(input.hours, input.maxMessages),
+  ]);
+  const inbox = await importReadonlyBatch(input.userId, inboxBatch);
+  const sent = await importReadonlyBatch(input.userId, sentBatch);
+  return {
+    imported: inbox.imported + sent.imported,
+    duplicates: inbox.duplicates + sent.duplicates,
+    suggested: inbox.suggested + sent.suggested,
+    unmatched: inbox.unmatched + sent.unmatched,
+    importedIds: [...inbox.importedIds, ...sent.importedIds],
+    scanned: inboxBatch.messages.length + sentBatch.messages.length,
+    uidValidity: { inbox: inboxBatch.uidValidity, sent: sentBatch.uidValidity },
+    folders: { inbox, sent },
+    readOnly: true as const,
+    serverFlagsChanged: false as const,
+    externalSideEffects: false as const,
+  };
+}
+
+export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: number; hours: number; maxMessages: number; analysisLimit?: number }) {
+  const result = await syncReadonlyInboxCommand(input);
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const pendingResult = await db.execute(sql`
+    SELECT email_row.id
+    FROM como_next_email_messages email_row
+    WHERE email_row.user_id = ${input.userId}
+      AND email_row.inbox_status <> 'dismissed'
+      AND NOT EXISTS (
+        SELECT 1 FROM como_next_email_analyses analysis_row
+        WHERE analysis_row.email_message_id = email_row.id
+          AND analysis_row.analysis_status = 'draft'
+      )
+    ORDER BY email_row.received_at DESC, email_row.id DESC
+    LIMIT ${Math.max(1, Math.min(input.analysisLimit || 10, 20))}
+  `);
+  const candidateIds = [...new Set([
+    ...result.importedIds,
+    ...rowsOf<any>(pendingResult).map(row => Number(row.id)),
+  ])].slice(0, Math.max(1, Math.min(input.analysisLimit || 10, 20)));
+  let analyzed = 0;
+  let analysisFailures = 0;
+  for (let offset = 0; offset < candidateIds.length; offset += 3) {
+    const batch = candidateIds.slice(offset, offset + 3);
+    const outcomes = await Promise.allSettled(batch.map(emailId => analyzeEmailCommand({ userId: input.userId, emailId, requestKey: `mailbox-context-v1:${emailId}` })));
+    for (let index = 0; index < outcomes.length; index += 1) {
+      if (outcomes[index].status === "fulfilled") analyzed += 1;
+      else {
+        analysisFailures += 1;
+        console.error(`[COMO email sync] Failed to analyze email ${batch[index]}:`, outcomes[index]);
+      }
+    }
+  }
+  return { ...result, analyzed, analysisFailures };
 }
 
 export async function listEmailInbox(userId: number, status?: "unmatched" | "suggested" | "linked" | "dismissed") {
@@ -180,7 +296,7 @@ export async function listEmailInbox(userId: number, status?: "unmatched" | "sug
   if (!db) databaseUnavailable();
   const statusFilter = status ? sql`AND email_row.inbox_status = ${status}` : sql``;
   const result = await db.execute(sql`
-    SELECT email_row.id, email_row.from_email AS fromEmail, email_row.from_name AS fromName,
+    SELECT email_row.id, email_row.folder_name AS folderName, email_row.from_email AS fromEmail, email_row.from_name AS fromName,
       email_row.subject, LEFT(email_row.body_text, 500) AS bodyPreview,
       email_row.received_at AS receivedAt, email_row.server_seen AS serverSeen,
       email_row.attachment_count AS attachmentCount, email_row.inbox_status AS inboxStatus,
@@ -264,7 +380,7 @@ async function storeEmailAttachments(email: typeof comoNextEmailMessages.$inferS
   const db = await getDb();
   if (!db) databaseUnavailable();
   if (!email.attachmentCount) return [] as Array<{ ordinal: number; documentId: number; sha256: string }>;
-  const full = await fetchEmailByUID(email.imapUid, email.uidValidity);
+  const full = await fetchEmailByUID(email.imapUid, email.uidValidity, email.folderName);
   if (!full) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تعذر استعادة الرسالة من صندوق البريد" });
   if (messageIdentitySha(full, email.uidValidity) !== email.messageIdSha256 || sha256(full.textBody.trim().slice(0, 1_000_000)) !== email.bodySha256) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هوية الرسالة أو محتواها لم تعد مطابقة؛ أعد المزامنة قبل الربط" });
@@ -313,7 +429,8 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
     if (!party) throw new TRPCError({ code: "NOT_FOUND", message: "الطرف لا يتبع المشروع المختار" });
   }
   const storedDocuments = await storeEmailAttachments(email);
-  const sourceRecordId = `imap:${email.mailboxKey.slice(0, 24)}:${email.uidValidity}:${email.imapUid}`;
+  const isSent = email.folderName !== "INBOX";
+  const sourceRecordId = `imap:${email.mailboxKey.slice(0, 24)}:${email.folderName}:${email.uidValidity}:${email.imapUid}`;
   return db.transaction(async tx => {
     const [existingCommunication] = await tx.select({ id: comoNextCommunications.id }).from(comoNextCommunications).where(and(eq(comoNextCommunications.sourceSystem, "imap"), eq(comoNextCommunications.sourceRecordId, sourceRecordId))).limit(1);
     if (existingCommunication) {
@@ -326,8 +443,8 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
       workFileId: input.workFileId,
       projectPartyId: input.projectPartyId || null,
       channel: "email",
-      direction: "inbound",
-      communicationStatus: "received",
+      direction: isSent ? "outbound" : "inbound",
+      communicationStatus: isSent ? "sent" : "received",
       approvalStatus: "not_required",
       subject: email.subject,
       body: email.bodyText || "(لا يوجد نص مستخرج)",
@@ -335,8 +452,9 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
       toText: email.toText,
       ccText: email.ccText,
       externalMessageRef: email.messageId || `IMAP UID ${email.imapUid}`,
-      evidenceReference: `IMAP INBOX; UIDVALIDITY=${email.uidValidity}; UID=${email.imapUid}; SHA-256=${email.bodySha256}`,
+      evidenceReference: `IMAP ${email.folderName}; UIDVALIDITY=${email.uidValidity}; UID=${email.imapUid}; SHA-256=${email.bodySha256}`,
       occurredAt: email.receivedAt,
+      sentAt: isSent ? email.receivedAt : null,
       sourceSystem: "imap",
       sourceRecordId,
     });
@@ -346,9 +464,9 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
       workFileId: input.workFileId,
       memoryType: "material",
       entryType: "email_message",
-      title: `بريد وارد: ${email.subject}`,
-      body: `من: ${email.fromName || email.fromEmail}\n${email.bodyText}`.slice(0, 1_000_000),
-      sourceStatus: "received_readonly",
+      title: `${isSent ? "بريد صادر" : "بريد وارد"}: ${email.subject}`,
+      body: `${isSent ? "إلى" : "من"}: ${isSent ? email.toText || "غير محدد" : email.fromName || email.fromEmail}\n${email.bodyText}`.slice(0, 1_000_000),
+      sourceStatus: isSent ? "sent_readonly" : "received_readonly",
       isCurrent: 1,
       sourceSystem: "imap",
       sourceRecordId,
@@ -373,7 +491,7 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
     }).where(eq(comoNextEmailMessages.id, input.emailId));
     await appendEvent(tx, {
       userId: input.userId, projectId: input.projectId, workFileId: input.workFileId,
-      eventType: "email_received_linked", summary: `ربط بريد وارد: ${email.subject}`,
+      eventType: isSent ? "email_sent_linked" : "email_received_linked", summary: `ربط بريد ${isSent ? "صادر" : "وارد"}: ${email.subject}`,
       payload: { emailId: input.emailId, communicationId, attachmentCount: storedDocuments.length, serverFlagsChanged: false, externalSideEffect: false },
       idempotencyKey: `event:${sourceRecordId}`,
     });
@@ -416,6 +534,120 @@ const emailAnalysisSchema = {
   additionalProperties: false,
 } as const;
 
+type EmailAnalysisContext = {
+  workFile: { id: number; title: string; status: string; governingQuestion: string; desiredOutcome: string };
+  mailboxMessages: Array<{ direction: string; folderName: string; subject: string; excerpt: string; receivedAt: string; inboxStatus: string }>;
+  communications: Array<{ direction: string; status: string; subject: string; excerpt: string; occurredAt: string | null; evidenceReference: string | null }>;
+  actions: Array<{ title: string; status: string; description: string | null; evidenceReference: string | null; updatedAt: string | null }>;
+};
+
+export function buildEmailAnalysisPrompt(email: {
+  folderName: string;
+  fromName?: string | null;
+  fromEmail: string;
+  toText?: string | null;
+  ccText?: string | null;
+  subject: string;
+  receivedAt: string;
+  bodyText: string;
+}, context: EmailAnalysisContext | null) {
+  const isSent = email.folderName !== "INBOX";
+  const contextText = context ? `
+
+سياق ملف الموضوع الحالي — قد يتضمن وقائع أحدث من الرسالة، والأحدث زمنيًا ينسخ الحالة الأقدم:
+الملف: ${context.workFile.title} (#${context.workFile.id})
+حالته: ${context.workFile.status}
+السؤال الحاكم: ${context.workFile.governingQuestion}
+النتيجة المطلوبة: ${context.workFile.desiredOutcome}
+
+أحدث المراسلات المرتبطة:
+${context.communications.map(item => `- [${item.occurredAt || "دون تاريخ"}] ${item.direction}/${item.status}: ${item.subject} — ${item.excerpt}${item.evidenceReference ? ` — الدليل: ${item.evidenceReference}` : ""}`).join("\n") || "- لا توجد"}
+
+أحدث رسائل الصندوق المرتبطة أو المرشحة لهذا الملف — المرشح ليس ربطًا معتمدًا لكنه دليل يجب أخذه في السياق:
+${context.mailboxMessages.map(item => `- [${item.receivedAt}] ${item.direction}/${item.folderName}/${item.inboxStatus}: ${item.subject} — ${item.excerpt}`).join("\n") || "- لا توجد"}
+
+أحدث الإجراءات المرتبطة:
+${context.actions.map(item => `- ${item.status}: ${item.title}${item.description ? ` — ${item.description}` : ""}${item.evidenceReference ? ` — الدليل: ${item.evidenceReference}` : ""}`).join("\n") || "- لا توجد"}` : "";
+
+  return `حلل الرسالة التالية ضمن تسلسل ملف الموضوع، لا كنص منفصل.
+اتجاه الرسالة: ${isSent ? "صادرة من عبد الرحمن" : "واردة إلى عبد الرحمن"}
+المجلد: ${email.folderName}
+من: ${email.fromName || ""} <${email.fromEmail}>
+إلى: ${email.toText || "غير محدد"}
+نسخة: ${email.ccText || "لا يوجد"}
+الموضوع: ${email.subject}
+التاريخ: ${email.receivedAt}
+
+${email.bodyText}${contextText}
+
+قواعد الحسم:
+- افصل بين ما طلبته الرسالة وقت وصولها وبين الحقيقة الحالية للملف.
+- لا تقترح قرارًا أو إجراءً أثبتت مراسلة أو واقعة لاحقة أنه نُفذ أو استُبدل.
+- إذا ثبت إرسال اعتماد صرف، فلا تقل إن الاعتماد ما زال معلقًا؛ ميّز بين «اعتماد الصرف وإرساله» و«تنفيذ الدفع وتأكيده».
+- لا تعتبر الدفع منفذًا بلا تأكيد صريح من وائل أو المالية أو دليل دفع.
+- لا تكرر إجراءً نشطًا قائمًا ولا تقترح ربط رسالة مرتبطة أصلًا.
+- الرسالة الصادرة توثق ما فعله عبد الرحمن؛ لا تكتب مسودة رد عليها.
+- كل مقترح يبقى review-only ولا يغير أي حالة تشغيلية.`;
+}
+
+async function loadEmailAnalysisContext(db: any, email: typeof comoNextEmailMessages.$inferSelect): Promise<EmailAnalysisContext | null> {
+  const workFileId = Number(email.linkedWorkFileId || email.suggestedWorkFileId || 0);
+  if (!workFileId) return null;
+  const [workFile] = await db.select().from(comoNextWorkFiles).where(eq(comoNextWorkFiles.id, workFileId)).limit(1);
+  if (!workFile) return null;
+  const communications = await db.select({
+    direction: comoNextCommunications.direction,
+    status: comoNextCommunications.communicationStatus,
+    subject: comoNextCommunications.subject,
+    body: comoNextCommunications.body,
+    occurredAt: comoNextCommunications.occurredAt,
+    evidenceReference: comoNextCommunications.evidenceReference,
+  }).from(comoNextCommunications).where(eq(comoNextCommunications.workFileId, workFileId)).orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id)).limit(12);
+  const actions = await db.select({
+    title: comoNextActions.title,
+    status: comoNextActions.actionStatus,
+    description: comoNextActions.description,
+    evidenceReference: comoNextActions.evidenceReference,
+    updatedAt: comoNextActions.updatedAt,
+  }).from(comoNextActions).where(eq(comoNextActions.workFileId, workFileId)).orderBy(desc(comoNextActions.updatedAt), desc(comoNextActions.id)).limit(12);
+  const mailboxMessages = await db.select({
+    folderName: comoNextEmailMessages.folderName,
+    subject: comoNextEmailMessages.subject,
+    bodyText: comoNextEmailMessages.bodyText,
+    receivedAt: comoNextEmailMessages.receivedAt,
+    inboxStatus: comoNextEmailMessages.inboxStatus,
+  }).from(comoNextEmailMessages).where(or(
+    eq(comoNextEmailMessages.linkedWorkFileId, workFileId),
+    eq(comoNextEmailMessages.suggestedWorkFileId, workFileId),
+  )).orderBy(desc(comoNextEmailMessages.receivedAt), desc(comoNextEmailMessages.id)).limit(12);
+  return {
+    workFile: {
+      id: Number(workFile.id),
+      title: workFile.title,
+      status: workFile.workFileStatus,
+      governingQuestion: workFile.governingQuestion,
+      desiredOutcome: workFile.desiredOutcome,
+    },
+    mailboxMessages: mailboxMessages.map(item => ({
+      direction: item.folderName === "INBOX" ? "inbound" : "outbound",
+      folderName: item.folderName,
+      subject: item.subject,
+      excerpt: String(item.bodyText || "").replace(/\s+/g, " ").slice(0, 700),
+      receivedAt: item.receivedAt,
+      inboxStatus: item.inboxStatus,
+    })),
+    communications: communications.map(item => ({
+      direction: item.direction,
+      status: item.status,
+      subject: item.subject,
+      excerpt: String(item.body || "").replace(/\s+/g, " ").slice(0, 700),
+      occurredAt: item.occurredAt || null,
+      evidenceReference: item.evidenceReference || null,
+    })),
+    actions: actions.map(item => ({ ...item, updatedAt: item.updatedAt || null })),
+  };
+}
+
 export async function analyzeEmailCommand(input: { userId: number; emailId: number; requestKey: string }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -423,11 +655,12 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
   const [existing] = await db.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
   if (existing) return { id: Number(existing.id), replayed: true as const };
+  const context = await loadEmailAnalysisContext(db, email);
   const response = await invokeLLM({
     model: EMAIL_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. حلل البريد اعتمادًا على نصه فقط. لا تنشئ إجراءً أو قرارًا أو التزامًا تشغيليًا، ولا ترسل أو تعتمد أي رد. أخرج JSON مطابقًا للمخطط. إذا احتوى البريد طلبًا أو قرارًا أو متابعة فعلية، ضعها كمقترحات review-only مع اقتباس حرفي قصير؛ لا تنشئ مقترحًا لمجرد ملء القائمة." },
-      { role: "user", content: `حلل البريد الوارد التالي كمسودة للمراجعة. لخصه بالعربية، قدر أهميته، واقترح الخطوة التالية. إذا احتاج ردًا فاكتب مسودة فقط ولا تعتبرها معتمدة أو مرسلة. اقترح فقط ما تدعمه الرسالة: action يحتاج معيار قبول، decision يحتاج سؤالًا واضحًا، communication_draft يبقى مسودة، وnote للحفظ المرجعي.\n\nمن: ${email.fromName || ""} <${email.fromEmail}>\nالموضوع: ${email.subject}\nالتاريخ: ${email.receivedAt}\n\n${email.bodyText}` },
+      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. حلل الرسالة داخل تسلسل ملف الموضوع كاملًا، واعتبر الدليل الأحدث هو الحقيقة التشغيلية. لا تنشئ إجراءً أو قرارًا أو التزامًا تشغيليًا، ولا ترسل أو تعتمد أي رد. أخرج JSON مطابقًا للمخطط. المقترحات review-only ولا تُنشأ إذا كانت الخطوة قائمة أو منتهية أو نسختها واقعة أحدث." },
+      { role: "user", content: buildEmailAnalysisPrompt(email, context) },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_email_analysis", strict: true, schema: emailAnalysisSchema as unknown as Record<string, unknown> } },
   });
@@ -478,6 +711,7 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
   if (!email.linkedWorkFileId || !email.linkedProjectId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اربط الرسالة بملف العمل قبل إنشاء مسودة الرد" });
+  if (email.folderName !== "INBOX") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "الرسالة صادرة ولا تحتاج مسودة رد" });
   if (email.replyDraftCommunicationId) return { id: Number(email.replyDraftCommunicationId), replayed: true as const, sent: false as const };
   const draft = await createCommunicationDraftCommand({
     userId: input.userId,

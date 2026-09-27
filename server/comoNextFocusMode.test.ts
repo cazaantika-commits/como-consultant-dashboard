@@ -59,6 +59,8 @@ describe("COMO Next focus mode", () => {
 
   it("opens the exact review proposal from the kitchen without exposing the unrelated proposal list", () => {
     expect(source).toContain('if (item.kind === "proposal") return openProposal(item.recordId)');
+    expect(source).toContain("onProposalChange(data.intakeProposals[0].id)");
+    expect(source).toContain("فتح مقترح Manus");
     expect(source).toContain('url.searchParams.set("focusKind", "proposal")');
     expect(source).toContain('selectedProposalId={selectedFocusKind === "proposal" ? selectedFocusId : null}');
     expect(proposalsSource).toContain("selectedProposalId?: number | null");

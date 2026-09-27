@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { comoNextEmailSyncSettings } from "../drizzle/schema";
 import { sdk } from "./_core/sdk";
 import { getDb } from "./db";
-import { syncReadonlyInboxCommand } from "./services/comoNextEmailInbox";
+import { syncAndAnalyzeReadonlyMailboxCommand } from "./services/comoNextEmailInbox";
 
 function nowSql() {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -38,7 +38,7 @@ export function registerScheduledEmailSyncRoute(app: Express) {
       }
       await db.update(comoNextEmailSyncSettings).set({ lastRunAt: nowSql(), lastStatus: "running", lastError: null }).where(eq(comoNextEmailSyncSettings.id, settings.id));
       try {
-        const result = await syncReadonlyInboxCommand({ userId: settings.userId, hours: settings.lookbackHours, maxMessages: settings.maxMessages });
+        const result = await syncAndAnalyzeReadonlyMailboxCommand({ userId: settings.userId, hours: settings.lookbackHours, maxMessages: settings.maxMessages, analysisLimit: 3 });
         await db.update(comoNextEmailSyncSettings).set({
           lastRunAt: nowSql(),
           lastSuccessAt: nowSql(),
@@ -48,7 +48,7 @@ export function registerScheduledEmailSyncRoute(app: Express) {
           lastDuplicates: result.duplicates,
           lastError: null,
         }).where(eq(comoNextEmailSyncSettings.id, settings.id));
-        res.status(200).json({ ok: true, scanned: result.scanned, imported: result.imported, duplicates: result.duplicates, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
+        res.status(200).json({ ok: true, scanned: result.scanned, imported: result.imported, duplicates: result.duplicates, analyzed: result.analyzed, analysisFailures: result.analysisFailures, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
       } catch (error) {
         const message = error instanceof Error ? error.message.slice(0, 2000) : "scheduled_sync_failed";
         await db.update(comoNextEmailSyncSettings).set({ lastRunAt: nowSql(), lastStatus: "failed", lastError: message }).where(eq(comoNextEmailSyncSettings.id, settings.id));

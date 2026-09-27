@@ -40,6 +40,7 @@ export interface EmailAttachment {
 
 export interface ReadonlyMailboxBatch {
   mailbox: string;
+  folderName: string;
   uidValidity: string;
   messages: EmailMessage[];
 }
@@ -217,9 +218,9 @@ export function fetchNewEmails(): Promise<EmailMessage[]> {
 
 /**
  * Strict read-only mailbox snapshot for COMO Next.
- * The folder is opened read-only and markSeen is explicitly disabled.
+ * Every folder is opened read-only and markSeen is explicitly disabled.
  */
-export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number = 100): Promise<ReadonlyMailboxBatch> {
+export function fetchReadonlyFolderSince(folderName: string, hours: number = 72, maxMessages: number = 100): Promise<ReadonlyMailboxBatch> {
   return new Promise((resolve, reject) => {
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
@@ -244,7 +245,7 @@ export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number 
       reject(error);
     };
     imap.once("ready", () => {
-      imap.openBox("INBOX", true, (openError, box) => {
+      imap.openBox(folderName, true, (openError, box) => {
         if (openError) { imap.end(); fail(openError); return; }
         uidValidity = String(box.uidvalidity ?? "0");
         const since = new Date(Date.now() - Math.max(1, Math.min(hours, 24 * 365)) * 60 * 60 * 1000);
@@ -256,7 +257,7 @@ export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number 
           const uids = (found || []).slice(-limit);
           if (!uids.length) { imap.end(); return; }
           let pending = uids.length;
-          const fetch = imap.fetch(uids, { bodies: "", struct: true });
+          const fetch = imap.fetch(uids, { bodies: "", struct: true, markSeen: false });
           fetch.on("message", msg => {
             let uid = 0;
             let flags: string[] = [];
@@ -303,10 +304,18 @@ export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number 
       if (settled) return;
       settled = true;
       messages.sort((a, b) => b.date.getTime() - a.date.getTime());
-      resolve({ mailbox: getConfiguredMailboxAddress(), uidValidity, messages });
+      resolve({ mailbox: getConfiguredMailboxAddress(), folderName, uidValidity, messages });
     });
     imap.connect();
   });
+}
+
+export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number = 100) {
+  return fetchReadonlyFolderSince("INBOX", hours, maxMessages);
+}
+
+export function fetchReadonlySentSince(hours: number = 72, maxMessages: number = 100) {
+  return fetchReadonlyFolderSince("Sent", hours, maxMessages);
 }
 
 /**
@@ -425,7 +434,7 @@ export function fetchEmailsSince(hours: number = 48): Promise<EmailMessage[]> {
 /**
  * Fetch a single email by UID with full attachments
  */
-export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string): Promise<EmailMessage | null> {
+export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string, folderName: string = "INBOX"): Promise<EmailMessage | null> {
   return new Promise((resolve, reject) => {
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
@@ -446,11 +455,11 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string)
     let result: EmailMessage | null = null;
 
     imap.once("ready", () => {
-      imap.openBox("INBOX", true, (err, box) => {
+      imap.openBox(folderName, true, (err, box) => {
         if (err) { imap.end(); reject(err); return; }
         if (expectedUidValidity && String(box.uidvalidity ?? "0") !== expectedUidValidity) {
           imap.end();
-          reject(new Error("Mailbox UIDVALIDITY changed; refresh the inbox before linking this message"));
+          reject(new Error(`Mailbox UIDVALIDITY changed for ${folderName}; refresh the mailbox before linking this message`));
           return;
         }
 
