@@ -117,9 +117,46 @@ export function buildExecutiveKitchenQueue(input: {
   for (const review of input.specialistReviews) items.push({ id: `specialist:${review.id}`, kind: "specialist", phase: "owner_review", title: review.executiveSummary || review.requestText, projectId: review.projectId, workFileId: review.workFileId, recordId: review.id });
   for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority });
 
+  const reviewKindRank: Record<string, number> = { decision: 0, proposal: 1, communication: 2, email: 3, specialist: 4 };
+  const groupedItems: Array<Record<string, unknown>> = [];
+  const groupedReviewIndex = new Map<string, number>();
+  for (const item of items) {
+    if (item.phase !== "owner_review") {
+      groupedItems.push(item);
+      continue;
+    }
+    const workFileId = Number(item.workFileId || 0);
+    const normalizedTitle = String(item.title || "")
+      .replace(/^\s*((re|fw|fwd)\s*:\s*)+/gi, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    const groupKey = workFileId > 0
+      ? `work-file:${workFileId}`
+      : item.kind === "email" && normalizedTitle
+        ? `email-thread:${normalizedTitle}`
+        : String(item.id);
+    const existingIndex = groupedReviewIndex.get(groupKey);
+    if (existingIndex === undefined) {
+      groupedReviewIndex.set(groupKey, groupedItems.length);
+      groupedItems.push({ ...item, id: `review:${groupKey}`, reviewItemCount: 1, relatedReviewIds: [String(item.id)] });
+      continue;
+    }
+    const existing = groupedItems[existingIndex];
+    const existingCount = Number(existing.reviewItemCount || 1);
+    const relatedReviewIds = [...((existing.relatedReviewIds as string[] | undefined) || [String(existing.id)]), String(item.id)];
+    const shouldReplacePrimary = (reviewKindRank[String(item.kind)] ?? 9) < (reviewKindRank[String(existing.kind)] ?? 9);
+    groupedItems[existingIndex] = {
+      ...(shouldReplacePrimary ? item : existing),
+      id: `review:${groupKey}`,
+      reviewItemCount: existingCount + 1,
+      relatedReviewIds,
+    };
+  }
+
   const phaseRank: Record<string, number> = { owner_review: 0, verify: 1, act_now: 2, define_next_step: 3, waiting_external: 4, scheduled: 5 };
   const priorityRank: Record<string, number> = { urgent: 0, important: 1, normal: 2 };
-  return items.sort((a, b) => {
+  return groupedItems.sort((a, b) => {
     const phaseDelta = (phaseRank[String(a.phase)] ?? 9) - (phaseRank[String(b.phase)] ?? 9);
     if (phaseDelta) return phaseDelta;
     const priorityDelta = (priorityRank[String(a.priority)] ?? 9) - (priorityRank[String(b.priority)] ?? 9);

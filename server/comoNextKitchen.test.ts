@@ -26,12 +26,29 @@ function seed() {
 }
 
 describe("COMO Next executive kitchen", () => {
-  it("unifies every operational type and prioritizes owner review before passive waiting", () => {
+  it("unifies every operational type and counts one owner-review topic instead of every linked record", () => {
     const queue = buildExecutiveKitchenQueue(seed());
-    expect(queue).toHaveLength(6);
+    expect(queue).toHaveLength(4);
     expect(queue[0]?.phase).toBe("owner_review");
-    expect(queue.find(item => item.kind === "email")?.title).toBe("رسالة تحتاج ربطًا");
+    expect(queue[0]?.kind).toBe("decision");
+    expect(queue[0]?.reviewItemCount).toBe(3);
+    expect(queue[0]?.relatedReviewIds).toEqual(["decision:3", "communication:4", "email:5"]);
     expect(queue.at(-1)?.phase).toBe("waiting_external");
+  });
+
+  it("collapses several proposals for the same work file into one review topic", () => {
+    const input = seed();
+    input.decisions = [];
+    input.draftCommunications = [];
+    input.emails = [];
+    input.filesWithoutNextAction = [];
+    input.intakeProposals = [
+      { id: 11, title: "سؤال أول", projectId: 1, workFileId: 10, priority: "important" },
+      { id: 12, title: "سؤال ثان", projectId: 1, workFileId: 10, priority: "normal" },
+    ];
+    const review = buildExecutiveKitchenQueue(input).filter(item => item.phase === "owner_review");
+    expect(review).toHaveLength(1);
+    expect(review[0]?.reviewItemCount).toBe(2);
   });
 
   it("counts only inbox messages in the kitchen attention badge", () => {

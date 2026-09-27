@@ -177,6 +177,7 @@ function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number;
           <span className="flex flex-wrap items-center gap-2">
             <span className={`text-[10px] font-black tracking-wide ${meta.eyebrow}`}>{meta.label}</span>
             <span className="rounded-full border border-white bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{queueKindLabel[item.kind] || "عمل"}</span>
+            {Number(item.reviewItemCount || 0) > 1 ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black text-violet-800">{item.reviewItemCount} سجلات ضمن الموضوع</span> : null}
           </span>
           <span className="mt-2 block break-words text-[15px] font-black leading-7 text-slate-950 sm:text-base">{item.title}</span>
         </span>
