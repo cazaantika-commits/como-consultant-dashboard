@@ -8,15 +8,23 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
+function isTransientQueryError(error: unknown) {
+  if (!(error instanceof TRPCClientError)) return false;
+  const code = error.data?.code;
+  if (["TIMEOUT", "INTERNAL_SERVER_ERROR", "BAD_GATEWAY", "SERVICE_UNAVAILABLE", "TOO_MANY_REQUESTS"].includes(String(code))) {
+    return true;
+  }
+  return /is not valid JSON|failed to fetch|networkerror|load failed|fetch failed/i.test(error.message);
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Retry up to 2 times on transient errors (e.g. server restart returning HTML)
+      // Retry only short-lived transport/server failures. Permission, validation,
+      // and business-rule errors remain immediate and visible.
       retry: (failureCount, error) => {
         if (failureCount >= 2) return false;
-        // Retry on JSON parse errors (server returned HTML during restart)
-        if (error instanceof TRPCClientError && error.message.includes('is not valid JSON')) return true;
-        return false;
+        return isTransientQueryError(error);
       },
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     },
@@ -38,9 +46,7 @@ queryClient.getQueryCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
-    // Suppress JSON parse errors (server returned HTML during restart/cold-start) - these are retried automatically
-    const isJsonParseError = error instanceof TRPCClientError && error.message.includes('is not valid JSON');
-    if (!isJsonParseError) {
+    if (!isTransientQueryError(error)) {
       console.error("[API Query Error]", error);
     }
   }

@@ -635,19 +635,19 @@ export default function ConsultantEvaluationPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 p-4" dir="rtl">
-      <div className="w-full max-w-none">
+    <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-50 via-emerald-50 to-teal-50 p-3 sm:p-4" dir="rtl">
+      <div className="min-w-0 w-full max-w-none">
         {/* Hero Header */}
         <div className="relative overflow-hidden rounded-3xl mb-8 shadow-2xl">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700" />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMSIgb3BhY2l0eT0iMC4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
-          <div className="relative px-8 py-10">
-            <div className="flex items-center gap-4 mb-4">
+          <div className="relative px-4 py-7 sm:px-8 sm:py-10">
+            <div className="mb-4 flex min-w-0 items-center gap-3 sm:gap-4">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <DollarSign className="w-7 h-7 text-white" />
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-white mb-1">الأتعاب المالية للاستشاريين</h1>
+              <div className="min-w-0">
+                <h1 className="break-words text-2xl font-bold text-white mb-1 sm:text-3xl">الأتعاب المالية للاستشاريين</h1>
                 <p className="text-emerald-100">إدارة وتسجيل أتعاب التصميم والإشراف لكل استشاري — البيانات تنعكس في مركز القيادة</p>
               </div>
             </div>
@@ -720,8 +720,8 @@ export default function ConsultantEvaluationPage() {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {projectConsultants.map((consultant: any) => (
-                    <div key={consultant.id} className="bg-gradient-to-r from-emerald-100 to-teal-100 text-slate-800 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm">
-                      {consultant.name}
+                    <div key={consultant.id} className="flex max-w-full items-center gap-2 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 px-4 py-2 text-sm font-medium text-slate-800 shadow-sm">
+                      <span className="min-w-0 break-words">{consultant.name}</span>
                       <button onClick={() => {
                         if (confirm(`هل تريد إزالة ${consultant.name} من هذا المشروع؟`)) {
                           removeConsultantFromProjectMutation.mutate({ projectId: selectedProject.id, consultantId: consultant.id });
@@ -744,14 +744,14 @@ export default function ConsultantEvaluationPage() {
                     الأتعاب المالية
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="min-w-0 p-3 sm:p-6">
                   {/* Fee Deviation Legend */}
                   <div className="bg-gradient-to-r from-slate-50 to-emerald-50 p-4 rounded-xl border border-slate-200 mb-6">
                     <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                       <Shield className="w-4 h-4 text-emerald-600" />
                       مناطق انحراف الأتعاب (Safety First)
                     </h4>
-                    <div className="grid grid-cols-4 gap-3 text-xs">
+                    <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-4">
                       <div className="bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
                         <span className="font-bold text-emerald-800">النطاق الطبيعي</span>
                         <p className="text-emerald-600">±15% من المتوسط</p>
@@ -774,8 +774,8 @@ export default function ConsultantEvaluationPage() {
                     )}
                   </div>
 
-                  <div className="overflow-x-auto border-2 border-slate-200 rounded-2xl shadow-lg w-full">
-                    <table className="border-collapse w-full" style={{tableLayout:'fixed'}}>
+                  <div className="w-full max-w-full overflow-x-auto rounded-2xl border-2 border-slate-200 shadow-lg">
+                    <table className="min-w-[980px] border-collapse" style={{tableLayout:'fixed'}}>
                       <thead>
                         {/* Two-level header: group header + column headers */}
                         <tr className="bg-gradient-to-r from-emerald-700 via-teal-700 to-cyan-700 text-white text-center text-xs font-bold">

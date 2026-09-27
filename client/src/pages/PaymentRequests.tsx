@@ -407,11 +407,11 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-emerald-50/30 p-6" dir="rtl">
+    <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-gradient-to-br from-slate-50 to-emerald-50/30 p-3 sm:p-6" dir="rtl">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
+        <div className="mb-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 text-gray-500 hover:text-gray-800 -mr-1">
               <ArrowRight className="w-4 h-4" />
               الرئيسية
@@ -420,12 +420,12 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center shadow-lg">
               <CreditCard className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">طلبات الصرف</h1>
+            <div className="min-w-0">
+              <h1 className="break-words text-xl font-bold text-gray-900 sm:text-2xl">طلبات الصرف</h1>
               <p className="text-sm text-gray-500">إدارة أوامر الدفع مع سير الموافقة الكامل</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setShowMonthlyReport(true)} className="gap-2 text-sm">
               <Calendar className="w-4 h-4" />
               تقرير شهري
@@ -471,7 +471,7 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
       </div>
 
       {/* Status Stats */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
         {[
           { key: "all", label: "الكل", color: "from-gray-500 to-gray-600" },
           { key: "pending_wael", label: "بانتظار وائل", color: "from-blue-500 to-indigo-600" },
@@ -493,14 +493,14 @@ export default function PaymentRequests({ embedded = false, memberRole = '' }: {
 
       {/* Search + Filter + Add */}
       <div className="flex gap-3 mb-3 flex-wrap">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative min-w-0 flex-1 basis-full sm:min-w-48 sm:basis-auto">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input placeholder="بحث برقم الطلب أو الشريك أو المشروع..." value={search}
             onChange={e => setSearch(e.target.value)} className="pr-10 bg-white" />
         </div>
         {uniqueProjects.length > 0 && (
           <Select value={projectFilter} onValueChange={setProjectFilter}>
-            <SelectTrigger className="w-48 bg-white">
+            <SelectTrigger className="w-full bg-white sm:w-48">
               <SelectValue placeholder="فلتر حسب المشروع" />
             </SelectTrigger>
             <SelectContent>

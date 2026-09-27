@@ -13,22 +13,38 @@ interface ProjectContextValue {
 
 const ProjectContext = createContext<ProjectContextValue | null>(null);
 
+function readProjectIdFromLocation(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = new URLSearchParams(window.location.search).get("projectId");
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [selectedProjectId, setSelectedProjectIdState] = useState<number | null>(() => {
+    const linkedProjectId = readProjectIdFromLocation();
+    if (linkedProjectId) return linkedProjectId;
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? Number(saved) : null;
   });
 
-  // Re-read the persisted choice after client hydration. This keeps project-first
-  // Financial Studies pages in their selected-project context after a reload.
+  // A direct project link is authoritative for the first page load. Persist it so
+  // subsequent project-first pages keep the same official project context.
   useEffect(() => {
+    const linkedProjectId = readProjectIdFromLocation();
+    if (linkedProjectId) {
+      setSelectedProjectIdState(linkedProjectId);
+      localStorage.setItem(STORAGE_KEY, String(linkedProjectId));
+      return;
+    }
     const saved = localStorage.getItem(STORAGE_KEY);
     const savedProjectId = saved ? Number(saved) : null;
-    if (savedProjectId && Number.isFinite(savedProjectId) && savedProjectId !== selectedProjectId) {
+    if (savedProjectId && Number.isFinite(savedProjectId)) {
       setSelectedProjectIdState(savedProjectId);
     }
-  }, [selectedProjectId]);
+  }, []);
 
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projects = projectsQuery.data || [];

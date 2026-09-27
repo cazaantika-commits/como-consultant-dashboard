@@ -242,7 +242,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
 
   /* ── Compact mode: hide side columns to show more of task name ── */
-  const [compactMode, setCompactMode] = useState(false);
+  const [compactMode, setCompactMode] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   // Left panel width: compact = WBS(32) + name(flex) + %(48) = ~280, normal = 460
   const leftPanelWidth = compactMode ? 280 : 640;
 
@@ -783,9 +783,9 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
 
   if (!selectedProjectId) {
     return (
-      <div className="min-h-screen bg-white" dir="rtl">
-        <div className="bg-gradient-to-l from-slate-700 to-slate-800 text-white px-6 py-4">
-          <div className="flex items-center justify-between">
+      <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-white" dir="rtl">
+        <div className="bg-gradient-to-l from-slate-700 to-slate-800 px-3 py-4 text-white sm:px-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Calendar className="w-6 h-6 text-slate-300" />
               <div>
@@ -793,7 +793,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                 <p className="text-sm text-slate-300">مخطط جانت — جدولة مراحل DLD / RERA</p>
               </div>
             </div>
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <Select onValueChange={(v) => handleSetProjectId(Number(v))}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="اختر المشروع..." />
@@ -824,10 +824,10 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
   }
 
   return (
-    <div className="min-h-screen bg-white" dir="rtl" style={{ cursor: dragInfo ? (dragInfo.mode === "move" ? "grabbing" : "ew-resize") : undefined }}>
+    <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-white" dir="rtl" style={{ cursor: dragInfo ? (dragInfo.mode === "move" ? "grabbing" : "ew-resize") : undefined }}>
       {/* Header */}
-      <div className="bg-gradient-to-l from-slate-700 to-slate-800 text-white px-6 py-3">
-        <div className="flex items-center justify-between">
+      <div className="bg-gradient-to-l from-slate-700 to-slate-800 px-3 py-3 text-white sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-slate-300" />
             <div>
@@ -835,9 +835,9 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
               <p className="text-xs text-slate-300">مخطط جانت — جدولة مراحل DLD / RERA</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full items-center gap-3 overflow-x-auto pb-1 sm:w-auto sm:pb-0">
             {/* Filter buttons */}
-            <div className="flex items-center gap-1 bg-white/10 rounded-md px-2 py-1">
+            <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/10 px-2 py-1">
               <Filter className="w-3 h-3 text-slate-300 ml-1" />
               <button
                 onClick={() => setFilterMode("all")}
@@ -901,7 +901,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
               <span>اليوم</span>
             </button>
             {/* Drag hint */}
-            <div className="text-[10px] text-slate-400 flex items-center gap-1">
+            <div className="hidden text-[10px] text-slate-400 lg:flex lg:items-center lg:gap-1">
               <GripVertical className="w-3 h-3" />
               <span>اسحب الأشرطة لتحريكها</span>
             </div>
@@ -931,7 +931,7 @@ export default function WorkSchedulePage({ initialProjectId, onProjectChange }: 
                 <ZoomIn className="w-4 h-4" />
               </button>
             </div>
-            <div className="w-56">
+            <div className="w-44 shrink-0 sm:w-56">
               <Select value={String(selectedProjectId)} onValueChange={(v) => handleSetProjectId(Number(v))}>
                 <SelectTrigger className="bg-white/10 border-white/20 text-white h-8 text-sm">
                   <SelectValue />

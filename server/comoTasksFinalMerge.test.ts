@@ -60,10 +60,10 @@ describe("final COMO Tasks merge", () => {
   });
 
   it("retires parallel task, agent, meeting, activity, sent-email, and command-center routes", () => {
-    expect(appSource).toContain('<Route path="/tasks" component={() => <Redirect to="/como-next?tab=work-files" />} />');
+    expect(appSource).toContain('<Route path="/tasks" component={() => <Redirect to="/como-next?section=actions" />} />');
     expect(appSource).toContain('<Route path="/agent-dashboard" component={() => <Redirect to="/sara" />} />');
     expect(appSource).toContain('<Route path="/command-center" component={() => <Redirect to="/sara" />} />');
-    expect(appSource).toContain('<Route path="/sent-emails" component={() => <Redirect to="/como-next?tab=email" />} />');
+    expect(appSource).toContain('<Route path="/sent-emails" component={() => <Redirect to="/como-next?section=communications" />} />');
     expect(internalMessagesSource).not.toContain("INSERT INTO tasks");
     expect(internalMessagesSource).toContain("أُلغي مسار المهام القديم");
   });

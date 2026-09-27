@@ -32,9 +32,8 @@ export const consultantsRegistryRouter = router({
         const db = await getDb();
         if (!db) return [];
 
-        let query = db.query.consultantsRegistry.findMany();
-
-        const consultants = await query;
+        const consultants = await db.select().from(consultantsRegistry)
+          .where(eq(consultantsRegistry.userId, ctx.user.id));
 
         // Apply filters
         let filtered = consultants;
@@ -69,16 +68,14 @@ export const consultantsRegistryRouter = router({
         const db = await getDb();
         if (!db) return null;
 
-        const consultant = await db.query.consultantsRegistry.findFirst({
-          where: and(
-            eq(consultantsRegistry.id, input.id)),
-        });
+        const [consultant] = await db.select().from(consultantsRegistry)
+          .where(and(eq(consultantsRegistry.id, input.id), eq(consultantsRegistry.userId, ctx.user.id)))
+          .limit(1);
 
         if (!consultant) return null;
 
-        const files = await db.query.consultantsRegistryFiles.findMany({
-          where: eq(consultantsRegistryFiles.consultantId, input.id),
-        });
+        const files = await db.select().from(consultantsRegistryFiles)
+          .where(eq(consultantsRegistryFiles.consultantId, input.id));
 
         return { ...consultant, files };
       } catch (error) {
@@ -146,7 +143,8 @@ export const consultantsRegistryRouter = router({
           .set(updateData)
           .where(
             and(
-              eq(consultantsRegistry.id, id))
+              eq(consultantsRegistry.id, id),
+              eq(consultantsRegistry.userId, ctx.user.id))
           );
 
         return { success: true };
@@ -168,7 +166,8 @@ export const consultantsRegistryRouter = router({
           .delete(consultantsRegistry)
           .where(
             and(
-              eq(consultantsRegistry.id, input.id))
+              eq(consultantsRegistry.id, input.id),
+              eq(consultantsRegistry.userId, ctx.user.id))
           );
 
         return { success: true };
@@ -187,16 +186,14 @@ export const consultantsRegistryRouter = router({
         if (!db) return [];
 
         // Verify ownership
-        const consultant = await db.query.consultantsRegistry.findFirst({
-          where: and(
-            eq(consultantsRegistry.id, input.consultantId)),
-        });
+        const [consultant] = await db.select().from(consultantsRegistry)
+          .where(and(eq(consultantsRegistry.id, input.consultantId), eq(consultantsRegistry.userId, ctx.user.id)))
+          .limit(1);
 
         if (!consultant) return [];
 
-        return await db.query.consultantsRegistryFiles.findMany({
-          where: eq(consultantsRegistryFiles.consultantId, input.consultantId),
-        });
+        return await db.select().from(consultantsRegistryFiles)
+          .where(eq(consultantsRegistryFiles.consultantId, input.consultantId));
       } catch (error) {
         console.error("[ConsultantsRegistry] Error fetching files:", error);
         return [];
@@ -219,10 +216,9 @@ export const consultantsRegistryRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
         // Verify ownership
-        const consultant = await db.query.consultantsRegistry.findFirst({
-          where: and(
-            eq(consultantsRegistry.id, input.consultantId)),
-        });
+        const [consultant] = await db.select().from(consultantsRegistry)
+          .where(and(eq(consultantsRegistry.id, input.consultantId), eq(consultantsRegistry.userId, ctx.user.id)))
+          .limit(1);
 
         if (!consultant) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Consultant not found" });
@@ -259,10 +255,9 @@ export const consultantsRegistryRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
         // Verify ownership
-        const consultant = await db.query.consultantsRegistry.findFirst({
-          where: and(
-            eq(consultantsRegistry.id, input.consultantId)),
-        });
+        const [consultant] = await db.select().from(consultantsRegistry)
+          .where(and(eq(consultantsRegistry.id, input.consultantId), eq(consultantsRegistry.userId, ctx.user.id)))
+          .limit(1);
 
         if (!consultant) {
           throw new TRPCError({ code: "FORBIDDEN", message: "Consultant not found" });
@@ -285,8 +280,8 @@ export const consultantsRegistryRouter = router({
       const db = await getDb();
       if (!db) return DEFAULT_CATEGORIES;
 
-      const customCategories = await db.query.consultantsCategories.findMany({
-        });
+      const customCategories = await db.select().from(consultantsCategories)
+        .where(eq(consultantsCategories.userId, ctx.user.id));
 
       const customNames = customCategories.map((c) => c.categoryName);
       return [...DEFAULT_CATEGORIES, ...customNames];
@@ -305,11 +300,12 @@ export const consultantsRegistryRouter = router({
         if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
         // Check if already exists
-        const existing = await db.query.consultantsCategories.findFirst({
-          where: and(
-            eq(consultantsCategories.categoryName, input.categoryName)
-          ),
-        });
+        const [existing] = await db.select().from(consultantsCategories)
+          .where(and(
+            eq(consultantsCategories.categoryName, input.categoryName),
+            eq(consultantsCategories.userId, ctx.user.id)
+          ))
+          .limit(1);
 
         if (existing) {
           return { success: true, message: "Category already exists" };

@@ -123,7 +123,8 @@ function formatFullAED(amount: number): string {
 // ═══════════════════════════════════════════════════════════════
 
 export default function ProgramCashFlowPage() {
-  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const { selectedProjectId: officialProjectId } = useProjectContext();
+  const [selectedCfProjectId, setSelectedCfProjectId] = useState<number | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const projectsQuery = trpc.cashFlowProgram.listProjects.useQuery();
@@ -137,11 +138,25 @@ export default function ProgramCashFlowPage() {
 
   const projects = projectsQuery.data || [];
 
-  if (selectedProjectId) {
+  useEffect(() => {
+    if (selectedCfProjectId || projects.length === 0) return;
+    const linkedProjectId = typeof window === "undefined"
+      ? null
+      : Number(new URLSearchParams(window.location.search).get("projectId"));
+    const sourceProjectId = Number.isInteger(linkedProjectId) && linkedProjectId > 0
+      ? linkedProjectId
+      : officialProjectId;
+    if (!sourceProjectId) return;
+    const match = projects.find((project: any) => project.projectId === sourceProjectId)
+      ?? projects.find((project: any) => project.id === sourceProjectId);
+    if (match) setSelectedCfProjectId(match.id);
+  }, [officialProjectId, projects, selectedCfProjectId]);
+
+  if (selectedCfProjectId) {
     return (
       <ProjectDetailView
-        cfProjectId={selectedProjectId}
-        onBack={() => { setSelectedProjectId(null); projectsQuery.refetch(); }}
+        cfProjectId={selectedCfProjectId}
+        onBack={() => { setSelectedCfProjectId(null); projectsQuery.refetch(); }}
       />
     );
   }
@@ -234,7 +249,7 @@ export default function ProgramCashFlowPage() {
               <Card
                 key={p.id}
                 className="group hover:border-primary/50 hover:shadow-md transition-all cursor-pointer relative"
-                onClick={() => setSelectedProjectId(p.id)}
+                onClick={() => setSelectedCfProjectId(p.id)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
@@ -498,10 +513,28 @@ function ProjectDetailView({ cfProjectId, onBack }: { cfProjectId: number; onBac
   const cashFlow = cashFlowQuery.data;
   const dual = cashFlow?.dualCashFlow;
 
-  if (!project) {
+  if (projectQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (projectQuery.isError || !project) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-lg items-center px-4" dir="rtl">
+        <Card className="w-full border-amber-200">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="mx-auto h-9 w-9 text-amber-600" />
+            <h2 className="mt-3 font-bold">تعذر فتح برنامج التدفقات</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{projectQuery.error?.message || "لم يعد سجل التدفقات المحدد متاحًا."}</p>
+            <div className="mt-5 flex justify-center gap-2">
+              <Button variant="outline" onClick={onBack}>العودة للمشاريع</Button>
+              <Button onClick={() => projectQuery.refetch()}>إعادة المحاولة</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

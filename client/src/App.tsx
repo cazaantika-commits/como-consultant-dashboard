@@ -21,51 +21,27 @@ import ConsultantEvaluationPage from "./pages/ConsultantEvaluationPage";
 import ConsultantCommitteePage from "./pages/ConsultantCommitteePage";
 import CommitteeDecisionPage from "./pages/CommitteeDecisionPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
-import ProposalsPage from "./pages/ProposalsPage";
 import GoogleConnectPage from "./pages/GoogleConnectPage";
-import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractsRegistryPage from "./pages/ContractsRegistryPage";
-import SpecialistKnowledgePage from "./pages/SpecialistKnowledgePage";
 import KnowledgeHubPage from "./pages/KnowledgeHubPage";
-import ExecutiveVIPPage from "./pages/ExecutiveVIPPage";
 import FeasibilityStudyPage from "./pages/FeasibilityStudyPage";
 import DevelopmentStagesPage from "./pages/DevelopmentStagesPage";
 import ExecutiveCashFlowPage from "./pages/ProjectCashFlowSimplified";
 import ProgramCashFlowPage from "./pages/ProgramCashFlowPage";
-import ExcelCashFlowPage from "./pages/ExcelCashFlowPage";
-import EscrowCashFlowPage from "./pages/EscrowCashFlowPage";
-import ConsultantsRegistry from "./pages/ConsultantsRegistry";
 import BusinessPartnersRegistry from "./pages/BusinessPartnersRegistry";
 import PaymentRequests from "./pages/PaymentRequests";
-import MarketReportsPage from "./pages/MarketReportsPage";
-import RiskDashboardPage from "./pages/RiskDashboardPage";
-import SelfLearningPage from "./pages/SelfLearningPage";
 import DevelopmentPhasesPage from "./pages/DevelopmentPhasesPage";
 import ProjectLifecyclePage from "./pages/ProjectLifecyclePage";
 import { ContractAuditPage } from "./pages/ContractAuditPage";
-import NewsTickerManagePage from "./pages/NewsTickerManagePage";
 import CostDistributionRulesPage from "./pages/CostDistributionRulesPage";
 import WorkSchedulePage from "./pages/WorkSchedulePage";
-import CashFlowSettingsPage from "./pages/CashFlowSettingsPage";
-import CashFlowReflectionPage from "./pages/CashFlowReflectionPage";
-import CashFlowComparisonPage from "./pages/CashFlowComparisonPage";
-import EngineComparisonPage from "./pages/EngineComparisonPage";
-import ProjectCardOffplanPage from "./pages/ProjectCardOffplanPage";
-import ProjectCardPostCompletionPage from "./pages/ProjectCardPostCompletionPage";
-import PricingPage from "./pages/PricingPage";
-import InvestorCapitalPlanPage from "./pages/InvestorCapitalPlanPage";
-import InvestorCashFlowSchedulePage from "./pages/InvestorCashFlowSchedulePage";
-import EscrowCashFlowSchedulePage2 from "./pages/EscrowCashFlowSchedulePage2";
 import UserManagementPage from "./pages/UserManagementPage";
 import ApprovalSettings from "./pages/ApprovalSettings";
 import GeneralRequests from "./pages/GeneralRequests";
-import InternalMessages from "./pages/InternalMessages";
 import { ReadOnlyGuard } from "./components/ReadOnlyGuard";
 import V2InvestorCashFlow from "./pages/V2InvestorCashFlow";
 import V2EscrowCashFlow from "./pages/V2EscrowCashFlow";
 import V2Feasibility from "./pages/V2Feasibility";
-import V2WaelSales from "./pages/V2WaelSales";
-import V2PaymentPlan from "./pages/V2PaymentPlan";
 import V2Timeline from "./pages/V2Timeline";
 import V2Hub from "./pages/V2Hub";
 import BateekhaPage from "./pages/BateekhaPage";
@@ -80,6 +56,17 @@ import ComoNextProjectPage from "./pages/ComoNextProjectPage";
 import ComoNextProjectOpeningPage from "./pages/ComoNextProjectOpeningPage";
 import ProjectManagementPage from "./pages/ProjectManagementPage";
 
+function FinancialWorkspaceRedirect({ tab }: { tab: string }) {
+  const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+  params.set("tab", tab);
+  return <Redirect to={`/bateekha?${params.toString()}`} />;
+}
+
+function LegacyProjectRedirect() {
+  const id = typeof window === "undefined" ? "" : window.location.pathname.split("/").filter(Boolean).pop();
+  return <Redirect to={id ? `/como-next/projects/${id}` : "/project-management"} />;
+}
+
 function Router() {
   return (
     <Switch>
@@ -88,7 +75,7 @@ function Router() {
       <Route path="/consultant-profiles" component={() => <Redirect to="/consultant-know" />} />
       <Route path="/consultant-profile/:id" component={ConsultantDetailPage} />
       <Route path="/drive" component={DriveBrowserPage} />
-      <Route path="/tasks" component={() => <Redirect to="/como-next?tab=work-files" />} />
+      <Route path="/tasks" component={() => <Redirect to="/como-next?section=actions" />} />
       <Route path="/agent-dashboard" component={() => <Redirect to="/sara" />} />
       {/* These pages are also accessible as tabs inside Project Management */}
       <Route path="/feasibility" component={FeasibilityStudyPage} />
@@ -97,9 +84,9 @@ function Router() {
       <Route path="/cash-flow" component={() => <Redirect to="/bateekha" />} />
       <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
       <Route path="/program-cashflow" component={ProgramCashFlowPage} />
-      <Route path="/excel-cashflow" component={ExcelCashFlowPage} />
-      <Route path="/escrow-cashflow" component={EscrowCashFlowPage} />
-      <Route path="/consultants-registry" component={ConsultantsRegistry} />
+      <Route path="/excel-cashflow" component={() => <FinancialWorkspaceRedirect tab="cashflows" />} />
+      <Route path="/escrow-cashflow" component={() => <FinancialWorkspaceRedirect tab="escrow" />} />
+      <Route path="/consultants-registry" component={() => <Redirect to="/consultant-know" />} />
       <Route path="/business-partners-registry" component={BusinessPartnersRegistry} />
       <Route path="/payment-requests" component={PaymentRequests} />
       <Route path="/general-requests" component={GeneralRequests} />
@@ -117,46 +104,46 @@ function Router() {
       <Route path="/conversation-history" component={() => <Redirect to="/sara" />} />
       <Route path="/task-settings" component={() => <Redirect to="/sara" />} />
       <Route path="/knowledge-base" component={KnowledgeBasePage} />
-      <Route path="/proposals" component={ProposalsPage} />
-      <Route path="/meetings" component={() => <Redirect to="/como-next?tab=work-files" />} />
-      <Route path="/meetings/new" component={() => <Redirect to="/como-next?tab=work-files" />} />
-      <Route path="/meetings/tracking" component={() => <Redirect to="/como-next?tab=work-files" />} />
+      <Route path="/proposals" component={() => <Redirect to="/consultant-proposals" />} />
+      <Route path="/meetings" component={() => <Redirect to="/como-next?section=meetings" />} />
+      <Route path="/meetings/new" component={() => <Redirect to="/como-next?section=meetings" />} />
+      <Route path="/meetings/tracking" component={() => <Redirect to="/como-next?section=meetings" />} />
       <Route path="/execution-dashboard" component={() => <Redirect to="/como-next" />} />
       <Route path="/google-connect" component={GoogleConnectPage} />
-      <Route path="/project/:id" component={ProjectDetailPage} />
-      <Route path="/projects/:id" component={ProjectDetailPage} />
+      <Route path="/project/:id" component={LegacyProjectRedirect} />
+      <Route path="/projects/:id" component={LegacyProjectRedirect} />
       <Route path="/contracts" component={ContractsRegistryPage} />
-          <Route path="/news-manage" component={NewsTickerManagePage} />
+      <Route path="/news-manage" component={() => <Redirect to="/" />} />
       <Route path="/activity-monitor" component={() => <Redirect to="/como-next" />} />
-      <Route path="/specialist-knowledge" component={SpecialistKnowledgePage} />
+      <Route path="/specialist-knowledge" component={() => <Redirect to="/como-next?section=specialists" />} />
       <Route path="/knowledge-analysis" component={KnowledgeHubPage} />
-      <Route path="/sent-emails" component={() => <Redirect to="/como-next?tab=email" />} />
-      <Route path="/executive" component={ExecutiveVIPPage} />
+      <Route path="/sent-emails" component={() => <Redirect to="/como-next?section=communications" />} />
+      <Route path="/executive" component={() => <Redirect to="/como-next" />} />
       <Route path="/command-center" component={() => <Redirect to="/sara" />} />
-      <Route path="/meetings/:id" component={() => <Redirect to="/como-next?tab=work-files" />} />
-      <Route path="/market-reports" component={MarketReportsPage} />
-      <Route path="/risk-dashboard" component={RiskDashboardPage} />
+      <Route path="/meetings/:id" component={() => <Redirect to="/como-next?section=meetings" />} />
+      <Route path="/market-reports" component={() => <Redirect to="/knowledge-analysis" />} />
+      <Route path="/risk-dashboard" component={() => <Redirect to="/project-management" />} />
       <Route path="/development-phases" component={DevelopmentPhasesPage} />
       <Route path="/work-schedule" component={WorkSchedulePage} />
-      <Route path="/self-learning" component={SelfLearningPage} />
+      <Route path="/self-learning" component={() => <Redirect to="/knowledge-analysis" />} />
       <Route path="/contract-audit" component={() => <Redirect to="/contracts" />} />
       <Route path="/cost-distribution-rules" component={CostDistributionRulesPage} />
-      <Route path="/cashflow-settings" component={CashFlowSettingsPage} />
-      <Route path="/cashflow-reflection" component={CashFlowReflectionPage} />
-      <Route path="/cashflow-comparison" component={CashFlowComparisonPage} />
-      <Route path="/engine-comparison" component={EngineComparisonPage} />
-      <Route path="/project-card" component={ProjectCardOffplanPage} />
-      <Route path="/project-card-offplan" component={ProjectCardOffplanPage} />
-      <Route path="/project-card-post-completion" component={ProjectCardPostCompletionPage} />
-      <Route path="/pricing" component={PricingPage} />
-      <Route path="/investor-capital-plan" component={InvestorCapitalPlanPage} />
-      <Route path="/investor-cashflow-schedule" component={InvestorCashFlowSchedulePage} />
-      <Route path="/escrow-cashflow-schedule" component={EscrowCashFlowSchedulePage2} />
+      <Route path="/cashflow-settings" component={() => <FinancialWorkspaceRedirect tab="settings" />} />
+      <Route path="/cashflow-reflection" component={() => <FinancialWorkspaceRedirect tab="cashflows" />} />
+      <Route path="/cashflow-comparison" component={() => <FinancialWorkspaceRedirect tab="cashflows" />} />
+      <Route path="/engine-comparison" component={() => <FinancialWorkspaceRedirect tab="cashflows" />} />
+      <Route path="/project-card" component={() => <FinancialWorkspaceRedirect tab="general" />} />
+      <Route path="/project-card-offplan" component={() => <FinancialWorkspaceRedirect tab="general" />} />
+      <Route path="/project-card-post-completion" component={() => <FinancialWorkspaceRedirect tab="general" />} />
+      <Route path="/pricing" component={() => <FinancialWorkspaceRedirect tab="sales" />} />
+      <Route path="/investor-capital-plan" component={() => <FinancialWorkspaceRedirect tab="capital_portfolio" />} />
+      <Route path="/investor-cashflow-schedule" component={() => <FinancialWorkspaceRedirect tab="cashflows" />} />
+      <Route path="/escrow-cashflow-schedule" component={() => <FinancialWorkspaceRedirect tab="escrow" />} />
       <Route path="/v2/investor-cashflow" component={V2InvestorCashFlow} />
       <Route path="/v2/escrow-cashflow" component={V2EscrowCashFlow} />
       <Route path="/v2/feasibility" component={V2Feasibility} />
-      <Route path="/v2/wael-sales" component={V2WaelSales} />
-      <Route path="/v2/payment-plan" component={V2PaymentPlan} />
+      <Route path="/v2/wael-sales" component={() => <FinancialWorkspaceRedirect tab="sales" />} />
+      <Route path="/v2/payment-plan" component={() => <FinancialWorkspaceRedirect tab="sales" />} />
       <Route path="/v2/timeline" component={() => <Redirect to="/development-phases" />} />
       <Route path="/v2" component={V2Hub} />
       <Route path="/bateekha" component={BateekhaPage} />
@@ -167,13 +154,13 @@ function Router() {
       <Route path="/como-next" component={ComoNextTodayPage} />
       <Route path="/sara" component={SaraPage} />
       <Route path="/project-launch/:projectId" component={ProjectLaunchGatePage} />
-      <Route path="/project-launch"><Redirect to="/como-next?tab=work-files" /></Route>
+      <Route path="/project-launch"><Redirect to="/project-management" /></Route>
       <Route path="/project-reference" component={ProjectReferencePage} />
       <Route path="/consultant-appointment-pack" component={ConsultantAppointmentPackPage} />
       <Route path="/contract-deliverables" component={ContractDeliverablesPage} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/approval-settings" component={ApprovalSettings} />
-      <Route path="/internal-messages" component={InternalMessages} />
+      <Route path="/internal-messages" component={() => <Redirect to="/como-next?section=communications" />} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
