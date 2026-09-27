@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -583,18 +583,11 @@ function CloseWorkFileDialog({ workFileId, disabled, onClosed }: { workFileId: n
   </Dialog>;
 }
 
-function TodayActionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
+function TodayActionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number, actionId: number) => void }) {
   return (
-    <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-slate-200 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2"><PriorityBadge priority={item.priority} /><OwnerChip ownerType={item.ownerType} />{item.isOverdue ? <Badge variant="outline" className="rounded-full border-rose-200 bg-rose-50 text-rose-700">متأخر</Badge> : null}</div>
-          <h4 className="line-clamp-2 text-sm font-bold leading-6 text-slate-900">{item.title}</h4>
-          <p className="mt-1 line-clamp-1 text-xs text-slate-500">{item.projectName} · {item.workFileTitle}</p>
-        </div>
-        <ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-slate-600" />
-      </div>
-      <div className="mt-4 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><Clock3 className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(item.attentionAt)}</bdi></div>
+    <button onClick={() => onOpen(item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition duration-150 hover:border-[#8fb7c2] hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
+      <h4 className="min-w-0 flex-1 text-sm font-bold leading-6 text-slate-900">{item.title}</h4>
+      <ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1e6478]" />
     </button>
   );
 }
@@ -622,22 +615,29 @@ function TodayMeetingCard({ item, onOpen }: { item: any; onOpen: (workFileId: nu
 
 function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => void }) {
   return (
-    <button onClick={() => onOpen(file.id)} className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-5 text-right shadow-sm transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-[#1b7182] via-[#55a696] to-[#d5aa68]" />
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0"><div className="mb-3 flex flex-wrap items-center gap-2"><StatusBadge status={file.workFileStatus} kind="work-file" /><PriorityBadge priority={file.priority} /></div><h3 className="line-clamp-2 text-base font-extrabold leading-7 text-slate-900">{file.title}</h3><p className="mt-1 text-xs font-semibold text-[#1e6478]">{file.projectName}{file.plotNumber ? ` · قطعة ${file.plotNumber}` : ""}</p></div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4f3] text-[#1e6478]"><BriefcaseBusiness className="h-5 w-5" /></div>
-      </div>
-      <div className="mt-5 rounded-2xl bg-[#f7f8f6] p-4">
-        <p className="text-[11px] font-bold text-slate-400">الإجراء التالي</p>
-        <p className="mt-1 line-clamp-2 text-sm font-semibold leading-6 text-slate-800">{file.nextActionTitle || "لم يحدد بعد"}</p>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500"><span>{file.openActionCount} إجراء مفتوح</span><bdi dir="ltr">{file.nextAttentionAt ? formatDateTime(file.nextAttentionAt) : "بحاجة إلى تنظيم"}</bdi></div>
-      </div>
+    <button onClick={() => onOpen(file.id)} className="group flex min-h-16 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-right shadow-sm transition duration-150 hover:border-[#8fb7c2] hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e6478]">
+      <h3 className="min-w-0 flex-1 text-base font-extrabold leading-7 text-slate-900">{file.title}</h3>
+      <ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1e6478]" />
     </button>
   );
 }
 
-function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFileId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onChanged: () => void }) {
+function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: any; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+  return <div className="min-h-[calc(100vh-8rem)] bg-[#f8f8f5] p-5 sm:p-7">
+    <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2]"><ArrowLeft className="h-4 w-4" />العودة إلى عناوين الإجراءات</button>
+    <article className="mx-auto mt-6 max-w-xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div>
+      <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{action.title}</h2>
+      {action.description ? <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">التفاصيل</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-700">{action.description}</p></div> : null}
+      <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">معيار القبول</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-800">{action.acceptanceCriteria}</p></div>
+      {action.evidenceReference ? <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-[11px] font-black text-emerald-700">دليل التحقق</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{action.evidenceReference}</p></div> : null}
+      {action.attentionAt ? <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-500"><CalendarClock className="h-4 w-4" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}
+      {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><ActionStatusDialog action={action} onUpdated={onUpdated} /></div> : null}
+    </article>
+  </div>;
+}
+
+function WorkFileSheet({ workFileId, actionId, open, onOpenChange, onActionChange, onChanged }: { workFileId: number | null; actionId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onActionChange: (actionId: number | null) => void; onChanged: () => void }) {
   const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, { enabled: open && Boolean(workFileId) });
   const [, navigate] = useLocation();
   const [showAllMemory, setShowAllMemory] = useState(false);
@@ -648,10 +648,12 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
   const hasPendingMeetings = data?.meetings.some((meeting: any) => ["planned", "confirmed"].includes(meeting.meetingStatus) || meeting.pendingProposalCount > 0 || meeting.latestMinutesStatus === "draft") ?? false;
   const hasPendingIntake = (data?.intakeProposals?.length || 0) > 0;
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
+  const focusedAction = actionId ? data?.actions.find((action: any) => action.id === actionId) : null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent dir="rtl" side="left" className="w-full overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0 sm:max-w-2xl">
+      <SheetContent dir="rtl" side="left" className="w-screen max-w-none overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0 sm:max-w-none">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} /></div> : data ? <>
+          {focusedAction ? <FocusedActionView action={focusedAction} isClosed={isClosed} onBack={() => onActionChange(null)} onUpdated={onChanged} /> : <>
           <div className="border-b border-slate-200 bg-[#16243b] px-6 py-7 text-white">
             <SheetHeader className="text-right"><div className="mb-3 flex flex-wrap items-center gap-2"><StatusBadge status={data.workFile.workFileStatus} kind="work-file" /><PriorityBadge priority={data.workFile.priority} /></div><SheetTitle className="text-2xl font-black leading-9 text-white">{data.workFile.title}</SheetTitle><SheetDescription className="text-sm text-slate-300">{data.workFile.projectName}</SheetDescription></SheetHeader>
           </div>
@@ -668,8 +670,8 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
               <div className="space-y-3">{data.communications.length === 0 ? <EmptyState title="لا توجد مراسلات" description="أنشئ مسودة عندما يحتاج الملف تواصلًا خارجيًا؛ الحفظ لا يرسل شيئًا." /> : data.communications.map((communication: any) => { const meta = communicationStatusMeta[communication.communicationStatus] || communicationStatusMeta.archived; return <Card key={communication.id} className="rounded-2xl border-sky-100 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[communication.channel as CommunicationChannel]}</Badge>{communication.direction === "inbound" ? <Badge variant="outline" className="rounded-full border-sky-100 bg-white text-sky-700">وارد</Badge> : null}</div><h4 className="font-black leading-6 text-slate-900">{communication.subject}</h4>{communication.toText ? <p className="mt-1 text-[11px] text-slate-500">إلى: <bdi dir="ltr">{communication.toText}</bdi></p> : null}{communication.fromText ? <p className="mt-1 text-[11px] text-slate-500">من: <bdi dir="ltr">{communication.fromText}</bdi></p> : null}<p className="mt-2 max-h-28 overflow-hidden whitespace-pre-wrap text-xs leading-6 text-slate-600">{communication.body}</p>{communication.reviewNote ? <div className="mt-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-6 text-amber-900"><span className="font-bold">ملاحظة المراجعة:</span> {communication.reviewNote}</div> : null}{communication.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل الإرسال:</span> {communication.evidenceReference}</div> : null}</div>{!isClosed ? <CommunicationControls communication={communication} onUpdated={onChanged} /> : null}</div><div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(communication.occurredAt)}</bdi>{communication.externalMessageRef ? <bdi dir="ltr">{communication.externalMessageRef}</bdi> : null}</div></Card>; })}</div>
             </section>
             <section>
-              <div className="mb-3 flex items-center justify-between"><div><h3 className="text-base font-black text-slate-900">الإجراءات</h3><p className="text-xs text-slate-500">لا يعتبر الإجراء منتهيًا قبل التحقق من دليله.</p></div>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
-              <div className="space-y-3">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <Card key={action.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div><h4 className="font-bold leading-6 text-slate-900">{action.title}</h4>{action.description ? <p className="mt-2 text-xs leading-6 text-slate-600">{action.description}</p> : null}<p className="mt-2 text-xs leading-6 text-slate-500"><span className="font-bold">معيار القبول:</span> {action.acceptanceCriteria}</p>{action.evidenceReference ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-6 text-emerald-900"><span className="font-bold">دليل التحقق:</span> {action.evidenceReference}</div> : null}</div>{!isClosed ? <ActionStatusDialog action={action} onUpdated={onChanged} /> : null}</div>{action.attentionAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}</Card>)}</div>
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-black text-slate-900">الإجراءات</h3>{!isClosed ? <NewActionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
+              <div className="space-y-2">{data.actions.length === 0 ? <EmptyState title="لا توجد إجراءات بعد" description="أضف الإجراء الحقيقي التالي حتى يظهر في قائمة اليوم." /> : data.actions.map((action: any) => <button key={action.id} type="button" onClick={() => onActionChange(action.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition duration-150 hover:border-[#8fb7c2] hover:shadow-md"><h4 className="min-w-0 flex-1 text-sm font-bold leading-6 text-slate-900">{action.title}</h4><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1e6478]" /></button>)}</div>
             </section>
             <WorkFileMeetingsSection workFileId={data.workFile.id} meetings={data.meetings} isClosed={isClosed} onUpdated={onChanged} />
             {data.memory.length ? <section><div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><BookOpenCheck className="h-5 w-5 text-[#1e6478]" /><div><h3 className="text-base font-black text-slate-900">ذاكرة الملف</h3><p className="text-xs text-slate-500">المواد والتحليلات والقرارات السابقة بعد ربطها بسياقها الصحيح.</p></div></div><Badge variant="outline" className="rounded-full bg-white">{data.memory.length}</Badge></div><div className="space-y-3">{(showAllMemory ? data.memory : data.memory.slice(0, 8)).map((entry: any) => <Card key={entry.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex gap-3"><div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.memoryType === "decision" ? "bg-amber-50 text-amber-700" : entry.memoryType === "work_product" ? "bg-violet-50 text-violet-700" : "bg-slate-100 text-slate-600"}`}>{entry.memoryType === "decision" ? <CheckCheck className="h-4 w-4" /> : entry.memoryType === "work_product" ? <FileText className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h4 className="font-bold leading-6 text-slate-900">{entry.title}</h4>{entry.sourceFileName ? <Paperclip className="h-3.5 w-3.5 text-slate-400" /> : null}</div>{entry.body ? <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-6 text-slate-600">{entry.body}</p> : null}{entry.documents?.length ? <div className="mt-3 space-y-2">{entry.documents.map((document: any) => <a key={document.id} href={document.downloadPath} target="_blank" rel="noreferrer" className="flex items-center justify-between gap-3 rounded-xl border border-[#cfe3df] bg-[#f1f8f6] px-3 py-2 text-[11px] font-bold text-[#18596a] transition hover:bg-[#e5f2ef]"><span className="min-w-0 truncate">{document.fileName}</span><span className="shrink-0">فتح الملف</span></a>)}</div> : entry.sourceFileName ? <p className="mt-2 truncate text-[11px] font-semibold text-slate-500">مرجع محفوظ: {entry.sourceFileName}</p> : null}<p className="mt-2 text-[10px] text-slate-400"><bdi dir="ltr">{formatDateTime(entry.occurredAt)}</bdi></p></div></div></Card>)}</div>{data.memory.length > 8 ? <Button variant="outline" onClick={() => setShowAllMemory(value => !value)} className="mt-3 w-full rounded-xl bg-white">{showAllMemory ? "عرض المختصر" : `عرض جميع عناصر الذاكرة (${data.memory.length})`}</Button> : null}</section> : null}
@@ -680,6 +682,7 @@ function WorkFileSheet({ workFileId, open, onOpenChange, onChanged }: { workFile
               <Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />فتح بطاقة المشروع الأصلية</Button>
             </div>
           </div>
+          </>}
         </> : null}
       </SheetContent>
     </Sheet>
@@ -768,9 +771,11 @@ export default function ComoNextTodayPage() {
   const requestParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const requestedTab = requestParams?.get("tab") ?? null;
   const requestedWorkFileId = Number(requestParams?.get("workFileId") || 0);
+  const requestedActionId = Number(requestParams?.get("actionId") || 0);
   const initialTab: ExecutiveTab = requestedWorkFileId > 0 ? "work-files" : requestedTab === "work-files" || requestedTab === "email" || requestedTab === "transfer" ? requestedTab : "today";
   const [activeTab, setActiveTab] = useState<ExecutiveTab>(initialTab);
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(requestedWorkFileId > 0 ? requestedWorkFileId : null);
+  const [selectedActionId, setSelectedActionId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : null);
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
@@ -785,11 +790,42 @@ export default function ComoNextTodayPage() {
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   };
 
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const workFileId = Number(params.get("workFileId") || 0);
+      const actionId = Number(params.get("actionId") || 0);
+      setSelectedWorkFileId(workFileId > 0 ? workFileId : null);
+      setSelectedActionId(actionId > 0 ? actionId : null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
   const refresh = async () => {
     await Promise.all([utils.comoNext.getOverview.invalidate(), selectedWorkFileId ? utils.comoNext.getWorkFile.invalidate({ workFileId: selectedWorkFileId }) : Promise.resolve()]);
   };
 
-  const openWorkFile = (id: number) => setSelectedWorkFileId(id);
+  const syncFocusUrl = (workFileId: number | null, actionId: number | null, mode: "push" | "replace" = "push") => {
+    const url = new URL(window.location.href);
+    if (workFileId) url.searchParams.set("workFileId", String(workFileId)); else url.searchParams.delete("workFileId");
+    if (actionId) url.searchParams.set("actionId", String(actionId)); else url.searchParams.delete("actionId");
+    window.history[mode === "push" ? "pushState" : "replaceState"]({}, "", `${url.pathname}${url.search}`);
+  };
+  const openWorkFile = (id: number, actionId?: number) => {
+    setSelectedWorkFileId(id);
+    setSelectedActionId(actionId || null);
+    syncFocusUrl(id, actionId || null);
+  };
+  const closeWorkFile = () => {
+    setSelectedWorkFileId(null);
+    setSelectedActionId(null);
+    syncFocusUrl(null, null, "replace");
+  };
+  const changeFocusedAction = (actionId: number | null) => {
+    setSelectedActionId(actionId);
+    syncFocusUrl(selectedWorkFileId, actionId, "replace");
+  };
   const todaySections = useMemo(() => data ? [
     { key: "waitingExternal", title: "بانتظار أطراف خارجية", description: "ردود أو مستندات يجب متابعتها", icon: Clock3, items: data.today.sections.waitingExternal, accent: "text-amber-700 bg-amber-50" },
     { key: "mine", title: "عليّ اليوم", description: "الإجراءات التي تتطلب تدخلك", icon: UserRound, items: data.today.sections.mine, accent: "text-slate-800 bg-slate-100" },
@@ -811,7 +847,7 @@ export default function ComoNextTodayPage() {
             <div><button onClick={() => navigate("/")} className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><ArrowLeft className="h-4 w-4" />الصفحة الرئيسية</button><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20"><BriefcaseBusiness className="h-6 w-6 text-[#9dd5ca]" /></div><div><p className="text-xs font-bold tracking-[0.18em] text-[#9dd5ca]">COMO NEXT</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">المكتب التنفيذي</h1></div></div><p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">ما يحتاج انتباهك اليوم، وملفات العمل التي تقود القرار والتنفيذ. Manus هو العقل التنفيذي عند تكليفه؛ ولا توجد نتائج مصطنعة أو إجراءات تلقائية.</p></div>
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={() => navigate("/como-next/project-opening")} className="rounded-xl bg-[#d5ae63] font-black text-[#14243a] hover:bg-[#e3c27f]"><Building2 className="ms-2 h-4 w-4" />فتح مشروع من وثيقته</Button>
-              <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); setSelectedWorkFileId(id); }} />
+              <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />
             </div>
           </div>
         </div>
@@ -874,7 +910,7 @@ export default function ComoNextTodayPage() {
         </Tabs> : null}
       </main>
 
-      <WorkFileSheet workFileId={selectedWorkFileId} open={selectedWorkFileId !== null} onOpenChange={open => { if (!open) setSelectedWorkFileId(null); }} onChanged={refresh} />
+      <WorkFileSheet workFileId={selectedWorkFileId} actionId={selectedActionId} open={selectedWorkFileId !== null} onOpenChange={open => { if (!open) closeWorkFile(); }} onActionChange={changeFocusedAction} onChanged={refresh} />
     </div>
   );
 }
