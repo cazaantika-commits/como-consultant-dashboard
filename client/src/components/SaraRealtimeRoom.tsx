@@ -91,6 +91,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const avatarTokenRef = useRef<string | null>(null);
   const avatarConnectedRef = useRef(false);
   const autoStartedRef = useRef(false);
+  const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   const live = phase !== "idle" && phase !== "error";
   const estimatedUsd = useMemo(() => (
@@ -134,6 +135,12 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   }, [stopOutputCapture]);
 
   useEffect(() => () => stopSession(), [stopSession]);
+
+  useEffect(() => {
+    const panel = transcriptScrollRef.current;
+    if (!panel) return;
+    panel.scrollTo({ top: panel.scrollHeight, behavior: "smooth" });
+  }, [transcript]);
 
   useEffect(() => {
     if (!live) return;
@@ -440,10 +447,10 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => undefined);
       }}
     >
-      <div className="relative grid h-[100dvh] w-full max-w-6xl grid-rows-[45%_55%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-1">
+      <div className="relative grid h-[100dvh] w-full max-w-6xl grid-rows-[42%_58%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-1">
         {streamlined ? <div className="absolute inset-x-3 top-3 z-30 mx-auto max-w-xl sm:inset-x-auto sm:left-1/2 sm:top-5 sm:w-[min(560px,calc(100%-40px))] sm:-translate-x-1/2"><ComoPrimaryNav active="sara" beforeNavigate={stopSession} dark /></div> : null}
 
-        <section className={`relative min-h-0 bg-[#071522] p-1.5 sm:p-4 ${streamlined ? "pt-[76px] sm:pt-20" : ""}`}>
+        <section className={`relative min-h-0 bg-[#071522] p-1.5 sm:p-4 ${streamlined ? "sm:pt-20" : ""}`}>
           <SaraLiveAvatarView
             portrait={SARA_PORTRAIT}
             idleVideo={SARA_IDLE_VIDEO}
@@ -462,13 +469,13 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         </section>
 
         <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top_right,#fff7e6_0,#ffffff_36%,#f7f8fb_100%)]">
-          <header className="flex items-start justify-between gap-3 border-b border-slate-200/80 px-3 py-3 sm:px-6 sm:py-4">
+          <header className="flex items-center justify-between gap-3 border-b border-slate-200/80 px-4 py-2.5 sm:px-6 sm:py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-black text-slate-900">سارة</h2>
+                <h2 className="text-base font-black text-slate-900 sm:text-xl">المحادثة</h2>
                 {streamlined ? <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-800">{phaseLabel[phase]}</Badge> : <><Badge className="border-0 bg-slate-900 text-[10px] text-white">واجهة COMO</Badge><Badge className="border-0 bg-amber-100 text-[10px] text-amber-900">Manus للتنفيذ العميق</Badge></>}
               </div>
-              <p className="mt-1 text-xs text-slate-500">{streamlined ? "تكلم بطبيعتك؛ سارة تسمعك وتقرأ مكتبك." : "محادثة مباشرة عبر WebRTC · القراءة فورية · الحفظ كمقترح للمراجعة فقط"}</p>
+              <p className="mt-1 hidden text-xs text-slate-500 sm:block">{streamlined ? "تكلم بطبيعتك؛ سارة تسمعك وتقرأ مكتبك." : "محادثة مباشرة عبر WebRTC · القراءة فورية · الحفظ كمقترح للمراجعة فقط"}</p>
             </div>
             {!streamlined ? <Button variant="ghost" size="icon" onClick={() => { stopSession(); setAvatarToken(null); onClose(); }} className="rounded-xl"><X className="h-5 w-5" /></Button> : null}
           </header>
@@ -479,7 +486,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
             <div className="rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-400">تقدير OpenAI</p><p className="mt-0.5 text-xs font-black text-slate-800">${estimatedUsd.toFixed(3)}</p></div>
           </div> : null}
 
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-6">
+          <div ref={transcriptScrollRef} className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-3 sm:space-y-3 sm:px-6 sm:py-5">
             {transcript.length === 0 ? (
               <div className="mx-auto mt-6 max-w-md text-center sm:mt-10">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-lg"><Sparkles className="h-6 w-6" /></div>
@@ -489,12 +496,12 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
             ) : null}
             {transcript.map(entry => (
               <div key={entry.id} className={`flex ${entry.role === "member" ? "justify-start" : entry.role === "sara" ? "justify-end" : "justify-center"}`}>
-                {entry.role === "system" ? <p className="rounded-full bg-slate-200/70 px-4 py-2 text-[11px] font-bold text-slate-500">{entry.text}</p> : <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm ${entry.role === "member" ? "rounded-br-md bg-white text-slate-800 ring-1 ring-slate-200" : "rounded-bl-md bg-gradient-to-l from-amber-400 to-amber-500 text-slate-950"}`}><p className="mb-1 text-[10px] font-black opacity-60">{entry.role === "member" ? memberName : "سارة"}</p><p className="whitespace-pre-wrap">{entry.text}</p></div>}
+                {entry.role === "system" ? <p className="max-w-[94%] rounded-full bg-slate-200/70 px-3 py-2 text-center text-[10px] font-bold leading-4 text-slate-500 sm:text-[11px]">{entry.text}</p> : <div className={`max-w-[92%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-6 shadow-sm sm:max-w-[88%] sm:px-4 sm:py-3 sm:text-sm sm:leading-7 ${entry.role === "member" ? "rounded-br-md bg-white text-slate-800 ring-1 ring-slate-200" : "rounded-bl-md bg-gradient-to-l from-amber-300 to-amber-400 text-slate-950"}`}><p className="mb-1 text-[10px] font-black opacity-60">{entry.role === "member" ? memberName : "سارة"}</p><p className="whitespace-pre-wrap break-words">{entry.text}</p></div>}
               </div>
             ))}
           </div>
 
-          <footer className={`border-t border-slate-200/80 bg-white/90 p-4 backdrop-blur-xl sm:px-6 ${streamlined ? "pb-24 sm:pb-4" : ""}`}>
+          <footer className={`shrink-0 border-t border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4 ${streamlined ? "pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-4" : ""}`}>
             {!streamlined ? <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
               {!live ? <Button onClick={startSession} disabled={createSession.isPending || !status.data?.realtimeConfigured} className="h-12 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800"><Phone className="ml-2 h-5 w-5" /> ابدأ الحديث مع سارة</Button> : <><Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">{!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}</Button><Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button></>}
               <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} variant="outline" className="h-11 rounded-2xl bg-white lg:hidden">{avatarToken ? <VideoOff className="ml-2 h-4 w-4" /> : <Video className="ml-2 h-4 w-4" />}{avatarToken ? "إيقاف الصورة" : "صورة حية"}</Button>

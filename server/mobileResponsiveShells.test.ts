@@ -27,8 +27,10 @@ describe("mobile responsive shells", () => {
   });
 
   it("keeps Sara visible above the conversation on a phone", () => {
-    expect(saraRoom).toContain("grid-rows-[45%_55%]");
+    expect(saraRoom).toContain("grid-rows-[42%_58%]");
     expect(saraRoom).toContain("h-[100dvh]");
+    expect(saraRoom).toContain("transcriptScrollRef");
+    expect(saraRoom).not.toContain('"pt-[76px] sm:pt-20"');
     expect(saraRoom).not.toContain("relative hidden min-h-0");
     expect(sara).toContain("<SaraRealtimeRoom");
     expect(sara).toContain("streamlined");
