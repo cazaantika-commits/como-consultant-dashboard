@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mic, MicOff, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, Volume2, X } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { SaraLiveAvatarView, type SaraVisualSpeechCue } from "./SaraLiveAvatarView";
+import { ComoPrimaryNav } from "./ComoPrimaryNav";
 
 const SARA_PORTRAIT = saraPortrait;
 const SARA_IDLE_VIDEO = saraIdleVideo;
@@ -55,7 +56,7 @@ function float32ToPcmBinary(input: Float32Array) {
   return binary;
 }
 
-export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token: string; memberName: string; isOpen: boolean; onClose: () => void }) {
+export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart = false, streamlined = false }: { token: string; memberName: string; isOpen: boolean; onClose: () => void; autoStart?: boolean; streamlined?: boolean }) {
   const status = trpc.saraRealtime.status.useQuery({ token }, { enabled: isOpen && Boolean(token), staleTime: 60_000 });
   const createSession = trpc.saraRealtime.createSession.useMutation();
   const runTool = trpc.saraRealtime.runTool.useMutation();
@@ -74,6 +75,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   const [avatarConnected, setAvatarConnected] = useState(false);
   const [avatarCue, setAvatarCue] = useState<SaraVisualSpeechCue | null>(null);
   const [avatarInterruptId, setAvatarInterruptId] = useState(0);
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
@@ -88,6 +90,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   const lastMemberTextRef = useRef("");
   const avatarTokenRef = useRef<string | null>(null);
   const avatarConnectedRef = useRef(false);
+  const autoStartedRef = useRef(false);
 
   const live = phase !== "idle" && phase !== "error";
   const estimatedUsd = useMemo(() => (
@@ -127,6 +130,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
     setAvatarConnected(false);
     setAvatarCue(null);
     setAvatarInterruptId(value => value + 1);
+    setAudioBlocked(false);
   }, [stopOutputCapture]);
 
   useEffect(() => () => stopSession(), [stopSession]);
@@ -309,7 +313,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
         if (!remoteStream || !remoteAudioRef.current) return;
         remoteAudioRef.current.srcObject = remoteStream;
         remoteAudioRef.current.muted = false;
-        void remoteAudioRef.current.play().catch(() => toast.info("اضغط داخل النافذة للسماح بتشغيل صوت سارة"));
+        void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
         startOutputCapture(remoteStream);
       };
       peer.onconnectionstatechange = () => {
@@ -326,7 +330,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
         setPhase("thinking");
         channel.send(JSON.stringify({
           type: "response.create",
-          response: { instructions: `ابدئي الآن بتحية قصيرة جدًا لـ${memberName} ثم اسأليه: شو بتحب نبدأ فيه؟` },
+          response: { instructions: `ابدئي بتحية قصيرة جدًا لـ${memberName}. ثم استخدمي lookup_executive_workspace بفئة overview، أعطيه زبدة أهم ثلاث أولويات حالية فقط، واسأليه بأي واحدة يريد أن يبدأ.` },
         }));
       };
       channel.onclose = () => setPhase("idle");
@@ -346,6 +350,33 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
       toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل سارة الصوتية");
     }
   }, [createSession, handleRealtimeEvent, live, memberName, startOutputCapture, stopSession, token]);
+
+  const startAvatar = useCallback(async (quiet = false) => {
+    if (avatarTokenRef.current || createAvatarToken.isPending) return true;
+    try {
+      const result = await createAvatarToken.mutateAsync({ token, isSandbox: false });
+      setAvatarToken(result.sessionToken);
+      if (!quiet) toast.success("سارة تتحرك الآن مع صوتها");
+      return true;
+    } catch (reason) {
+      if (!quiet) toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل الصورة الحية لسارة");
+      return false;
+    }
+  }, [createAvatarToken, token]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      autoStartedRef.current = false;
+      return;
+    }
+    if (!autoStart || !status.data || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void (async () => {
+      if (status.data.liveAvatarConfigured) await startAvatar(true);
+      if (status.data.realtimeConfigured) await startSession();
+      else setPhase("error");
+    })();
+  }, [autoStart, isOpen, startAvatar, startSession, status.data]);
 
   const toggleMute = useCallback(() => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -386,14 +417,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
       toast.info("تم إيقاف الصورة الحية؛ الصوت ما زال يعمل");
       return;
     }
-    try {
-      const result = await createAvatarToken.mutateAsync({ token, isSandbox: false });
-      setAvatarToken(result.sessionToken);
-      toast.success("جارٍ تشغيل صورة سارة الحية؛ يبدأ احتساب LiveAvatar عند اتصال الفيديو");
-    } catch (reason) {
-      toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل الصورة الحية لسارة");
-    }
-  }, [avatarToken, createAvatarToken, token]);
+    await startAvatar();
+  }, [avatarToken, startAvatar]);
 
   if (!isOpen) return null;
 
@@ -407,9 +432,18 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-slate-950/70 p-0 backdrop-blur-sm sm:p-5" dir="rtl">
-      <div className="grid h-[100dvh] w-full max-w-6xl grid-rows-[42%_58%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.88fr_1.12fr] lg:grid-rows-1">
-        <section className="relative min-h-0 bg-[#071522] p-1.5 sm:p-4">
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-slate-950/70 p-0 backdrop-blur-sm sm:p-5"
+      dir="rtl"
+      onPointerDown={() => {
+        if (!audioBlocked || !remoteAudioRef.current) return;
+        void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => undefined);
+      }}
+    >
+      <div className="relative grid h-[100dvh] w-full max-w-6xl grid-rows-[45%_55%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-1">
+        {streamlined ? <div className="absolute inset-x-3 top-3 z-30 mx-auto max-w-xl sm:inset-x-auto sm:left-1/2 sm:top-5 sm:w-[min(560px,calc(100%-40px))] sm:-translate-x-1/2"><ComoPrimaryNav active="sara" beforeNavigate={stopSession} dark /></div> : null}
+
+        <section className={`relative min-h-0 bg-[#071522] p-1.5 sm:p-4 ${streamlined ? "pt-[76px] sm:pt-20" : ""}`}>
           <SaraLiveAvatarView
             portrait={SARA_PORTRAIT}
             idleVideo={SARA_IDLE_VIDEO}
@@ -418,89 +452,63 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
             interruptId={avatarInterruptId}
             onStateChange={state => setAvatarConnected(state.connected)}
           />
-          {!avatarToken && (
+          {!streamlined && !avatarToken ? (
             <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
               <p className="text-sm font-bold sm:text-base">سارة أمامك بحركتها المحلية</p>
               <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">الحركة الهادئة تعمل تلقائيًا. شغّل الصورة الحية فقط عندما تحتاج مزامنة الشفاه.</p>
-              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm">
-                <Video className="ml-2 h-4 w-4" /> تشغيل الصورة الحية
-              </Button>
+              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm"><Video className="ml-2 h-4 w-4" /> تشغيل الصورة الحية</Button>
             </div>
-          )}
+          ) : null}
         </section>
 
         <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top_right,#fff7e6_0,#ffffff_36%,#f7f8fb_100%)]">
           <header className="flex items-start justify-between gap-3 border-b border-slate-200/80 px-3 py-3 sm:px-6 sm:py-4">
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-black text-slate-900">سارة</h2>
-                  <Badge className="border-0 bg-slate-900 text-[10px] text-white">واجهة COMO</Badge>
-                  <Badge className="border-0 bg-amber-100 text-[10px] text-amber-900">Manus للتنفيذ العميق</Badge>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">محادثة مباشرة عبر WebRTC · القراءة فورية · الحفظ كمقترح للمراجعة فقط</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-black text-slate-900">سارة</h2>
+                {streamlined ? <Badge className="border-0 bg-emerald-100 text-[10px] text-emerald-800">{phaseLabel[phase]}</Badge> : <><Badge className="border-0 bg-slate-900 text-[10px] text-white">واجهة COMO</Badge><Badge className="border-0 bg-amber-100 text-[10px] text-amber-900">Manus للتنفيذ العميق</Badge></>}
               </div>
+              <p className="mt-1 text-xs text-slate-500">{streamlined ? "تكلم بطبيعتك؛ سارة تسمعك وتقرأ مكتبك." : "محادثة مباشرة عبر WebRTC · القراءة فورية · الحفظ كمقترح للمراجعة فقط"}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => { stopSession(); setAvatarToken(null); onClose(); }} className="rounded-xl"><X className="h-5 w-5" /></Button>
+            {!streamlined ? <Button variant="ghost" size="icon" onClick={() => { stopSession(); setAvatarToken(null); onClose(); }} className="rounded-xl"><X className="h-5 w-5" /></Button> : null}
           </header>
 
-          <div className="grid grid-cols-3 gap-2 border-b border-slate-200/80 px-4 py-3 sm:px-6">
+          {!streamlined ? <div className="grid grid-cols-3 gap-2 border-b border-slate-200/80 px-4 py-3 sm:px-6">
             <div className="rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-400">الحالة</p><p className="mt-0.5 text-xs font-black text-slate-800">{phaseLabel[phase]}</p></div>
             <div className="rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-400">المدة</p><p className="mt-0.5 font-mono text-xs font-black text-slate-800">{formatClock(elapsedSeconds)}</p></div>
             <div className="rounded-2xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200"><p className="text-[10px] font-bold text-slate-400">تقدير OpenAI</p><p className="mt-0.5 text-xs font-black text-slate-800">${estimatedUsd.toFixed(3)}</p></div>
-          </div>
+          </div> : null}
 
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5 sm:px-6">
-            {transcript.length === 0 && (
-              <div className="mx-auto mt-10 max-w-md text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-lg"><Sparkles className="h-7 w-7" /></div>
-                <h3 className="mt-4 text-lg font-black text-slate-900">صوت سارة أصبح مباشرًا</h3>
-                <p className="mt-2 text-sm leading-7 text-slate-500">ابدأ الجلسة ثم تحدث بطبيعتك. تستطيع مقاطعتها، وهي تقرأ مصادر COMO. إذا طلبت منها متابعة أمر، تسجله كمقترح ينتظر اعتمادك ولا تنفذه تلقائيًا.</p>
+            {transcript.length === 0 ? (
+              <div className="mx-auto mt-6 max-w-md text-center sm:mt-10">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-lg"><Sparkles className="h-6 w-6" /></div>
+                <h3 className="mt-4 text-lg font-black text-slate-900">{phase === "connecting" ? "سارة تتصل الآن" : phase === "thinking" ? "سارة تراجع أولوياتك" : "سارة جاهزة معك"}</h3>
+                <p className="mt-2 text-sm leading-7 text-slate-500">تكلم مباشرة. ستعطيك الزبدة، وتستمع لتحديثاتك، وتحفظ ما تطلبه كمقترح للمراجعة.</p>
               </div>
-            )}
+            ) : null}
             {transcript.map(entry => (
               <div key={entry.id} className={`flex ${entry.role === "member" ? "justify-start" : entry.role === "sara" ? "justify-end" : "justify-center"}`}>
-                {entry.role === "system" ? (
-                  <p className="rounded-full bg-slate-200/70 px-4 py-2 text-[11px] font-bold text-slate-500">{entry.text}</p>
-                ) : (
-                  <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm ${entry.role === "member" ? "rounded-br-md bg-white text-slate-800 ring-1 ring-slate-200" : "rounded-bl-md bg-gradient-to-l from-amber-400 to-amber-500 text-slate-950"}`}>
-                    <p className="mb-1 text-[10px] font-black opacity-60">{entry.role === "member" ? memberName : "سارة"}</p>
-                    <p className="whitespace-pre-wrap">{entry.text}</p>
-                  </div>
-                )}
+                {entry.role === "system" ? <p className="rounded-full bg-slate-200/70 px-4 py-2 text-[11px] font-bold text-slate-500">{entry.text}</p> : <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-7 shadow-sm ${entry.role === "member" ? "rounded-br-md bg-white text-slate-800 ring-1 ring-slate-200" : "rounded-bl-md bg-gradient-to-l from-amber-400 to-amber-500 text-slate-950"}`}><p className="mb-1 text-[10px] font-black opacity-60">{entry.role === "member" ? memberName : "سارة"}</p><p className="whitespace-pre-wrap">{entry.text}</p></div>}
               </div>
             ))}
           </div>
 
-          <footer className="border-t border-slate-200/80 bg-white/90 p-4 backdrop-blur-xl sm:px-6">
-            <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
-              {!live ? (
-                <Button onClick={startSession} disabled={createSession.isPending || !status.data?.realtimeConfigured} className="h-12 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800">
-                  <Phone className="ml-2 h-5 w-5" /> ابدأ الحديث مع سارة
-                </Button>
-              ) : (
-                <>
-                  <Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">
-                    {!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}
-                  </Button>
-                  <Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button>
-                </>
-              )}
-              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} variant="outline" className="h-11 rounded-2xl bg-white lg:hidden">
-                {avatarToken ? <VideoOff className="ml-2 h-4 w-4" /> : <Video className="ml-2 h-4 w-4" />}{avatarToken ? "إيقاف الصورة" : "صورة حية"}
-              </Button>
-            </div>
+          <footer className={`border-t border-slate-200/80 bg-white/90 p-4 backdrop-blur-xl sm:px-6 ${streamlined ? "pb-24 sm:pb-4" : ""}`}>
+            {!streamlined ? <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+              {!live ? <Button onClick={startSession} disabled={createSession.isPending || !status.data?.realtimeConfigured} className="h-12 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800"><Phone className="ml-2 h-5 w-5" /> ابدأ الحديث مع سارة</Button> : <><Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">{!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}</Button><Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button></>}
+              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} variant="outline" className="h-11 rounded-2xl bg-white lg:hidden">{avatarToken ? <VideoOff className="ml-2 h-4 w-4" /> : <Video className="ml-2 h-4 w-4" />}{avatarToken ? "إيقاف الصورة" : "صورة حية"}</Button>
+            </div> : phase === "error" ? <Button onClick={() => { autoStartedRef.current = false; void startSession(); void startAvatar(true); }} className="mb-3 h-10 w-full rounded-xl bg-slate-900 text-white">إعادة الاتصال بسارة</Button> : null}
             <div className="flex items-center gap-2">
-              <Input value={textInput} onChange={event => setTextInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter") sendText(); }} placeholder="أو اكتب لسارة…" disabled={!live} className="h-11 rounded-xl bg-white" />
+              <Input value={textInput} onChange={event => setTextInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter") sendText(); }} placeholder="اكتب لسارة…" disabled={!live} className="h-11 rounded-xl bg-white" />
+              {streamlined && live ? <Button onClick={toggleMute} variant="outline" size="icon" className="h-11 w-11 flex-none rounded-xl bg-white">{!microphoneAvailable || muted ? <MicOff className="h-4 w-4 text-rose-500" /> : <Mic className="h-4 w-4 text-emerald-600" />}</Button> : null}
               <Button onClick={sendText} disabled={!live || !textInput.trim()} size="icon" className="h-11 w-11 flex-none rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400"><Send className="h-4 w-4" /></Button>
             </div>
-            <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400">
-              <span><Volume2 className="ml-1 inline h-3 w-3" /> التقدير لا يشمل تفريغ الصوت أو LiveAvatar</span>
-              <span>المقترح ليس تنفيذًا · لا إرسال خارجي</span>
-            </div>
+            {!streamlined ? <div className="mt-2 flex items-center justify-end text-[10px] text-slate-400"><span>المقترح ليس تنفيذًا · لا إرسال خارجي</span></div> : null}
           </footer>
           <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
         </section>
+        {streamlined && audioBlocked ? <div className="absolute inset-x-4 bottom-24 z-[130] mx-auto max-w-sm rounded-full bg-slate-950/92 px-4 py-2 text-center text-xs font-bold text-white shadow-xl sm:bottom-5">المس الشاشة مرة واحدة لسماع سارة</div> : null}
       </div>
     </div>
   );

@@ -70,7 +70,8 @@ function LegacyProjectRedirect() {
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={() => <Redirect to="/como-next" />} />
+      <Route path="/gateway" component={Home} />
       <Route path="/consultant-dashboard" component={() => <Redirect to="/consultant-portal" />} />
       <Route path="/consultant-profiles" component={() => <Redirect to="/consultant-know" />} />
       <Route path="/consultant-profile/:id" component={ConsultantDetailPage} />

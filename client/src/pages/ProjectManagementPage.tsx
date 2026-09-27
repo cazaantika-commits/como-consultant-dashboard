@@ -20,6 +20,7 @@ import {
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { ProjectSelector } from "@/components/ProjectSelector";
+import { ComoPrimaryNav } from "@/components/ComoPrimaryNav";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,6 +35,7 @@ const MANAGEMENT_CARDS = [
     description: "هوية المشروع ووثائقه وذاكرته وملفات العمل والقرارات والمراسلات والاجتماعات في سياق واحد.",
     icon: BriefcaseBusiness,
     tone: "from-[#153b48] to-[#266679]",
+    surface: "border-cyan-100 bg-cyan-50/85",
     accent: "text-[#1f6478]",
     href: (projectId: number) => `/como-next/projects/${projectId}`,
   },
@@ -43,6 +45,7 @@ const MANAGEMENT_CARDS = [
     description: "الدراسة المالية المحمية للمشروع المختار، من دون إعادة كتابة المعادلات أو نسخ بياناتها.",
     icon: BarChart3,
     tone: "from-[#365c4a] to-[#648773]",
+    surface: "border-emerald-100 bg-emerald-50/85",
     accent: "text-[#4b7059]",
     href: (projectId: number) => `/bateekha?projectId=${projectId}&tab=feasibility&returnTo=${encodeURIComponent(`/project-management?projectId=${projectId}`)}`,
   },
@@ -52,6 +55,7 @@ const MANAGEMENT_CARDS = [
     description: "كل بطاقات التدفق المعتمدة للمشروع نفسه، ومنها تدفق المستثمر والإسكرو، داخل المحرك القائم.",
     icon: WalletCards,
     tone: "from-[#5c4938] to-[#9a724f]",
+    surface: "border-amber-100 bg-amber-50/90",
     accent: "text-[#815f45]",
     href: (projectId: number) => `/bateekha?projectId=${projectId}&returnTo=${encodeURIComponent(`/project-management?projectId=${projectId}`)}`,
   },
@@ -61,6 +65,7 @@ const MANAGEMENT_CARDS = [
     description: "بوابة التأسيس والامتثال والجدول والعقود، مرتبطة بالمشروع المختار بدل التنقل بين صفحات بلا سياق.",
     icon: Route,
     tone: "from-[#56406f] to-[#8963a8]",
+    surface: "border-violet-100 bg-violet-50/85",
     accent: "text-[#6d4c88]",
     href: (projectId: number) => `/development-phases?projectId=${projectId}`,
   },
@@ -119,10 +124,12 @@ export default function ProjectManagementPage() {
   const project = projectQuery.data as any;
   const foundation = foundationQuery.data as any;
 
-  return <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#edf3f2_100%)] text-slate-900" dir="rtl">
+  return <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#edf3f2_100%)] pb-24 text-slate-900 sm:pb-0" dir="rtl">
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-stretch gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-7">
-        <button type="button" onClick={() => navigate("/")} className="inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft className="h-4 w-4" />الرئيسية</button>
+        <h1 className="text-xl font-black text-[#102b35] sm:hidden">المشاريع</h1>
+        <button type="button" onClick={() => navigate("/")} className="hidden items-center gap-2 text-sm font-bold text-slate-700 sm:inline-flex"><ArrowLeft className="h-4 w-4" />المطبخ</button>
+        <div className="sm:w-[390px]"><ComoPrimaryNav active="projects" /></div>
         <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"><Badge variant="outline" className="min-w-0 justify-center rounded-full border-emerald-200 bg-emerald-50 px-2 text-[10px] text-emerald-700 sm:text-xs"><ShieldCheck className="ml-1 h-3.5 w-3.5 shrink-0" />مصدر واحد للمشروع</Badge><Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="min-w-0 rounded-xl bg-white px-2 text-[10px] sm:px-3 sm:text-xs"><FilePlus2 className="ml-1 h-3.5 w-3.5 shrink-0" />فتح مشروع جديد</Button></div>
       </div>
     </header>
@@ -145,7 +152,7 @@ export default function ProjectManagementPage() {
           <div className="grid gap-3 border-t border-slate-100 bg-[#fbfcfb] p-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><ProjectFact label="رقم القطعة" value={project.plotNumber} icon={MapPinned} /><ProjectFact label="سند الملكية" value={project.titleDeedNumber} icon={BookOpenCheck} /><ProjectFact label="مرجع DDA" value={project.ddaNumber || project.masterDevRef} icon={Landmark} /><ProjectFact label="الاستخدام" value={project.permittedUse} icon={Building2} /><ProjectFact label="مساحة الأرض" value={formatArea(project.plotAreaSqm, "م²")} icon={MapPinned} /><ProjectFact label="المساحة الطابقية" value={formatArea(project.gfaSqm, "م²")} icon={Building2} /></div>
         </section>
 
-        <section className="mt-7"><h2 className="mb-4 text-xl font-black text-slate-950">مسارات المشروع</h2><div className="space-y-2">{MANAGEMENT_CARDS.map(item => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.href(selectedProjectId))} className="group flex min-h-16 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.tone} text-white`}><Icon className="h-5 w-5" /></span><span className="font-black text-slate-950">{item.title}</span></span><ChevronLeft className={`h-5 w-5 shrink-0 ${item.accent}`} /></button>; })}</div></section>
+        <section className="mt-7"><h2 className="mb-4 text-xl font-black text-slate-950">مسارات المشروع</h2><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{MANAGEMENT_CARDS.map(item => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.href(selectedProjectId))} className={`group relative min-h-[150px] overflow-hidden rounded-[26px] border p-4 text-right shadow-[0_12px_35px_rgba(15,23,42,.06)] transition hover:-translate-y-1 hover:shadow-lg ${item.surface}`}><span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-lg`}><Icon className="h-5 w-5" /></span><span className="mt-5 block text-base font-black leading-6 text-slate-950">{item.title}</span><span className="mt-2 hidden text-[11px] leading-5 text-slate-500 sm:block">{item.description}</span><ChevronLeft className={`absolute bottom-4 left-4 h-5 w-5 ${item.accent}`} /></button>; })}</div></section>
 
         {foundation ? <section className="mt-6 rounded-[28px] border border-amber-200 bg-[#fffaf0] p-5 sm:p-6"><p className="text-[10px] font-black text-amber-800">القرار التالي بحسب مصادر المشروع</p><div className="mt-2 flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-black leading-8 text-slate-950">{foundation.nextDecision}</h2><p className="mt-1 text-xs text-slate-600">اقتراح مسار فقط؛ لا يتحول إلى تنفيذ أو التزام تلقائي.</p></div><Button variant="outline" className="rounded-xl bg-white" onClick={() => navigate(`/project-launch/${selectedProjectId}`)}>عرض أساس المشروع <ChevronLeft className="mr-2 h-4 w-4" /></Button></div></section> : null}
       </>}

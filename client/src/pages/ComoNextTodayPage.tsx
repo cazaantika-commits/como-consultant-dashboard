@@ -19,6 +19,7 @@ import { WorkFileMeetingsSection } from "@/components/ComoNextMeetingWorkspace";
 import { ComoNextEmailInbox } from "@/components/ComoNextEmailInbox";
 import { ComoNextIntakeProposals } from "@/components/ComoNextIntakeProposals";
 import { PreservedCapabilityGallery } from "@/components/PreservedCapabilityGallery";
+import { ComoPrimaryNav } from "@/components/ComoPrimaryNav";
 import {
   AlertCircle,
   ArrowLeft,
@@ -994,15 +995,15 @@ export default function ComoNextTodayPage() {
 
   const selectedMeta = sectionCards.find(item => item.key === selectedSection);
   return (
-    <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[#f6f6f2] text-slate-900">
+    <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff7e8_0,#f7f6ef_36%,#eaf1ee_100%)] pb-24 text-slate-900 sm:pb-0">
       <header className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,#284965_0%,#14243a_48%,#091523_100%)] text-white shadow-[0_18px_50px_rgba(2,12,24,.18)]">
         <div className="mx-auto flex min-h-20 max-w-5xl flex-col items-stretch gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"><ArrowLeft className="h-4 w-4" /></button>
+            <button aria-label="فتح بوابة COMO" onClick={() => navigate("/gateway")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"><ArrowLeft className="h-4 w-4" /></button>
             <div><p className="text-[10px] font-bold tracking-[.16em] text-[#9dd5ca]">COMO NEXT</p><h1 className="text-xl font-black">المطبخ التنفيذي</h1></div>
           </div>
-          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center">
-            <Button variant="outline" onClick={() => navigate("/sara")} className="min-w-0 rounded-xl border-white/15 bg-white/5 px-3 text-xs text-white hover:bg-white/10 sm:text-sm">اليوم مع سارة</Button>
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:flex sm:items-center">
+            <div className="sm:w-[390px]"><ComoPrimaryNav active="kitchen" dark /></div>
             <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />
           </div>
         </div>
@@ -1011,7 +1012,17 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <>
           {!selectedSection ? <section>
-            <div className="mb-5 flex items-end justify-between gap-3"><div><p className="text-[10px] font-black tracking-[.18em] text-[#1e6478]">EXECUTIVE KITCHEN</p><h2 className="mt-1 text-3xl font-black text-slate-950">كل ما عليك الآن</h2></div><Button type="button" variant="ghost" onClick={() => setShowSections(value => !value)} className="rounded-xl text-xs text-slate-500">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button></div>
+            <div className="mb-5 overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#0a2b35_0%,#113f45_55%,#1f5d50_100%)] p-6 text-white shadow-[0_26px_70px_rgba(8,47,54,.22)] sm:p-9">
+              <div className="flex flex-wrap items-start justify-between gap-5">
+                <div><p className="text-xs font-black text-amber-200">{new Intl.DateTimeFormat("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-5xl">ما الذي يحتاج إنجازًا الآن؟</h2><p className="mt-3 max-w-xl text-sm leading-7 text-white/65">كل بطاقة مرتبطة بخطوة عملية. افتح واحدة فتختفي البقية حتى تنهيها أو تحدّثها.</p></div>
+                <Button type="button" variant="outline" onClick={() => setShowSections(value => !value)} className="rounded-2xl border-white/15 bg-white/10 text-white hover:bg-white/20 hover:text-white">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button>
+              </div>
+              <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
+                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "owner_review").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">لمراجعتك</p></div>
+                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "act_now" || item.phase === "verify").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">للتنفيذ</p></div>
+                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "waiting_external").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">بانتظار الغير</p></div>
+              </div>
+            </div>
             {showSections ? <div className="mb-6 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[92px] overflow-hidden rounded-[24px] border border-white bg-white p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span><span className="mt-1 block text-[10px] font-bold text-slate-400">افتح العناوين ثم سجل واحد</span></span><bdi className="text-2xl font-black text-slate-300">{item.count}</bdi></span></button>; })}</div> : null}
             <div className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length ? data.executionQueue.map((item: any, index: number) => <ExecutiveQueueCard key={item.id} item={item} index={index} onOpen={openQueueItem} />) : <div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500 sm:col-span-2">لا يوجد عمل مفتوح الآن</div>}</div>
           </section> : <section>

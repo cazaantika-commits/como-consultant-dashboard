@@ -6,6 +6,9 @@ const gallery = readFileSync("client/src/components/PreservedCapabilityGallery.t
 const specialists = readFileSync("client/src/components/ComoNextSpecialistDesks.tsx", "utf8");
 const kitchen = readFileSync("client/src/pages/ComoNextTodayPage.tsx", "utf8");
 const sara = readFileSync("client/src/pages/SaraPage.tsx", "utf8");
+const navigation = readFileSync("client/src/components/ComoPrimaryNav.tsx", "utf8");
+const app = readFileSync("client/src/App.tsx", "utf8");
+const projects = readFileSync("client/src/pages/ProjectManagementPage.tsx", "utf8");
 
 describe("COMO visual identity", () => {
   it("restores rich gateway cards without turning Home into an operational dashboard", () => {
@@ -32,12 +35,31 @@ describe("COMO visual identity", () => {
     expect(kitchen).toContain("للتنفيذ الآن");
     expect(kitchen).toContain("بانتظار طرف خارجي");
     expect(kitchen).toContain("<ExecutiveQueueCard");
+    expect(kitchen).toContain("ما الذي يحتاج إنجازًا الآن؟");
   });
 
-  it("autoplays only Sara's local silent motion on page load", () => {
+  it("opens Sara as an automatic live conversation with graceful local motion", () => {
     expect(sara).toContain('@/assets/como/sara-idle.webm');
     expect(sara).toContain("autoPlay muted loop playsInline");
-    expect(sara).toContain("الحركة المحلية تعمل تلقائيًا");
-    expect(sara).not.toContain("createAvatarToken.mutateAsync");
+    expect(sara).toContain("بعد التحقق تفتح سارة مباشرة");
+    expect(sara).toContain("autoStart");
+    expect(sara).toContain("streamlined");
+  });
+
+  it("uses one warm mobile navigation for the kitchen, projects, and Sara", () => {
+    expect(navigation).toContain('active: PrimaryArea');
+    expect(navigation).toContain('fixed inset-x-0 bottom-0');
+    expect(navigation).toContain('saraPortrait');
+    expect(kitchen).toContain('<ComoPrimaryNav active="kitchen" dark />');
+    expect(app).toContain('<Redirect to="/como-next" />');
+    expect(app).toContain('path="/gateway"');
+  });
+
+  it("presents project destinations as calm colored tiles instead of a monochrome list", () => {
+    expect(projects).toContain("grid grid-cols-2 gap-3 lg:grid-cols-4");
+    expect(projects).toContain("bg-cyan-50/85");
+    expect(projects).toContain("bg-emerald-50/85");
+    expect(projects).toContain("bg-amber-50/90");
+    expect(projects).toContain("bg-violet-50/85");
   });
 });

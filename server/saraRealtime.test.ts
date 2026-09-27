@@ -73,18 +73,20 @@ describe("Sara Realtime architecture", () => {
     });
   });
 
-  it("connects the browser through ephemeral WebRTC and starts LiveAvatar only from an explicit control", () => {
+  it("connects through ephemeral WebRTC and auto-starts the streamlined Sara page", () => {
     expect(roomSource).toContain('https://api.openai.com/v1/realtime/calls');
     expect(roomSource).toContain('Authorization: `Bearer ${session.clientSecret}`');
     expect(roomSource).not.toContain("OPENAI_API_KEY");
-    expect(roomSource).toContain("ابدأ الحديث مع سارة");
-    expect(roomSource).toContain("تشغيل الصورة الحية");
-    expect(roomSource).toContain("grid-rows-[42%_58%]");
+    expect(pageSource).toContain("autoStart");
+    expect(pageSource).toContain("streamlined");
+    expect(roomSource).toContain("if (status.data.liveAvatarConfigured) await startAvatar(true)");
+    expect(roomSource).toContain("if (status.data.realtimeConfigured) await startSession()");
+    expect(roomSource).toContain("grid-rows-[45%_55%]");
     expect(roomSource).toContain("h-[100dvh]");
     expect(roomSource).not.toContain("relative hidden min-h-0");
     expect(roomSource).toContain('peer.addTransceiver("audio", { direction: "recvonly" })');
     expect(roomSource).toContain("فتحت سارة وضع الكتابة مع بقاء الرد الصوتي");
-    expect(roomSource).toContain("المقترح ليس تنفيذًا · لا إرسال خارجي");
+    expect(roomSource).toContain("المس الشاشة مرة واحدة لسماع سارة");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");
     expect(roomSource).toContain('@/assets/como/sara-idle.webm');
@@ -96,7 +98,7 @@ describe("Sara Realtime architecture", () => {
     expect(pageSource).toContain("getCommandCenterTokenKey");
     expect(pageSource).toContain("commandCenter.verifyAccess.useQuery");
     expect(pageSource).toContain("التحقق وفتح سارة");
-    expect(pageSource).toContain("لا يبدأ OpenAI Realtime أو LiveAvatar أثناء التحقق");
+    expect(pageSource).toContain("بعد التحقق تفتح سارة مباشرة");
     expect(pageSource).not.toContain('navigate("/command-center")');
   });
 
