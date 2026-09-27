@@ -16,8 +16,8 @@ describe("unified project-management hub", () => {
     expect(files.app).toContain('<Route path="/project-management" component={ProjectManagementPage} />');
     expect(files.home).toContain('id: "project-management"');
     expect(files.home).toContain('path: "/project-management"');
-    expect(files.management).toContain("اختر المشروع");
-    expect(files.management).toContain("مشروع واحد في كل مرة");
+    expect(files.management).toContain("المشروع النشط");
+    expect(files.management).toContain("<ProjectSelector");
   });
 
   it("keeps the four agreed project-management cards and points to existing protected modules", () => {
@@ -37,7 +37,7 @@ describe("unified project-management hub", () => {
     expect(files.financial).toContain("setSelectedProjectId(requestedProjectId)");
     expect(files.financial).toContain("/bateekha?projectId=${selectedProjectId}&tab=${tab.id}");
     expect(files.project).toContain("/project-management?projectId=${projectId}");
-    expect(files.project).toContain("/bateekha?projectId=${projectId}");
+    expect(files.management).toContain("/bateekha?projectId=${projectId}");
   });
 
   it("makes the preserved development tour share one project and fixes its embedded foundation card", () => {

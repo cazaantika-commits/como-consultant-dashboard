@@ -53,26 +53,10 @@ const importanceMeta: Record<string, { label: string; className: string }> = {
 };
 
 function MailCard({ item, onOpen }: { item: any; onOpen: (id: number) => void }) {
-  const status = statusMeta[item.inboxStatus] || statusMeta.unmatched;
-  const importance = importanceMeta[item.importance] || importanceMeta.unreviewed;
   return (
-    <button type="button" onClick={() => onOpen(item.id)} className="group w-full rounded-[22px] border border-slate-200 bg-white p-4 text-right shadow-[0_10px_28px_rgba(15,23,42,.035)] transition hover:-translate-y-0.5 hover:border-[#8fb7c2] hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-slate-900">{item.subject}</p>
-          <p className="mt-1 truncate text-xs text-slate-500">{item.fromName || item.fromEmail} · <bdi dir="ltr">{item.fromEmail}</bdi></p>
-        </div>
-        <ArrowLeft className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:-translate-x-1 group-hover:text-[#1f6478]" />
-      </div>
-      <p className="mt-3 line-clamp-2 text-xs leading-6 text-slate-600">{item.analysisSummary || item.bodyPreview || "لا يوجد نص مستخرج"}</p>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={`rounded-full text-[10px] ${status.className}`}>{status.label}</Badge>
-        <Badge variant="outline" className={`rounded-full text-[10px] ${importance.className}`}>{importance.label}</Badge>
-        {!item.serverSeen ? <Badge variant="outline" className="rounded-full border-sky-200 bg-sky-50 text-[10px] text-sky-700">غير مقروءة على الخادم</Badge> : null}
-        {item.attachmentCount ? <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500"><Paperclip className="h-3.5 w-3.5" />{item.attachmentCount}</span> : null}
-        <span className="ms-auto text-[10px] text-slate-400">{formatDateTime(item.receivedAt)}</span>
-      </div>
-      {item.suggestedProjectName ? <div className="mt-3 rounded-xl bg-[#f3f8f7] px-3 py-2 text-[11px] font-bold text-[#1f6478]">مقترح: {item.suggestedProjectName}{item.suggestedWorkFileTitle ? ` · ${item.suggestedWorkFileTitle}` : ""}</div> : null}
+    <button type="button" onClick={() => onOpen(item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md">
+      <p className="min-w-0 flex-1 truncate text-sm font-black text-slate-900">{item.subject}</p>
+      <ArrowLeft className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:-translate-x-1 group-hover:text-[#1f6478]" />
     </button>
   );
 }
@@ -160,7 +144,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="max-h-[92vh] max-w-5xl overflow-y-auto rounded-[28px] border-slate-200 bg-[#fafbf9] p-0">
+      <DialogContent dir="rtl" className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none border-slate-200 bg-[#fafbf9] p-0 sm:h-[94dvh] sm:max-w-5xl sm:rounded-[28px]">
         {detailQuery.isLoading ? <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : detail ? <>
           <DialogHeader className="border-b border-slate-200 bg-white px-6 py-5 text-right">
             <div className="flex flex-wrap items-start justify-between gap-3 pe-8">
@@ -226,21 +210,16 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
   };
 
   return (
-    <div className="space-y-6">
-      <Card className="overflow-hidden rounded-[28px] border-[#cfe3df] bg-[#102f3a] p-0 text-white shadow-[0_20px_60px_rgba(15,47,58,.15)]">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10"><Inbox className="h-6 w-6 text-amber-300" /></div><div><p className="text-[11px] font-black tracking-[.16em] text-amber-300">READ-ONLY INBOX</p><h2 className="mt-1 text-2xl font-black">صندوق البريد التنفيذي</h2></div></div><p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">اقرأ الرسائل، راجع اقتراح الربط، ثم اعتمد نقل الرسالة ومرفقاتها إلى ملف العمل. لا إرسال أو رد أو تحويل أو تغيير لحالة القراءة على الخادم.</p></div>
-          <Button onClick={sync} disabled={syncMutation.isPending} className="h-12 rounded-2xl bg-amber-400 px-6 font-black text-slate-950 hover:bg-amber-300">{syncMutation.isPending ? <Loader2 className="ms-2 h-5 w-5 animate-spin" /> : <RefreshCw className="ms-2 h-5 w-5" />}قراءة آخر 7 أيام</Button>
-        </div>
-      </Card>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}قراءة آخر 7 أيام</Button></div>
 
-      <div className="grid gap-3 sm:grid-cols-3">{[
+      <div className="grid grid-cols-3 gap-2">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention, icon: MailQuestion, tone: "text-amber-800 bg-amber-50" },
         { key: "linked", label: "داخل ملفات العمل", value: counts.linked, icon: MailCheck, tone: "text-emerald-800 bg-emerald-50" },
         { key: "dismissed", label: "مستبعدة", value: counts.dismissed, icon: Archive, tone: "text-slate-600 bg-slate-100" },
-      ].map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => setFilter(item.key as InboxFilter)} className={`rounded-3xl border p-5 text-right transition ${filter === item.key ? "border-[#7eaeb5] bg-white shadow-md" : "border-slate-200 bg-white/70 hover:bg-white"}`}><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{item.value}</bdi></p></div><div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></div></div></button>; })}</div>
+      ].map(item => <button key={item.key} type="button" onClick={() => setFilter(item.key as InboxFilter)} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition ${filter === item.key ? "border-[#7eaeb5] bg-white shadow-sm" : "border-slate-200 bg-white/70"}`}><span className="block text-[10px] font-bold text-slate-500">{item.label}</span><bdi className="mt-1 block text-lg font-black text-slate-900">{item.value}</bdi></button>)}</div>
 
-      {listQuery.isLoading ? <div className="flex min-h-64 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : filtered.length ? <div className="grid gap-3 lg:grid-cols-2">{filtered.map((item: any) => <MailCard key={item.id} item={item} onOpen={setSelectedId} />)}</div> : <div className="flex min-h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/70 p-8 text-center"><Inbox className="h-8 w-8 text-slate-300" /><h3 className="mt-4 text-sm font-black text-slate-800">لا توجد رسائل في هذا القسم</h3><p className="mt-2 text-xs text-slate-500">استخدم القراءة اليدوية لجلب الرسائل الجديدة دون تغيير صندوق البريد.</p></div>}
+      {listQuery.isLoading ? <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : filtered.length ? <div className="space-y-2">{filtered.map((item: any) => <MailCard key={item.id} item={item} onOpen={setSelectedId} />)}</div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد رسائل في هذا القسم</div>}
 
       <MessageDialog emailId={selectedId} open={selectedId !== null} onOpenChange={value => { if (!value) setSelectedId(null); }} onChanged={refresh} />
     </div>

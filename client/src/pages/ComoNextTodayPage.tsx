@@ -56,7 +56,8 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type ExecutiveTab = "today" | "work-files" | "email" | "transfer";
+type ExecutiveSection = "actions" | "decisions" | "communications" | "meetings" | "email" | "intake" | "specialists" | "work-files" | "transfer";
+type ExecutiveFocusKind = "action" | "decision" | "communication" | "meeting";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
@@ -592,25 +593,16 @@ function TodayActionCard({ item, onOpen }: { item: any; onOpen: (workFileId: num
   );
 }
 
-function TodayDecisionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
-  const status = decisionStatusMeta[item.decisionStatus as DecisionStatus];
-  return <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-rose-100 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400">
-    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${status.className}`}>{status.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[item.decisionAuthority as DecisionAuthority]}</Badge></div><h4 className="text-sm font-black leading-6 text-slate-900">{item.title}</h4><p className="mt-1 line-clamp-2 text-xs leading-6 text-slate-600">{item.question}</p><p className="mt-2 text-[11px] font-semibold text-[#1e6478]">{item.projectName} · {item.workFileTitle}</p></div><ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-rose-600" /></div>
-    {item.dueAt ? <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500"><CalendarClock className="h-3.5 w-3.5" /><bdi dir="ltr">{formatDateTime(item.dueAt)}</bdi></div> : null}
-  </button>;
+function TodayDecisionCard({ item, onOpen }: { item: any; onOpen: (workFileId: number, decisionId: number) => void }) {
+  return <button onClick={() => onOpen(item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-rose-200 hover:shadow-md"><h4 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{item.title}</h4><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-rose-600" /></button>;
 }
 
-function TodayCommunicationCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
-  const meta = communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived;
-  return <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-sky-100 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400">
-    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${meta.className}`}>{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div><h4 className="text-sm font-black leading-6 text-slate-900">{item.subject}</h4>{item.toText ? <p className="mt-1 truncate text-xs text-slate-500">إلى: <bdi dir="ltr">{item.toText}</bdi></p> : null}<p className="mt-2 text-[11px] font-semibold text-[#1e6478]">{item.projectName} · {item.workFileTitle}</p></div><ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-sky-600" /></div>
-  </button>;
+function TodayCommunicationCard({ item, onOpen }: { item: any; onOpen: (workFileId: number, communicationId: number) => void }) {
+  return <button onClick={() => onOpen(item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-sky-200 hover:shadow-md"><h4 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{item.subject}</h4><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-sky-600" /></button>;
 }
 
-function TodayMeetingCard({ item, onOpen }: { item: any; onOpen: (workFileId: number) => void }) {
-  return <button onClick={() => onOpen(item.workFileId)} className="group w-full rounded-2xl border border-teal-100 bg-white p-4 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
-    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-full border-teal-200 bg-teal-50 text-teal-800">{item.meetingStatus === "planned" ? "قيد التحضير" : item.meetingStatus === "confirmed" ? "موعد مؤكد" : "تحتاج مراجعة"}</Badge>{item.pendingProposalCount ? <Badge variant="outline" className="rounded-full border-violet-200 bg-violet-50 text-violet-800">{item.pendingProposalCount} مقترح</Badge> : null}{item.draftMinutesCount ? <Badge variant="outline" className="rounded-full border-amber-200 bg-amber-50 text-amber-800">مسودة محضر</Badge> : null}</div><h4 className="text-sm font-black leading-6 text-slate-900">{item.title}</h4><p className="mt-2 text-[11px] font-semibold text-[#1e6478]">{item.projectName} · {item.workFileTitle}</p>{item.startsAt ? <p className="mt-2 text-xs text-slate-500"><bdi dir="ltr">{formatDateTime(item.startsAt)}</bdi></p> : null}</div><ChevronLeft className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-teal-600" /></div>
-  </button>;
+function TodayMeetingCard({ item, onOpen }: { item: any; onOpen: (workFileId: number, meetingId: number) => void }) {
+  return <button onClick={() => onOpen(item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-teal-200 hover:shadow-md"><h4 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{item.title}</h4><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-teal-600" /></button>;
 }
 
 function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => void }) {
@@ -637,7 +629,32 @@ function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: an
   </div>;
 }
 
-function WorkFileSheet({ workFileId, actionId, open, onOpenChange, onActionChange, onChanged }: { workFileId: number | null; actionId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onActionChange: (actionId: number | null) => void; onChanged: () => void }) {
+function FocusedRecordView({ kind, item, workFileId, isClosed, onBack, onUpdated }: { kind: Exclude<ExecutiveFocusKind, "action">; item: any; workFileId: number; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+  return <div className="min-h-[calc(100vh-8rem)] bg-[#f8f8f5] p-5 sm:p-7">
+    <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />العودة إلى القائمة</button>
+    <article className="mx-auto mt-6 max-w-2xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      {kind === "decision" ? <>
+        <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${decisionStatusMeta[item.decisionStatus as DecisionStatus]?.className || ""}`}>{decisionStatusMeta[item.decisionStatus as DecisionStatus]?.label || item.decisionStatus}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[item.decisionAuthority as DecisionAuthority]}</Badge></div>
+        <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{item.title}</h2>
+        <p className="mt-5 whitespace-pre-wrap text-sm font-semibold leading-8 text-slate-800">{item.question}</p>
+        {item.contextSummary ? <p className="mt-4 whitespace-pre-wrap border-t border-slate-100 pt-4 text-sm leading-8 text-slate-600">{item.contextSummary}</p> : null}
+        {item.recommendation ? <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm leading-7 text-cyan-950">{item.recommendation}</div> : null}
+        {!isClosed && ["required", "deferred"].includes(item.decisionStatus) ? <div className="mt-6 border-t border-slate-100 pt-5"><ResolveDecisionDialog decision={item} onUpdated={onUpdated} /></div> : null}
+      </> : null}
+      {kind === "communication" ? <>
+        <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).className}`}>{(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div>
+        <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{item.subject}</h2>
+        {item.toText ? <p className="mt-3 text-xs text-slate-500">إلى: <bdi dir="ltr">{item.toText}</bdi></p> : null}
+        {item.fromText ? <p className="mt-1 text-xs text-slate-500">من: <bdi dir="ltr">{item.fromText}</bdi></p> : null}
+        <p className="mt-5 whitespace-pre-wrap border-t border-slate-100 pt-5 text-sm leading-8 text-slate-700">{item.body}</p>
+        {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><CommunicationControls communication={item} onUpdated={onUpdated} /></div> : null}
+      </> : null}
+      {kind === "meeting" ? <WorkFileMeetingsSection workFileId={workFileId} meetings={[item]} isClosed={isClosed} onUpdated={onUpdated} /> : null}
+    </article>
+  </div>;
+}
+
+function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onActionChange, onFocusBack, onChanged }: { workFileId: number | null; focusKind: ExecutiveFocusKind | null; focusId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onActionChange: (actionId: number | null) => void; onFocusBack: () => void; onChanged: () => void }) {
   const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, { enabled: open && Boolean(workFileId) });
   const [, navigate] = useLocation();
   const [showAllMemory, setShowAllMemory] = useState(false);
@@ -648,12 +665,15 @@ function WorkFileSheet({ workFileId, actionId, open, onOpenChange, onActionChang
   const hasPendingMeetings = data?.meetings.some((meeting: any) => ["planned", "confirmed"].includes(meeting.meetingStatus) || meeting.pendingProposalCount > 0 || meeting.latestMinutesStatus === "draft") ?? false;
   const hasPendingIntake = (data?.intakeProposals?.length || 0) > 0;
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
-  const focusedAction = actionId ? data?.actions.find((action: any) => action.id === actionId) : null;
+  const focusedAction = focusKind === "action" && focusId ? data?.actions.find((action: any) => action.id === focusId) : null;
+  const focusedDecision = focusKind === "decision" && focusId ? data?.decisions.find((decision: any) => decision.id === focusId) : null;
+  const focusedCommunication = focusKind === "communication" && focusId ? data?.communications.find((communication: any) => communication.id === focusId) : null;
+  const focusedMeeting = focusKind === "meeting" && focusId ? data?.meetings.find((meeting: any) => meeting.id === focusId) : null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent dir="rtl" side="left" className="w-screen max-w-none overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0 sm:max-w-none">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} /></div> : data ? <>
-          {focusedAction ? <FocusedActionView action={focusedAction} isClosed={isClosed} onBack={() => onActionChange(null)} onUpdated={onChanged} /> : <>
+          {focusedAction ? <FocusedActionView action={focusedAction} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
           <div className="border-b border-slate-200 bg-[#16243b] px-6 py-7 text-white">
             <SheetHeader className="text-right"><div className="mb-3 flex flex-wrap items-center gap-2"><StatusBadge status={data.workFile.workFileStatus} kind="work-file" /><PriorityBadge priority={data.workFile.priority} /></div><SheetTitle className="text-2xl font-black leading-9 text-white">{data.workFile.title}</SheetTitle><SheetDescription className="text-sm text-slate-300">{data.workFile.projectName}</SheetDescription></SheetHeader>
           </div>
@@ -770,23 +790,36 @@ export default function ComoNextTodayPage() {
   const [, navigate] = useLocation();
   const requestParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const requestedTab = requestParams?.get("tab") ?? null;
+  const requestedSection = requestParams?.get("section") as ExecutiveSection | null;
   const requestedWorkFileId = Number(requestParams?.get("workFileId") || 0);
   const requestedActionId = Number(requestParams?.get("actionId") || 0);
-  const initialTab: ExecutiveTab = requestedWorkFileId > 0 ? "work-files" : requestedTab === "work-files" || requestedTab === "email" || requestedTab === "transfer" ? requestedTab : "today";
-  const [activeTab, setActiveTab] = useState<ExecutiveTab>(initialTab);
+  const requestedFocusKind = requestParams?.get("focusKind") as ExecutiveFocusKind | null;
+  const requestedFocusId = Number(requestParams?.get("focusId") || 0);
+  const initialSection: ExecutiveSection | null = requestedWorkFileId > 0
+    ? "work-files"
+    : requestedSection || (requestedTab === "work-files" || requestedTab === "email" || requestedTab === "transfer" ? requestedTab : null);
+  const [selectedSection, setSelectedSection] = useState<ExecutiveSection | null>(initialSection);
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(requestedWorkFileId > 0 ? requestedWorkFileId : null);
-  const [selectedActionId, setSelectedActionId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : null);
+  const [selectedFocusKind, setSelectedFocusKind] = useState<ExecutiveFocusKind | null>(requestedActionId > 0 ? "action" : requestedFocusKind);
+  const [selectedFocusId, setSelectedFocusId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : requestedFocusId > 0 ? requestedFocusId : null);
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
   const importReviewQuery = trpc.comoNext.getImportReview.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin", staleTime: 60_000 });
   const data = overviewQuery.data;
 
-  const updateTab = (value: string) => {
-    const next = value as ExecutiveTab;
-    setActiveTab(next);
+  const openSection = (next: ExecutiveSection) => {
+    setSelectedSection(next);
     const url = new URL(window.location.href);
-    url.searchParams.set("tab", next);
+    url.searchParams.delete("tab");
+    url.searchParams.set("section", next);
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  };
+  const closeSection = () => {
+    setSelectedSection(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tab");
+    url.searchParams.delete("section");
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   };
 
@@ -795,8 +828,13 @@ export default function ComoNextTodayPage() {
       const params = new URLSearchParams(window.location.search);
       const workFileId = Number(params.get("workFileId") || 0);
       const actionId = Number(params.get("actionId") || 0);
+      const section = params.get("section") as ExecutiveSection | null;
+      const focusKind = params.get("focusKind") as ExecutiveFocusKind | null;
+      const focusId = Number(params.get("focusId") || 0);
       setSelectedWorkFileId(workFileId > 0 ? workFileId : null);
-      setSelectedActionId(actionId > 0 ? actionId : null);
+      setSelectedFocusKind(actionId > 0 ? "action" : focusKind);
+      setSelectedFocusId(actionId > 0 ? actionId : focusId > 0 ? focusId : null);
+      setSelectedSection(section);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
@@ -806,111 +844,97 @@ export default function ComoNextTodayPage() {
     await Promise.all([utils.comoNext.getOverview.invalidate(), selectedWorkFileId ? utils.comoNext.getWorkFile.invalidate({ workFileId: selectedWorkFileId }) : Promise.resolve()]);
   };
 
-  const syncFocusUrl = (workFileId: number | null, actionId: number | null, mode: "push" | "replace" = "push") => {
+  const syncFocusUrl = (workFileId: number | null, focusKind: ExecutiveFocusKind | null, focusId: number | null, mode: "push" | "replace" = "push") => {
     const url = new URL(window.location.href);
     if (workFileId) url.searchParams.set("workFileId", String(workFileId)); else url.searchParams.delete("workFileId");
-    if (actionId) url.searchParams.set("actionId", String(actionId)); else url.searchParams.delete("actionId");
+    url.searchParams.delete("actionId");
+    if (focusKind) url.searchParams.set("focusKind", focusKind); else url.searchParams.delete("focusKind");
+    if (focusId) url.searchParams.set("focusId", String(focusId)); else url.searchParams.delete("focusId");
     window.history[mode === "push" ? "pushState" : "replaceState"]({}, "", `${url.pathname}${url.search}`);
   };
   const openWorkFile = (id: number, actionId?: number) => {
     setSelectedWorkFileId(id);
-    setSelectedActionId(actionId || null);
-    syncFocusUrl(id, actionId || null);
+    setSelectedFocusKind(actionId ? "action" : null);
+    setSelectedFocusId(actionId || null);
+    syncFocusUrl(id, actionId ? "action" : null, actionId || null);
+  };
+  const openFocusedRecord = (workFileId: number, focusKind: ExecutiveFocusKind, focusId: number) => {
+    setSelectedWorkFileId(workFileId);
+    setSelectedFocusKind(focusKind);
+    setSelectedFocusId(focusId);
+    syncFocusUrl(workFileId, focusKind, focusId);
   };
   const closeWorkFile = () => {
     setSelectedWorkFileId(null);
-    setSelectedActionId(null);
-    syncFocusUrl(null, null, "replace");
+    setSelectedFocusKind(null);
+    setSelectedFocusId(null);
+    syncFocusUrl(null, null, null, "replace");
   };
   const changeFocusedAction = (actionId: number | null) => {
-    setSelectedActionId(actionId);
-    syncFocusUrl(selectedWorkFileId, actionId, "replace");
+    setSelectedFocusKind(actionId ? "action" : null);
+    setSelectedFocusId(actionId);
+    syncFocusUrl(selectedWorkFileId, actionId ? "action" : null, actionId, "replace");
   };
-  const todaySections = useMemo(() => data ? [
-    { key: "waitingExternal", title: "بانتظار أطراف خارجية", description: "ردود أو مستندات يجب متابعتها", icon: Clock3, items: data.today.sections.waitingExternal, accent: "text-amber-700 bg-amber-50" },
-    { key: "mine", title: "عليّ اليوم", description: "الإجراءات التي تتطلب تدخلك", icon: UserRound, items: data.today.sections.mine, accent: "text-slate-800 bg-slate-100" },
-    { key: "manus", title: "لدى Manus", description: "أعمال تحليل أو إعداد مسجلة باسمه", icon: Bot, items: data.today.sections.manus, accent: "text-violet-800 bg-violet-50" },
-    { key: "team", title: "لدى الفريق", description: "التزامات داخلية مستحقة", icon: UsersRound, items: data.today.sections.team, accent: "text-cyan-800 bg-cyan-50" },
-  ] : [], [data]);
+  const leaveFocusedRecord = () => selectedSection && selectedSection !== "work-files" ? closeWorkFile() : changeFocusedAction(null);
+  const sectionCards = useMemo(() => data ? [
+    { key: "actions" as const, title: "الإجراءات والمتابعات", count: data.actions.length, icon: CheckCheck, tone: "bg-slate-100 text-slate-700" },
+    { key: "decisions" as const, title: "القرارات المطلوبة", count: data.decisions.length, icon: Scale, tone: "bg-rose-50 text-rose-700" },
+    { key: "communications" as const, title: "المراسلات والمسودات", count: data.draftCommunications.length, icon: Mail, tone: "bg-sky-50 text-sky-700" },
+    { key: "meetings" as const, title: "الاجتماعات", count: data.meetingAttention.length, icon: CalendarDays, tone: "bg-teal-50 text-teal-700" },
+    { key: "email" as const, title: "البريد الوارد", count: data.emailAttention.length, icon: Inbox, tone: "bg-amber-50 text-amber-700", adminOnly: true },
+    { key: "intake" as const, title: "مقترحات المراجعة", count: data.intakeProposals.length, icon: Sparkles, tone: "bg-violet-50 text-violet-700" },
+    { key: "specialists" as const, title: "المراجعات التخصصية", count: data.specialistAttention.length, icon: BriefcaseBusiness, tone: "bg-emerald-50 text-emerald-700" },
+    { key: "work-files" as const, title: "ملفات العمل", count: data.workFiles.length, icon: FileStack, tone: "bg-cyan-50 text-cyan-800" },
+  ].filter(item => !item.adminOnly || user?.role === "admin") : [], [data, user?.role]);
 
   if (loading) return <PageSkeleton />;
   if (!isAuthenticated || !user) {
     return <div dir="rtl" className="flex min-h-screen items-center justify-center bg-[#f7f7f3] p-6"><Card className="w-full max-w-md rounded-3xl border-slate-200 bg-white p-8 text-center shadow-xl"><div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#16243b] text-white"><BriefcaseBusiness className="h-7 w-7" /></div><h1 className="text-xl font-black">المكتب التنفيذي</h1><p className="mt-2 text-sm leading-6 text-slate-500">سجّل الدخول للوصول إلى ملفات العمل والمتابعات الخاصة بك.</p><Button onClick={() => { window.location.href = getLoginUrl(); }} className="mt-6 w-full rounded-xl bg-[#16243b] hover:bg-[#203554]"><LogIn className="ms-2 h-4 w-4" />تسجيل الدخول</Button></Card></div>;
   }
 
+  const selectedMeta = sectionCards.find(item => item.key === selectedSection);
   return (
     <div dir="rtl" className="como-next-workspace min-h-screen bg-[#f6f6f2] text-slate-900">
-      <header className="relative overflow-hidden bg-[#14243a] text-white">
-        <div className="absolute inset-0 opacity-30" style={{ backgroundImage: "radial-gradient(circle at 15% 20%, #4da9a0 0, transparent 25%), radial-gradient(circle at 85% 0%, #d3aa69 0, transparent 24%)" }} />
-        <div className="relative mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div><button onClick={() => navigate("/")} className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><ArrowLeft className="h-4 w-4" />الصفحة الرئيسية</button><div className="flex items-center gap-3"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20"><BriefcaseBusiness className="h-6 w-6 text-[#9dd5ca]" /></div><div><p className="text-xs font-bold tracking-[0.18em] text-[#9dd5ca]">COMO NEXT</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">المكتب التنفيذي</h1></div></div><p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">ما يحتاج انتباهك اليوم، وملفات العمل التي تقود القرار والتنفيذ. Manus هو العقل التنفيذي عند تكليفه؛ ولا توجد نتائج مصطنعة أو إجراءات تلقائية.</p></div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={() => navigate("/como-next/project-opening")} className="rounded-xl bg-[#d5ae63] font-black text-[#14243a] hover:bg-[#e3c27f]"><Building2 className="ms-2 h-4 w-4" />فتح مشروع من وثيقته</Button>
-              <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />
-            </div>
+      <header className="border-b border-slate-200 bg-[#14243a] text-white">
+        <div className="mx-auto flex min-h-20 max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate("/")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"><ArrowLeft className="h-4 w-4" /></button>
+            <div><p className="text-[10px] font-bold tracking-[.16em] text-[#9dd5ca]">COMO NEXT</p><h1 className="text-xl font-black">المكتب التنفيذي</h1></div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate("/sara")} className="rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10">اليوم مع سارة</Button>
+            <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
-        {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <Tabs value={activeTab} onValueChange={updateTab}>
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <TabsList className={`grid h-12 w-full ${user.role === "admin" ? "grid-cols-4 sm:w-[720px]" : "grid-cols-2 sm:w-[360px]"} rounded-2xl bg-white p-1 shadow-sm ring-1 ring-slate-200`}><TabsTrigger value="today" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><CalendarClock className="ms-2 h-4 w-4" />اليوم</TabsTrigger><TabsTrigger value="work-files" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><FileStack className="ms-2 h-4 w-4" />ملفات العمل</TabsTrigger>{user.role === "admin" ? <TabsTrigger value="email" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Inbox className="ms-2 h-4 w-4" />البريد</TabsTrigger> : null}{user.role === "admin" ? <TabsTrigger value="transfer" className="rounded-xl font-bold data-[state=active]:bg-[#16243b] data-[state=active]:text-white"><Database className="ms-2 h-4 w-4" />منطقة النقل</TabsTrigger> : null}</TabsList>
-            <p className="text-xs text-slate-500">آخر قراءة <bdi dir="ltr">{formatDateTime(data.today.generatedAt)}</bdi> · توقيت دبي</p>
-          </div>
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+        {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <>
+          {!selectedSection ? <section>
+            <h2 className="mb-4 text-2xl font-black text-slate-950">كل ما عليك</h2>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="font-black text-slate-900">{item.title}</span></span><span className="flex shrink-0 items-center gap-3"><bdi className="text-lg font-black text-slate-700">{item.count}</bdi><ChevronLeft className="h-4 w-4 text-slate-300 group-hover:text-[#1e6478]" /></span></button>; })}
+            </div>
+          </section> : <section>
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>
+              <div className="text-left"><h2 className="text-xl font-black text-slate-950">{selectedMeta?.title || "المكتب التنفيذي"}</h2>{selectedMeta ? <bdi className="text-xs font-bold text-slate-400">{selectedMeta.count}</bdi> : null}</div>
+            </div>
 
-          <TabsContent value="today" className="mt-0 space-y-6">
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مستحق اليوم</p><p className="mt-2 text-3xl font-black text-slate-900"><bdi>{data.today.summary.dueToday}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><CalendarClock className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">متأخر</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.today.summary.overdue}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><AlertCircle className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-rose-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">قرارات مطلوبة</p><p className="mt-2 text-3xl font-black text-rose-700"><bdi>{data.decisions.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-sky-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مسودات للمراجعة</p><p className="mt-2 text-3xl font-black text-sky-700"><bdi>{data.draftCommunications.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><Mail className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-teal-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">اجتماعات تحتاج انتباهًا</p><p className="mt-2 text-3xl font-black text-teal-700"><bdi>{data.meetingAttention.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><CalendarDays className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بانتظار الخارج</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.today.summary.waitingExternal}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Clock3 className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-violet-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">لدى Manus</p><p className="mt-2 text-3xl font-black text-violet-700"><bdi>{data.today.summary.manus}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><Sparkles className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-amber-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">بريد يحتاج مراجعة</p><p className="mt-2 text-3xl font-black text-amber-700"><bdi>{data.emailAttention.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Inbox className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-violet-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مقترحات بانتظارك</p><p className="mt-2 text-3xl font-black text-violet-700"><bdi>{data.intakeProposals.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><Sparkles className="h-6 w-6" /></div></div></Card>
-              <Card className="rounded-3xl border-teal-100 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-xs font-bold text-slate-400">مسودات التخصصات</p><p className="mt-2 text-3xl font-black text-teal-700"><bdi>{data.specialistAttention.length}</bdi></p></div><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><BriefcaseBusiness className="h-6 w-6" /></div></div></Card>
-            </section>
-
-            {data.emailAttention.length ? <Card className="rounded-3xl border-amber-100 bg-[#fffdf7] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700"><Inbox className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">بريد وارد يحتاج مراجعتك</h2><p className="text-xs text-slate-500">سارة تعرض التنبيه؛ الربط أو تكليف Manus أو إنشاء مسودة يحتاج اختيارك.</p></div></div><Button variant="ghost" onClick={() => updateTab("email")} className="rounded-xl text-amber-800">فتح الصندوق<ChevronLeft className="me-1 h-4 w-4" /></Button></div><div className="grid gap-3 lg:grid-cols-2">{data.emailAttention.slice(0, 4).map((item: any) => <button key={item.id} type="button" onClick={() => updateTab("email")} className="rounded-2xl border border-amber-100 bg-white p-4 text-right transition hover:border-amber-300"><p className="line-clamp-1 text-sm font-black text-slate-900">{item.subject}</p><p className="mt-2 text-xs text-slate-500">{item.fromName || item.fromEmail} · {formatDateTime(item.receivedAt)}</p></button>)}</div></Card> : null}
-
-            <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} />
-
-            {data.specialistAttention.length ? <Card className="rounded-3xl border-teal-100 bg-[#f6fbfa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-100 text-teal-800"><BriefcaseBusiness className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">مسودات تخصصية تنتظر مراجعتك</h2><p className="text-xs text-slate-500">مراقب المشروع ومدير العقود أعدّا تحليلاً داخليًا؛ لا يوجد أي تنفيذ أو إرسال.</p></div></div><Badge variant="outline" className="rounded-full border-teal-200 bg-white text-teal-700"><bdi>{data.specialistAttention.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="rounded-2xl border border-teal-100 bg-white p-4 text-right transition hover:border-teal-300"><div className="flex items-center justify-between gap-2"><Badge variant="outline" className="rounded-full bg-teal-50 text-[10px] text-teal-800">{item.capabilityCode === "contract_manager" ? "مدير العقود" : "مراقب المشروع"}</Badge><span className="text-[10px] text-slate-400">{formatDateTime(item.createdAt)}</span></div><p className="mt-3 line-clamp-2 text-sm font-black leading-6 text-slate-900">{item.executiveSummary || item.requestText}</p></button>)}</div></Card> : null}
-
-            {data.decisions.length ? <Card className="rounded-3xl border-rose-100 bg-[#fffafa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-rose-700"><Scale className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">قرارات تنتظر الحسم</h2><p className="text-xs text-slate-500">لا تتحول إلى إجراء خارجي قبل تسجيل القرار وسلطته.</p></div></div><Badge variant="outline" className="rounded-full border-rose-200 bg-white text-rose-700"><bdi>{data.decisions.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
-
-            {data.draftCommunications.length ? <Card className="rounded-3xl border-sky-100 bg-[#f8fcfd] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-50 text-sky-700"><SendHorizontal className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">مراسلات تنتظر المراجعة</h2><p className="text-xs text-slate-500">المسودة لا تُرسل. بعد اعتمادها يبقى تسجيل دليل الإرسال خطوة منفصلة.</p></div></div><Badge variant="outline" className="rounded-full border-sky-200 bg-white text-sky-700"><bdi>{data.draftCommunications.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.draftCommunications.map((item: any) => <TodayCommunicationCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
-
-            {data.meetingAttention.length ? <Card className="rounded-3xl border-teal-100 bg-[#f6fbfa] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"><CalendarDays className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">غرف اجتماعات تحتاج انتباهك</h2><p className="text-xs text-slate-500">تحضير أو مقترحات Manus أو مسودة محضر تنتظر مراجعة واضحة.</p></div></div><Badge variant="outline" className="rounded-full border-teal-200 bg-white text-teal-700"><bdi>{data.meetingAttention.length}</bdi></Badge></div><div className="grid gap-3 lg:grid-cols-2">{data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card> : null}
-
-            {data.today.summary.dueToday === 0 && data.decisions.length === 0 && data.draftCommunications.length === 0 && data.meetingAttention.length === 0 && data.emailAttention.length === 0 && data.intakeProposals.length === 0 && data.specialistAttention.length === 0 ? <EmptyState title="لا توجد متابعة أو قرارات أو مسودات أو اجتماعات أو رسائل أو مقترحات مستحقة اليوم" description="اليوم هادئ. الملفات النشطة ظاهرة أدناه، ويمكنك فتح أي ملف وإضافة الإجراء أو القرار التالي." action={<Button variant="outline" onClick={() => updateTab("work-files")} className="rounded-xl bg-white">عرض ملفات العمل</Button>} /> : <section className="grid gap-5 lg:grid-cols-2">{todaySections.filter(section => section.items.length > 0).map(section => { const Icon = section.icon; return <Card key={section.key} className="rounded-3xl border-slate-200 bg-[#fbfbf8] p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${section.accent}`}><Icon className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{section.title}</h2><p className="text-xs text-slate-500">{section.description}</p></div></div><Badge variant="outline" className="rounded-full bg-white"><bdi>{section.items.length}</bdi></Badge></div><div className="space-y-3">{section.items.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />)}</div></Card>; })}</section>}
-
-            <section><div className="mb-4 flex items-end justify-between"><div><h2 className="text-lg font-black">نبض ملفات العمل</h2><p className="mt-1 text-sm text-slate-500">أهم الملفات النشطة وما الذي ينتظرها.</p></div><Button variant="ghost" onClick={() => updateTab("work-files")} className="rounded-xl text-[#1e6478]">عرض الكل<ChevronLeft className="me-1 h-4 w-4" /></Button></div>{data.workFiles.length === 0 ? <EmptyState title="لم تفتح ملفات عمل بعد" description="ابدأ بموضوع حقيقي له سؤال حاكم ونتيجة مطلوبة، ثم أضف إجراءه التالي." action={<NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />} /> : <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.slice(0, 3).map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}</section>
-          </TabsContent>
-
-          <TabsContent value="work-files" className="mt-0 space-y-8">
-            <section><div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[11px] font-black text-[#1e6478]">الإدارة من مستوى المشروع</p><h2 className="text-xl font-black">الملفات التنفيذية للمشاريع</h2><p className="mt-1 text-sm leading-6 text-slate-500">كل مشروع يجمع ذاكرته وملفات عمله وقراراته ومراسلاته واجتماعاته في مكان واحد.</p></div><div className="flex items-center gap-2 text-xs text-slate-500"><FolderOpen className="h-4 w-4" /><bdi>{projectsQuery.data?.length || 0}</bdi> مشروع</div></div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{(projectsQuery.data || []).map(project => { const activeCount = data.workFiles.filter((file: any) => file.projectId === project.id).length; return <button key={project.id} type="button" onClick={() => navigate(`/como-next/projects/${project.id}`)} className="group relative overflow-hidden rounded-[26px] border border-slate-200 bg-white p-5 text-right shadow-sm transition hover:-translate-y-1 hover:border-[#8fb7c2] hover:shadow-xl"><div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-[#173d4b] via-[#55a696] to-[#d5aa68]" /><div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black text-[#1e6478]">ملف المشروع الموحد</p><h3 className="mt-2 text-base font-black leading-7 text-slate-900">{project.name}</h3><p className="mt-1 text-xs text-slate-500">{project.plotNumber ? `قطعة ${project.plotNumber}` : "مرجع المشروع الرسمي"}</p></div><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#eaf4f3] text-[#1e6478]"><FolderOpen className="h-5 w-5" /></div></div><div className="mt-5 flex items-center justify-between rounded-2xl bg-[#f7f8f6] px-4 py-3"><span className="text-xs font-semibold text-slate-600">{activeCount ? `${activeCount} ملفات عمل نشطة` : "لا توجد ملفات نشطة"}</span><ChevronLeft className="h-4 w-4 text-[#1e6478] transition group-hover:-translate-x-1" /></div></button>; })}</div>
-            </section>
-            <section><div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h2 className="text-xl font-black">ملفات العمل النشطة</h2><p className="mt-1 text-sm leading-6 text-slate-500">كل ملف يبدأ بسؤال، وينتهي بدليل، وبينهما إجراءات ومسؤوليات واضحة.</p></div><div className="flex items-center gap-2 text-xs text-slate-500"><BriefcaseBusiness className="h-4 w-4" /><bdi>{data.workFiles.length}</bdi> ملف نشط</div></div>
-              {data.workFiles.length === 0 ? <EmptyState title="لا توجد ملفات عمل" description="افتح أول ملف من زر «فتح ملف عمل» في أعلى الصفحة." /> : <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">{data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />)}</div>}
-            </section>
-          </TabsContent>
-
-          {user.role === "admin" ? <TabsContent value="email" className="mt-0">
-            <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} />
-          </TabsContent> : null}
-
-          {user.role === "admin" ? <TabsContent value="transfer" className="mt-0">
-            <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} />
-          </TabsContent> : null}
-        </Tabs> : null}
+            {selectedSection === "actions" ? <div className="space-y-2">{data.actions.length ? data.actions.map((item: any) => <TodayActionCard key={item.id} item={item} onOpen={openWorkFile} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد إجراءات مفتوحة</div>}</div> : null}
+            {selectedSection === "decisions" ? <div className="space-y-2">{data.decisions.length ? data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={(workFileId, decisionId) => openFocusedRecord(workFileId, "decision", decisionId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد قرارات مطلوبة</div>}</div> : null}
+            {selectedSection === "communications" ? <div className="space-y-2">{data.draftCommunications.length ? data.draftCommunications.map((item: any) => <TodayCommunicationCard key={item.id} item={item} onOpen={(workFileId, communicationId) => openFocusedRecord(workFileId, "communication", communicationId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مسودات تنتظر المراجعة</div>}</div> : null}
+            {selectedSection === "meetings" ? <div className="space-y-2">{data.meetingAttention.length ? data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={(workFileId, meetingId) => openFocusedRecord(workFileId, "meeting", meetingId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد اجتماعات تحتاج انتباهك</div>}</div> : null}
+            {selectedSection === "email" && user.role === "admin" ? <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} /> : null}
+            {selectedSection === "intake" ? <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} /> : null}
+            {selectedSection === "specialists" ? <div className="space-y-2">{data.specialistAttention.length ? data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm hover:border-emerald-200"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.executiveSummary || item.requestText}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-emerald-700" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مراجعات تخصصية معلقة</div>}</div> : null}
+            {selectedSection === "work-files" ? <div className="space-y-2">{data.workFiles.length ? data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد ملفات عمل نشطة</div>}</div> : null}
+            {selectedSection === "transfer" && user.role === "admin" ? <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} /> : null}
+          </section>}
+        </> : null}
       </main>
 
-      <WorkFileSheet workFileId={selectedWorkFileId} actionId={selectedActionId} open={selectedWorkFileId !== null} onOpenChange={open => { if (!open) closeWorkFile(); }} onActionChange={changeFocusedAction} onChanged={refresh} />
+      <WorkFileSheet workFileId={selectedWorkFileId} focusKind={selectedFocusKind} focusId={selectedFocusId} open={selectedWorkFileId !== null} onOpenChange={open => { if (!open) closeWorkFile(); }} onActionChange={changeFocusedAction} onFocusBack={leaveFocusedRecord} onChanged={refresh} />
     </div>
   );
 }

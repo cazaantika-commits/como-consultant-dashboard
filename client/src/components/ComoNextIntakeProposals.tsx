@@ -88,7 +88,7 @@ function ProposalDialog({ proposal, open, onOpenChange, onChanged }: { proposal:
   };
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent dir="rtl" className="max-h-[92vh] max-w-3xl overflow-y-auto rounded-[28px] border-slate-200 bg-[#fbfbf8]">
+    <DialogContent dir="rtl" className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none border-slate-200 bg-[#fbfbf8] sm:h-[94dvh] sm:max-w-3xl sm:rounded-[28px]">
       <DialogHeader className="text-right">
         <div className="flex items-center gap-2"><Badge variant="outline" className={`rounded-full ${kind.tone}`}>{kind.label}</Badge><Badge variant="outline" className="rounded-full bg-white"><SourceIcon className="ms-1 h-3.5 w-3.5" />{sourceMeta[proposal.sourceKind]?.label}</Badge></div>
         <DialogTitle className="pt-2 text-xl">مراجعة المقترح قبل أي أثر تشغيلي</DialogTitle>
@@ -121,11 +121,7 @@ export function ComoNextIntakeProposals({ proposals, onChanged, onOpenWorkFile, 
   const [selected, setSelected] = useState<any | null>(null);
   if (!proposals?.length) return null;
   return <>
-    <Card className="rounded-3xl border-violet-100 bg-[linear-gradient(135deg,#fcfbff,#f7fbff)] p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-100 text-violet-800"><Sparkles className="h-5 w-5" /></div><div><h2 className="text-base font-black text-slate-900">{title}</h2><p className="text-xs text-slate-500">قادمة من البريد أو حديثك مع سارة؛ لا أثر لها قبل اعتمادك.</p></div></div><Badge variant="outline" className="rounded-full border-violet-200 bg-white text-violet-800"><bdi>{proposals.length}</bdi></Badge></div>
-      <div className="grid gap-3 lg:grid-cols-2">{proposals.map(proposal => { const meta = kindMeta[proposal.proposalKind] || kindMeta.note; const Icon = meta.icon; const SourceIcon = (sourceMeta[proposal.sourceKind] || sourceMeta.email).icon; return <button key={proposal.id} type="button" onClick={() => setSelected(proposal)} className="rounded-2xl border border-violet-100 bg-white p-4 text-right transition hover:-translate-y-0.5 hover:border-violet-300 hover:shadow-md"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="mb-2 flex flex-wrap gap-2"><Badge variant="outline" className={`rounded-full text-[10px] ${meta.tone}`}><Icon className="ms-1 h-3 w-3" />{meta.label}</Badge><Badge variant="outline" className="rounded-full bg-white text-[10px]"><SourceIcon className="ms-1 h-3 w-3" />{sourceMeta[proposal.sourceKind]?.label}</Badge></div><h3 className="text-sm font-black leading-6 text-slate-900">{proposal.title}</h3><p className="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">{proposal.content || proposal.evidenceExcerpt}</p><p className="mt-3 text-[10px] font-bold text-violet-700">{proposal.projectName} · {proposal.workFileTitle}</p></div><Sparkles className="h-4 w-4 shrink-0 text-violet-300" /></div></button>; })}</div>
-      {onOpenWorkFile ? <div className="mt-4 text-left"><Button variant="ghost" size="sm" onClick={() => onOpenWorkFile(proposals[0].workFileId)} className="rounded-xl text-violet-800">فتح ملف العمل</Button></div> : null}
-    </Card>
+    <div className="space-y-2">{proposals.map(proposal => <button key={proposal.id} type="button" onClick={() => setSelected(proposal)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-violet-300 hover:shadow-md"><h3 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{proposal.title}</h3><Sparkles className="h-4 w-4 shrink-0 text-violet-300 group-hover:text-violet-700" /></button>)}</div>
     <ProposalDialog proposal={selected} open={Boolean(selected)} onOpenChange={value => { if (!value) setSelected(null); }} onChanged={onChanged} />
   </>;
 }

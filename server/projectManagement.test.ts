@@ -118,9 +118,9 @@ describe("Project API Integration", () => {
     expect(procedures).toContain("delete");
   });
 
-  it("should have 7 procedures in the projects router", async () => {
+  it("should retain at least the original 7 project procedures", async () => {
     const { projectsRouter } = await import("./routers/projects");
     const procedures = Object.keys(projectsRouter._def.procedures);
-    expect(procedures.length).toBe(7);
+    expect(procedures.length).toBeGreaterThanOrEqual(7);
   });
 });

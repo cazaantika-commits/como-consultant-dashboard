@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 const launchSource = readFileSync("server/routers/projectLaunchGate.ts", "utf8");
 const meetingSource = readFileSync("server/routers/meetings.ts", "utf8");
 const homeSource = readFileSync("client/src/pages/Home.tsx", "utf8");
+const saraSource = readFileSync("client/src/pages/SaraPage.tsx", "utf8");
 const marketDecisionSource = readFileSync("client/src/components/feasibility/MarketDecisionTab.tsx", "utf8");
 const meetingRoomSource = readFileSync("client/src/pages/MeetingRoomPage.tsx", "utf8");
 
@@ -27,19 +28,15 @@ describe("owner workflow references", () => {
     expect(saveBlock).not.toContain("db.update(meetings)");
   });
 
-  it("keeps the legacy owner digest read-only but removes it completely from the rebuilt homepage", () => {
-    expect(launchSource).toContain("getOwnerSummary: publicProcedure");
-    expect(launchSource).toContain("ccToken: z.string().min(1).optional()");
-    expect(launchSource).toContain("رمز مركز القيادة غير صالح");
-    const digestBlock = launchSource.slice(launchSource.indexOf("getOwnerSummary: publicProcedure"));
-    expect(digestBlock).toContain("db.select().from(tasks)");
-    expect(digestBlock).toContain("db.select().from(meetings)");
-    expect(digestBlock).toContain("FROM project_change_requests");
-    expect(digestBlock).not.toMatch(/\.insert\(|\.update\(|\.delete\(/);
+  it("keeps the removed legacy digest out of both the launch router and the rebuilt homepage", () => {
+    expect(launchSource).not.toContain("getOwnerSummary");
+    expect(launchSource).toContain("get: protectedProcedure");
+    expect(launchSource).toContain("requireProjectAccess");
     expect(homeSource).not.toContain("projectLaunchGate.getOwnerSummary.useQuery");
     expect(homeSource).not.toContain("اليوم / يحتاج قرارًا");
     expect(homeSource).not.toContain("قراءة تشغيلية من المصادر القائمة");
-    expect(homeSource).toContain("trpc.comoNext.getOverview.useQuery");
-    expect(homeSource).toContain("من COMO Next فقط");
+    expect(homeSource).not.toContain("trpc.comoNext.getOverview.useQuery");
+    expect(saraSource).toContain("trpc.comoNext.getOverview.useQuery");
+    expect(saraSource).toContain("الأهم الآن");
   });
 });

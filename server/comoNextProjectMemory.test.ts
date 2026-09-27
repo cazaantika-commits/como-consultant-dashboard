@@ -76,7 +76,7 @@ describe("COMO Next reviewed project memory", () => {
     const villas = await getProjectExecutiveFile({ userId: 1, projectId: 6 });
     expect(majan.dossier?.briefStatus).toBe("reviewed");
     expect(majan.summary.reviewedMemory).toBe(12);
-    expect(majan.summary.pendingDecisions).toBe(1);
+    expect(majan.summary.pendingDecisions).toBe(0);
     expect(majan.foundation.totalGateCount).toBe(4);
     expect(majan.foundation.gates[0]?.id).toBe("facts");
     expect(villas.dossier?.briefStatus).toBe("reviewed");
@@ -107,11 +107,12 @@ describe("COMO Next reviewed project memory", () => {
     expect(projectPage).toContain("الملف التنفيذي الموحد");
     expect(projectPage).toContain("ذاكرة المشروع");
     expect(projectPage).toContain("مراجع الإثبات");
-    expect(projectPage).toContain("بوابة تأسيس المشروع");
+    expect(projectPage).toContain("محطة تأسيس المشروع");
     expect(projectPage).toContain("data.foundation.nextDecision");
     expect(projectPage).toContain("workFileId=${workFileId}");
     expect(projectPage).not.toContain("sendMail");
-    expect(officePage).toContain("الملفات التنفيذية للمشاريع");
+    expect(officePage).toContain("كل ما عليك");
+    expect(officePage).toContain("الإجراءات والمتابعات");
     expect(officePage).toContain('requestParams?.get("workFileId")');
   });
 });

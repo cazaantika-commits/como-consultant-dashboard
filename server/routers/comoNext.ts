@@ -372,6 +372,7 @@ export const comoNextRouter = router({
 
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
+      actions: todayRows,
       decisions,
       draftCommunications,
       meetingAttention,

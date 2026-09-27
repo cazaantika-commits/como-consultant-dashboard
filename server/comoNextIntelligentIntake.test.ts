@@ -53,7 +53,7 @@ describe("COMO Next intelligent intake safeguards", () => {
   });
 
   it("surfaces proposals in Today and blocks closing their work file before review", () => {
-    expect(todayPage).toContain("مقترحات بانتظارك");
+    expect(todayPage).toContain("مقترحات المراجعة");
     expect(todayPage).toContain("hasPendingIntake");
     expect(commands).toContain("comoNextIntakeProposals");
     expect(commands).toContain("لا يمكن إغلاق الملف قبل مراجعة المقترحات الواردة من البريد أو سارة");
