@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Mic, MicOff, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
+import { BellRing, ListChecks, Mic, MicOff, Newspaper, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { SaraLiveAvatarView, type SaraVisualSpeechCue } from "./SaraLiveAvatarView";
 import { ComoPrimaryNav } from "./ComoPrimaryNav";
 
@@ -15,6 +15,7 @@ const SARA_IDLE_VIDEO = saraIdleVideo;
 
 type TranscriptEntry = { id: string; role: "member" | "sara" | "system"; text: string };
 type VoicePhase = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "error";
+type BriefingMode = "auto" | "full" | "today" | "changes";
 
 type RealtimeEvent = {
   type?: string;
@@ -58,10 +59,13 @@ function float32ToPcmBinary(input: Float32Array) {
 
 export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart = false, streamlined = false }: { token: string; memberName: string; isOpen: boolean; onClose: () => void; autoStart?: boolean; streamlined?: boolean }) {
   const status = trpc.saraRealtime.status.useQuery({ token }, { enabled: isOpen && Boolean(token), staleTime: 60_000 });
+  const briefingStatus = trpc.saraRealtime.briefingStatus.useQuery({ token }, { enabled: isOpen && Boolean(token), staleTime: 20_000 });
   const createSession = trpc.saraRealtime.createSession.useMutation();
   const runTool = trpc.saraRealtime.runTool.useMutation();
   const recordTranscript = trpc.saraRealtime.recordTranscript.useMutation();
   const createAvatarToken = trpc.saraRealtime.createAvatarToken.useMutation();
+  const prepareBriefing = trpc.saraRealtime.prepareBriefing.useMutation();
+  const completeBriefing = trpc.saraRealtime.completeBriefing.useMutation();
 
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [muted, setMuted] = useState(false);
@@ -91,6 +95,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const avatarTokenRef = useRef<string | null>(null);
   const avatarConnectedRef = useRef(false);
   const autoStartedRef = useRef(false);
+  const briefingStartedRef = useRef(false);
+  const pendingBriefingDeliveryRef = useRef<number | null>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
   const live = phase !== "idle" && phase !== "error";
@@ -121,6 +127,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     outputItemIdRef.current = null;
     assistantDraftRef.current = "";
     lastMemberTextRef.current = "";
+    briefingStartedRef.current = false;
+    pendingBriefingDeliveryRef.current = null;
     setPhase("idle");
     setMuted(false);
     setMicrophoneAvailable(true);
@@ -163,6 +171,46 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     channel.send(JSON.stringify(event));
   }, []);
 
+  const finishPendingBriefing = useCallback((completed: boolean) => {
+    const deliveryId = pendingBriefingDeliveryRef.current;
+    if (!deliveryId) return;
+    pendingBriefingDeliveryRef.current = null;
+    completeBriefing.mutate({ token, deliveryId, completed }, {
+      onSuccess: () => { void briefingStatus.refetch(); },
+    });
+  }, [briefingStatus, completeBriefing, token]);
+
+  const playBriefing = useCallback(async (mode: BriefingMode) => {
+    const channel = dataChannelRef.current;
+    if (!channel || channel.readyState !== "open") {
+      if (mode !== "auto") toast.info("لحظة يا زعيم، سارة بعدها عم تتصل");
+      return;
+    }
+    try {
+      if (pendingBriefingDeliveryRef.current) {
+        try { sendRealtimeEvent({ type: "response.cancel" }); } catch { /* no active response */ }
+        finishPendingBriefing(false);
+      }
+      setPhase("thinking");
+      const briefing = await prepareBriefing.mutateAsync({ token, mode, sessionId: sessionIdRef.current });
+      pendingBriefingDeliveryRef.current = briefing.deliveryId;
+      setTranscript(items => mergeTranscript(items, {
+        id: `briefing-${briefing.deliveryId}`,
+        role: "system",
+        text: `${briefing.title} · أعدّها Manus من COMO الآن`,
+      }));
+      sendRealtimeEvent({
+        type: "response.create",
+        response: {
+          instructions: `هذه نشرة أعدّها Manus من مصادر COMO الحالية. قدّمي محتواها بالترتيب نفسه ومن دون حذف حقيقة أو إضافة معلومة. لا تقرئي العلامة ---؛ استخدميها كوقفة قصيرة طبيعية واتركي مجالًا لعبدالرحمن أن يقاطعك أو يعلّق. التزمي بشخصية سارة اللبنانية المرحة المحددة في تعليمات الجلسة.\n\nالنشرة:\n${briefing.text}`,
+        },
+      });
+    } catch (reason) {
+      setPhase("listening");
+      toast.error(reason instanceof Error ? reason.message : "تعذر تجهيز نشرة سارة");
+    }
+  }, [finishPendingBriefing, prepareBriefing, sendRealtimeEvent, token]);
+
   const handleToolCall = useCallback(async (event: RealtimeEvent) => {
     if (!event.call_id || !event.name) return;
     if (event.name !== "lookup_command_center" && event.name !== "lookup_executive_workspace" && event.name !== "capture_intake_proposal") {
@@ -204,6 +252,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       case "input_audio_buffer.speech_started":
         setPhase("listening");
         setAvatarInterruptId(value => value + 1);
+        finishPendingBriefing(false);
         break;
       case "input_audio_buffer.speech_stopped":
         setPhase("thinking");
@@ -243,9 +292,11 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       case "response.done":
         if (event.response?.status === "failed") {
+          finishPendingBriefing(false);
           setPhase("error");
           toast.error(event.response.status_details?.error?.message || "تعذر إكمال رد سارة");
         } else {
+          finishPendingBriefing(event.response?.status === "completed");
           setPhase("listening");
         }
         break;
@@ -254,7 +305,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         toast.error(event.error?.message || "حدث خطأ في جلسة سارة");
         break;
     }
-  }, [handleToolCall, persistTranscript]);
+  }, [finishPendingBriefing, handleToolCall, persistTranscript]);
 
   useEffect(() => { avatarTokenRef.current = avatarToken; }, [avatarToken]);
   useEffect(() => { avatarConnectedRef.current = avatarConnected; }, [avatarConnected]);
@@ -335,10 +386,10 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       channel.onopen = () => {
         setTranscript(items => mergeTranscript(items, { id: "system-start", role: "system", text: "سارة تستمع الآن. يمكنك مقاطعتها في أي لحظة." }));
         setPhase("thinking");
-        channel.send(JSON.stringify({
-          type: "response.create",
-          response: { instructions: `ابدئي بتحية قصيرة جدًا لـ${memberName}. ثم استخدمي lookup_executive_workspace بفئة overview، أعطيه زبدة أهم ثلاث أولويات حالية فقط، واسأليه بأي واحدة يريد أن يبدأ.` },
-        }));
+        if (!briefingStartedRef.current) {
+          briefingStartedRef.current = true;
+          void playBriefing("auto");
+        }
       };
       channel.onclose = () => setPhase("idle");
 
@@ -356,7 +407,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       setPhase("error");
       toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل سارة الصوتية");
     }
-  }, [createSession, handleRealtimeEvent, live, memberName, startOutputCapture, stopSession, token]);
+  }, [createSession, handleRealtimeEvent, live, playBriefing, startOutputCapture, stopSession, token]);
 
   const startAvatar = useCallback(async (quiet = false) => {
     if (avatarTokenRef.current || createAvatarToken.isPending) return true;
@@ -437,6 +488,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     speaking: "تتحدث الآن",
     error: "الاتصال متوقف",
   };
+  const briefingButtonDisabled = !live || prepareBriefing.isPending || phase === "connecting" || phase === "thinking" || phase === "speaking";
 
   return (
     <div
@@ -506,6 +558,43 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
               {!live ? <Button onClick={startSession} disabled={createSession.isPending || !status.data?.realtimeConfigured} className="h-12 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800"><Phone className="ml-2 h-5 w-5" /> ابدأ الحديث مع سارة</Button> : <><Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">{!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}</Button><Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button></>}
               <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} variant="outline" className="h-11 rounded-2xl bg-white lg:hidden">{avatarToken ? <VideoOff className="ml-2 h-4 w-4" /> : <Video className="ml-2 h-4 w-4" />}{avatarToken ? "إيقاف الصورة" : "صورة حية"}</Button>
             </div> : phase === "error" ? <Button onClick={() => { autoStartedRef.current = false; void startSession(); void startAvatar(true); }} className="mb-3 h-10 w-full rounded-xl bg-slate-900 text-white">إعادة الاتصال بسارة</Button> : null}
+            <div className="mb-2 grid grid-cols-3 gap-1.5 sm:mb-3 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { void playBriefing("full"); }}
+                disabled={briefingButtonDisabled}
+                title="تعمل تلقائيًا عند أول فتح صباحًا، ومرة أخرى كخلاصة مسائية"
+                className="h-10 min-w-0 rounded-xl border-amber-200 bg-amber-50 px-2 text-[10px] font-black text-amber-950 hover:bg-amber-100 sm:h-11 sm:text-xs"
+              >
+                <Newspaper className="ml-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">الموجز الشامل</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { void playBriefing("today"); }}
+                disabled={briefingButtonDisabled}
+                title="ما يحتاج حركة اليوم، مرتبًا حسب التوقيت والأثر"
+                className="h-10 min-w-0 rounded-xl border-sky-200 bg-sky-50 px-2 text-[10px] font-black text-sky-950 hover:bg-sky-100 sm:h-11 sm:text-xs"
+              >
+                <ListChecks className="ml-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">أعمال اليوم</span>
+                {briefingStatus.data ? <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[9px] shadow-sm">{briefingStatus.data.todayCount}</span> : null}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { void playBriefing("changes"); }}
+                disabled={briefingButtonDisabled}
+                title="فقط ما تغير منذ آخر نشرة اكتمل سماعها"
+                className="h-10 min-w-0 rounded-xl border-emerald-200 bg-emerald-50 px-2 text-[10px] font-black text-emerald-950 hover:bg-emerald-100 sm:h-11 sm:text-xs"
+              >
+                <BellRing className="ml-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">ما الجديد؟</span>
+                {briefingStatus.data?.hasHeardBriefing && briefingStatus.data.changesCount > 0 ? <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[9px] shadow-sm">{briefingStatus.data.changesCount}</span> : null}
+              </Button>
+            </div>
             <div className="flex items-center gap-2">
               <Input value={textInput} onChange={event => setTextInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter") sendText(); }} placeholder="اكتب لسارة…" disabled={!live} className="h-11 rounded-xl bg-white" />
               {streamlined && live ? <Button onClick={toggleMute} variant="outline" size="icon" className="h-11 w-11 flex-none rounded-xl bg-white">{!microphoneAvailable || muted ? <MicOff className="h-4 w-4 text-rose-500" /> : <Mic className="h-4 w-4 text-emerald-600" />}</Button> : null}

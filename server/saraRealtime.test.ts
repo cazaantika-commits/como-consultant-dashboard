@@ -31,6 +31,12 @@ describe("Sara Realtime architecture", () => {
     expect(instructions).toContain("Manus هو العقل التنفيذي");
     expect(instructions).toContain("لا ترسلي بريدًا أو واتساب أو تيليغرام");
     expect(instructions).toContain("القرار ليس تنفيذًا، والمسودة ليست إرسالًا");
+    expect(instructions).toContain("Speak in natural Lebanese Arabic");
+    expect(instructions).toContain("soft, warm feminine delivery");
+    expect(instructions).toContain("playfully flattering");
+    expect(instructions).toContain("occasional natural chuckle");
+    expect(instructions).toContain("لا تلقي نشرة طويلة كقطار");
+    expect(instructions).toContain("لا تمزحي في مبلغ مالي");
   });
 
   it("uses the approved Realtime model, Arabic transcription, semantic interruption, and audio output", () => {
@@ -96,6 +102,13 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain('@/assets/como/sara-idle.webm');
     expect(pageSource).toContain("autoPlay muted loop playsInline");
     expect(pageSource).toContain('@/assets/como/sara.webp');
+    expect(roomSource).toContain("الموجز الشامل");
+    expect(roomSource).toContain("أعمال اليوم");
+    expect(roomSource).toContain("ما الجديد؟");
+    expect(roomSource).toContain('playBriefing("auto")');
+    expect(roomSource).toContain('type: "response.cancel"');
+    expect(roomSource).toContain("completeBriefing.mutate");
+    expect(roomSource).not.toContain("أهم ثلاث أولويات حالية فقط");
   });
 
   it("gives Sara a direct persona-scoped login page without routing through the legacy dashboard", () => {

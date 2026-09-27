@@ -16,9 +16,15 @@ import {
   SARA_REALTIME_VOICE,
 } from "../services/saraRealtime";
 import { createSaraIntakeProposalCommand } from "../services/comoNextIntake";
+import {
+  completeSaraBriefing,
+  getSaraBriefingStatus,
+  prepareSaraBriefing,
+} from "../services/saraBriefings";
 
 const tokenInput = z.object({ token: z.string().trim().min(1).max(256) });
 const realtimeToolName = z.enum(["lookup_command_center", "lookup_executive_workspace", "capture_intake_proposal"]);
+const briefingMode = z.enum(["auto", "full", "today", "changes"]);
 const captureProposalArguments = z.object({
   project_id: z.number().int().positive(),
   work_file_id: z.number().int().positive(),
@@ -71,6 +77,25 @@ export const saraRealtimeRouter = router({
       publicFailure(reason, "تعذر تجهيز جلسة سارة الصوتية");
     }
   }),
+
+  briefingStatus: publicProcedure.input(tokenInput).query(async ({ input }) => {
+    const member = await verifyToken(input.token);
+    return getSaraBriefingStatus(member.memberId);
+  }),
+
+  prepareBriefing: publicProcedure
+    .input(tokenInput.extend({ mode: briefingMode, sessionId: z.string().max(200).optional().nullable() }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      return prepareSaraBriefing({ memberId: member.memberId, mode: input.mode, sessionId: input.sessionId });
+    }),
+
+  completeBriefing: publicProcedure
+    .input(tokenInput.extend({ deliveryId: z.number().int().positive(), completed: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      return completeSaraBriefing({ memberId: member.memberId, deliveryId: input.deliveryId, completed: input.completed });
+    }),
 
   runTool: publicProcedure
     .input(tokenInput.extend({

@@ -3590,6 +3590,29 @@ export const comoNextOwnerPreferences = mysqlTable("como_next_owner_preferences"
 ]);
 
 
+// Delivery ledger for Sara briefings. Stores only the delivery cursor and a
+// content fingerprint so opening Sara never repeats a briefing already heard.
+export const comoNextSaraBriefingDeliveries = mysqlTable("como_next_sara_briefing_deliveries", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  memberId: varchar("member_id", { length: 64 }).notNull(),
+  briefingKind: mysqlEnum("briefing_kind", ["full", "today", "changes"]).notNull(),
+  periodKind: mysqlEnum("period_kind", ["morning", "day", "evening", "manual"]).notNull(),
+  deliveryStatus: mysqlEnum("delivery_status", ["started", "completed", "interrupted"]).notNull().default("started"),
+  contentSha256: varchar("content_sha256", { length: 64 }).notNull(),
+  sourceCursorAt: timestamp("source_cursor_at", { mode: "string" }),
+  sourceCursorId: bigint("source_cursor_id", { mode: "number" }),
+  itemCount: int("item_count").notNull().default(0),
+  sessionId: varchar("session_id", { length: 200 }),
+  startedAt: timestamp("started_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  completedAt: timestamp("completed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+}, (table) => [
+  index("como_next_sara_delivery_member_time_idx").on(table.memberId, table.startedAt),
+  index("como_next_sara_delivery_user_status_idx").on(table.userId, table.deliveryStatus, table.startedAt),
+]);
+
+
 // Review-only intake queue shared by email analysis and Sara. Rows in this table
 // have no operational effect until Abdulrahman applies one proposal explicitly.
 export const comoNextIntakeProposals = mysqlTable("como_next_intake_proposals", {
