@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildExecutiveKitchenQueue } from "./services/comoNextKitchen";
+import { buildExecutiveKitchenQueue, buildOperationalUpdatePrompt } from "./services/comoNextKitchen";
 
 const migration = readFileSync("drizzle/0093_como_next_executive_kitchen.sql", "utf8");
 const kitchenService = readFileSync("server/services/comoNextKitchen.ts", "utf8");
@@ -38,9 +38,53 @@ describe("COMO Next executive kitchen", () => {
     expect(migration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE|UPDATE)\s/im);
     expect(kitchenService).toContain('model: UPDATE_ANALYSIS_MODEL');
     expect(kitchenService).toContain('analysisStatus: "draft"');
+    expect(kitchenService).toContain("نص التحديث كتبه عبد الرحمن داخل التطبيق");
+    expect(kitchenService).toContain("كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل");
+    expect(kitchenService).toContain("لا تقترح إرفاقها أو ربطها مرة أخرى");
+    expect(kitchenService).toContain("ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا");
     expect(kitchenService).toContain('input.decision === "dismiss"');
     expect(kitchenService).toContain('createActionCommand');
     expect(kitchenService).not.toContain("sendReply(");
+  });
+
+  it("gives Manus the latest linked correspondence before judging an operational update", () => {
+    const prompt = buildOperationalUpdatePrompt({
+      workFile: {
+        title: "مراجعة عرض رياليستيك المعدل",
+        governingQuestion: "هل وصل تأكيد الموعد؟",
+        desiredOutcome: "انتظار تأكيد موعد الاثنين",
+      },
+      action: {
+        title: "انتظار تأكيد رياليستيك",
+        actionStatus: "completed_pending_verification",
+        acceptanceCriteria: "ربط دليل التأكيد",
+      },
+      activeActions: [{
+        title: "تحضير اجتماع رياليستيك المؤكد",
+        actionStatus: "open",
+        acceptanceCriteria: "اكتمال محاور الاجتماع",
+      }],
+      update: {
+        sourceChannel: "email",
+        occurredAt: "2026-09-27 16:38:23",
+        updateText: "تم التأكيد",
+      },
+      communications: [{
+        id: 120013,
+        direction: "inbound",
+        communicationStatus: "received",
+        subject: "RE: Invitation to Submit Consultancy Proposal",
+        body: "Yes Confirmed",
+        occurredAt: "2026-09-25 13:34:58",
+        evidenceReference: "IMAP UID=436",
+      }],
+    });
+
+    expect(prompt).toContain("أحدث المراسلات المرتبطة والمحفوظة بالفعل داخل الملف");
+    expect(prompt).toContain("Yes Confirmed");
+    expect(prompt).toContain("IMAP UID=436");
+    expect(prompt).toContain("تحضير اجتماع رياليستيك المؤكد");
+    expect(prompt.indexOf("انتظار تأكيد موعد الاثنين")).toBeLessThan(prompt.indexOf("Yes Confirmed"));
   });
 
   it("opens on one title-only Now queue and preserves full focus for one record", () => {
@@ -61,6 +105,6 @@ describe("COMO Next executive kitchen", () => {
     expect(scheduleRoute).toContain("serverFlagsChanged: false");
     expect(scheduleRoute).not.toContain("analyzeEmailCommand");
     expect(scheduleRoute).not.toContain("sendReply");
-    expect(emailPage).toContain("تحديث مقروء فقط كل ساعة");
+    expect(emailPage).toContain("06:00 · 11:00 · 17:00 بتوقيت دبي");
   });
 });

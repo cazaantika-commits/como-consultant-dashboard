@@ -1,7 +1,8 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 import {
   comoNextActions,
+  comoNextCommunications,
   comoNextWorkFileUpdates,
   comoNextWorkFiles,
 } from "../../drizzle/schema";
@@ -42,6 +43,52 @@ const updateAnalysisSchema = {
   required: ["summary", "nextStepRequired", "rationale", "suggestedActionTitle", "suggestedActionDescription", "suggestedAcceptanceCriteria", "suggestedPriority", "suggestedDueAt"],
   additionalProperties: false,
 } as const;
+
+type UpdateEvidenceRow = {
+  id: number;
+  direction: string;
+  communicationStatus: string;
+  subject: string;
+  body: string;
+  occurredAt: string | null;
+  evidenceReference?: string | null;
+};
+
+export function buildOperationalUpdatePrompt(input: {
+  workFile: { title: string; governingQuestion: string; desiredOutcome: string };
+  action?: { title: string; actionStatus: string; acceptanceCriteria: string } | null;
+  activeActions?: Array<{ title: string; actionStatus: string; acceptanceCriteria: string }>;
+  update: { sourceChannel: string; occurredAt: string; updateText: string };
+  communications: UpdateEvidenceRow[];
+}) {
+  const evidence = input.communications.length
+    ? input.communications.map((row, index) => [
+        `${index + 1}. ${row.direction === "inbound" ? "وارد" : row.direction === "outbound" ? "صادر" : "داخلي"} · ${row.occurredAt || "بلا تاريخ"}`,
+        `الموضوع: ${row.subject}`,
+        `الحالة: ${row.communicationStatus}`,
+        `المحتوى: ${String(row.body || "").trim().slice(0, 2500)}`,
+        row.evidenceReference ? `مرجع الدليل: ${row.evidenceReference}` : null,
+      ].filter(Boolean).join("\n")).join("\n\n")
+    : "لا توجد مراسلات مرتبطة بالملف.";
+  const activeActions = input.activeActions?.length
+    ? input.activeActions.map((row, index) => `${index + 1}. ${row.title} · ${row.actionStatus}\nمعيار القبول: ${row.acceptanceCriteria}`).join("\n\n")
+    : "لا توجد إجراءات نشطة أخرى.";
+
+  return `ملف العمل: ${input.workFile.title}
+السؤال الحاكم المسجل سابقًا: ${input.workFile.governingQuestion}
+النتيجة المطلوبة المسجلة سابقًا: ${input.workFile.desiredOutcome}
+${input.action ? `الإجراء المرتبط: ${input.action.title}\nحالته: ${input.action.actionStatus}\nمعيار القبول: ${input.action.acceptanceCriteria}` : "لا يوجد إجراء محدد مرتبط بالتحديث."}
+قناة التحديث: ${input.update.sourceChannel}
+وقت الحدث: ${input.update.occurredAt}
+نص التحديث:
+${input.update.updateText}
+
+الإجراءات النشطة الحالية في الملف:
+${activeActions}
+
+أحدث المراسلات المرتبطة والمحفوظة بالفعل داخل الملف، من الأحدث إلى الأقدم:
+${evidence}`;
+}
 
 export function buildExecutiveKitchenQueue(input: {
   actions: any[];
@@ -148,11 +195,31 @@ export async function recordWorkFileUpdateCommand(input: {
 export async function analyzeWorkFileUpdateCommand(input: { userId: number; updateId: number }) {
   const { db, update, workFile, action } = await loadUpdateContext(input.userId, input.updateId, "write");
   if (update.analysisStatus === "applied" || update.analysisStatus === "dismissed") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تمت مراجعة هذا التحديث بالفعل" });
+  const recentCommunications = await db.select({
+    id: comoNextCommunications.id,
+    direction: comoNextCommunications.direction,
+    communicationStatus: comoNextCommunications.communicationStatus,
+    subject: comoNextCommunications.subject,
+    body: comoNextCommunications.body,
+    occurredAt: comoNextCommunications.occurredAt,
+    evidenceReference: comoNextCommunications.evidenceReference,
+  }).from(comoNextCommunications)
+    .where(eq(comoNextCommunications.workFileId, workFile.id))
+    .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id))
+    .limit(8);
+  const activeActions = await db.select({
+    title: comoNextActions.title,
+    actionStatus: comoNextActions.actionStatus,
+    acceptanceCriteria: comoNextActions.acceptanceCriteria,
+  }).from(comoNextActions)
+    .where(and(eq(comoNextActions.workFileId, workFile.id), notInArray(comoNextActions.actionStatus, ["verified", "cancelled"])))
+    .orderBy(desc(comoNextActions.updatedAt))
+    .limit(12);
   const response = await invokeLLM({
     model: UPDATE_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مرتبطًا بملف عمل. لا تنفذ، لا ترسل، لا تعتمد قرارًا، ولا تغيّر حالة الإجراء. حدّد هل توجد خطوة عملية جديدة فعلًا. إذا كانت المعلومة مجرد إثبات/تأكيد لا يستلزم عملًا جديدًا فاجعل nextStepRequired=false. لا تكرر إجراءً قائمًا. اكتب اقتراحًا واحدًا فقط قابلًا للمراجعة ومعيار قبول واضحًا إن لزم." },
-      { role: "user", content: `ملف العمل: ${workFile.title}\nالسؤال الحاكم: ${workFile.governingQuestion}\nالنتيجة المطلوبة: ${workFile.desiredOutcome}\n${action ? `الإجراء المرتبط: ${action.title}\nحالته: ${action.actionStatus}\nمعيار القبول: ${action.acceptanceCriteria}` : "لا يوجد إجراء محدد مرتبط بالتحديث."}\nقناة التحديث: ${update.sourceChannel}\nوقت الحدث: ${update.occurredAt}\nنص التحديث:\n${update.updateText}` },
+      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مع كامل الأدلة المرتبطة المعروضة. نص التحديث كتبه عبد الرحمن داخل التطبيق؛ تسمية قناة المصدر لا تعني أنه نص وارد من الطرف الخارجي، فلا تنسب تعليق عبد الرحمن إلى الطرف ولا تقترح ردًا خارجيًا لمجرد أنه سأل النظام أو اشتكى من التتبع. كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل، لذلك لا تقترح إرفاقها أو ربطها مرة أخرى. رتّب الحقائق زمنيًا؛ الدليل الأحدث ينسخ وصف حالة أقدم عندما يتعارضان. لا تقل إن دليلاً مفقود إذا كانت مراسلة مرتبطة في السياق تثبته. إذا أكد بريد وارد موعدًا كان منتظرًا، فصرّح بأن شرط الانتظار تحقق واقترح التحضير أو الخطوة التالية، لا إعادة طلب التأكيد. إذا كانت الخطوة التالية موجودة ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا واجعل nextStepRequired=false. لا تنفذ، لا ترسل، لا تعتمد قرارًا، ولا تغيّر حالة الإجراء. حدّد هل توجد خطوة عملية جديدة فعلًا، ولا تكرر إجراءً قائمًا. اكتب اقتراحًا واحدًا فقط قابلًا للمراجعة ومعيار قبول واضحًا إن لزم." },
+      { role: "user", content: buildOperationalUpdatePrompt({ workFile, action, update, activeActions, communications: recentCommunications.map(row => ({ ...row, id: Number(row.id) })) }) },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_operational_update_analysis", strict: true, schema: updateAnalysisSchema as unknown as Record<string, unknown> } },
   });

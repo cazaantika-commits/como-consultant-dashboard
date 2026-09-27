@@ -36,7 +36,7 @@ export const comoNextEmailRouter = router({
       lastImported: comoNextEmailSyncSettings.lastImported,
       lastDuplicates: comoNextEmailSyncSettings.lastDuplicates,
     }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, ctx.user.id)).limit(1);
-    return settings || { isEnabled: 0, cronExpression: "0 0 * * * *", lastRunAt: null, lastSuccessAt: null, lastStatus: "never" as const, lastScanned: 0, lastImported: 0, lastDuplicates: 0 };
+    return settings || { isEnabled: 0, cronExpression: "0 0 2,7,13 * * *", lastRunAt: null, lastSuccessAt: null, lastStatus: "never" as const, lastScanned: 0, lastImported: 0, lastDuplicates: 0 };
   }),
 
   list: protectedProcedure

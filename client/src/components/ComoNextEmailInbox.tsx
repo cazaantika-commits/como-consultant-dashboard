@@ -212,7 +212,7 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>تحديث مقروء فقط كل ساعة{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>تحديث مقروء فقط يوميًا: 06:00 · 11:00 · 17:00 بتوقيت دبي{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
 
       <div className="grid grid-cols-3 gap-2">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention, icon: MailQuestion, tone: "text-amber-800 bg-amber-50" },
