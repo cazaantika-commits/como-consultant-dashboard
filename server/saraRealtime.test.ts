@@ -92,7 +92,7 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("المس الشاشة مرة واحدة لسماع سارة");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");
-    expect(avatarSource).toContain("object-[center_45%]");
+    expect(avatarSource).toContain("object-[center_25%]");
     expect(roomSource).toContain('@/assets/como/sara-idle.webm');
     expect(pageSource).toContain("autoPlay muted loop playsInline");
     expect(pageSource).toContain('@/assets/como/sara.webp');
