@@ -88,7 +88,7 @@ function ProposalDialog({ proposal, open, onOpenChange, onChanged }: { proposal:
   };
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent dir="rtl" className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-x-hidden overflow-y-auto rounded-none border-slate-200 bg-[#fbfbf8] p-4 sm:!left-1/2 sm:!top-1/2 sm:!h-[94dvh] sm:!w-full sm:!max-w-3xl sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px] sm:p-6">
+    <DialogContent dir="rtl" className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-x-hidden overflow-y-auto rounded-none border-slate-200 bg-[#fbfbf8] p-4 sm:p-6">
       <DialogHeader className="text-right">
         <div className="flex items-center gap-2"><Badge variant="outline" className={`rounded-full ${kind.tone}`}>{kind.label}</Badge><Badge variant="outline" className="rounded-full bg-white"><SourceIcon className="ms-1 h-3.5 w-3.5" />{sourceMeta[proposal.sourceKind]?.label}</Badge></div>
         <DialogTitle className="pt-2 text-xl">مراجعة المقترح قبل أي أثر تشغيلي</DialogTitle>
@@ -117,11 +117,18 @@ function ProposalDialog({ proposal, open, onOpenChange, onChanged }: { proposal:
   </Dialog>;
 }
 
-export function ComoNextIntakeProposals({ proposals, onChanged, onOpenWorkFile, title = "مقترحات تنتظر مراجعتك" }: { proposals: any[]; onChanged: () => Promise<void> | void; onOpenWorkFile?: (workFileId: number) => void; title?: string }) {
-  const [selected, setSelected] = useState<any | null>(null);
+export function ComoNextIntakeProposals({ proposals, onChanged, onOpenWorkFile, title = "مقترحات تنتظر مراجعتك", selectedProposalId, onSelectedProposalChange }: { proposals: any[]; onChanged: () => Promise<void> | void; onOpenWorkFile?: (workFileId: number) => void; title?: string; selectedProposalId?: number | null; onSelectedProposalChange?: (proposalId: number | null) => void }) {
+  const [localSelected, setLocalSelected] = useState<any | null>(null);
+  const selected = selectedProposalId
+    ? proposals.find(proposal => proposal.id === selectedProposalId) || null
+    : localSelected;
+  const selectProposal = (proposal: any | null) => {
+    if (onSelectedProposalChange) onSelectedProposalChange(proposal?.id ?? null);
+    else setLocalSelected(proposal);
+  };
   if (!proposals?.length) return null;
+  if (selected) return <ProposalDialog proposal={selected} open onOpenChange={value => { if (!value) selectProposal(null); }} onChanged={onChanged} />;
   return <>
-    <div className="space-y-2">{proposals.map(proposal => <button key={proposal.id} type="button" onClick={() => setSelected(proposal)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-violet-300 hover:shadow-md"><h3 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{proposal.title}</h3><Sparkles className="h-4 w-4 shrink-0 text-violet-300 group-hover:text-violet-700" /></button>)}</div>
-    <ProposalDialog proposal={selected} open={Boolean(selected)} onOpenChange={value => { if (!value) setSelected(null); }} onChanged={onChanged} />
+    <div className="space-y-2">{proposals.map(proposal => <button key={proposal.id} type="button" onClick={() => selectProposal(proposal)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-violet-300 hover:shadow-md"><h3 className="min-w-0 flex-1 text-sm font-black leading-6 text-slate-900">{proposal.title}</h3><Sparkles className="h-4 w-4 shrink-0 text-violet-300 group-hover:text-violet-700" /></button>)}</div>
   </>;
 }

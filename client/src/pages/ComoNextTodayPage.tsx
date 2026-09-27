@@ -59,7 +59,7 @@ import {
 } from "lucide-react";
 
 type ExecutiveSection = "actions" | "decisions" | "communications" | "meetings" | "email" | "intake" | "specialists" | "work-files" | "transfer";
-type ExecutiveFocusKind = "action" | "decision" | "communication" | "meeting";
+type ExecutiveFocusKind = "action" | "decision" | "communication" | "meeting" | "proposal";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
@@ -887,7 +887,9 @@ export default function ComoNextTodayPage() {
   const requestedActionId = Number(requestParams?.get("actionId") || 0);
   const requestedFocusKind = requestParams?.get("focusKind") as ExecutiveFocusKind | null;
   const requestedFocusId = Number(requestParams?.get("focusId") || 0);
-  const initialSection: ExecutiveSection | null = requestedWorkFileId > 0
+  const initialSection: ExecutiveSection | null = requestedFocusKind === "proposal"
+    ? "intake"
+    : requestedWorkFileId > 0
     ? "work-files"
     : requestedSection || (requestedTab === "work-files" || requestedTab === "email" || requestedTab === "transfer" ? requestedTab : null);
   const [selectedSection, setSelectedSection] = useState<ExecutiveSection | null>(initialSection);
@@ -957,11 +959,31 @@ export default function ComoNextTodayPage() {
     setSelectedFocusId(focusId);
     syncFocusUrl(workFileId, focusKind, focusId);
   };
+  const openProposal = (proposalId: number) => {
+    setSelectedSection("intake");
+    setSelectedWorkFileId(null);
+    setSelectedFocusKind("proposal");
+    setSelectedFocusId(proposalId);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("tab");
+    url.searchParams.set("section", "intake");
+    url.searchParams.delete("workFileId");
+    url.searchParams.delete("actionId");
+    url.searchParams.set("focusKind", "proposal");
+    url.searchParams.set("focusId", String(proposalId));
+    window.history.pushState({}, "", `${url.pathname}${url.search}`);
+  };
+  const changeFocusedProposal = (proposalId: number | null) => {
+    if (proposalId) return openProposal(proposalId);
+    setSelectedFocusKind(null);
+    setSelectedFocusId(null);
+    syncFocusUrl(null, null, null, "replace");
+  };
   const openQueueItem = (item: any) => {
     if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);
     if (["decision", "communication", "meeting"].includes(item.kind) && item.workFileId) return openFocusedRecord(item.workFileId, item.kind as ExecutiveFocusKind, item.recordId);
     if (item.kind === "email") return openSection("email");
-    if (item.kind === "proposal") return openSection("intake");
+    if (item.kind === "proposal") return openProposal(item.recordId);
     if (item.kind === "specialist") return openSection("specialists");
     if (item.workFileId) return openWorkFile(item.workFileId);
   };
@@ -1036,7 +1058,7 @@ export default function ComoNextTodayPage() {
             {selectedSection === "communications" ? <div className="space-y-2">{data.draftCommunications.length ? data.draftCommunications.map((item: any) => <TodayCommunicationCard key={item.id} item={item} onOpen={(workFileId, communicationId) => openFocusedRecord(workFileId, "communication", communicationId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مسودات تنتظر المراجعة</div>}</div> : null}
             {selectedSection === "meetings" ? <div className="space-y-2">{data.meetingAttention.length ? data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={(workFileId, meetingId) => openFocusedRecord(workFileId, "meeting", meetingId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد اجتماعات تحتاج انتباهك</div>}</div> : null}
             {selectedSection === "email" && user.role === "admin" ? <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} /> : null}
-            {selectedSection === "intake" ? <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} /> : null}
+            {selectedSection === "intake" ? <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} selectedProposalId={selectedFocusKind === "proposal" ? selectedFocusId : null} onSelectedProposalChange={changeFocusedProposal} /> : null}
             {selectedSection === "specialists" ? <div><PreservedCapabilityGallery /><div className="mt-5 space-y-2">{data.specialistAttention.length ? data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm hover:border-emerald-200"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.executiveSummary || item.requestText}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-emerald-700" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مراجعات تخصصية معلقة الآن</div>}</div></div> : null}
             {selectedSection === "work-files" ? <div className="space-y-2">{data.workFiles.length ? data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد ملفات عمل نشطة</div>}</div> : null}
             {selectedSection === "transfer" && user.role === "admin" ? <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} /> : null}

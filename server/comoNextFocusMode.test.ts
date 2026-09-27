@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const source = readFileSync("client/src/pages/ComoNextTodayPage.tsx", "utf8");
 const projectSource = readFileSync("client/src/pages/ComoNextProjectPage.tsx", "utf8");
+const proposalsSource = readFileSync("client/src/components/ComoNextIntakeProposals.tsx", "utf8");
 
 function between(start: string, end: string) {
   const from = source.indexOf(start);
@@ -52,6 +53,15 @@ describe("COMO Next focus mode", () => {
     expect(source).toContain('<FocusedRecordView kind="decision"');
     expect(source).toContain('<FocusedRecordView kind="communication"');
     expect(source).toContain('<FocusedRecordView kind="meeting"');
+  });
+
+  it("opens the exact review proposal from the kitchen without exposing the unrelated proposal list", () => {
+    expect(source).toContain('if (item.kind === "proposal") return openProposal(item.recordId)');
+    expect(source).toContain('url.searchParams.set("focusKind", "proposal")');
+    expect(source).toContain('selectedProposalId={selectedFocusKind === "proposal" ? selectedFocusId : null}');
+    expect(proposalsSource).toContain("selectedProposalId?: number | null");
+    expect(proposalsSource).toContain("proposals.find(proposal => proposal.id === selectedProposalId)");
+    expect(proposalsSource).toContain("if (selected) return <ProposalDialog proposal={selected} open");
   });
 
   it("keeps the unified project file category-first and opens one memory or source at a time", () => {
