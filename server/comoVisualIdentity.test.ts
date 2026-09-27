@@ -38,9 +38,10 @@ describe("COMO visual identity", () => {
     expect(kitchen).toContain("ما الذي يحتاج إنجازًا الآن؟");
   });
 
-  it("opens Sara as an automatic live conversation with graceful local motion", () => {
-    expect(sara).toContain('@/assets/como/sara-idle.webm');
-    expect(sara).toContain("autoPlay muted loop playsInline");
+  it("opens Sara as an automatic live conversation with one approved visual identity", () => {
+    expect(sara).toContain('@/assets/como/sara.webp');
+    expect(sara).not.toContain('@/assets/como/sara-idle.webm');
+    expect((sara.match(/<img src={saraPortrait}/g) || [])).toHaveLength(2);
     expect(sara).toContain("بعد التحقق تفتح سارة مباشرة");
     expect(sara).toContain("autoStart");
     expect(sara).toContain("streamlined");
