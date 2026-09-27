@@ -111,7 +111,7 @@ describe("COMO Next reviewed project memory", () => {
     expect(projectPage).toContain("data.foundation.nextDecision");
     expect(projectPage).toContain("workFileId=${workFileId}");
     expect(projectPage).not.toContain("sendMail");
-    expect(officePage).toContain("كل ما عليك");
+    expect(officePage).toContain("ما الذي يحتاج إنجازًا الآن؟");
     expect(officePage).toContain("الإجراءات والمتابعات");
     expect(officePage).toContain('requestParams?.get("workFileId")');
   });

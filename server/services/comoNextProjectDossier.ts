@@ -60,6 +60,8 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
     communicationsResult,
     meetingsResult,
     partiesResult,
+    partyContactsResult,
+    partyWorkFilesResult,
     memoryResult,
     contractsResult,
     deliverablesResult,
@@ -131,7 +133,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
         d.due_at ASC, d.id DESC
     `),
     db.execute(sql`
-      SELECT c.id, c.work_file_id AS workFileId, wf.title AS workFileTitle,
+      SELECT c.id, c.work_file_id AS workFileId, c.project_party_id AS projectPartyId, wf.title AS workFileTitle,
         c.subject, c.direction, c.channel, c.communication_status AS communicationStatus,
         c.from_text AS fromText, c.to_text AS toText, c.occurred_at AS occurredAt
       FROM como_next_communications c
@@ -140,7 +142,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       ORDER BY c.occurred_at DESC, c.id DESC LIMIT 12
     `),
     db.execute(sql`
-      SELECT m.id, m.work_file_id AS workFileId, wf.title AS workFileTitle,
+      SELECT m.id, m.work_file_id AS workFileId, m.project_party_id AS projectPartyId, wf.title AS workFileTitle,
         m.title, m.meeting_status AS meetingStatus, m.starts_at AS startsAt,
         m.outcome_summary AS outcomeSummary,
         (SELECT COUNT(*) FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id = m.id AND proposal.review_status = 'pending') AS pendingProposalCount,
@@ -151,7 +153,9 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       ORDER BY m.starts_at DESC, m.id DESC LIMIT 12
     `),
     db.execute(sql`
-      SELECT party.id, party.display_name AS displayName, party.party_type AS partyType,
+      SELECT party.id, pp.id AS projectPartyId, party.display_name AS displayName,
+        party.legal_name AS legalName, party.party_type AS partyType,
+        party.jurisdiction, party.registration_number AS registrationNumber,
         party.party_status AS partyStatus, pp.role_code AS roleCode,
         pp.relationship_status AS relationshipStatus,
         (SELECT contact.display_name FROM como_next_party_contacts contact WHERE contact.party_id = party.id ORDER BY contact.is_primary DESC, contact.id ASC LIMIT 1) AS primaryContactName,
@@ -160,6 +164,33 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       JOIN como_next_parties party ON party.id = pp.party_id
       WHERE pp.project_id = ${input.projectId}
       ORDER BY CASE pp.relationship_status WHEN 'active' THEN 0 ELSE 1 END, party.display_name
+    `),
+    db.execute(sql`
+      SELECT contact.id, contact.party_id AS partyId, contact.display_name AS displayName,
+        contact.email, contact.phone, contact.job_title AS jobTitle,
+        contact.is_primary AS isPrimary, contact.notes
+      FROM como_next_party_contacts contact
+      WHERE contact.party_id IN (
+        SELECT project_party.party_id FROM como_next_project_parties project_party
+        WHERE project_party.project_id = ${input.projectId}
+      )
+      ORDER BY contact.is_primary DESC, contact.display_name ASC, contact.id ASC
+    `),
+    db.execute(sql`
+      SELECT link.project_party_id AS projectPartyId, link.relationship_role AS relationshipRole,
+        wf.id, wf.title, wf.work_file_status AS workFileStatus, wf.priority,
+        wf.governing_question AS governingQuestion, wf.desired_outcome AS desiredOutcome,
+        (SELECT action_row.title FROM como_next_actions action_row
+          WHERE action_row.work_file_id = wf.id
+            AND action_row.action_status NOT IN ('verified','cancelled')
+          ORDER BY CASE WHEN action_row.attention_at IS NULL THEN 1 ELSE 0 END,
+            action_row.attention_at ASC, action_row.id ASC LIMIT 1) AS nextActionTitle,
+        wf.updated_at AS updatedAt
+      FROM como_next_work_file_parties link
+      JOIN como_next_work_files wf ON wf.id = link.work_file_id AND wf.project_id = link.project_id
+      WHERE link.project_id = ${input.projectId}
+      ORDER BY CASE wf.work_file_status WHEN 'open' THEN 0 WHEN 'waiting' THEN 1 WHEN 'blocked' THEN 2 ELSE 3 END,
+        wf.updated_at DESC, wf.id DESC
     `),
     db.execute(sql`
       SELECT wm.id, wm.work_file_id AS workFileId, wf.title AS workFileTitle,
@@ -296,13 +327,42 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
   }));
   const actions = rows<any>(actionsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId) }));
   const decisions = rows<any>(decisionsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId) }));
-  const communications = rows<any>(communicationsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId) }));
+  const communications = rows<any>(communicationsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId), projectPartyId: row.projectPartyId ? asNumber(row.projectPartyId) : null }));
   const meetings = rows<any>(meetingsResult).map(row => ({
     ...row,
     id: asNumber(row.id),
     workFileId: asNumber(row.workFileId),
+    projectPartyId: row.projectPartyId ? asNumber(row.projectPartyId) : null,
     pendingProposalCount: asNumber(row.pendingProposalCount),
   }));
+  const partyContacts = rows<any>(partyContactsResult).map(row => ({
+    ...row,
+    id: asNumber(row.id),
+    partyId: asNumber(row.partyId),
+    isPrimary: Boolean(asNumber(row.isPrimary)),
+  }));
+  const partyWorkFiles = rows<any>(partyWorkFilesResult).map(row => ({
+    ...row,
+    id: asNumber(row.id),
+    projectPartyId: asNumber(row.projectPartyId),
+  }));
+  const parties = rows<any>(partiesResult).map(row => {
+    const projectPartyId = asNumber(row.projectPartyId);
+    const relatedWorkFiles = partyWorkFiles.filter(file => file.projectPartyId === projectPartyId);
+    const relatedWorkFileIds = new Set(relatedWorkFiles.map(file => file.id));
+    const relatedCommunications = communications.filter(item => item.projectPartyId === projectPartyId || relatedWorkFileIds.has(item.workFileId));
+    const relatedMeetings = meetings.filter(item => item.projectPartyId === projectPartyId || relatedWorkFileIds.has(item.workFileId));
+    return {
+      ...row,
+      id: asNumber(row.id),
+      projectPartyId,
+      contacts: partyContacts.filter(contact => contact.partyId === asNumber(row.id)),
+      workFiles: relatedWorkFiles,
+      communications: relatedCommunications,
+      meetings: relatedMeetings,
+      lastCommunicationAt: relatedCommunications[0]?.occurredAt || null,
+    };
+  });
   const memory = rows<any>(memoryResult).map(row => ({
     ...row,
     id: asNumber(row.id),
@@ -429,7 +489,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       communications: communications.length,
       meetings: meetings.length,
       reviewedMemory: reviewedMemory.length,
-      activeParties: rows<any>(partiesResult).filter(row => row.relationshipStatus === "active").length,
+      activeParties: parties.filter(row => row.relationshipStatus === "active").length,
       contracts: contracts.length,
       deliverableExceptions: deliverables.filter(row => row.isException).length,
       lifecycleExceptions: scheduleExceptions.length,
@@ -439,7 +499,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
     decisions,
     communications,
     meetings,
-    parties: rows<any>(partiesResult).map(row => ({ ...row, id: asNumber(row.id) })),
+    parties,
     reviewedMemory,
     memory,
     sourceRegister: {
