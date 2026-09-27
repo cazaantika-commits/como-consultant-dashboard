@@ -1,0 +1,57 @@
+-- COMO Next: executive kitchen operational updates and scheduled read-only inbox.
+-- Additive only. No financial, cash-flow, study, contract, or existing operational row is modified.
+
+CREATE TABLE como_next_work_file_updates (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  project_id INT NOT NULL,
+  work_file_id INT NOT NULL,
+  action_id INT NULL,
+  source_channel ENUM('phone','meeting','whatsapp','email','site_visit','internal') NOT NULL,
+  update_text LONGTEXT NOT NULL,
+  occurred_at TIMESTAMP NOT NULL,
+  analysis_status ENUM('not_requested','draft','applied','dismissed','failed') NOT NULL DEFAULT 'not_requested',
+  analysis_summary LONGTEXT NULL,
+  suggested_action_title VARCHAR(500) NULL,
+  suggested_action_description TEXT NULL,
+  suggested_acceptance_criteria TEXT NULL,
+  suggested_priority ENUM('normal','important','urgent') NULL,
+  suggested_due_at TIMESTAMP NULL,
+  model_id VARCHAR(120) NULL,
+  target_action_id INT NULL,
+  reviewed_by_user_id INT NULL,
+  reviewed_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT como_next_update_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  CONSTRAINT como_next_update_file_fk FOREIGN KEY (project_id, work_file_id) REFERENCES como_next_work_files(project_id, id) ON DELETE RESTRICT,
+  CONSTRAINT como_next_update_action_fk FOREIGN KEY (project_id, action_id) REFERENCES como_next_actions(project_id, id) ON DELETE RESTRICT,
+  CONSTRAINT como_next_update_target_action_fk FOREIGN KEY (project_id, target_action_id) REFERENCES como_next_actions(project_id, id) ON DELETE RESTRICT,
+  CONSTRAINT como_next_update_reviewer_fk FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  INDEX como_next_update_file_time_idx (work_file_id, occurred_at),
+  INDEX como_next_update_review_idx (user_id, analysis_status, created_at)
+);
+
+CREATE TABLE como_next_email_sync_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  mailbox_key VARCHAR(64) NOT NULL DEFAULT 'owner-primary',
+  schedule_cron_task_uid VARCHAR(65) NULL,
+  cron_expression VARCHAR(80) NOT NULL DEFAULT '0 0 * * * *',
+  lookback_hours INT NOT NULL DEFAULT 48,
+  max_messages INT NOT NULL DEFAULT 100,
+  is_enabled TINYINT NOT NULL DEFAULT 0,
+  last_run_at TIMESTAMP NULL,
+  last_success_at TIMESTAMP NULL,
+  last_status ENUM('never','running','success','failed') NOT NULL DEFAULT 'never',
+  last_scanned INT NOT NULL DEFAULT 0,
+  last_imported INT NOT NULL DEFAULT 0,
+  last_duplicates INT NOT NULL DEFAULT 0,
+  last_error TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT como_next_email_sync_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  UNIQUE INDEX como_next_email_sync_user_mailbox_uq (user_id, mailbox_key),
+  UNIQUE INDEX como_next_email_sync_task_uid_uq (schedule_cron_task_uid),
+  INDEX como_next_email_sync_enabled_idx (is_enabled, updated_at)
+);

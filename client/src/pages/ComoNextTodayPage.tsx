@@ -614,7 +614,47 @@ function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => voi
   );
 }
 
-function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: any; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+function WorkFileUpdateComposer({ workFileId, actionId, updates, onChanged }: { workFileId: number; actionId?: number | null; updates: any[]; onChanged: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [sourceChannel, setSourceChannel] = useState<"phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal">("phone");
+  const [updateText, setUpdateText] = useState("");
+  const recordMutation = trpc.comoNext.recordWorkFileUpdate.useMutation();
+  const analyzeMutation = trpc.comoNext.analyzeWorkFileUpdate.useMutation();
+  const reviewMutation = trpc.comoNext.reviewWorkFileUpdate.useMutation();
+  const busy = recordMutation.isPending || analyzeMutation.isPending || reviewMutation.isPending;
+
+  const submit = async () => {
+    if (updateText.trim().length < 3) return toast.error("اكتب ما حدث أولًا");
+    try {
+      const saved = await recordMutation.mutateAsync({ workFileId, actionId: actionId || null, sourceChannel, updateText: updateText.trim() });
+      await analyzeMutation.mutateAsync({ updateId: saved.id });
+      setUpdateText("");
+      setOpen(false);
+      toast.success("حُفظ التحديث وحلّل Manus الخطوة التالية للمراجعة");
+      await onChanged();
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ التحديث"); }
+  };
+  const review = async (updateId: number, decision: "apply" | "dismiss") => {
+    try {
+      await reviewMutation.mutateAsync({ updateId, decision });
+      toast.success(decision === "apply" ? "تحول الاقتراح إلى إجراء حي" : "تم إنهاء الاقتراح دون إنشاء إجراء");
+      await onChanged();
+    } catch (error: any) { toast.error(error?.message || "تعذرت مراجعة الاقتراح"); }
+  };
+
+  return <section className="rounded-2xl border border-[#cfe3df] bg-[#f4faf8] p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">ماذا حدث؟</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">سجّل مكالمة أو اجتماعًا أو معلومة؛ يحلل Manus الخطوة التالية كاقتراح فقط.</p></div><Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "إضافة تحديث"}</Button></div>
+    {open ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">
+      <Select value={sourceChannel} onValueChange={(value: any) => setSourceChannel(value)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="phone">مكالمة هاتفية</SelectItem><SelectItem value="meeting">اجتماع</SelectItem><SelectItem value="whatsapp">واتساب</SelectItem><SelectItem value="email">بريد</SelectItem><SelectItem value="site_visit">زيارة موقع</SelectItem><SelectItem value="internal">تحديث داخلي</SelectItem></SelectContent></Select>
+      <Textarea value={updateText} onChange={event => setUpdateText(event.target.value)} className="min-h-28 rounded-xl bg-white leading-7" placeholder="مثال: أكد الاستشاري الموعد هاتفيًا ليوم الثلاثاء الساعة 10..." />
+      <p className="text-[10px] leading-5 text-slate-400">بالضغط أدناه يُستدعى Manus عبر <bdi dir="ltr">gpt-5-mini</bdi> لتحليل هذا التحديث فقط. لا إرسال ولا تنفيذ تلقائي.</p>
+      <Button type="button" onClick={submit} disabled={busy} className="w-full rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}حفظ وتحليل الخطوة التالية</Button>
+    </div> : null}
+    {updates.length ? <div className="mt-4 space-y-2 border-t border-[#d9e9e5] pt-4">{updates.slice(0, 5).map(update => <div key={update.id} className="rounded-xl border border-white bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline" className="rounded-full bg-slate-50">{update.sourceChannel === "phone" ? "مكالمة" : update.sourceChannel === "meeting" ? "اجتماع" : update.sourceChannel}</Badge><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(update.occurredAt)}</bdi></div><p className="mt-2 whitespace-pre-wrap text-xs font-semibold leading-6 text-slate-800">{update.updateText}</p>{update.analysisSummary ? <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-[11px] leading-6 text-slate-500">{update.analysisSummary}</p> : null}{update.analysisStatus === "draft" && update.suggestedActionTitle ? <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-[10px] font-black text-violet-700">الخطوة المقترحة</p><p className="mt-1 text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تحويلها إلى إجراء</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">لا يلزم إجراء</Button></div></div> : update.analysisStatus === "draft" ? <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">لا تستلزم خطوة جديدة؛ بقي التحديث ضمن سجل الملف.</div> : null}</div>)}</div> : null}
+  </section>;
+}
+
+function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { action: any; updates: any[]; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2] sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" /><span className="break-words text-right">العودة إلى عناوين الإجراءات</span></button>
     <article className="mx-auto mt-4 min-w-0 max-w-xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
@@ -625,6 +665,7 @@ function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: an
       {action.evidenceReference ? <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-[11px] font-black text-emerald-700">دليل التحقق</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{action.evidenceReference}</p></div> : null}
       {action.attentionAt ? <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-500"><CalendarClock className="h-4 w-4" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}
       {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><ActionStatusDialog action={action} onUpdated={onUpdated} /></div> : null}
+      {!isClosed ? <div className="mt-5"><WorkFileUpdateComposer workFileId={action.workFileId} actionId={action.id} updates={updates} onChanged={onUpdated} /></div> : null}
     </article>
   </div>;
 }
@@ -673,13 +714,14 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent dir="rtl" side="left" className="!left-0 !right-0 !h-[100dvh] !w-screen !max-w-none overflow-x-hidden overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} action={<Button type="button" variant="outline" onClick={() => detailQuery.refetch()}>إعادة المحاولة</Button>} /></div> : data ? <>
-          {focusedAction ? <FocusedActionView action={focusedAction} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
+          {focusedAction ? <FocusedActionView action={focusedAction} updates={(data.updates || []).filter((update: any) => update.actionId === focusedAction.id)} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
           <div className="border-b border-slate-200 bg-[#16243b] px-4 py-6 text-white sm:px-6 sm:py-7">
             <SheetHeader className="text-right"><div className="mb-3 flex flex-wrap items-center gap-2"><StatusBadge status={data.workFile.workFileStatus} kind="work-file" /><PriorityBadge priority={data.workFile.priority} /></div><SheetTitle className="text-2xl font-black leading-9 text-white">{data.workFile.title}</SheetTitle><SheetDescription className="text-sm text-slate-300">{data.workFile.projectName}</SheetDescription></SheetHeader>
           </div>
           <div className="min-w-0 space-y-5 p-4 sm:space-y-6 sm:p-6">
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-400">السؤال الحاكم</p><p className="mt-2 text-sm font-semibold leading-7 text-slate-900">{data.workFile.governingQuestion}</p><div className="my-4 h-px bg-slate-100" /><p className="text-xs font-bold text-slate-400">النتيجة المطلوبة</p><p className="mt-2 text-sm leading-7 text-slate-700">{data.workFile.desiredOutcome}</p></Card>
             {data.parties.length ? <Card className="rounded-3xl border-[#cfe3df] bg-[#f1f8f6] p-5 shadow-sm"><div className="flex items-center gap-2 text-[#1e6478]"><UsersRound className="h-4 w-4" /><h3 className="text-sm font-black">الأطراف المرتبطة بهذا الملف</h3></div><div className="mt-3 flex flex-wrap gap-2">{data.parties.map((party: any) => <Badge key={party.id} variant="outline" className="rounded-full border-[#bdd8d2] bg-white px-3 py-1.5 text-[#18596a]">{party.displayName}</Badge>)}</div></Card> : null}
+            {!isClosed ? <WorkFileUpdateComposer workFileId={data.workFile.id} updates={(data.updates || []).filter((update: any) => !update.actionId)} onChanged={onChanged} /> : null}
             <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={onChanged} title="مقترحات مرتبطة بهذا الملف" />
             <section>
               <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><Scale className="h-5 w-5 text-rose-700" /><div><h3 className="text-base font-black text-slate-900">سجل القرارات</h3><p className="text-xs text-slate-500">السؤال، صاحب السلطة، والنتيجة المعتمدة في مكان واحد.</p></div></div>{!isClosed ? <NewDecisionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div>
@@ -802,6 +844,7 @@ export default function ComoNextTodayPage() {
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(requestedWorkFileId > 0 ? requestedWorkFileId : null);
   const [selectedFocusKind, setSelectedFocusKind] = useState<ExecutiveFocusKind | null>(requestedActionId > 0 ? "action" : requestedFocusKind);
   const [selectedFocusId, setSelectedFocusId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : requestedFocusId > 0 ? requestedFocusId : null);
+  const [showSections, setShowSections] = useState(false);
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
@@ -864,6 +907,14 @@ export default function ComoNextTodayPage() {
     setSelectedFocusId(focusId);
     syncFocusUrl(workFileId, focusKind, focusId);
   };
+  const openQueueItem = (item: any) => {
+    if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);
+    if (["decision", "communication", "meeting"].includes(item.kind) && item.workFileId) return openFocusedRecord(item.workFileId, item.kind as ExecutiveFocusKind, item.recordId);
+    if (item.kind === "email") return openSection("email");
+    if (item.kind === "proposal") return openSection("intake");
+    if (item.kind === "specialist") return openSection("specialists");
+    if (item.workFileId) return openWorkFile(item.workFileId);
+  };
   const closeWorkFile = () => {
     setSelectedWorkFileId(null);
     setSelectedFocusKind(null);
@@ -911,10 +962,9 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <>
           {!selectedSection ? <section>
-            <h2 className="mb-4 text-2xl font-black text-slate-950">كل ما عليك</h2>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="font-black text-slate-900">{item.title}</span></span><span className="flex shrink-0 items-center gap-3"><bdi className="text-lg font-black text-slate-700">{item.count}</bdi><ChevronLeft className="h-4 w-4 text-slate-300 group-hover:text-[#1e6478]" /></span></button>; })}
-            </div>
+            <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-xs font-black text-[#1e6478]">المطبخ التنفيذي</p><h2 className="mt-1 text-2xl font-black text-slate-950">العمل الآن</h2></div><Button type="button" variant="ghost" onClick={() => setShowSections(value => !value)} className="rounded-xl text-xs text-slate-500">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button></div>
+            {showSections ? <div className="mb-5 grid gap-2 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-4 w-4" /></span><span className="text-sm font-black text-slate-900">{item.title}</span></span><bdi className="shrink-0 text-sm font-black text-slate-500">{item.count}</bdi></button>; })}</div> : null}
+            <div className="space-y-2">{data.executionQueue.length ? data.executionQueue.map((item: any) => <button key={item.id} type="button" onClick={() => openQueueItem(item)} className="group flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="min-w-0 flex-1"><span className="block text-[10px] font-black text-[#1e6478]">{item.phase === "owner_review" ? "للمراجعة" : item.phase === "verify" ? "للتحقق" : item.phase === "waiting_external" ? "بانتظار طرف خارجي" : item.phase === "define_next_step" ? "يحتاج خطوة تالية" : item.phase === "scheduled" ? "موعد" : "للتنفيذ"}</span><span className="mt-0.5 block break-words text-sm font-black leading-6 text-slate-900">{item.title}</span></span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-[#1e6478]" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل مفتوح الآن</div>}</div>
           </section> : <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>

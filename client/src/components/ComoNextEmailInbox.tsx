@@ -77,17 +77,17 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
   const projects = useMemo(() => {
     const map = new Map<number, string>();
     for (const item of optionsQuery.data || []) map.set(item.projectId, item.projectName);
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [optionsQuery.data]);
   const workFiles = useMemo(() => {
     const map = new Map<number, string>();
     for (const item of optionsQuery.data || []) if (String(item.projectId) === projectId) map.set(item.workFileId, item.workFileTitle);
-    return [...map.entries()].map(([id, title]) => ({ id, title }));
+    return Array.from(map.entries()).map(([id, title]) => ({ id, title }));
   }, [optionsQuery.data, projectId]);
   const parties = useMemo(() => {
     const map = new Map<number, string>();
     for (const item of optionsQuery.data || []) if (String(item.projectId) === projectId && item.projectPartyId) map.set(item.projectPartyId, item.partyName || `طرف ${item.projectPartyId}`);
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [optionsQuery.data, projectId]);
 
   useEffect(() => {
@@ -192,6 +192,7 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
   const [filter, setFilter] = useState<InboxFilter>("attention");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const listQuery = trpc.comoNextEmail.list.useQuery(undefined, { staleTime: 15_000 });
+  const scheduledStatusQuery = trpc.comoNextEmail.scheduledStatus.useQuery(undefined, { staleTime: 30_000 });
   const syncMutation = trpc.comoNextEmail.syncReadonly.useMutation();
   const items = listQuery.data || [];
   const filtered = items.filter((item: any) => filter === "attention" ? ["unmatched", "suggested"].includes(item.inboxStatus) : item.inboxStatus === filter);
@@ -211,7 +212,7 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}قراءة آخر 7 أيام</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">البريد الوارد</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>تحديث مقروء فقط كل ساعة{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
 
       <div className="grid grid-cols-3 gap-2">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention, icon: MailQuestion, tone: "text-amber-800 bg-amber-50" },

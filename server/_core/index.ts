@@ -24,6 +24,7 @@ import portfolioPdfRoute from "../portfolioPdfRoute";
 import { registerComoNextDocumentRoute } from "../comoNextDocumentRoute";
 import { registerComoNextProjectOpportunityRoute } from "../comoNextProjectOpportunityRoute";
 import { registerLifecycleDocumentRoute } from "../lifecycleDocumentRoute";
+import { registerScheduledEmailSyncRoute } from "../scheduledEmailSyncRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -84,6 +85,8 @@ async function startServer() {
   registerLifecycleDocumentRoute(app);
   // Owner-only protected intake for project opportunities and land documents.
   registerComoNextProjectOpportunityRoute(app);
+  // Authenticated Manus Heartbeat callback for deterministic, read-only inbox sync.
+  registerScheduledEmailSyncRoute(app);
 
   // tRPC API
   app.use(

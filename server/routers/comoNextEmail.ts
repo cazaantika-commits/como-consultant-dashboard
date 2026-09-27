@@ -1,6 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
+import { eq } from "drizzle-orm";
+import { comoNextEmailSyncSettings } from "../../drizzle/schema";
+import { getDb } from "../db";
 import {
   analyzeEmailCommand,
   createReplyDraftFromEmailCommand,
@@ -19,6 +22,23 @@ function assertOwner(role?: string) {
 const statusSchema = z.enum(["unmatched", "suggested", "linked", "dismissed"]);
 
 export const comoNextEmailRouter = router({
+  scheduledStatus: protectedProcedure.query(async ({ ctx }) => {
+    assertOwner(ctx.user.role);
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
+    const [settings] = await db.select({
+      isEnabled: comoNextEmailSyncSettings.isEnabled,
+      cronExpression: comoNextEmailSyncSettings.cronExpression,
+      lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+      lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+      lastStatus: comoNextEmailSyncSettings.lastStatus,
+      lastScanned: comoNextEmailSyncSettings.lastScanned,
+      lastImported: comoNextEmailSyncSettings.lastImported,
+      lastDuplicates: comoNextEmailSyncSettings.lastDuplicates,
+    }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, ctx.user.id)).limit(1);
+    return settings || { isEnabled: 0, cronExpression: "0 0 * * * *", lastRunAt: null, lastSuccessAt: null, lastStatus: "never" as const, lastScanned: 0, lastImported: 0, lastDuplicates: 0 };
+  }),
+
   list: protectedProcedure
     .input(z.object({ status: statusSchema.optional() }).optional())
     .query(({ ctx, input }) => {

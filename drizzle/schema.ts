@@ -1415,6 +1415,8 @@ export const users = mysqlTable("users", {
 	index("users_openId_unique").on(table.openId),
 ]);
 
+export type User = typeof users.$inferSelect;
+
 
 // Consultants & Technical Specialists Registry
 export const consultantsRegistry = mysqlTable("consultants_registry", {
@@ -2972,6 +2974,39 @@ export const comoNextWorkFileEvents = mysqlTable("como_next_work_file_events", {
   }).onDelete("restrict"),
 ]);
 
+// Append-only operational updates captured from calls, meetings, WhatsApp, email,
+// site visits, or internal notes. Manus analysis remains draft-only until the
+// owner explicitly applies a suggested action.
+export const comoNextWorkFileUpdates = mysqlTable("como_next_work_file_updates", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  actionId: int("action_id"),
+  sourceChannel: mysqlEnum("source_channel", ["phone", "meeting", "whatsapp", "email", "site_visit", "internal"]).notNull(),
+  updateText: longtext("update_text").notNull(),
+  occurredAt: timestamp("occurred_at", { mode: "string" }).notNull(),
+  analysisStatus: mysqlEnum("analysis_status", ["not_requested", "draft", "applied", "dismissed", "failed"]).notNull().default("not_requested"),
+  analysisSummary: longtext("analysis_summary"),
+  suggestedActionTitle: varchar("suggested_action_title", { length: 500 }),
+  suggestedActionDescription: text("suggested_action_description"),
+  suggestedAcceptanceCriteria: text("suggested_acceptance_criteria"),
+  suggestedPriority: mysqlEnum("suggested_priority", ["normal", "important", "urgent"]),
+  suggestedDueAt: timestamp("suggested_due_at", { mode: "string" }),
+  modelId: varchar("model_id", { length: 120 }),
+  targetActionId: int("target_action_id"),
+  reviewedByUserId: int("reviewed_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+  reviewedAt: timestamp("reviewed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("como_next_update_file_time_idx").on(table.workFileId, table.occurredAt),
+  index("como_next_update_review_idx").on(table.userId, table.analysisStatus, table.createdAt),
+  foreignKey({ name: "como_next_update_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+  foreignKey({ name: "como_next_update_action_fk", columns: [table.projectId, table.actionId], foreignColumns: [comoNextActions.projectId, comoNextActions.id] }).onDelete("restrict"),
+  foreignKey({ name: "como_next_update_target_action_fk", columns: [table.projectId, table.targetActionId], foreignColumns: [comoNextActions.projectId, comoNextActions.id] }).onDelete("restrict"),
+]);
+
 // Follow-up Desk transfer staging. Raw source rows and file metadata land here
 // first; they are never treated as active COMO records until a separate,
 // reviewed promotion command is executed.
@@ -3446,6 +3481,32 @@ export const comoNextEmailAttachments = mysqlTable("como_next_email_attachments"
 }, (table) => [
   uniqueIndex("como_next_email_attachment_order_uq").on(table.emailMessageId, table.ordinal),
   index("como_next_email_attachment_document_idx").on(table.documentId),
+]);
+
+// Owner-level configuration and last-run status for the deterministic read-only
+// inbox heartbeat. The task UID is the sole scheduled-callback lookup key.
+export const comoNextEmailSyncSettings = mysqlTable("como_next_email_sync_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  mailboxKey: varchar("mailbox_key", { length: 64 }).notNull().default("owner-primary"),
+  scheduleCronTaskUid: varchar("schedule_cron_task_uid", { length: 65 }),
+  cronExpression: varchar("cron_expression", { length: 80 }).notNull().default("0 0 * * * *"),
+  lookbackHours: int("lookback_hours").notNull().default(48),
+  maxMessages: int("max_messages").notNull().default(100),
+  isEnabled: tinyint("is_enabled").notNull().default(0),
+  lastRunAt: timestamp("last_run_at", { mode: "string" }),
+  lastSuccessAt: timestamp("last_success_at", { mode: "string" }),
+  lastStatus: mysqlEnum("last_status", ["never", "running", "success", "failed"]).notNull().default("never"),
+  lastScanned: int("last_scanned").notNull().default(0),
+  lastImported: int("last_imported").notNull().default(0),
+  lastDuplicates: int("last_duplicates").notNull().default(0),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_email_sync_user_mailbox_uq").on(table.userId, table.mailboxKey),
+  uniqueIndex("como_next_email_sync_task_uid_uq").on(table.scheduleCronTaskUid),
+  index("como_next_email_sync_enabled_idx").on(table.isEnabled, table.updatedAt),
 ]);
 
 export const comoNextEmailAnalyses = mysqlTable("como_next_email_analyses", {

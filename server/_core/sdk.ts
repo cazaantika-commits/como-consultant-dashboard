@@ -14,6 +14,13 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
+
+export type AuthenticatedUser = User & {
+  isCron?: boolean;
+  taskUid?: string | null;
+};
+
+const CRON_OPEN_ID_PREFIX = "cron_";
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
@@ -256,10 +263,13 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
+  async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
     const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = cookies.get(COOKIE_NAME);
+    let sessionCookie = cookies.get(COOKIE_NAME);
+    if (!sessionCookie) {
+      const authHeader = req.headers.authorization;
+      if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) sessionCookie = authHeader.slice(7);
+    }
     const session = await this.verifySession(sessionCookie);
 
     if (!session) {
@@ -268,6 +278,26 @@ class SDKServer {
 
     const sessionUserId = session.openId;
     const signedInAt = new Date();
+    const signedInAtSql = signedInAt.toISOString().slice(0, 19).replace("T", " ");
+
+    if (session.openId.startsWith(CRON_OPEN_ID_PREFIX)) {
+      const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+      if (!userInfo.taskUid) throw ForbiddenError("Cron session missing task_uid");
+      return {
+        id: -1,
+        openId: userInfo.openId,
+        name: userInfo.name || "Manus Scheduled Task",
+        email: null,
+        loginMethod: null,
+        role: "user",
+        createdAt: signedInAtSql,
+        updatedAt: signedInAtSql,
+        lastSignedIn: signedInAtSql,
+        isCron: true,
+        taskUid: userInfo.taskUid,
+      } as AuthenticatedUser;
+    }
+
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically

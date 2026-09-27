@@ -48,6 +48,13 @@ import {
   reviewSpecialistDraftCommand,
   runSpecialistReviewCommand,
 } from "../services/comoNextSpecialists";
+import {
+  analyzeWorkFileUpdateCommand,
+  buildExecutiveKitchenQueue,
+  listWorkFileUpdates,
+  recordWorkFileUpdateCommand,
+  reviewWorkFileUpdateCommand,
+} from "../services/comoNextKitchen";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -64,6 +71,7 @@ const prioritySchema = z.enum(["normal", "important", "urgent"]);
 const ownerTypeSchema = z.enum(["human", "manus", "team"]);
 const decisionAuthoritySchema = z.enum(["abdulrahman", "wael", "sheikh_issa", "joint", "other"]);
 const communicationChannelSchema = z.enum(["email", "whatsapp", "letter", "phone_note", "internal"]);
+const kitchenUpdateChannelSchema = z.enum(["phone", "meeting", "whatsapp", "email", "site_visit", "internal"]);
 const meetingProposalTargetSchema = z.enum(["agenda_item", "decision", "action", "external_commitment", "risk", "note", "communication_draft"]);
 const actionStatusSchema = z.enum([
   "open",
@@ -370,6 +378,7 @@ export const comoNextRouter = router({
       draftMinutesCount: Number(row.draftMinutesCount || 0),
     }));
 
+    const filesWithoutNextAction = workFiles.filter(file => !file.nextActionId);
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       actions: todayRows,
@@ -380,7 +389,17 @@ export const comoNextRouter = router({
       intakeProposals,
       specialistAttention,
       workFiles,
-      filesWithoutNextAction: workFiles.filter(file => !file.nextActionId),
+      filesWithoutNextAction,
+      executionQueue: buildExecutiveKitchenQueue({
+        actions: todayRows,
+        decisions,
+        draftCommunications,
+        meetings: meetingAttention,
+        emails: emailAttention,
+        intakeProposals,
+        specialistReviews: specialistAttention,
+        filesWithoutNextAction,
+      }),
     };
   }),
 
@@ -604,6 +623,7 @@ export const comoNextRouter = router({
         .where(eq(comoNextCommunications.workFileId, input.workFileId))
         .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id));
       const intakeProposals = await listPendingIntakeProposals(ctx.user.id, input.workFileId);
+      const updates = await listWorkFileUpdates(ctx.user.id, input.workFileId);
       const documentsByMemory = new Map<number, any[]>();
       for (const row of getRows<any>(documentsResult)) {
         const memoryId = Number(row.memoryId);
@@ -636,6 +656,7 @@ export const comoNextRouter = router({
         })),
         communications,
         intakeProposals,
+        updates,
         parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
         accessRole: access.role,
       };
@@ -670,6 +691,33 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return createActionCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  recordWorkFileUpdate: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      actionId: z.number().int().positive().optional().nullable(),
+      sourceChannel: kitchenUpdateChannelSchema,
+      updateText: z.string().trim().min(3).max(100_000),
+      occurredAt: z.string().optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return recordWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  analyzeWorkFileUpdate: protectedProcedure
+    .input(z.object({ updateId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return analyzeWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  reviewWorkFileUpdate: protectedProcedure
+    .input(z.object({ updateId: z.number().int().positive(), decision: z.enum(["apply", "dismiss"]) }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return reviewWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
     }),
 
   reviewIntakeProposal: protectedProcedure
