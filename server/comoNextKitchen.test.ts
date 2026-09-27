@@ -54,6 +54,7 @@ describe("COMO Next executive kitchen", () => {
   it("schedules read-only inbox sync only through authenticated configured task UID", () => {
     expect(migration).toContain("CREATE TABLE como_next_email_sync_settings");
     expect(scheduleRoute).toContain("caller.isCron");
+    expect(scheduleRoute).toContain("req.body?.taskUid");
     expect(scheduleRoute).toContain("scheduleCronTaskUid, taskUid");
     expect(scheduleRoute).toContain("settings.isEnabled !== 1");
     expect(scheduleRoute).toContain("syncReadonlyInboxCommand");

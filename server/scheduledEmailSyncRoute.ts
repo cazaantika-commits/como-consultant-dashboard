@@ -13,12 +13,19 @@ export function registerScheduledEmailSyncRoute(app: Express) {
   app.post("/api/scheduled/como-next-email-sync", async (req, res) => {
     let taskUid = "";
     try {
-      const caller = await sdk.authenticateRequest(req);
-      if (!caller.isCron || !caller.taskUid) {
+      try {
+        const caller = await sdk.authenticateRequest(req);
+        if (caller.isCron && caller.taskUid) taskUid = caller.taskUid;
+      } catch {
+        // Some deployed WebDev edges do not forward the cron cookie to Express.
+        // The private Heartbeat payload is accepted only if its high-entropy
+        // task UID exactly matches the enabled database configuration below.
+      }
+      if (!taskUid && typeof req.body?.taskUid === "string") taskUid = req.body.taskUid.trim();
+      if (taskUid.length < 16) {
         res.status(403).json({ error: "cron_auth_required" });
         return;
       }
-      taskUid = caller.taskUid;
       const db = await getDb();
       if (!db) {
         res.status(503).json({ error: "database_unavailable" });
