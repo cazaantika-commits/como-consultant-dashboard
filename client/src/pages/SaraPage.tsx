@@ -117,30 +117,30 @@ export default function SaraPage() {
 
   if (member && token) {
     return (
-      <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff6de_0,#f8faf8_38%,#edf3f2_100%)] p-4 sm:p-7" dir="rtl">
+      <main className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff6de_0,#f8faf8_38%,#edf3f2_100%)] p-3 sm:p-7" dir="rtl">
         <div className="mx-auto max-w-5xl">
-          <header className="mb-4 flex items-center justify-between gap-3">
-            <button type="button" onClick={() => navigate("/")} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowRight className="h-4 w-4" />الرئيسية</button>
-            <Button variant="outline" onClick={() => navigate("/como-next")} className="rounded-xl bg-white"><BriefcaseBusiness className="ml-2 h-4 w-4" />المكتب التنفيذي</Button>
+          <header className="mb-3 grid grid-cols-2 gap-2 sm:mb-4 sm:flex sm:items-center sm:justify-between sm:gap-3">
+            <button type="button" onClick={() => navigate("/")} className="inline-flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm sm:px-4 sm:text-sm"><ArrowRight className="h-4 w-4 shrink-0" />الرئيسية</button>
+            <Button variant="outline" onClick={() => navigate("/como-next")} className="min-w-0 rounded-xl bg-white px-3 text-xs sm:px-4 sm:text-sm"><BriefcaseBusiness className="ml-1 h-4 w-4 shrink-0 sm:ml-2" />المكتب التنفيذي</Button>
           </header>
 
           <section className="grid overflow-hidden rounded-[30px] border border-white bg-white shadow-[0_24px_80px_rgba(15,23,42,.12)] md:grid-cols-[.72fr_1.28fr]">
-            <div className="relative h-56 overflow-hidden sm:h-72 md:h-auto md:min-h-[360px]">
-              <img src={SARA_PORTRAIT} alt="سارة" className="absolute inset-0 h-full w-full object-cover object-[center_18%]" />
+            <div className="relative h-72 overflow-hidden md:h-auto md:min-h-[360px]">
+              <img src={SARA_PORTRAIT} alt="سارة" className="absolute inset-0 h-full w-full object-cover object-[center_22%]" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/45 via-transparent to-transparent" />
             </div>
-            <div className="p-5 sm:p-7">
-              <div className="flex items-center justify-between gap-3"><div><p className="text-[11px] font-black text-[#1d6577]">اليوم</p><h1 className="mt-1 text-2xl font-black text-slate-950">صباح الخير، {member.nameAr}</h1></div><Button onClick={() => setRoomOpen(true)} className="rounded-2xl bg-amber-400 font-black text-slate-950 hover:bg-amber-300"><MessageSquare className="ml-2 h-4 w-4" />تحدث مع سارة</Button></div>
+            <div className="min-w-0 p-4 sm:p-7">
+              <div className="flex min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="text-[11px] font-black text-[#1d6577]">اليوم</p><h1 className="mt-1 break-words text-xl font-black leading-8 text-slate-950 sm:text-2xl">صباح الخير، {member.nameAr}</h1></div><Button onClick={() => setRoomOpen(true)} className="w-full shrink-0 rounded-2xl bg-amber-400 font-black text-slate-950 hover:bg-amber-300 sm:w-auto"><MessageSquare className="ml-2 h-4 w-4" />تحدث مع سارة</Button></div>
 
               <div className="mt-6 grid grid-cols-3 gap-2">
-                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="rounded-2xl border border-slate-200 bg-[#fafbf9] p-3 text-right"><span className="text-[10px] font-bold text-slate-500">اليوم</span><strong className="mt-1 block text-2xl font-black text-slate-950">{brief.today}</strong></button>
-                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="rounded-2xl border border-rose-100 bg-rose-50/70 p-3 text-right"><span className="text-[10px] font-bold text-rose-700">متأخر</span><strong className="mt-1 block text-2xl font-black text-rose-800">{brief.overdue}</strong></button>
-                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-right"><span className="text-[10px] font-bold text-amber-700">3 أيام</span><strong className="mt-1 block text-2xl font-black text-amber-800">{brief.upcoming}</strong></button>
+                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="min-w-0 rounded-2xl border border-slate-200 bg-[#fafbf9] p-3 text-right"><span className="text-[10px] font-bold text-slate-500">اليوم</span><strong className="mt-1 block text-2xl font-black text-slate-950">{brief.today}</strong></button>
+                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="min-w-0 rounded-2xl border border-rose-100 bg-rose-50/70 p-3 text-right"><span className="text-[10px] font-bold text-rose-700">متأخر</span><strong className="mt-1 block text-2xl font-black text-rose-800">{brief.overdue}</strong></button>
+                <button type="button" onClick={() => navigate("/como-next?section=actions")} className="min-w-0 rounded-2xl border border-amber-100 bg-amber-50/70 p-3 text-right"><span className="text-[10px] font-bold text-amber-700">3 أيام</span><strong className="mt-1 block text-2xl font-black text-amber-800">{brief.upcoming}</strong></button>
               </div>
 
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-black text-slate-700">الأهم الآن</h2><CalendarDays className="h-4 w-4 text-slate-400" /></div>
-                {overviewQuery.isLoading ? <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-[#1d6577]" /></div> : brief.items.length ? <div className="space-y-2">{brief.items.map((item: any) => <button key={`${item.workFileId}-${item.id}`} type="button" onClick={() => navigate(`/como-next?section=actions&workFileId=${item.workFileId}&actionId=${item.id}`)} className="group flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right transition hover:border-[#8fb7c2]"><span className="flex min-w-0 items-center gap-2">{item.isOverdue ? <Clock3 className="h-4 w-4 shrink-0 text-rose-600" /> : <CalendarDays className="h-4 w-4 shrink-0 text-amber-600" />}<span className="truncate text-sm font-bold text-slate-900">{item.title}</span></span><ChevronLeft className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-[#1d6577]" /></button>)}</div> : <p className="rounded-xl border border-dashed border-slate-200 bg-[#fafbf9] px-4 py-5 text-center text-sm font-bold text-slate-500">لا يوجد أمر مهم مسجل الآن</p>}
+                {overviewQuery.isLoading ? <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-[#1d6577]" /></div> : brief.items.length ? <div className="space-y-2">{brief.items.map((item: any) => <button key={`${item.workFileId}-${item.id}`} type="button" onClick={() => navigate(`/como-next?section=actions&workFileId=${item.workFileId}&actionId=${item.id}`)} className="group flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right transition hover:border-[#8fb7c2]"><span className="flex min-w-0 items-center gap-2">{item.isOverdue ? <Clock3 className="h-4 w-4 shrink-0 text-rose-600" /> : <CalendarDays className="h-4 w-4 shrink-0 text-amber-600" />}<span className="line-clamp-2 break-words text-sm font-bold leading-6 text-slate-900">{item.title}</span></span><ChevronLeft className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-[#1d6577]" /></button>)}</div> : <p className="rounded-xl border border-dashed border-slate-200 bg-[#fafbf9] px-4 py-5 text-center text-sm font-bold text-slate-500">لا يوجد أمر مهم مسجل الآن</p>}
               </div>
             </div>
           </section>

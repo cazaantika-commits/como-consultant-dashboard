@@ -117,7 +117,7 @@ export function SaraLiveAvatarView({ portrait, idleVideo, sessionToken, speechCu
   }, [interruptId]);
 
   return (
-    <div className="relative h-full min-h-[260px] overflow-hidden rounded-[26px] bg-[#071522] shadow-[0_24px_70px_rgba(2,12,24,.38)]">
+    <div className="relative h-full min-h-[170px] overflow-hidden rounded-[20px] bg-[#071522] shadow-[0_24px_70px_rgba(2,12,24,.38)] sm:min-h-[260px] sm:rounded-[26px]">
       <video
         src={idleVideo}
         poster={portrait}

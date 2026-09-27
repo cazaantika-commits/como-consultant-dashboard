@@ -119,11 +119,11 @@ export default function ProjectManagementPage() {
   const project = projectQuery.data as any;
   const foundation = foundationQuery.data as any;
 
-  return <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#edf3f2_100%)] text-slate-900" dir="rtl">
+  return <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#edf3f2_100%)] text-slate-900" dir="rtl">
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-7">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-col items-stretch gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-7">
         <button type="button" onClick={() => navigate("/")} className="inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft className="h-4 w-4" />الرئيسية</button>
-        <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className="rounded-full border-emerald-200 bg-emerald-50 text-emerald-700"><ShieldCheck className="ml-1 h-3.5 w-3.5" />مصدر واحد للمشروع</Badge><Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="rounded-xl bg-white text-xs"><FilePlus2 className="ml-1 h-3.5 w-3.5" />فتح مشروع جديد</Button></div>
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"><Badge variant="outline" className="min-w-0 justify-center rounded-full border-emerald-200 bg-emerald-50 px-2 text-[10px] text-emerald-700 sm:text-xs"><ShieldCheck className="ml-1 h-3.5 w-3.5 shrink-0" />مصدر واحد للمشروع</Badge><Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="min-w-0 rounded-xl bg-white px-2 text-[10px] sm:px-3 sm:text-xs"><FilePlus2 className="ml-1 h-3.5 w-3.5 shrink-0" />فتح مشروع جديد</Button></div>
       </div>
     </header>
 

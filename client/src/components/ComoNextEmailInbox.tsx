@@ -144,16 +144,16 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir="rtl" className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none border-slate-200 bg-[#fafbf9] p-0 sm:h-[94dvh] sm:max-w-5xl sm:rounded-[28px]">
+      <DialogContent dir="rtl" className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-x-hidden overflow-y-auto rounded-none border-slate-200 bg-[#fafbf9] p-0 sm:!left-1/2 sm:!top-1/2 sm:!h-[94dvh] sm:!w-full sm:!max-w-5xl sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px]">
         {detailQuery.isLoading ? <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : detail ? <>
-          <DialogHeader className="border-b border-slate-200 bg-white px-6 py-5 text-right">
+          <DialogHeader className="border-b border-slate-200 bg-white px-4 py-5 text-right sm:px-6">
             <div className="flex flex-wrap items-start justify-between gap-3 pe-8">
               <div className="min-w-0"><DialogTitle className="text-xl leading-8">{detail.message.subject}</DialogTitle><DialogDescription className="mt-2"><bdi dir="ltr">{detail.message.fromEmail}</bdi> · {formatDateTime(detail.message.receivedAt)}</DialogDescription></div>
               <div className="flex gap-2"><Badge variant="outline" className={`rounded-full ${statusMeta[detail.message.inboxStatus]?.className}`}>{statusMeta[detail.message.inboxStatus]?.label}</Badge><Badge variant="outline" className={`rounded-full ${importanceMeta[detail.message.importance]?.className}`}>{importanceMeta[detail.message.importance]?.label}</Badge></div>
             </div>
           </DialogHeader>
 
-          <div className="space-y-5 p-6">
+          <div className="min-w-0 space-y-5 p-4 sm:p-6">
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-6 text-emerald-900"><ShieldCheck className="ms-2 inline h-4 w-4" />قراءة داخلية فقط: لا إرسال، لا تحويل، لا حذف، ولا تغيير لحالة القراءة على خادم البريد.</div>
 
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{detail.message.bodyText || "لا يوجد نص مستخرج"}</p></Card>

@@ -88,7 +88,7 @@ function ProposalDialog({ proposal, open, onOpenChange, onChanged }: { proposal:
   };
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent dir="rtl" className="h-[100dvh] w-screen max-w-none overflow-y-auto rounded-none border-slate-200 bg-[#fbfbf8] sm:h-[94dvh] sm:max-w-3xl sm:rounded-[28px]">
+    <DialogContent dir="rtl" className="!left-0 !top-0 !h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 overflow-x-hidden overflow-y-auto rounded-none border-slate-200 bg-[#fbfbf8] p-4 sm:!left-1/2 sm:!top-1/2 sm:!h-[94dvh] sm:!w-full sm:!max-w-3xl sm:!-translate-x-1/2 sm:!-translate-y-1/2 sm:rounded-[28px] sm:p-6">
       <DialogHeader className="text-right">
         <div className="flex items-center gap-2"><Badge variant="outline" className={`rounded-full ${kind.tone}`}>{kind.label}</Badge><Badge variant="outline" className="rounded-full bg-white"><SourceIcon className="ms-1 h-3.5 w-3.5" />{sourceMeta[proposal.sourceKind]?.label}</Badge></div>
         <DialogTitle className="pt-2 text-xl">مراجعة المقترح قبل أي أثر تشغيلي</DialogTitle>

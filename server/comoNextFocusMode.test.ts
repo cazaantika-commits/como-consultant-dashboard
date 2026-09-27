@@ -39,7 +39,7 @@ describe("COMO Next focus mode", () => {
     expect(source).toContain("{focusedAction ? <FocusedActionView");
     expect(source).toContain("العودة إلى عناوين الإجراءات");
     expect(source).toContain("onClick={() => onActionChange(action.id)}");
-    expect(source).toContain('className="w-screen max-w-none overflow-y-auto');
+    expect(source).toContain("!w-screen !max-w-none overflow-x-hidden overflow-y-auto");
   });
 
   it("opens one executive category before any item and supports focused decisions, communications, and meetings", () => {

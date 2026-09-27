@@ -405,9 +405,9 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/70 p-2 backdrop-blur-sm sm:p-5" dir="rtl">
-      <div className="grid h-[94dvh] w-full max-w-6xl overflow-hidden rounded-[30px] border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] lg:grid-cols-[0.88fr_1.12fr]">
-        <section className="relative hidden min-h-0 bg-[#071522] p-4 lg:block">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-slate-950/70 p-0 backdrop-blur-sm sm:p-5" dir="rtl">
+      <div className="grid h-[100dvh] w-full max-w-6xl grid-rows-[30%_70%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.88fr_1.12fr] lg:grid-rows-1">
+        <section className="relative min-h-0 bg-[#071522] p-1.5 sm:p-4">
           <SaraLiveAvatarView
             portrait={SARA_PORTRAIT}
             idleVideo={SARA_IDLE_VIDEO}
@@ -417,10 +417,10 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
             onStateChange={state => setAvatarConnected(state.connected)}
           />
           {!avatarToken && (
-            <div className="absolute inset-x-8 bottom-10 rounded-2xl border border-white/10 bg-slate-950/75 p-4 text-right text-white backdrop-blur-xl">
-              <p className="font-bold">سارة جاهزة بصورتها المعتمدة</p>
-              <p className="mt-1 text-xs leading-5 text-slate-300">شغّل الصورة الحية فقط عندما تحتاج حركة الشفاه؛ الصوت المباشر يعمل مستقلًا لتقليل التكلفة.</p>
-              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-3 h-9 bg-amber-400 text-slate-950 hover:bg-amber-300">
+            <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
+              <p className="text-sm font-bold sm:text-base">سارة أمامك بصورتها المعتمدة</p>
+              <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">شغّل الصورة الحية فقط عندما تحتاج حركة الشفاه؛ الصوت المباشر يعمل مستقلًا لتقليل التكلفة.</p>
+              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm">
                 <Video className="ml-2 h-4 w-4" /> تشغيل الصورة الحية
               </Button>
             </div>
@@ -428,9 +428,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
         </section>
 
         <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top_right,#fff7e6_0,#ffffff_36%,#f7f8fb_100%)]">
-          <header className="flex items-start justify-between gap-3 border-b border-slate-200/80 px-4 py-4 sm:px-6">
+          <header className="flex items-start justify-between gap-3 border-b border-slate-200/80 px-3 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center gap-3">
-              <div className="relative h-12 w-12 overflow-hidden rounded-2xl ring-2 ring-amber-300/70 lg:hidden"><img src={SARA_PORTRAIT} alt="سارة" className="h-full w-full object-cover object-[center_18%]" /></div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-black text-slate-900">سارة</h2>

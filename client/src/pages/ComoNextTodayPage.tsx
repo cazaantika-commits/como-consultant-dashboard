@@ -238,7 +238,7 @@ function NewWorkFileDialog({ projects, onCreated }: { projects: any[]; onCreated
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-11 rounded-xl bg-[#16243b] px-5 text-white shadow-lg shadow-slate-900/10 hover:bg-[#203554] active:scale-[0.98]">
+        <Button className="h-11 w-full min-w-0 rounded-xl bg-[#16243b] px-3 text-xs text-white shadow-lg shadow-slate-900/10 hover:bg-[#203554] active:scale-[0.98] sm:w-auto sm:px-5 sm:text-sm">
           <Plus className="ms-2 h-4 w-4" />
           فتح ملف عمل
         </Button>
@@ -615,11 +615,11 @@ function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => voi
 }
 
 function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: any; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
-  return <div className="min-h-[calc(100vh-8rem)] bg-[#f8f8f5] p-5 sm:p-7">
-    <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2]"><ArrowLeft className="h-4 w-4" />العودة إلى عناوين الإجراءات</button>
-    <article className="mx-auto mt-6 max-w-xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+  return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
+    <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2] sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" /><span className="break-words text-right">العودة إلى عناوين الإجراءات</span></button>
+    <article className="mx-auto mt-4 min-w-0 max-w-xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
       <div className="flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div>
-      <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{action.title}</h2>
+      <h2 className="mt-5 break-words text-xl font-black leading-9 text-slate-950 sm:text-2xl sm:leading-10">{action.title}</h2>
       {action.description ? <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">التفاصيل</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-700">{action.description}</p></div> : null}
       <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">معيار القبول</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-800">{action.acceptanceCriteria}</p></div>
       {action.evidenceReference ? <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-[11px] font-black text-emerald-700">دليل التحقق</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{action.evidenceReference}</p></div> : null}
@@ -630,9 +630,9 @@ function FocusedActionView({ action, isClosed, onBack, onUpdated }: { action: an
 }
 
 function FocusedRecordView({ kind, item, workFileId, isClosed, onBack, onUpdated }: { kind: Exclude<ExecutiveFocusKind, "action">; item: any; workFileId: number; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
-  return <div className="min-h-[calc(100vh-8rem)] bg-[#f8f8f5] p-5 sm:p-7">
-    <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />العودة إلى القائمة</button>
-    <article className="mx-auto mt-6 max-w-2xl rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+  return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
+    <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" />العودة إلى القائمة</button>
+    <article className="mx-auto mt-4 min-w-0 max-w-2xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
       {kind === "decision" ? <>
         <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${decisionStatusMeta[item.decisionStatus as DecisionStatus]?.className || ""}`}>{decisionStatusMeta[item.decisionStatus as DecisionStatus]?.label || item.decisionStatus}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[item.decisionAuthority as DecisionAuthority]}</Badge></div>
         <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{item.title}</h2>
@@ -671,13 +671,13 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const focusedMeeting = focusKind === "meeting" && focusId ? data?.meetings.find((meeting: any) => meeting.id === focusId) : null;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent dir="rtl" side="left" className="w-screen max-w-none overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0 sm:max-w-none">
+      <SheetContent dir="rtl" side="left" className="!left-0 !right-0 !h-[100dvh] !w-screen !max-w-none overflow-x-hidden overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} /></div> : data ? <>
           {focusedAction ? <FocusedActionView action={focusedAction} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
-          <div className="border-b border-slate-200 bg-[#16243b] px-6 py-7 text-white">
+          <div className="border-b border-slate-200 bg-[#16243b] px-4 py-6 text-white sm:px-6 sm:py-7">
             <SheetHeader className="text-right"><div className="mb-3 flex flex-wrap items-center gap-2"><StatusBadge status={data.workFile.workFileStatus} kind="work-file" /><PriorityBadge priority={data.workFile.priority} /></div><SheetTitle className="text-2xl font-black leading-9 text-white">{data.workFile.title}</SheetTitle><SheetDescription className="text-sm text-slate-300">{data.workFile.projectName}</SheetDescription></SheetHeader>
           </div>
-          <div className="space-y-6 p-6">
+          <div className="min-w-0 space-y-5 p-4 sm:space-y-6 sm:p-6">
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-bold text-slate-400">السؤال الحاكم</p><p className="mt-2 text-sm font-semibold leading-7 text-slate-900">{data.workFile.governingQuestion}</p><div className="my-4 h-px bg-slate-100" /><p className="text-xs font-bold text-slate-400">النتيجة المطلوبة</p><p className="mt-2 text-sm leading-7 text-slate-700">{data.workFile.desiredOutcome}</p></Card>
             {data.parties.length ? <Card className="rounded-3xl border-[#cfe3df] bg-[#f1f8f6] p-5 shadow-sm"><div className="flex items-center gap-2 text-[#1e6478]"><UsersRound className="h-4 w-4" /><h3 className="text-sm font-black">الأطراف المرتبطة بهذا الملف</h3></div><div className="mt-3 flex flex-wrap gap-2">{data.parties.map((party: any) => <Badge key={party.id} variant="outline" className="rounded-full border-[#bdd8d2] bg-white px-3 py-1.5 text-[#18596a]">{party.displayName}</Badge>)}</div></Card> : null}
             <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={onChanged} title="مقترحات مرتبطة بهذا الملف" />
@@ -894,15 +894,15 @@ export default function ComoNextTodayPage() {
 
   const selectedMeta = sectionCards.find(item => item.key === selectedSection);
   return (
-    <div dir="rtl" className="como-next-workspace min-h-screen bg-[#f6f6f2] text-slate-900">
+    <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[#f6f6f2] text-slate-900">
       <header className="border-b border-slate-200 bg-[#14243a] text-white">
-        <div className="mx-auto flex min-h-20 max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex min-h-20 max-w-5xl flex-col items-stretch gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"><ArrowLeft className="h-4 w-4" /></button>
             <div><p className="text-[10px] font-bold tracking-[.16em] text-[#9dd5ca]">COMO NEXT</p><h1 className="text-xl font-black">المكتب التنفيذي</h1></div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => navigate("/sara")} className="rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/10">اليوم مع سارة</Button>
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center">
+            <Button variant="outline" onClick={() => navigate("/sara")} className="min-w-0 rounded-xl border-white/15 bg-white/5 px-3 text-xs text-white hover:bg-white/10 sm:text-sm">اليوم مع سارة</Button>
             <NewWorkFileDialog projects={projectsQuery.data || []} onCreated={async id => { await refresh(); openWorkFile(id); }} />
           </div>
         </div>
@@ -916,7 +916,7 @@ export default function ComoNextTodayPage() {
               {sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group flex min-h-16 items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="font-black text-slate-900">{item.title}</span></span><span className="flex shrink-0 items-center gap-3"><bdi className="text-lg font-black text-slate-700">{item.count}</bdi><ChevronLeft className="h-4 w-4 text-slate-300 group-hover:text-[#1e6478]" /></span></button>; })}
             </div>
           </section> : <section>
-            <div className="mb-5 flex items-center justify-between gap-3">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>
               <div className="text-left"><h2 className="text-xl font-black text-slate-950">{selectedMeta?.title || "المكتب التنفيذي"}</h2>{selectedMeta ? <bdi className="text-xs font-bold text-slate-400">{selectedMeta.count}</bdi> : null}</div>
             </div>

@@ -1170,7 +1170,7 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
   }
 
   return (
-    <div className={`${embedded ? "" : "min-h-screen bg-background"}`} dir="rtl">
+    <div className={`min-w-0 max-w-full overflow-x-hidden ${embedded ? "" : "min-h-screen bg-background"}`} dir="rtl">
 
       {/* ═══════════════════════════════════════════════════════
            HERO BANNER — مسار الامتثال التنظيمي
@@ -1187,22 +1187,22 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
         <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full opacity-10"
           style={{ background: "radial-gradient(circle, #c4b5fd, transparent)" }} />
 
-        <div className="relative max-w-3xl mx-auto px-6 pt-7 pb-6">
+        <div className="relative mx-auto max-w-3xl px-4 pb-6 pt-7 sm:px-6">
           {/* Title row */}
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div className="flex items-center gap-4">
+          <div className="mb-5 flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", backdropFilter: "blur(12px)" }}
               >
                 <Building2 className="w-7 h-7 text-white" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white leading-tight">مسار الامتثال التنظيمي</h2>
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold leading-tight text-white sm:text-2xl">مسار الامتثال التنظيمي</h2>
                 <p className="text-violet-300 text-sm mt-0.5">دورة حياة المشروع العقاري — DLD / RERA</p>
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex shrink-0 gap-2 sm:justify-end">
               {selectedProjectId && (
                 <button
                   onClick={() => { setReportStageFilter("all"); setShowReportDialog(true); }}
@@ -1343,8 +1343,8 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
 	              : program.status === "no_approved_program"
 	                ? "البرنامج مكتمل ويحتاج اعتمادًا"
 	                : "البرنامج غير مكتمل";
-	          return <div className={`mb-5 rounded-2xl border p-4 ${tone}`}>
-	            <div className="flex flex-wrap items-start justify-between gap-4">
+		          return <div className={`mb-5 min-w-0 rounded-2xl border p-4 ${tone}`}>
+		            <div className="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
 	              <div className="min-w-0 flex-1">
 	                <p className="text-[10px] font-black text-slate-500">البرنامج الأولي · المصدر الحاكم</p>
 	                <h3 className="mt-1 text-base font-black text-slate-950">{title}</h3>
@@ -1355,9 +1355,9 @@ export default function ProjectLifecyclePage({ embedded, initialProjectId, onPro
 	                  {program.earliestStartDate && program.latestDueDate ? <span className="rounded-full bg-white px-3 py-1"><bdi>{program.earliestStartDate}</bdi> — <bdi>{program.latestDueDate}</bdi></span> : null}
 	                </div>
 	              </div>
-	              {user?.role === "admin" ? <div className="flex shrink-0 flex-wrap gap-2">
-	                <Button size="sm" variant="outline" className="bg-white" disabled={programDecisionMutation.isPending || !program.serviceCount} onClick={() => programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "reviewed" })}>تسجيل مراجعة</Button>
-	                <Button size="sm" className="bg-emerald-700 text-white hover:bg-emerald-800" disabled={programDecisionMutation.isPending || !program.isSourceComplete} onClick={() => { if (window.confirm("اعتماد هذه النسخة من البرنامج الأولي؟ أي تغيير لاحق سيجعل الاعتماد بحاجة إلى مراجعة جديدة.")) programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "approved" }); }}>اعتماد النسخة الحالية</Button>
+		              {user?.role === "admin" ? <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:shrink-0 sm:flex-wrap">
+		                <Button size="sm" variant="outline" className="min-w-0 bg-white px-2 text-xs" disabled={programDecisionMutation.isPending || !program.serviceCount} onClick={() => programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "reviewed" })}>تسجيل مراجعة</Button>
+		                <Button size="sm" className="min-w-0 bg-emerald-700 px-2 text-xs text-white hover:bg-emerald-800" disabled={programDecisionMutation.isPending || !program.isSourceComplete} onClick={() => { if (window.confirm("اعتماد هذه النسخة من البرنامج الأولي؟ أي تغيير لاحق سيجعل الاعتماد بحاجة إلى مراجعة جديدة.")) programDecisionMutation.mutate({ projectId: selectedProjectId, decisionStatus: "approved" }); }}>اعتماد النسخة الحالية</Button>
 	              </div> : null}
 	            </div>
 	            <p className="mt-3 text-[11px] leading-5 text-slate-500">الاعتماد يثبت لقطة الخدمات والمواعيد فقط؛ لا يرسل طلب عروض ولا ينشئ عقدًا أو أثرًا ماليًا.</p>

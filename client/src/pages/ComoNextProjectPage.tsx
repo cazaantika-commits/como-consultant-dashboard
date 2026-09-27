@@ -121,7 +121,7 @@ export default function ComoNextProjectPage() {
   const openWorkFile = (workFileId: number) => navigate(`/como-next?tab=work-files&workFileId=${workFileId}`);
   const openFocusedOfficeRecord = (section: "decisions" | "communications" | "meetings", kind: "decision" | "communication" | "meeting", workFileId: number, recordId: number) => navigate(`/como-next?section=${section}&workFileId=${workFileId}&focusKind=${kind}&focusId=${recordId}`);
 
-  return <div dir="rtl" className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#eef3f2_100%)] text-slate-900">
+  return <div dir="rtl" className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#eef3f2_100%)] text-slate-900">
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-7">
         <button type="button" onClick={() => navigate("/como-next?tab=work-files")} className="inline-flex items-center gap-2 text-sm font-bold text-slate-700"><ArrowLeft className="h-4 w-4" />المكتب التنفيذي</button>
@@ -132,7 +132,7 @@ export default function ComoNextProjectPage() {
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10">
       <section className="relative overflow-hidden rounded-[36px] bg-[#122b35] text-white shadow-[0_30px_90px_rgba(15,36,45,.18)]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(211,170,105,.26),transparent_32%),radial-gradient(circle_at_90%_10%,rgba(85,166,150,.20),transparent_36%)]" />
-        <div className="relative px-6 py-7 sm:px-10"><Badge className="rounded-full border border-amber-300/25 bg-amber-300/10 text-amber-200 hover:bg-amber-300/10">الملف التنفيذي الموحد</Badge><h1 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">{data.project.name}</h1></div>
+        <div className="relative min-w-0 px-5 py-7 sm:px-10"><Badge className="rounded-full border border-amber-300/25 bg-amber-300/10 text-amber-200 hover:bg-amber-300/10">الملف التنفيذي الموحد</Badge><h1 className="mt-4 break-words text-2xl font-black leading-tight sm:text-4xl">{data.project.name}</h1></div>
       </section>
 
       {projectFacts.length ? <section className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{projectFacts.map(item => { const Icon = item.icon; return <Card key={item.label} className="rounded-2xl border-slate-200 bg-white/90 p-4 shadow-sm"><Icon className="h-4 w-4 text-[#1f6478]" /><p className="mt-3 text-[10px] font-bold text-slate-400">{item.label}</p><p className="mt-1 text-sm font-black text-slate-800">{item.value}</p></Card>; })}</section> : null}

@@ -49,7 +49,7 @@ function GatewayButton({ item, onOpen, primary = false }: { item: GatewayItem; o
     >
       <span className="flex min-w-0 items-center gap-4">
         <span className={`flex shrink-0 items-center justify-center rounded-2xl ${item.tone} ${primary ? "h-12 w-12" : "h-10 w-10"}`}><Icon className={primary ? "h-6 w-6" : "h-5 w-5"} /></span>
-        <span className={`${primary ? "text-lg" : "text-sm"} font-black text-slate-950`}>{item.title}</span>
+        <span className={`min-w-0 break-words ${primary ? "text-lg" : "text-sm"} font-black text-slate-950`}>{item.title}</span>
       </span>
       <ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1d6577]" />
     </button>
@@ -79,11 +79,11 @@ export default function Home() {
   if (!effectivelyAuthenticated) return <PublicHome />;
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#fbfcfb_34%,#edf3f2_100%)] text-slate-900" dir="rtl">
+    <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#fbfcfb_34%,#edf3f2_100%)] text-slate-900" dir="rtl">
       <header className="border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-7">
-          <div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white"><Building2 className="h-5 w-5" /></span><div><p className="text-sm font-black">COMO Developments</p><p className="text-[10px] text-slate-500">مكتب عبد الرحمن التنفيذي</p></div></div>
-          <p className="text-xs text-slate-500">{effectiveName}</p>
+        <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white"><Building2 className="h-5 w-5" /></span><div className="min-w-0"><p className="truncate text-sm font-black">COMO Developments</p><p className="truncate text-[10px] text-slate-500">مكتب عبد الرحمن التنفيذي</p></div></div>
+          <p className="max-w-[32%] truncate text-[10px] text-slate-500 sm:max-w-none sm:text-xs">{effectiveName}</p>
         </div>
       </header>
 

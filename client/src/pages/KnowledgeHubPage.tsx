@@ -94,21 +94,21 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
   const selectedProject = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-background" dir="rtl">
       {/* Header */}
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center gap-3">
+        <div className="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center gap-2 px-3 py-2 sm:h-14 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
           <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5 shrink-0">
             <ArrowRight className="w-4 h-4" />
             العودة
           </Button>
           <div className="h-5 w-px bg-border" />
           {/* Section icon + title */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex min-w-0 items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
               <currentTab.icon className="w-3.5 h-3.5 text-white" />
             </div>
-            <h1 className="text-sm font-bold text-foreground">{currentTab.label}</h1>
+            <h1 className="truncate text-sm font-bold text-foreground">{currentTab.label}</h1>
           </div>
           <div className="h-5 w-px bg-border" />
           {/* Project selector */}
@@ -116,7 +116,7 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
             value={selectedProjectId?.toString() ?? ""}
             onValueChange={(v) => handleProjectChange(Number(v))}
           >
-            <SelectTrigger className="h-8 text-xs w-52 shrink-0">
+            <SelectTrigger className="order-3 h-9 w-full min-w-0 text-xs sm:order-none sm:h-8 sm:w-52 sm:shrink-0">
               <SelectValue placeholder="اختر مشروعاً..." />
             </SelectTrigger>
             <SelectContent>
@@ -128,7 +128,7 @@ export default function KnowledgeHubPage({ onBack }: { onBack?: () => void }) {
             </SelectContent>
           </Select>
           {selectedProject && (
-            <span className="text-xs text-muted-foreground truncate">({(selectedProject as any).plotNumber || selectedProject.id})</span>
+            <span className="hidden truncate text-xs text-muted-foreground md:inline">({(selectedProject as any).plotNumber || selectedProject.id})</span>
           )}
         </div>
         {/* Tab bar */}
