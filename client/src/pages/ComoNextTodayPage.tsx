@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { WorkFileMeetingsSection } from "@/components/ComoNextMeetingWorkspace";
 import { ComoNextEmailInbox } from "@/components/ComoNextEmailInbox";
 import { ComoNextIntakeProposals } from "@/components/ComoNextIntakeProposals";
+import { PreservedCapabilityGallery } from "@/components/PreservedCapabilityGallery";
 import {
   AlertCircle,
   ArrowLeft,
@@ -128,6 +129,54 @@ const decisionAuthorityMeta: Record<DecisionAuthority, string> = {
   joint: "قرار مشترك",
   other: "جهة أخرى",
 };
+
+const queuePhaseMeta: Record<string, { label: string; icon: typeof CheckCheck; card: string; iconClass: string; eyebrow: string }> = {
+  owner_review: { label: "يحتاج مراجعتك", icon: BookOpenCheck, card: "border-violet-100 bg-[linear-gradient(135deg,#ffffff_0%,#f5f0ff_100%)]", iconClass: "bg-violet-100 text-violet-800", eyebrow: "text-violet-700" },
+  verify: { label: "جاهز للتحقق", icon: ShieldCheck, card: "border-cyan-100 bg-[linear-gradient(135deg,#ffffff_0%,#eaf8fb_100%)]", iconClass: "bg-cyan-100 text-cyan-800", eyebrow: "text-cyan-800" },
+  act_now: { label: "للتنفيذ الآن", icon: CheckCheck, card: "border-emerald-100 bg-[linear-gradient(135deg,#ffffff_0%,#edf8f3_100%)]", iconClass: "bg-emerald-100 text-emerald-800", eyebrow: "text-emerald-800" },
+  define_next_step: { label: "يحتاج خطوة تالية", icon: Sparkles, card: "border-amber-100 bg-[linear-gradient(135deg,#ffffff_0%,#fff7df_100%)]", iconClass: "bg-amber-100 text-amber-800", eyebrow: "text-amber-800" },
+  waiting_external: { label: "بانتظار طرف خارجي", icon: Clock3, card: "border-orange-100 bg-[linear-gradient(135deg,#ffffff_0%,#fff2e7_100%)]", iconClass: "bg-orange-100 text-orange-800", eyebrow: "text-orange-800" },
+  scheduled: { label: "موعد قادم", icon: CalendarClock, card: "border-blue-100 bg-[linear-gradient(135deg,#ffffff_0%,#eef4ff_100%)]", iconClass: "bg-blue-100 text-blue-800", eyebrow: "text-blue-800" },
+};
+
+const queueKindLabel: Record<string, string> = {
+  action: "إجراء",
+  decision: "قرار",
+  communication: "مسودة",
+  meeting: "اجتماع",
+  email: "بريد",
+  proposal: "مقترح",
+  specialist: "مراجعة تخصصية",
+  gap: "ملف عمل",
+};
+
+function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number; onOpen: (item: any) => void }) {
+  const meta = queuePhaseMeta[item.phase] || queuePhaseMeta.act_now;
+  const Icon = meta.icon;
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(item)}
+      className={`group relative min-h-[116px] w-full min-w-0 overflow-hidden rounded-[26px] border p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,.12)] active:scale-[.99] sm:p-5 ${meta.card}`}
+    >
+      <span className={`absolute inset-y-0 right-0 w-1.5 ${item.priority === "urgent" ? "bg-rose-500" : item.priority === "important" ? "bg-amber-400" : "bg-[#1d6577]"}`} />
+      <div className="flex h-full min-w-0 items-start gap-4 pr-1">
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${meta.iconClass}`}><Icon className="h-5 w-5" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className={`text-[10px] font-black tracking-wide ${meta.eyebrow}`}>{meta.label}</span>
+            <span className="rounded-full border border-white bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{queueKindLabel[item.kind] || "عمل"}</span>
+          </span>
+          <span className="mt-2 block break-words text-[15px] font-black leading-7 text-slate-950 sm:text-base">{item.title}</span>
+        </span>
+        <span className="flex shrink-0 flex-col items-end justify-between self-stretch">
+          <bdi className="text-[10px] font-black text-slate-300">{String(index + 1).padStart(2, "0")}</bdi>
+          <ChevronLeft className="h-5 w-5 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1d6577]" />
+        </span>
+      </div>
+    </button>
+  );
+}
 
 function normalizeUtc(value: string | null | undefined) {
   if (!value) return null;
@@ -946,11 +995,11 @@ export default function ComoNextTodayPage() {
   const selectedMeta = sectionCards.find(item => item.key === selectedSection);
   return (
     <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[#f6f6f2] text-slate-900">
-      <header className="border-b border-slate-200 bg-[#14243a] text-white">
+      <header className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,#284965_0%,#14243a_48%,#091523_100%)] text-white shadow-[0_18px_50px_rgba(2,12,24,.18)]">
         <div className="mx-auto flex min-h-20 max-w-5xl flex-col items-stretch gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate("/")} className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5"><ArrowLeft className="h-4 w-4" /></button>
-            <div><p className="text-[10px] font-bold tracking-[.16em] text-[#9dd5ca]">COMO NEXT</p><h1 className="text-xl font-black">المكتب التنفيذي</h1></div>
+            <div><p className="text-[10px] font-bold tracking-[.16em] text-[#9dd5ca]">COMO NEXT</p><h1 className="text-xl font-black">المطبخ التنفيذي</h1></div>
           </div>
           <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center">
             <Button variant="outline" onClick={() => navigate("/sara")} className="min-w-0 rounded-xl border-white/15 bg-white/5 px-3 text-xs text-white hover:bg-white/10 sm:text-sm">اليوم مع سارة</Button>
@@ -962,9 +1011,9 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <>
           {!selectedSection ? <section>
-            <div className="mb-4 flex items-end justify-between gap-3"><div><p className="text-xs font-black text-[#1e6478]">المطبخ التنفيذي</p><h2 className="mt-1 text-2xl font-black text-slate-950">العمل الآن</h2></div><Button type="button" variant="ghost" onClick={() => setShowSections(value => !value)} className="rounded-xl text-xs text-slate-500">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button></div>
-            {showSections ? <div className="mb-5 grid gap-2 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm"><span className="flex min-w-0 items-center gap-3"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-4 w-4" /></span><span className="text-sm font-black text-slate-900">{item.title}</span></span><bdi className="shrink-0 text-sm font-black text-slate-500">{item.count}</bdi></button>; })}</div> : null}
-            <div className="space-y-2">{data.executionQueue.length ? data.executionQueue.map((item: any) => <button key={item.id} type="button" onClick={() => openQueueItem(item)} className="group flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md"><span className="min-w-0 flex-1"><span className="block text-[10px] font-black text-[#1e6478]">{item.phase === "owner_review" ? "للمراجعة" : item.phase === "verify" ? "للتحقق" : item.phase === "waiting_external" ? "بانتظار طرف خارجي" : item.phase === "define_next_step" ? "يحتاج خطوة تالية" : item.phase === "scheduled" ? "موعد" : "للتنفيذ"}</span><span className="mt-0.5 block break-words text-sm font-black leading-6 text-slate-900">{item.title}</span></span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-[#1e6478]" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل مفتوح الآن</div>}</div>
+            <div className="mb-5 flex items-end justify-between gap-3"><div><p className="text-[10px] font-black tracking-[.18em] text-[#1e6478]">EXECUTIVE KITCHEN</p><h2 className="mt-1 text-3xl font-black text-slate-950">كل ما عليك الآن</h2></div><Button type="button" variant="ghost" onClick={() => setShowSections(value => !value)} className="rounded-xl text-xs text-slate-500">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button></div>
+            {showSections ? <div className="mb-6 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[92px] overflow-hidden rounded-[24px] border border-white bg-white p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span><span className="mt-1 block text-[10px] font-bold text-slate-400">افتح العناوين ثم سجل واحد</span></span><bdi className="text-2xl font-black text-slate-300">{item.count}</bdi></span></button>; })}</div> : null}
+            <div className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length ? data.executionQueue.map((item: any, index: number) => <ExecutiveQueueCard key={item.id} item={item} index={index} onOpen={openQueueItem} />) : <div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500 sm:col-span-2">لا يوجد عمل مفتوح الآن</div>}</div>
           </section> : <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>
@@ -977,7 +1026,7 @@ export default function ComoNextTodayPage() {
             {selectedSection === "meetings" ? <div className="space-y-2">{data.meetingAttention.length ? data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={(workFileId, meetingId) => openFocusedRecord(workFileId, "meeting", meetingId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد اجتماعات تحتاج انتباهك</div>}</div> : null}
             {selectedSection === "email" && user.role === "admin" ? <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} /> : null}
             {selectedSection === "intake" ? <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} /> : null}
-            {selectedSection === "specialists" ? <div className="space-y-2">{data.specialistAttention.length ? data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm hover:border-emerald-200"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.executiveSummary || item.requestText}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-emerald-700" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مراجعات تخصصية معلقة</div>}</div> : null}
+            {selectedSection === "specialists" ? <div><PreservedCapabilityGallery /><div className="mt-5 space-y-2">{data.specialistAttention.length ? data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm hover:border-emerald-200"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.executiveSummary || item.requestText}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-emerald-700" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مراجعات تخصصية معلقة الآن</div>}</div></div> : null}
             {selectedSection === "work-files" ? <div className="space-y-2">{data.workFiles.length ? data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد ملفات عمل نشطة</div>}</div> : null}
             {selectedSection === "transfer" && user.role === "admin" ? <ImportReviewPanel data={importReviewQuery.data} isLoading={importReviewQuery.isLoading} error={importReviewQuery.error?.message} /> : null}
           </section>}

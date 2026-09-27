@@ -81,7 +81,7 @@ describe("Command Center dashboard card registry", () => {
   });
 
   it("places the decision summary ahead of financial alerts and uses Sara's approved local portrait", () => {
-    expect(source).toContain('/sara/sara-approved-5256847d.webp');
+    expect(source).toContain('@/assets/como/sara.webp');
     expect(source).toContain('تحدث مع سارة');
     expect(source).not.toContain('como-hijabi-advisor-portrait_b3437e42.png');
     expect(source.indexOf('ملخص مركز القيادة')).toBeLessThan(source.indexOf('<ExecutiveCashFlowAlert'));

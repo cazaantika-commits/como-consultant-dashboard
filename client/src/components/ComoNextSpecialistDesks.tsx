@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
+import buraqPortrait from "@/assets/como/buraq.webp";
+import farouqPortrait from "@/assets/como/farouq.webp";
 import { default as Bot } from "lucide-react/dist/esm/icons/bot.js";
 import { default as BriefcaseBusiness } from "lucide-react/dist/esm/icons/briefcase-business.js";
 import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/check-circle-2.js";
@@ -21,28 +23,34 @@ type SpecialistCode = "project_monitor" | "contract_manager";
 type WorkFile = { id: number; title: string; workFileStatus: string };
 
 const specialistMeta: Record<SpecialistCode, {
+  name: string;
   title: string;
   subtitle: string;
   defaultRequest: string;
   icon: typeof Bot;
   cardClass: string;
   iconClass: string;
+  portrait: string;
 }> = {
   project_monitor: {
+    name: "براق",
     title: "مراقب المشروع والمتابعة التنفيذية",
     subtitle: "يراجع ما تأخر، وما يعتمد على غيره، وما يحتاج قرارًا أو متابعة تالية.",
     defaultRequest: "راجع الوضع التنفيذي الحالي للمشروع وحدد ما يستحق انتباهي الآن، مع ربط كل ملاحظة بدليلها واقتراح الخطوات التالية كمقترحات فقط.",
     icon: ClipboardCheck,
     cardClass: "border-teal-100 bg-gradient-to-br from-white to-[#f2faf8]",
     iconClass: "bg-teal-100 text-teal-800",
+    portrait: buraqPortrait,
   },
   contract_manager: {
+    name: "فاروق",
     title: "مدير العقود",
     subtitle: "يراجع موقف العقود والتسليمات والالتزامات والتغييرات والمخاطر التجارية.",
     defaultRequest: "راجع الموقف التعاقدي الحالي للمشروع وحدد الالتزامات والمخاطر والأسئلة المفتوحة، من دون افتراض نص غير موجود ومن دون إرسال أي إشعار.",
     icon: BriefcaseBusiness,
     cardClass: "border-amber-100 bg-gradient-to-br from-white to-[#fffaf0]",
     iconClass: "bg-amber-100 text-amber-800",
+    portrait: farouqPortrait,
   },
 };
 
@@ -159,8 +167,15 @@ export function ComoNextSpecialistDesks({ projectId, workFiles }: { projectId: n
         const capability = capabilities.find(item => item.capabilityCode === code);
         const meta = specialistMeta[code];
         const Icon = meta.icon;
-        return <Card key={code} className={`rounded-[30px] p-6 shadow-sm ${meta.cardClass}`}>
-          <div className="flex items-start gap-3"><div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${meta.iconClass}`}><Icon className="h-5 w-5" /></div><div><h3 className="text-lg font-black text-slate-900">{capability?.displayName || meta.title}</h3><p className="mt-1 text-xs leading-6 text-slate-600">{capability?.scopeSummary || meta.subtitle}</p></div></div>
+        return <Card key={code} className={`overflow-hidden rounded-[30px] shadow-[0_18px_45px_rgba(15,23,42,.08)] ${meta.cardClass}`}>
+          <div className="grid sm:grid-cols-[148px_1fr]">
+            <div className="relative min-h-[210px] overflow-hidden bg-slate-900 sm:min-h-full">
+              <img src={meta.portrait} alt={meta.name} className="absolute inset-0 h-full w-full object-cover object-top" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-transparent" />
+              <div className="absolute inset-x-4 bottom-4 text-white"><p className="text-xl font-black">{meta.name}</p><p className="mt-1 text-[10px] text-white/70">يعمل عند طلبك فقط</p></div>
+            </div>
+            <div className="p-5 sm:p-6">
+              <div className="flex items-start gap-3"><div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${meta.iconClass}`}><Icon className="h-5 w-5" /></div><div><h3 className="text-lg font-black text-slate-900">{capability?.displayName || meta.title}</h3><p className="mt-1 text-xs leading-6 text-slate-600">{capability?.scopeSummary || meta.subtitle}</p></div></div>
           <div className="mt-5 space-y-3">
             <Textarea value={requests[code]} onChange={event => setRequests(current => ({ ...current, [code]: event.target.value }))} className="min-h-28 rounded-2xl border-slate-200 bg-white text-sm leading-7" />
             <Select value={workFileIds[code] ? String(workFileIds[code]) : "project"} onValueChange={value => setWorkFileIds(current => ({ ...current, [code]: value === "project" ? null : Number(value) }))}>
@@ -169,6 +184,8 @@ export function ComoNextSpecialistDesks({ projectId, workFiles }: { projectId: n
             </Select>
             <Button onClick={() => run(code)} disabled={runMutation.isPending || capabilitiesQuery.isLoading} className="w-full rounded-xl bg-slate-900 text-white hover:bg-slate-800">{runMutation.isPending && runMutation.variables?.capabilityCode === code ? <Loader2 className="ml-1.5 h-4 w-4 animate-spin" /> : <FileSearch className="ml-1.5 h-4 w-4" />}إعداد مسودة مراجعة</Button>
             <p className="flex items-start gap-1.5 text-[10px] leading-5 text-slate-500"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0" />يقرأ السجل الحالي عند الضغط فقط. لا مراقبة في الخلفية ولا إنشاء إجراء أو قرار أو مراسلة.</p>
+          </div>
+            </div>
           </div>
         </Card>;
       })}

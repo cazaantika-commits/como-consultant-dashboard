@@ -125,7 +125,7 @@ export function SaraLiveAvatarView({ portrait, idleVideo, sessionToken, speechCu
         muted
         loop
         playsInline
-        className={`absolute inset-0 h-full w-full object-cover object-[center_18%] transition-opacity duration-300 ${streamReady ? "opacity-0" : "opacity-100"}`}
+        className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 ${streamReady ? "opacity-0" : "opacity-100"}`}
       />
       <video
         ref={videoRef}
@@ -136,7 +136,7 @@ export function SaraLiveAvatarView({ portrait, idleVideo, sessionToken, speechCu
           event.currentTarget.muted = true;
           event.currentTarget.volume = 0;
         }}
-        className={`absolute inset-0 h-full w-full object-cover object-[center_18%] transition-opacity duration-300 ${streamReady ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-300 ${streamReady ? "opacity-100" : "opacity-0"}`}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#05101d]/95 via-transparent to-[#05101d]/10" />
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5 text-white">

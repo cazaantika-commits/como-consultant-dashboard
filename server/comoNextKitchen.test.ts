@@ -44,7 +44,7 @@ describe("COMO Next executive kitchen", () => {
   });
 
   it("opens on one title-only Now queue and preserves full focus for one record", () => {
-    expect(kitchenPage).toContain("العمل الآن");
+    expect(kitchenPage).toContain("كل ما عليك الآن");
     expect(kitchenPage).toContain("data.executionQueue.map");
     expect(kitchenPage).toContain("حفظ وتحليل الخطوة التالية");
     expect(kitchenPage).toContain("تحويلها إلى إجراء");

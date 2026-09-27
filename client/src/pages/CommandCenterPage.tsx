@@ -118,8 +118,9 @@ import { type UnifiedGroupCashFlow } from "@/lib/unifiedGroupCashFlow";
 import { speakWithLaylaBrowserVoice, stopLaylaBrowserVoice } from "@/lib/laylaBrowserVoice";
 import { playLaylaGeneratedAudio, stopLaylaGeneratedAudio } from "@/lib/laylaGeneratedAudio";
 import { SaraRealtimeRoom } from "@/components/SaraRealtimeRoom";
+import saraPortrait from "@/assets/como/sara.webp";
 
-const SARA_AVATAR_URL = "/sara/sara-approved-5256847d.webp";
+const SARA_AVATAR_URL = saraPortrait;
 
 // --- Token Management ---
 function getStoredToken(persona: CommandCenterPersona | null): string | null {

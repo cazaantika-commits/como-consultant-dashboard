@@ -27,10 +27,10 @@ describe("mobile responsive shells", () => {
   });
 
   it("keeps Sara visible above the conversation on a phone", () => {
-    expect(saraRoom).toContain("grid-rows-[30%_70%]");
+    expect(saraRoom).toContain("grid-rows-[42%_58%]");
     expect(saraRoom).toContain("h-[100dvh]");
     expect(saraRoom).not.toContain("relative hidden min-h-0");
-    expect(sara).toContain("flex min-w-0 flex-col items-stretch gap-3");
+    expect(sara).toContain("flex min-w-0 flex-col items-stretch gap-4");
   });
 
   it("uses true full-screen mobile dialogs for email and intake review", () => {

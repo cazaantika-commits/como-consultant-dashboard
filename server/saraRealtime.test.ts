@@ -79,7 +79,7 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).not.toContain("OPENAI_API_KEY");
     expect(roomSource).toContain("ابدأ الحديث مع سارة");
     expect(roomSource).toContain("تشغيل الصورة الحية");
-    expect(roomSource).toContain("grid-rows-[30%_70%]");
+    expect(roomSource).toContain("grid-rows-[42%_58%]");
     expect(roomSource).toContain("h-[100dvh]");
     expect(roomSource).not.toContain("relative hidden min-h-0");
     expect(roomSource).toContain('peer.addTransceiver("audio", { direction: "recvonly" })');
@@ -87,6 +87,9 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("المقترح ليس تنفيذًا · لا إرسال خارجي");
     expect(avatarSource).toContain("session.repeatAudio");
     expect(avatarSource).toContain("event.currentTarget.muted = true");
+    expect(roomSource).toContain('@/assets/como/sara-idle.webm');
+    expect(pageSource).toContain("autoPlay muted loop playsInline");
+    expect(pageSource).toContain('@/assets/como/sara.webp');
   });
 
   it("gives Sara a direct persona-scoped login page without routing through the legacy dashboard", () => {

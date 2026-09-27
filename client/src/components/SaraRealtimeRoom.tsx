@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import saraPortrait from "@/assets/como/sara.webp";
+import saraIdleVideo from "@/assets/como/sara-idle.webm";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +9,8 @@ import { toast } from "sonner";
 import { Mic, MicOff, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, Volume2, X } from "lucide-react";
 import { SaraLiveAvatarView, type SaraVisualSpeechCue } from "./SaraLiveAvatarView";
 
-const SARA_PORTRAIT = "/sara/sara-approved-5256847d.webp";
-const SARA_IDLE_VIDEO = "/sara/sara-idle-540p.webm";
+const SARA_PORTRAIT = saraPortrait;
+const SARA_IDLE_VIDEO = saraIdleVideo;
 
 type TranscriptEntry = { id: string; role: "member" | "sara" | "system"; text: string };
 type VoicePhase = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "error";
@@ -406,7 +408,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-slate-950/70 p-0 backdrop-blur-sm sm:p-5" dir="rtl">
-      <div className="grid h-[100dvh] w-full max-w-6xl grid-rows-[30%_70%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.88fr_1.12fr] lg:grid-rows-1">
+      <div className="grid h-[100dvh] w-full max-w-6xl grid-rows-[42%_58%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.88fr_1.12fr] lg:grid-rows-1">
         <section className="relative min-h-0 bg-[#071522] p-1.5 sm:p-4">
           <SaraLiveAvatarView
             portrait={SARA_PORTRAIT}
@@ -418,8 +420,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose }: { token
           />
           {!avatarToken && (
             <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
-              <p className="text-sm font-bold sm:text-base">سارة أمامك بصورتها المعتمدة</p>
-              <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">شغّل الصورة الحية فقط عندما تحتاج حركة الشفاه؛ الصوت المباشر يعمل مستقلًا لتقليل التكلفة.</p>
+              <p className="text-sm font-bold sm:text-base">سارة أمامك بحركتها المحلية</p>
+              <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">الحركة الهادئة تعمل تلقائيًا. شغّل الصورة الحية فقط عندما تحتاج مزامنة الشفاه.</p>
               <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm">
                 <Video className="ml-2 h-4 w-4" /> تشغيل الصورة الحية
               </Button>

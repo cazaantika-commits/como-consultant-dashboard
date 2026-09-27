@@ -18,7 +18,7 @@ it("keeps the authenticated homepage as a route-only gateway without an operatio
   expect(source).not.toContain("NewsTicker");
 });
 
-it("keeps the rebuilt homepage focused on five direct destinations and four protected workspaces", () => {
+it("keeps the rebuilt homepage focused on four primary destinations and four protected workspaces", () => {
   expect(source).toContain('id: "project-management"');
   expect(source).toContain('path: "/project-management"');
   expect(source).toContain('id: "executive-office"');
@@ -35,6 +35,7 @@ it("keeps the rebuilt homepage focused on five direct destinations and four prot
   expect(source).toContain('path: "/sara"');
   expect(source).toContain('id: "project-opening"');
   expect(source).toContain('path: "/como-next/project-opening"');
-  expect(source).not.toContain("SARA_PORTRAIT");
-  expect(source).not.toContain("فريق الوكلاء");
+  expect(source).toContain('import saraPortrait from "@/assets/como/sara.webp"');
+  expect(source).toContain("<PreservedCapabilityGallery />");
+  expect(source).not.toContain("trpc.comoNext.getOverview.useQuery");
 });

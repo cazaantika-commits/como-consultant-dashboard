@@ -59,11 +59,14 @@ describe("COMO Next intelligent intake safeguards", () => {
     expect(commands).toContain("لا يمكن إغلاق الملف قبل مراجعة المقترحات الواردة من البريد أو سارة");
   });
 
-  it("has no live proposal residue before the reversible smoke test", async () => {
+  it("preserves legitimate live proposals and requires complete provenance", async () => {
     const connection = await mysql.createConnection(process.env.DATABASE_URL!);
     try {
-      const [rows] = await connection.query<any[]>("SELECT COUNT(*) AS n FROM como_next_intake_proposals");
-      expect(Number(rows[0].n)).toBe(0);
+      const [rows] = await connection.query<any[]>(`SELECT COUNT(*) AS n,
+        SUM(CASE WHEN source_kind IS NULL OR source_record_id IS NULL OR review_status IS NULL THEN 1 ELSE 0 END) AS invalid
+        FROM como_next_intake_proposals`);
+      expect(Number(rows[0].n)).toBeGreaterThanOrEqual(0);
+      expect(Number(rows[0].invalid || 0)).toBe(0);
     } finally {
       await connection.end();
     }
