@@ -23,7 +23,7 @@ describe("Feasibility Study investor decision layer", () => {
     expect(source).toContain("ربح المشروع قبل حصة كومو");
     expect(source).toContain("التزام رأس المال للمستثمر");
     expect(source).toContain("ذروة السيولة المطلوبة");
-    expect(source).toContain("title=\"التكاليف\"");
+    expect(source).toContain('title={isJointVenture && !hasFinancialInputs ? "المصاريف المسجلة — التكلفة غير مكتملة" : "التكاليف"}');
     expect(source).toContain("title=\"تفاصيل المشروع\"");
   });
 
@@ -31,6 +31,6 @@ describe("Feasibility Study investor decision layer", () => {
     expect(source).toContain("calculateProjectCosts(project)");
     expect(source).toContain("computeInvestorCashFlow(project || null, scenario, undefined, salesResult)");
     expect(source).toContain("calculateInvestorCapitalSummary(cashFlow)");
-    expect(source).toContain("trpc.waelSalesPlan.getByProject.useQuery");
+    expect(source).toContain("trpc.waelSalesPlan.getApprovedByProject.useQuery");
   });
 });

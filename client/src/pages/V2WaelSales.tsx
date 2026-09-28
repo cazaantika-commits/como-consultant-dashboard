@@ -142,14 +142,18 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
+  const approvedPlanQuery = trpc.waelSalesPlan.getApprovedByProject.useQuery(
+    { projectId: selectedProjectId! },
+    { enabled: !!selectedProjectId && !!user }
+  );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
   const isBuildForSale = scenario === "build_for_sale";
   const isJointVenture = isJointVentureLandForUnits(scenario);
   const jointVentureTerms = useMemo(() => getJointVentureTerms(projectQuery.data), [projectQuery.data]);
   const inputReadiness = useMemo(() => getJointVentureInputReadiness(projectQuery.data), [projectQuery.data]);
   const hasSavedJointVentureSalesIndicator = useMemo(
-    () => hasApprovedWaelSalesIndicator(plansQuery.data?.[0]),
-    [plansQuery.data],
+    () => hasApprovedWaelSalesIndicator(approvedPlanQuery.data),
+    [approvedPlanQuery.data],
   );
   const hasIncompleteJointVentureInputs = inputReadiness.applies
     && !inputReadiness.salesWorkspaceReady
@@ -160,7 +164,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
   const saveWorkspace = trpc.waelSalesPlan.saveWorkspace.useMutation({
-    onSuccess: () => { plansQuery.refetch(); projectQuery.refetch(); toast({ title: "تم اعتماد سيناريو وائل ✓" }); },
+    onSuccess: () => { plansQuery.refetch(); approvedPlanQuery.refetch(); projectQuery.refetch(); toast({ title: "تم اعتماد سيناريو وائل ✓" }); },
     onError: (e: any) => {
       const errorMsg = e?.data?.zodError?.[0]?.message || e?.data?.code || e.message || "خطأ غير معروف";
       toast({ title: "خطأ في الحفظ", description: errorMsg, variant: "destructive" });
@@ -885,6 +889,17 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
   };
 
   const hasScenarioChanges = hasUnitChanges || hasPlanChanges || hasMarketingChanges || hasBuildForSaleMarketingChanges;
+  const workingPlan = plansQuery.data?.[0] as any;
+  const workingPlanIsApproved = workingPlan?.status === "approved" && !hasScenarioChanges;
+  const scenarioStatusLabel = hasIncompleteJointVentureInputs
+    ? "المدخلات غير مكتملة"
+    : hasScenarioChanges
+      ? "مسودة قيد الاختبار"
+      : workingPlanIsApproved
+        ? "السيناريو المعتمد"
+        : approvedPlanQuery.data
+          ? "مسودة محفوظة — التقارير على آخر اعتماد"
+          : "مسودة محفوظة — بانتظار الاعتماد";
   const firstCollection = cashInflowData.find((row) => row.cashInflow > 0);
   const visibleImpactMonths = cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 12);
   const visibleCollectionRows = cashInflowData.filter((row) => row.cashInflow > 0 || row.salesThisMonth > 0).slice(0, 18);
@@ -927,7 +942,7 @@ export default function V2WaelSales({ embedded }: { embedded?: boolean } = {}) {
             <div className="flex flex-wrap items-center gap-2.5">
               {!embedded && <ProjectSelector selectedId={selectedProjectId} onSelect={(id) => { setSelectedProjectId(id); setSalesCalendarPage(0); setImpactFocus("توزيع المبيعات"); }} />}
               {!embedded && <Button size="sm" variant="outline" onClick={() => navigate(resolveReturnPath(location.includes("?") ? location.slice(location.indexOf("?")) : window.location.search, "/v2"))} className="h-10 gap-1.5 border-teal-200 bg-white px-3 text-teal-800 hover:bg-teal-50 hover:text-teal-900"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</Button>}
-              <Badge className={hasIncompleteJointVentureInputs || hasScenarioChanges ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{hasIncompleteJointVentureInputs ? "المدخلات غير مكتملة" : hasScenarioChanges ? "مسودة قيد الاختبار" : "السيناريو المعتمد"}</Badge>
+              <Badge className={!workingPlanIsApproved || hasIncompleteJointVentureInputs ? "border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 hover:bg-amber-50" : "border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 hover:bg-emerald-50"}>{scenarioStatusLabel}</Badge>
               <Button size="sm" onClick={handleSaveWorkspace} disabled={hasIncompleteJointVentureInputs || saveWorkspace.isPending || totalChannelPct !== 100 || (!isBuildForSale && Math.abs(ppTotal - 100) > 0.001) || totalSold > offPlanUnits || (isJointVenture && totalSold !== offPlanUnits)} className="h-10 gap-1.5 bg-teal-600 px-4 font-bold text-white hover:bg-teal-500">
                 {saveWorkspace.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 اعتماد السيناريو

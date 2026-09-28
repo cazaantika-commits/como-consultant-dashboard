@@ -22,6 +22,7 @@ import { formatFullNumber } from "@/lib/numberFormat";
 import { buildSalesResultFromSavedPlan } from "@/lib/salesPlanCashFlow";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 import { getJointVentureInputReadiness, hasApprovedWaelSalesIndicator } from "@/lib/jointVentureInputReadiness";
+import { ApprovedSalesPlanRequired } from "@/components/ApprovedSalesPlanRequired";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -43,15 +44,15 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
     enabled: !!selectedProjectId && !!user,
   });
-  const plansQuery = trpc.waelSalesPlan.getByProject.useQuery(
+  const approvedPlanQuery = trpc.waelSalesPlan.getApprovedByProject.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
   const scenario = ((projectQuery.data as any)?.financingScenario || "offplan_escrow") as Scenario;
   const inputReadiness = useMemo(() => getJointVentureInputReadiness(projectQuery.data), [projectQuery.data]);
   const hasApprovedSalesIndicator = useMemo(
-    () => hasApprovedWaelSalesIndicator(plansQuery.data?.[0]),
-    [plansQuery.data],
+    () => hasApprovedWaelSalesIndicator(approvedPlanQuery.data),
+    [approvedPlanQuery.data],
   );
   const hasIncompleteJointVentureInputs = inputReadiness.applies
     && (!inputReadiness.financialModelReady || !hasApprovedSalesIndicator);
@@ -59,10 +60,10 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
   // One canonical saved-plan adapter keeps Escrow Cash Flow aligned with every
   // Sales, Settings, Investor Cash Flow, and Feasibility timing correction.
   const salesResult = useMemo(() => {
-    const plan = plansQuery.data?.[0] as any;
+    const plan = approvedPlanQuery.data as any;
     if (!plan || !projectQuery.data) return undefined;
     return buildSalesResultFromSavedPlan(plan, projectQuery.data, scenario);
-  }, [plansQuery.data, projectQuery.data, scenario]);
+  }, [approvedPlanQuery.data, projectQuery.data, scenario]);
 
   // ─── Compute cash flow from engine ─────────────────────────────────────
   const data = useMemo(() => {
@@ -170,7 +171,7 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
   const hasEscrowDeficit = lowestWorkingBalance.value < 0;
 
   // ─── Loading state ─────────────────────────────────────────────────────
-  if (projectQuery.isLoading || plansQuery.isLoading) {
+  if (projectQuery.isLoading || approvedPlanQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -190,6 +191,10 @@ export default function V2EscrowCashFlow({ embedded = false }: { embedded?: bool
         </div>
       </div>
     );
+  }
+
+  if (selectedProjectId && !approvedPlanQuery.data) {
+    return <ApprovedSalesPlanRequired projectId={selectedProjectId} />;
   }
 
   if (hasIncompleteJointVentureInputs) {

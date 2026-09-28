@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { waelSalesPlans, projects } from "../../drizzle/schema";
@@ -7,6 +8,24 @@ import {
   getSavedProjectUnitCount,
   rebuildOffPlanSalesResultsFromPaymentPlan,
 } from "../../client/src/lib/salesPlanCashFlow";
+
+async function assertOwnedProject(db: any, projectId: number, userId: number) {
+  const [project] = await db.select({ id: projects.id })
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, userId)))
+    .limit(1);
+  if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+  return project;
+}
+
+async function getOwnedPlan(db: any, planId: number, projectId: number | undefined, userId: number) {
+  const filters = [eq(waelSalesPlans.id, planId), eq(waelSalesPlans.userId, userId)];
+  if (projectId !== undefined) filters.push(eq(waelSalesPlans.projectId, projectId));
+  const [plan] = await db.select().from(waelSalesPlans).where(and(...filters)).limit(1);
+  if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Sales plan not found" });
+  await assertOwnedProject(db, plan.projectId, userId);
+  return plan;
+}
 
 const workspacePricingSchema = z.object({
 	studioPrice: z.number().int().min(0).optional(),
@@ -28,9 +47,10 @@ const workspacePricingSchema = z.object({
 export const waelSalesPlanRouter = router({
   getByProject: protectedProcedure
     .input(z.object({ projectId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return [];
+      await assertOwnedProject(db, input.projectId, ctx.user.id);
       const plans = await db
         .select()
         .from(waelSalesPlans)
@@ -39,16 +59,30 @@ export const waelSalesPlanRouter = router({
       return plans;
     }),
 
-  getById: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+  getApprovedByProject: protectedProcedure
+    .input(z.object({ projectId: z.number() }))
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return null;
+      await assertOwnedProject(db, input.projectId, ctx.user.id);
       const [plan] = await db
         .select()
         .from(waelSalesPlans)
-        .where(eq(waelSalesPlans.id, input.id));
+        .where(and(
+          eq(waelSalesPlans.projectId, input.projectId),
+          eq(waelSalesPlans.status, "approved"),
+        ))
+        .orderBy(desc(waelSalesPlans.updatedAt), desc(waelSalesPlans.id))
+        .limit(1);
       return plan || null;
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return null;
+      return getOwnedPlan(db, input.id, undefined, ctx.user.id);
     }),
 
   save: protectedProcedure
@@ -80,6 +114,8 @@ export const waelSalesPlanRouter = router({
       const db = await getDb();
       if (!db) throw new Error("DB not available");
       if (!ctx.user) throw new Error("Unauthorized");
+      await assertOwnedProject(db, input.projectId, ctx.user.id);
+      if (input.id) await getOwnedPlan(db, input.id, input.projectId, ctx.user.id);
 
       const data: any = {
         projectId: input.projectId,
@@ -107,7 +143,11 @@ export const waelSalesPlanRouter = router({
       if (input.resultsJson !== undefined) data.resultsJson = input.resultsJson;
 
       if (input.id) {
-        await db.update(waelSalesPlans).set(data).where(eq(waelSalesPlans.id, input.id));
+        await db.update(waelSalesPlans).set(data).where(and(
+          eq(waelSalesPlans.id, input.id),
+          eq(waelSalesPlans.projectId, input.projectId),
+          eq(waelSalesPlans.userId, ctx.user.id),
+        ));
         return { id: input.id, action: "updated" as const };
       } else {
         const result = await db.insert(waelSalesPlans).values(data);
@@ -147,6 +187,8 @@ export const waelSalesPlanRouter = router({
       const db = await getDb();
       if (!db) throw new Error("DB not available");
       if (!ctx.user) throw new Error("Unauthorized");
+      await assertOwnedProject(db, input.projectId, ctx.user.id);
+      if (input.planId) await getOwnedPlan(db, input.planId, input.projectId, ctx.user.id);
 
       const projectValues = {
         ...input.pricing,
@@ -176,7 +218,11 @@ export const waelSalesPlanRouter = router({
           .set(projectValues)
           .where(and(eq(projects.id, input.projectId), eq(projects.userId, ctx.user.id)));
         if (input.planId) {
-          await tx.update(waelSalesPlans).set(planValues).where(eq(waelSalesPlans.id, input.planId));
+          await tx.update(waelSalesPlans).set(planValues).where(and(
+            eq(waelSalesPlans.id, input.planId),
+            eq(waelSalesPlans.projectId, input.projectId),
+            eq(waelSalesPlans.userId, ctx.user.id),
+          ));
           return input.planId;
         }
         const result = await tx.insert(waelSalesPlans).values(planValues);
@@ -201,11 +247,7 @@ export const waelSalesPlanRouter = router({
       if (!ctx.user) throw new Error("Unauthorized");
 
       if (input.planId) {
-        const [currentPlan] = await db.select().from(waelSalesPlans).where(and(
-          eq(waelSalesPlans.id, input.planId),
-          eq(waelSalesPlans.projectId, input.projectId),
-          eq(waelSalesPlans.userId, ctx.user.id),
-        )).limit(1);
+        const currentPlan = await getOwnedPlan(db, input.planId, input.projectId, ctx.user.id);
         const [project] = await db.select().from(projects).where(and(
           eq(projects.id, input.projectId),
           eq(projects.userId, ctx.user.id),
@@ -226,6 +268,39 @@ export const waelSalesPlanRouter = router({
               existingResultsJson: currentPlan.resultsJson,
             })
           : null;
+
+        if (currentPlan.status === "approved") {
+          const result = await db.insert(waelSalesPlans).values({
+            projectId: currentPlan.projectId,
+            userId: ctx.user.id,
+            name: `${currentPlan.name} — مسودة تعديل خطة السداد`,
+            status: "draft",
+            t12Date: currentPlan.t12Date,
+            t03: currentPlan.t03,
+            t04: currentPlan.t04,
+            t05: currentPlan.t05,
+            t06: currentPlan.t06,
+            designMonths: currentPlan.designMonths,
+            constructionMonths: currentPlan.constructionMonths,
+            postCompletionMonths: currentPlan.postCompletionMonths,
+            totalRevenue: currentPlan.totalRevenue,
+            offplanPct: project.financingScenario === "joint_venture_land_for_units" ? 100 : currentPlan.offplanPct,
+            marketingBudgetPct: currentPlan.marketingBudgetPct,
+            salesCommissionPct: currentPlan.salesCommissionPct,
+            salesAbsorptionJson: rebuilt?.salesAbsorptionJson ?? currentPlan.salesAbsorptionJson,
+            marketingDistJson: currentPlan.marketingDistJson,
+            channelsJson: currentPlan.channelsJson,
+            paymentPlanJson: input.paymentPlanJson,
+            resultsJson: rebuilt?.resultsJson ?? null,
+          });
+          return {
+            id: Number((result as any)[0]?.insertId || 0),
+            action: "created" as const,
+            resultsRebuilt: Boolean(rebuilt),
+            requiresApproval: true,
+          };
+        }
+
         await db.update(waelSalesPlans)
           .set({
             paymentPlanJson: input.paymentPlanJson,
@@ -247,6 +322,8 @@ export const waelSalesPlanRouter = router({
         };
       }
 
+      await assertOwnedProject(db, input.projectId, ctx.user.id);
+
       const result = await db.insert(waelSalesPlans).values({
         projectId: input.projectId,
         userId: ctx.user.id,
@@ -264,10 +341,15 @@ export const waelSalesPlanRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new Error("DB not available");
-      await db.delete(waelSalesPlans).where(eq(waelSalesPlans.id, input.id));
+      const plan = await getOwnedPlan(db, input.id, undefined, ctx.user.id);
+      await db.delete(waelSalesPlans).where(and(
+        eq(waelSalesPlans.id, input.id),
+        eq(waelSalesPlans.projectId, plan.projectId),
+        eq(waelSalesPlans.userId, ctx.user.id),
+      ));
       return { success: true };
     }),
 });

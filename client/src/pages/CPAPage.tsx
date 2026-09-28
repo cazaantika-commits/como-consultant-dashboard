@@ -2650,7 +2650,12 @@ export default function CPAPage() {
   const returnTo = initialParams.get("returnTo");
   const [, navigate] = useLocation();
   const [screen, setScreen] = useState<Screen>(Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0 ? "project-detail" : Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
-  const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const { setSelectedProjectId: setOfficialProjectId } = useProjectContext();
+  const [selectedCpaProjectId, setSelectedCpaProjectId] = useState<number | null>(() => {
+    if (Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0) return initialCpaProjectId;
+    if (Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0) return initialScopeProjectId;
+    return null;
+  });
   const directProjectQuery = trpc.cpa.projects.list.useQuery(undefined, {
     enabled: Number.isInteger(requestedSystemProjectId) && requestedSystemProjectId > 0,
   });
@@ -2658,7 +2663,7 @@ export default function CPAPage() {
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
 
   function goHome() {
-    setSelectedProjectId(null);
+    setSelectedCpaProjectId(null);
     setSelectedPcId(null);
     if (returnTo) {
       navigate(returnTo);
@@ -2666,8 +2671,8 @@ export default function CPAPage() {
     }
     setScreen("home");
   }
-  function goProject(id: number) { setSelectedProjectId(id); setScreen("project-detail"); }
-  function goScopeSetup(id: number) { setSelectedProjectId(id); setScreen("project-requirements"); }
+  function goProject(id: number) { setSelectedCpaProjectId(id); setScreen("project-detail"); }
+  function goScopeSetup(id: number) { setSelectedCpaProjectId(id); setScreen("project-requirements"); }
   function goScopeReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("scope-review"); }
   function goSupervisionReview(pcId: number, name: string) { setSelectedPcId(pcId); setSelectedConsultantName(name); setScreen("supervision-review"); }
   function goResults() { setScreen("results"); }
@@ -2679,19 +2684,20 @@ export default function CPAPage() {
 
   useEffect(() => {
     if (Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0) {
-      setSelectedProjectId(initialCpaProjectId);
+      setSelectedCpaProjectId(initialCpaProjectId);
     } else if (Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0) {
-      setSelectedProjectId(initialScopeProjectId);
+      setSelectedCpaProjectId(initialScopeProjectId);
     }
-  }, [initialCpaProjectId, initialScopeProjectId, setSelectedProjectId]);
+  }, [initialCpaProjectId, initialScopeProjectId]);
 
   useEffect(() => {
     if (!Number.isInteger(requestedSystemProjectId) || requestedSystemProjectId <= 0 || !directProjectQuery.data) return;
     const matchedProject = (directProjectQuery.data as any[]).find(project => Number(project.project_id) === requestedSystemProjectId);
     if (!matchedProject) return;
-    setSelectedProjectId(Number(matchedProject.id));
+    setOfficialProjectId(requestedSystemProjectId);
+    setSelectedCpaProjectId(Number(matchedProject.id));
     setScreen("project-requirements");
-  }, [directProjectQuery.data, requestedSystemProjectId, setSelectedProjectId]);
+  }, [directProjectQuery.data, requestedSystemProjectId, setOfficialProjectId]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -2708,7 +2714,7 @@ export default function CPAPage() {
               <span className="text-foreground font-medium">الإعدادات</span>
             </>
           )}
-          {(screen === "project-detail" || screen === "project-requirements" || screen === "offer-reader" || screen === "financial-comparison" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedProjectId && (
+          {(screen === "project-detail" || screen === "project-requirements" || screen === "offer-reader" || screen === "financial-comparison" || screen === "scope-review" || screen === "supervision-review" || screen === "results" || screen === "truecost-report") && selectedCpaProjectId && (
             <>
               <span>/</span>
               <button onClick={() => { setScreen("project-detail"); }} className="hover:text-foreground transition-colors">
@@ -2765,9 +2771,9 @@ export default function CPAPage() {
         {screen === "home" && (
           <ProjectListScreen onSelectProject={goProject} onScopeSetup={goScopeSetup} onSettings={goSettings} />
         )}
-        {screen === "project-detail" && selectedProjectId && (
+        {screen === "project-detail" && selectedCpaProjectId && (
           <ProjectDetailScreen
-            projectId={selectedProjectId}
+            projectId={selectedCpaProjectId}
             onBack={goHome}
             onScopeReview={goScopeReview}
             onSupervisionReview={goSupervisionReview}
@@ -2785,35 +2791,35 @@ export default function CPAPage() {
             onBack={() => setScreen("project-detail")}
           />
         )}
-        {screen === "supervision-review" && selectedPcId && selectedProjectId && (
+        {screen === "supervision-review" && selectedPcId && selectedCpaProjectId && (
           <SupervisionReviewScreen
             projectConsultantId={selectedPcId}
             consultantName={selectedConsultantName}
-            projectId={selectedProjectId}
+            projectId={selectedCpaProjectId}
             onBack={() => setScreen("project-detail")}
           />
         )}
-        {screen === "results" && selectedProjectId && (
+        {screen === "results" && selectedCpaProjectId && (
           <ResultsScreen
-            projectId={selectedProjectId}
+            projectId={selectedCpaProjectId}
             onBack={() => setScreen("project-detail")}
             onNavigateToTrueCostReport={() => setScreen("truecost-report")}
           />
         )}
-        {screen === "truecost-report" && selectedProjectId && (
+        {screen === "truecost-report" && selectedCpaProjectId && (
           <TrueCostReportScreen
-            projectId={selectedProjectId}
+            projectId={selectedCpaProjectId}
             onBack={() => setScreen("results")}
           />
         )}
-        {screen === "project-requirements" && selectedProjectId && (
-          <ProjectRequirementsScreen projectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
+        {screen === "project-requirements" && selectedCpaProjectId && (
+          <ProjectRequirementsScreen projectId={selectedCpaProjectId} onBack={() => setScreen("project-detail")} />
         )}
-        {screen === "offer-reader" && selectedProjectId && selectedPcId && (
-          <OfferReaderContainer cpaProjectId={selectedProjectId} projectConsultantId={selectedPcId} consultantName={selectedConsultantName} onBack={() => setScreen("project-detail")} />
+        {screen === "offer-reader" && selectedCpaProjectId && selectedPcId && (
+          <OfferReaderContainer cpaProjectId={selectedCpaProjectId} projectConsultantId={selectedPcId} consultantName={selectedConsultantName} onBack={() => setScreen("project-detail")} />
         )}
-        {screen === "financial-comparison" && selectedProjectId && (
-          <FinancialOfferComparisonContainer cpaProjectId={selectedProjectId} onBack={() => setScreen("project-detail")} />
+        {screen === "financial-comparison" && selectedCpaProjectId && (
+          <FinancialOfferComparisonContainer cpaProjectId={selectedCpaProjectId} onBack={() => setScreen("project-detail")} />
         )}
         {screen === "settings" && (
           <SettingsScreen onBack={goHome} />

@@ -66,6 +66,7 @@ describe("isolated Joint Venture input readiness", () => {
 
     const financialComplete = { ...complete, estimatedConstructionPricePerSqft: 500 };
     const approvedPlan = {
+      status: "approved",
       resultsJson: JSON.stringify({
         salesDistribution: [2, 3, 5],
         actualEscrowCashInflow: [200_000, 300_000, 500_000],
@@ -77,8 +78,16 @@ describe("isolated Joint Venture input readiness", () => {
 
   it("requires an actual saved Wael distribution and escrow receipt before opening the escrow report", () => {
     expect(hasApprovedWaelSalesIndicator(undefined)).toBe(false);
-    expect(hasApprovedWaelSalesIndicator({ resultsJson: JSON.stringify({ salesDistribution: [], actualEscrowCashInflow: [] }) })).toBe(false);
+    expect(hasApprovedWaelSalesIndicator({ status: "approved", resultsJson: JSON.stringify({ salesDistribution: [], actualEscrowCashInflow: [] }) })).toBe(false);
     expect(hasApprovedWaelSalesIndicator({
+      status: "draft",
+      resultsJson: JSON.stringify({
+        salesDistribution: [1, 0, 2],
+        actualEscrowCashInflow: [100_000, 0, 200_000],
+      }),
+    })).toBe(false);
+    expect(hasApprovedWaelSalesIndicator({
+      status: "approved",
       resultsJson: JSON.stringify({
         salesDistribution: [1, 0, 2],
         actualEscrowCashInflow: [100_000, 0, 200_000],

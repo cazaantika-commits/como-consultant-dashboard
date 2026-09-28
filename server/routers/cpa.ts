@@ -8,6 +8,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { sql } from "drizzle-orm";
+import { requireProjectAccess } from "../services/comoNextCommands";
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -25,6 +26,24 @@ async function qRows<T = DbRow>(
 ): Promise<T[]> {
   const result = await db.execute(query);
   return (result[0] as unknown as T[]) ?? [];
+}
+
+async function requireCpaProjectAccess(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  cpaProjectId: number,
+  userId: number,
+  required: "read" | "write" = "read",
+) {
+  const rows = await qRows<{ project_id: number }>(
+    db,
+    sql`SELECT project_id FROM cpa_projects WHERE id = ${cpaProjectId} LIMIT 1`,
+  );
+  const projectId = Number(rows[0]?.project_id);
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    throw new Error("المشروع الاستشاري غير موجود");
+  }
+  await requireProjectAccess(db, projectId, userId, required);
+  return projectId;
 }
 
 async function getCurrentRequirementSetId(
@@ -844,7 +863,7 @@ export const cpaRouter = router({
 
   // ---- CPA Projects ----
   projects: router({
-    list: protectedProcedure.query(async () => {
+    list: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb();
       if (!db) return [];
       return qRows(
@@ -875,15 +894,23 @@ export const cpaRouter = router({
 	            FROM cpa_projects cp
 	            JOIN projects p ON p.id = cp.project_id
 	            WHERE p.is_test_project = 0
+                  AND (
+                    p.userId = ${ctx.user.id}
+                    OR EXISTS (
+                      SELECT 1 FROM como_next_project_access access
+                      WHERE access.project_id = p.id AND access.user_id = ${ctx.user.id}
+                    )
+                  )
 	            ORDER BY cp.created_at DESC`
       );
     }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return null;
+        await requireCpaProjectAccess(db, input.id, ctx.user.id, "read");
         const rows = await qRows<any>(
           db,
           sql`SELECT cp.*, p.name as project_name, p.bua as sys_bua,
@@ -918,9 +945,10 @@ export const cpaRouter = router({
 
     getSelectedSupervisionRoles: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
+        await requireCpaProjectAccess(db, input.id, ctx.user.id, "read");
         return qRows(
           db,
           sql`SELECT sr.id as supervision_role_id, sr.code as role_code,
@@ -958,9 +986,10 @@ export const cpaRouter = router({
           durationMonths: z.number().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        await requireProjectAccess(db, input.projectId, ctx.user.id, "write");
         const systemRows = await qRows<any>(
           db,
           sql`SELECT id, plotNumber, areaCode, description,
@@ -1016,10 +1045,11 @@ export const cpaRouter = router({
           status: z.enum(["ACTIVE", "COMPLETED", "CANCELLED"]).optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const { id, ...fields } = input;
+        await requireCpaProjectAccess(db, id, ctx.user.id, "write");
         // Build dynamic update using individual field checks
         if (fields.plotNumber !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET plot_number=${fields.plotNumber} WHERE id=${id}`);
@@ -1039,9 +1069,10 @@ export const cpaRouter = router({
       }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
+        await requireCpaProjectAccess(db, input.id, ctx.user.id, "write");
         // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
         // cpa_evaluation_results uses project_consultant_id, not cpa_project_id
         await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.id})`);
@@ -1822,9 +1853,10 @@ export const cpaRouter = router({
   // ---- Delete Project (legacy alias - delegates to projects.delete) ----
   deleteProject: protectedProcedure
     .input(z.object({ cpaProjectId: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error('DB unavailable');
+      await requireCpaProjectAccess(db, input.cpaProjectId, ctx.user.id, "write");
       // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
       await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
       const pcs = await qRows<any>(db, sql`SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);
@@ -1838,7 +1870,7 @@ export const cpaRouter = router({
     }),
 
   // ---- Utility ----
-  getSystemProjects: protectedProcedure.query(async () => {
+  getSystemProjects: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     if (!db) return [];
     return qRows(
@@ -1856,6 +1888,13 @@ export const cpaRouter = router({
         areaCode            AS area_code
 	      FROM projects
 	      WHERE is_test_project = 0
+            AND (
+              userId = ${ctx.user.id}
+              OR EXISTS (
+                SELECT 1 FROM como_next_project_access access
+                WHERE access.project_id = projects.id AND access.user_id = ${ctx.user.id}
+              )
+            )
 	      ORDER BY name`
     );
   }),

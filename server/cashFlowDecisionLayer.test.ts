@@ -24,7 +24,7 @@ describe("Cash-flow decision-first presentation", () => {
     expect(escrowSource).toContain("حساب الضمان — موقف السيولة");
     expect(escrowSource).toContain("مسار الرصيد ومحطات التصفية");
     expect(escrowSource).toContain("تحويل الاحتجاز:");
-    expect(escrowSource).toContain("calculateEscrowSettlement({");
+    expect(escrowSource).toContain("calculateEscrowMonthlyBalance({");
     expect(escrowSource).toContain("{escrowOutflows.map((item, i) => {");
     expect(escrowSource).toContain("{inflowRows.map((item, i) => (");
   });

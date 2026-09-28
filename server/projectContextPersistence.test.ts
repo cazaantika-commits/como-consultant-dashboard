@@ -14,4 +14,15 @@ describe("project context persistence", () => {
     expect(source).toContain("const savedProjectId = saved ? Number(saved) : null");
     expect(source).toContain("setSelectedProjectIdState(savedProjectId)");
   });
+
+  it("purges a stored id that is not an official accessible project", () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), "client/src/contexts/ProjectContext.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("isOfficialProject");
+    expect(source).toContain("projects.some(project => Number(project.id) === selectedProjectId)");
+    expect(source).toContain("localStorage.removeItem(STORAGE_KEY)");
+  });
 });

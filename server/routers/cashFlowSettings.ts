@@ -13,6 +13,7 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { buildApprovedSalesPlanMap, financialReportsRequireApprovedSalesPlan } from "../services/approvedSalesPlans";
 import {
   projectCashFlowSettings,
   projects,
@@ -91,19 +92,20 @@ export async function loadUnifiedGroupCashFlowSource() {
 
   const [allProjects, allPlans] = await Promise.all([
     db.select().from(projects).where(eq(projects.isTestProject, 0)),
-    db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+    db.select().from(waelSalesPlans)
+      .where(eq(waelSalesPlans.status, "approved"))
+      .orderBy(desc(waelSalesPlans.updatedAt), desc(waelSalesPlans.id)),
   ]);
-  const newestPlanByProject = new Map<number, typeof allPlans[number]>();
-  for (const plan of allPlans) {
-    if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
-  }
+  const approvedPlanByProject = buildApprovedSalesPlanMap(allPlans);
 
-  const sourceRows: GroupCashFlowProjectMonthlyNet[] = allProjects.map((project) => {
+  const sourceRows: GroupCashFlowProjectMonthlyNet[] = allProjects
+    .filter((project) => !financialReportsRequireApprovedSalesPlan(project.financingScenario) || approvedPlanByProject.has(project.id))
+    .map((project) => {
     const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
     const isCommercialDevelopment = scenario === "build_for_rent" || scenario === "rental";
     const salesResult = isCommercialDevelopment
       ? undefined
-      : buildSalesResultFromSavedPlan(newestPlanByProject.get(project.id), project, scenario);
+      : buildSalesResultFromSavedPlan(approvedPlanByProject.get(project.id), project, scenario);
     const cashFlow = computeInvestorCashFlow(project, scenario, undefined, salesResult);
     const investorNet = calculateInvestorMonthlyNet(cashFlow, salesResult);
     const capital = calculateInvestorCapitalSummary(cashFlow);
@@ -2155,7 +2157,10 @@ export const cashFlowSettingsRouter = router({
 
       const moRows = await db.select().from(marketOverview).where(eq(marketOverview.projectId, input.projectId));
       const cpRows = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, input.projectId));
-      const waelPlansRows = await db.select().from(waelSalesPlans).where(eq(waelSalesPlans.projectId, input.projectId)).orderBy(desc(waelSalesPlans.updatedAt));
+      const waelPlansRows = await db.select().from(waelSalesPlans).where(and(
+        eq(waelSalesPlans.projectId, input.projectId),
+        eq(waelSalesPlans.status, "approved"),
+      )).orderBy(desc(waelSalesPlans.updatedAt), desc(waelSalesPlans.id));
       const mo = moRows[0] || null;
       const cp = cpRows[0] || null;
       const waelPlan = waelPlansRows[0] || null;
@@ -2333,8 +2338,9 @@ export const cashFlowSettingsRouter = router({
         });
       }
 
-      // Fallback: if no Wael data or all zeros, use default linear absorption
-      if (revenuePerMonth.every(v => v === 0) && isOffplanScenario && totalRevenue > 0) {
+      // Only an approved Wael plan may feed official report revenue. A draft
+      // never triggers the legacy linear fallback or becomes a report source.
+      if (waelPlan && revenuePerMonth.every(v => v === 0) && isOffplanScenario && totalRevenue > 0) {
         const revenuePerSaleMonth = totalRevenue / salesMonths;
 
         for (let saleMonth = salesStartMonth; saleMonth <= salesEndMonth && saleMonth < totalMonths; saleMonth++) {
@@ -2387,6 +2393,9 @@ export const cashFlowSettingsRouter = router({
         projectId: project.id,
         projectName: project.name,
         scenario,
+        salesPlanSource: financialReportsRequireApprovedSalesPlan(scenario)
+          ? (waelPlan ? "approved" : "waiting_approved_sales_plan")
+          : "not_required",
         startDate: startDateStr,
         totalMonths,
         monthLabels,
@@ -2606,19 +2615,19 @@ export const cashFlowSettingsRouter = router({
 
     const [allProjects, allPlans] = await Promise.all([
       db.select().from(projects).where(eq(projects.isTestProject, 0)),
-      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+      db.select().from(waelSalesPlans)
+        .where(eq(waelSalesPlans.status, "approved"))
+        .orderBy(desc(waelSalesPlans.updatedAt), desc(waelSalesPlans.id)),
     ]);
-    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
-    for (const plan of allPlans) {
-      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
-    }
+    const approvedPlanByProject = buildApprovedSalesPlanMap(allPlans);
 
     return allProjects
       .filter((project) => isCapitalPortfolioEligibleScenario(project.financingScenario || "offplan_escrow"))
+      .filter((project) => approvedPlanByProject.has(project.id))
       .map((project) => {
       const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
       const salesResult = buildSalesResultFromSavedPlan(
-        newestPlanByProject.get(project.id),
+        approvedPlanByProject.get(project.id),
         project,
         scenario,
       );
@@ -2723,19 +2732,19 @@ export const cashFlowSettingsRouter = router({
 
     const [allProjects, allPlans] = await Promise.all([
       db.select().from(projects).where(eq(projects.isTestProject, 0)),
-      db.select().from(waelSalesPlans).orderBy(desc(waelSalesPlans.updatedAt)),
+      db.select().from(waelSalesPlans)
+        .where(eq(waelSalesPlans.status, "approved"))
+        .orderBy(desc(waelSalesPlans.updatedAt), desc(waelSalesPlans.id)),
     ]);
-    const newestPlanByProject = new Map<number, typeof allPlans[number]>();
-    for (const plan of allPlans) {
-      if (!newestPlanByProject.has(plan.projectId)) newestPlanByProject.set(plan.projectId, plan);
-    }
+    const approvedPlanByProject = buildApprovedSalesPlanMap(allPlans);
 
     return allProjects
       .filter((project) => isCapitalPortfolioEligibleScenario((project.financingScenario || "offplan_escrow") as FinancialStudiesScenario))
+      .filter((project) => approvedPlanByProject.has(project.id))
       .map((project) => {
         const scenario = (project.financingScenario || "offplan_escrow") as FinancialStudiesScenario;
         const salesResult = buildSalesResultFromSavedPlan(
-          newestPlanByProject.get(project.id),
+          approvedPlanByProject.get(project.id),
           project,
           scenario,
         );

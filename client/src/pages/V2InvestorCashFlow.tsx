@@ -23,6 +23,7 @@ import { isJointVentureFinancialResultReady } from "@/lib/jointVentureInputReadi
 import { formatFullNumber } from "@/lib/numberFormat";
 import { formatCashFlowMonthYear, sumCashFlowPeriod } from "@/lib/cashFlowReadability";
 import { resolveReturnPath } from "@/lib/returnNavigation";
+import { ApprovedSalesPlanRequired } from "@/components/ApprovedSalesPlanRequired";
 
 // ═══════════════════════════════════════════
 // FORMAT HELPERS
@@ -50,7 +51,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
     enabled: !!selectedProjectId && !!user,
   });
-  const plansQuery = trpc.waelSalesPlan.getByProject.useQuery(
+  const approvedPlanQuery = trpc.waelSalesPlan.getApprovedByProject.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
@@ -58,8 +59,8 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
 
   // ─── Parse salesResult from saved plan ─────────────────────────────────
   const salesResult = useMemo(
-    () => buildSalesResultFromSavedPlan(plansQuery.data?.[0] as any, projectQuery.data, scenario),
-    [plansQuery.data, projectQuery.data, scenario],
+    () => buildSalesResultFromSavedPlan(approvedPlanQuery.data as any, projectQuery.data, scenario),
+    [approvedPlanQuery.data, projectQuery.data, scenario],
   );
 
   // ─── Compute cash flow from engine ─────────────────────────────────────
@@ -89,7 +90,7 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const projectName = projectQuery.data?.name || "—";
   const isJointVenture = scenario === "joint_venture_land_for_units";
   const hasFinancialInputs = totalRevenue > 0
-    && isJointVentureFinancialResultReady(projectQuery.data, plansQuery.data?.[0]);
+    && isJointVentureFinancialResultReady(projectQuery.data, approvedPlanQuery.data);
   const projectCosts = useMemo(() => calculateProjectCosts(projectQuery.data), [projectQuery.data]);
 
   // ─── Build flat monthly arrays for each row ────────────────────────────
@@ -162,13 +163,17 @@ export default function V2InvestorCashFlow({ embedded = false }: { embedded?: bo
   const pulseScale = Math.max(...netFlow.map((value) => Math.abs(value)), 1);
 
   // ─── Loading state ─────────────────────────────────────────────────────
-  if (projectQuery.isLoading) {
+  if (projectQuery.isLoading || approvedPlanQuery.isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
         <span className="mr-2 text-gray-500 text-sm">جاري تحميل البيانات...</span>
       </div>
     );
+  }
+
+  if (selectedProjectId && scenario !== "build_for_rent" && !approvedPlanQuery.data) {
+    return <ApprovedSalesPlanRequired projectId={selectedProjectId} />;
   }
 
   return (

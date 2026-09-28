@@ -49,6 +49,17 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: !!user });
   const projects = projectsQuery.data || [];
 
+  // The global context accepts official `projects.id` values only. Feature-local
+  // identifiers (CPA, cash-flow, studies, etc.) must remain inside their feature.
+  useEffect(() => {
+    if (!user || projectsQuery.isLoading || selectedProjectId === null) return;
+    const isOfficialProject = projects.some(project => Number(project.id) === selectedProjectId);
+    if (!isOfficialProject) {
+      setSelectedProjectIdState(null);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [projects, projectsQuery.isLoading, selectedProjectId, user]);
+
   function setSelectedProjectId(id: number | null) {
     setSelectedProjectIdState(id);
     if (id !== null) {

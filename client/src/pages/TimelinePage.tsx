@@ -20,6 +20,7 @@ import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
 import { default as Save } from "lucide-react/dist/esm/icons/save.js";
 import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
 import { default as Building2 } from "lucide-react/dist/esm/icons/building-2.js";
+import { ApprovedSalesPlanRequired } from "@/components/ApprovedSalesPlanRequired";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
@@ -46,7 +47,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, {
     enabled: !!selectedProjectId && !!user,
   });
-  const plansQuery = trpc.waelSalesPlan.getByProject.useQuery(
+  const approvedPlanQuery = trpc.waelSalesPlan.getApprovedByProject.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user }
   );
@@ -83,8 +84,8 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   }, [projectQuery.data]);
 
   useEffect(() => {
-    if (plansQuery.data && plansQuery.data.length > 0) {
-      const plan = plansQuery.data[0] as any;
+    if (approvedPlanQuery.data) {
+      const plan = approvedPlanQuery.data as any;
       if (plan.salesAbsorptionJson) {
         try {
           const parsed = JSON.parse(plan.salesAbsorptionJson);
@@ -93,7 +94,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       }
       setHasChanges(false);
     }
-  }, [plansQuery.data]);
+  }, [approvedPlanQuery.data]);
 
   // ─── Computed ──────────────────────────────────────────────────────────────
   const totalDesignWeeks = designPayments.reduce((s, p) => s + p.durationWeeks, 0);
@@ -110,7 +111,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   const isBuildForSale = projectType === "build_for_sale";
   const isJointVenture = projectType === "joint_venture_land_for_units";
   const isIsolatedJointVenture = Boolean((projectQuery.data as any)?.isTestProject) && isJointVenture;
-  const activePlan = (plansQuery.data?.[0] ?? null) as any;
+  const activePlan = (approvedPlanQuery.data ?? null) as any;
   const hasSavedWaelIndicator = hasApprovedWaelSalesIndicator(activePlan);
   const savedScheduleSettings = useMemo(() => {
     try { return JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}")?.settings || {}; }
@@ -156,7 +157,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     projectEnd: sharedTiming.projectEndMonth,
   }), [sharedTiming]);
   const activityWindows = useMemo(() => {
-    const plan = (plansQuery.data?.[0] ?? {}) as any;
+    const plan = (approvedPlanQuery.data ?? {}) as any;
     let absorption: any = {};
     let results: any = {};
     try { absorption = JSON.parse(plan.salesAbsorptionJson || "{}"); } catch {}
@@ -175,7 +176,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
         salesDistribution: results.salesDistribution ?? (absorption.mode === "manual" ? absorption.manual : undefined),
       }),
     };
-  }, [plansQuery.data, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
+  }, [approvedPlanQuery.data, timeline.marketingStart, timeline.salesStart, timeline.projectEnd]);
   const buildForSaleMarketing = useMemo(() => {
     try {
       const rates = JSON.parse((projectQuery.data as any)?.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
@@ -192,7 +193,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
     return { startMonth, endMonth: startMonth + buildForSaleMarketing.durationMonths - 1 };
   }, [timeline.projectEnd, buildForSaleMarketing]);
   const buildForSaleSalesWindow = useMemo(() => {
-    const plan = (plansQuery.data?.[0] ?? {}) as any;
+    const plan = (approvedPlanQuery.data ?? {}) as any;
     let results: any = {};
     let absorption: any = {};
     try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
@@ -205,7 +206,7 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
       projectEndMonth: timeline.projectEnd,
       directSalesUnits: Array.isArray(directUnits) ? directUnits : [],
     });
-  }, [plansQuery.data, timeline.projectEnd]);
+  }, [approvedPlanQuery.data, timeline.projectEnd]);
   const displayProjectEnd = isBuildForSale
     ? Math.max(timeline.projectEnd, buildForSaleMarketingWindow.endMonth, buildForSaleSalesWindow.endMonth)
     : isJointVenture
@@ -233,6 +234,10 @@ export default function TimelinePage({ embedded }: { embedded?: boolean } = {}) 
   // ═══════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════════════════════
+  if (selectedProjectId && projectQuery.data && !approvedPlanQuery.isLoading && projectType !== "build_for_rent" && !approvedPlanQuery.data) {
+    return <ApprovedSalesPlanRequired projectId={selectedProjectId} compact />;
+  }
+
   return (
     <div className="bg-slate-100 p-2" dir="rtl">
       <div className="max-w-full mx-auto space-y-2">

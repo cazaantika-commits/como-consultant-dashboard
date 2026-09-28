@@ -31,6 +31,7 @@ import { default as Activity } from "lucide-react/dist/esm/icons/activity.js";
 import { default as Layers } from "lucide-react/dist/esm/icons/layers.js";
 import { default as CalendarClock } from "lucide-react/dist/esm/icons/calendar-clock.js";
 import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
+import { ApprovedSalesPlanRequired } from "@/components/ApprovedSalesPlanRequired";
 
 const fmt = (n: number) =>
   n === 0 ? "—" : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(n));
@@ -44,7 +45,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
   const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
-  const plansQuery = trpc.waelSalesPlan.getByProject.useQuery(
+  const approvedPlanQuery = trpc.waelSalesPlan.getApprovedByProject.useQuery(
     { projectId: selectedProjectId! },
     { enabled: !!selectedProjectId && !!user },
   );
@@ -69,10 +70,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   // One canonical saved-plan adapter keeps feasibility in lockstep with sales,
   // investor cash flow, and escrow whenever project timing or rules change.
   const salesResult = useMemo(() => {
-    const plan = plansQuery.data?.[0] as any;
+    const plan = approvedPlanQuery.data as any;
     if (!plan || !project) return undefined;
     return buildSalesResultFromSavedPlan(plan, project, scenario);
-  }, [plansQuery.data, project, scenario]);
+  }, [approvedPlanQuery.data, project, scenario]);
 
   const cashFlow = useMemo(
     () => computeInvestorCashFlow(project || null, scenario, undefined, salesResult),
@@ -99,7 +100,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
   const capitalCommittedPct = capital.requiredCapital > 0 ? Math.min(100, (capital.paidCapital / capital.requiredCapital) * 100) : 0;
   const investorOutcomePositive = investorProfit >= 0 && projectMarginOnCost >= 0;
   const hasFinancialInputs = totalRevenue > 0
-    && isJointVentureFinancialResultReady(project, plansQuery.data?.[0]);
+    && isJointVentureFinancialResultReady(project, approvedPlanQuery.data);
   const displayedOutcome = hasFinancialInputs ? fmtM(investorProfit) : "—";
 
   // Revenue breakdown
@@ -150,6 +151,10 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
     ? Number(project?.preConMonths || 0) + Number(project?.constructionMonths || 0) + Number(project?.handoverMonths || 0)
     : designDuration + Number(project?.constructionMonths || 18);
   const totalYears = totalMonths / 12;
+
+  if (selectedProjectId && project && !approvedPlanQuery.isLoading && !isBuildForRent && !approvedPlanQuery.data) {
+    return <ApprovedSalesPlanRequired projectId={selectedProjectId} />;
+  }
 
   return (
     <div className="bg-gradient-to-b from-slate-50 to-white min-h-[400px]" dir="rtl">

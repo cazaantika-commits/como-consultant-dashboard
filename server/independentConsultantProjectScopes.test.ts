@@ -21,6 +21,14 @@ afterAll(async () => {
 });
 
 describe("independent design-only project scope contracts", () => {
+  it("keeps the CPA row id local and preserves the official project context", () => {
+    expect(cpaPage).toContain("selectedCpaProjectId");
+    expect(cpaPage).toContain("setOfficialProjectId(requestedSystemProjectId)");
+    expect(cpaPage).not.toContain("setSelectedProjectId(initialCpaProjectId)");
+    expect(cpaRouter).toContain("requireCpaProjectAccess");
+    expect(cpaRouter).toContain("await requireProjectAccess(db, input.projectId, ctx.user.id, \"write\")");
+  });
+
   it("creates every new project without category-driven scope and copies design rows only", () => {
     const projectsRouter = cpaRouter.slice(cpaRouter.indexOf("projects: router({"), cpaRouter.indexOf("// ---- Project Consultants ----"));
     expect(projectsRouter).toContain("createBlankProjectRequirementSet");

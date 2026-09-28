@@ -85,7 +85,7 @@ export function getJointVentureInputReadiness(project: any): JointVentureInputRe
 }
 
 export function hasApprovedWaelSalesIndicator(plan: any): boolean {
-  if (!plan) return false;
+  if (!plan || plan.status !== "approved") return false;
   let results: any = {};
   try { results = JSON.parse(plan.resultsJson || "{}"); } catch {}
   const salesDistribution = Array.isArray(results.salesDistribution) ? results.salesDistribution : [];

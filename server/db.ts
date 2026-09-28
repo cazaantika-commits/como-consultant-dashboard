@@ -103,7 +103,9 @@ export async function getProjectById(projectId: number, userId?: number) {
   const db = await getDb();
   if (!db) return null;
   const result = await db.select().from(projects)
-    .where(eq(projects.id, projectId))
+    .where(userId === undefined
+      ? eq(projects.id, projectId)
+      : and(eq(projects.id, projectId), eq(projects.userId, userId)))
     .limit(1);
   return result.length > 0 ? result[0] : null;
 }
@@ -143,7 +145,7 @@ export async function updateProject(projectId: number, userId: number, data: Par
     }
   }
   
-  await db.update(projects).set(convertedData).where(eq(projects.id, projectId));
+  await db.update(projects).set(convertedData).where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
 
   // Sync schedule-related fields to cf_projects if linked record exists
   const scheduleFields = ['preConMonths', 'constructionMonths', 'handoverMonths', 'startDate'];
@@ -172,7 +174,7 @@ export async function deleteProject(projectId: number, userId: number) {
   if (!db) throw new Error('Database not available');
   const project = await getProjectById(projectId, userId);
   if (!project) throw new Error('Project not found');
-  return await db.delete(projects).where(eq(projects.id, projectId));
+  return await db.delete(projects).where(and(eq(projects.id, projectId), eq(projects.userId, userId)));
 }
 
 // Consultants queries
