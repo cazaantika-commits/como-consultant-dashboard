@@ -105,6 +105,7 @@ describe("COMO Next meeting safety invariants", () => {
     expect(recordingsMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
     expect(serviceSource).toContain("outcomesApplied: 0");
     expect(serviceSource).toContain("externalSideEffect: false");
+    expect(serviceSource).toContain("sourceSystem: comoNextMeetingSources.sourceSystem");
     expect(serviceSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
   });
 
@@ -118,8 +119,12 @@ describe("COMO Next meeting safety invariants", () => {
     expect(workspaceSource).toContain("رفع تسجيل أو تفريغ Zoom");
     expect(workspaceSource).toContain('params.get("focusKind") !== "meeting"');
     expect(workspaceSource).toContain("function MeetingAgendaNavigator");
+    expect(workspaceSource).toContain("function MeetingReferenceStrip");
+    expect(workspaceSource).toContain("فتح تحليل Manus");
     expect(workspaceSource).toContain("نقطة واحدة في كل مرة");
     expect(workspaceSource).toContain("النقطة {safeCursor + 1} من {items.length}");
+    expect(workspaceSource).toContain('source.sourceSystem === "manus_analysis"');
+    expect(workspaceSource).toContain("تحليل Manus مكتمل");
     expect(documentRouteSource).toContain("comoNextMeetingRecordings");
   });
 });
