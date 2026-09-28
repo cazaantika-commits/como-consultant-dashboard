@@ -107,7 +107,7 @@ export function buildExecutiveKitchenQueue(input: {
       : action.actionStatus === "completed_pending_verification"
         ? "verify"
         : "act_now";
-    items.push({ id: `action:${action.id}`, kind: "action", phase, title: action.title, projectId: action.projectId, workFileId: action.workFileId, recordId: action.id, priority: action.priority, attentionAt: action.attentionAt });
+    items.push({ id: `action:${action.id}`, kind: "action", phase, title: action.title, projectId: action.projectId, workFileId: action.workFileId, recordId: action.id, ownerType: action.ownerType, priority: action.priority, attentionAt: action.attentionAt });
   }
   for (const decision of input.decisions) items.push({ id: `decision:${decision.id}`, kind: "decision", phase: "owner_review", title: decision.title, projectId: decision.projectId, workFileId: decision.workFileId, recordId: decision.id, dueAt: decision.dueAt });
   for (const draft of input.draftCommunications) items.push({ id: `communication:${draft.id}`, kind: "communication", phase: "owner_review", title: draft.subject, projectId: draft.projectId, workFileId: draft.workFileId, recordId: draft.id, dueAt: draft.occurredAt });

@@ -61,6 +61,7 @@ import {
 type ExecutiveSection = "actions" | "decisions" | "communications" | "meetings" | "email" | "intake" | "specialists" | "work-files" | "transfer";
 type ExecutiveFocusKind = "action" | "decision" | "communication" | "meeting" | "proposal";
 type WorkFileStage = "now" | "evidence" | "outputs" | "decisions" | "execution" | "history";
+type QueueOwnerFilter = "all" | "owner" | "manus" | "external" | "scheduled";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
@@ -152,6 +153,17 @@ const queueKindLabel: Record<string, string> = {
   gap: "ملف عمل",
 };
 
+function queueResponsibilityMeta(item: any) {
+  if (item.phase === "waiting_external") return { label: "الدور الآن: الطرف الخارجي", className: "bg-orange-100 text-orange-800" };
+  if (item.phase === "scheduled") return { label: "الدور الآن: موعدك", className: "bg-blue-100 text-blue-800" };
+  if (item.ownerType === "manus") return { label: "ينفذه Manus", className: "bg-violet-100 text-violet-800" };
+  if (item.ownerType === "team") return { label: "ينفذه الفريق", className: "bg-cyan-100 text-cyan-800" };
+  if (item.phase === "owner_review" || ["decision", "proposal", "communication", "email", "specialist"].includes(item.kind)) {
+    return { label: "مطلوب منك: مراجعة أو حسم", className: "bg-amber-100 text-amber-900" };
+  }
+  return { label: "مطلوب منك", className: "bg-emerald-100 text-emerald-800" };
+}
+
 const workFileStages: Array<{ key: WorkFileStage; label: string; caption: string; icon: typeof Sparkles }> = [
   { key: "now", label: "الوضع الآن", caption: "الحقيقة والخطوة التالية", icon: Sparkles },
   { key: "evidence", label: "الدليل والمواد", caption: "ما وصل وما ثبت", icon: Paperclip },
@@ -163,6 +175,7 @@ const workFileStages: Array<{ key: WorkFileStage; label: string; caption: string
 
 function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number; onOpen: (item: any) => void }) {
   const meta = queuePhaseMeta[item.phase] || queuePhaseMeta.act_now;
+  const responsibility = queueResponsibilityMeta(item);
   const Icon = meta.icon;
   return (
     <button
@@ -178,6 +191,7 @@ function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number;
           <span className="flex flex-wrap items-center gap-2">
             <span className={`text-[10px] font-black tracking-wide ${meta.eyebrow}`}>{meta.label}</span>
             <span className="rounded-full border border-white bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{queueKindLabel[item.kind] || "عمل"}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${responsibility.className}`}>{responsibility.label}</span>
             {Number(item.reviewItemCount || 0) > 1 ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black text-violet-800">{item.reviewItemCount} سجلات ضمن الموضوع</span> : null}
           </span>
           <span className="mt-1.5 block break-words text-[15px] font-black leading-6 text-slate-950 sm:text-base">{item.title}</span>
@@ -714,6 +728,7 @@ function WorkFileUpdateComposer({ workFileId, actionId, updates, onChanged }: { 
 }
 
 function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { action: any; updates: any[]; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+  const linkedDocumentId = Number(String(action.evidenceReference || "").match(/document:(\d+)/)?.[1] || 0);
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2] sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" /><span className="break-words text-right">العودة إلى عناوين الإجراءات</span></button>
     <article className="mx-auto mt-4 min-w-0 max-w-xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
@@ -721,7 +736,7 @@ function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { a
       <h2 className="mt-5 break-words text-xl font-black leading-9 text-slate-950 sm:text-2xl sm:leading-10">{action.title}</h2>
       {action.description ? <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">التفاصيل</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-700">{action.description}</p></div> : null}
       <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">معيار القبول</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-800">{action.acceptanceCriteria}</p></div>
-      {action.evidenceReference ? <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-[11px] font-black text-emerald-700">دليل التحقق</p><p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{action.evidenceReference}</p></div> : null}
+      {action.evidenceReference ? <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4"><p className="text-[11px] font-black text-emerald-700">المخرج المرتبط</p>{linkedDocumentId ? <a href={`/api/como-next/documents/${linkedDocumentId}`} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#18596a] px-4 text-xs font-black text-white transition hover:bg-[#12495a]"><FileText className="h-4 w-4" />فتح التقرير المحمي</a> : <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{action.evidenceReference}</p>}</div> : null}
       {action.attentionAt ? <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-500"><CalendarClock className="h-4 w-4" /><bdi dir="ltr">{formatDateTime(action.attentionAt)}</bdi></div> : null}
       {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><ActionStatusDialog action={action} onUpdated={onUpdated} /></div> : null}
       {!isClosed ? <div className="mt-5"><WorkFileUpdateComposer workFileId={action.workFileId} actionId={action.id} updates={updates} onChanged={onUpdated} /></div> : null}
@@ -997,6 +1012,7 @@ export default function ComoNextTodayPage() {
   const [selectedFocusKind, setSelectedFocusKind] = useState<ExecutiveFocusKind | null>(requestedActionId > 0 ? "action" : requestedFocusKind);
   const [selectedFocusId, setSelectedFocusId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : requestedFocusId > 0 ? requestedFocusId : null);
   const [showSections, setShowSections] = useState(false);
+  const [queueOwnerFilter, setQueueOwnerFilter] = useState<QueueOwnerFilter>("all");
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
@@ -1116,6 +1132,21 @@ export default function ComoNextTodayPage() {
   }
 
   const selectedMeta = sectionCards.find(item => item.key === selectedSection);
+  const ownerWorkCount = data?.executionQueue.filter((item: any) =>
+    item.phase === "owner_review"
+    || (["act_now", "verify", "define_next_step"].includes(item.phase) && item.ownerType !== "manus" && item.ownerType !== "team")
+  ).length || 0;
+  const manusWorkCount = data?.executionQueue.filter((item: any) =>
+    item.ownerType === "manus" && !["waiting_external", "scheduled"].includes(item.phase)
+  ).length || 0;
+  const visibleExecutionQueue = data?.executionQueue.filter((item: any) => {
+    if (queueOwnerFilter === "all") return true;
+    if (queueOwnerFilter === "manus") return item.ownerType === "manus" && !["waiting_external", "scheduled"].includes(item.phase);
+    if (queueOwnerFilter === "external") return item.phase === "waiting_external";
+    if (queueOwnerFilter === "scheduled") return item.phase === "scheduled";
+    return item.phase === "owner_review"
+      || (["act_now", "verify", "define_next_step"].includes(item.phase) && item.ownerType !== "manus" && item.ownerType !== "team");
+  }) || [];
   return (
     <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff7e8_0,#f7f6ef_36%,#eaf1ee_100%)] pb-24 text-slate-900 sm:pb-0">
       <header className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,#284965_0%,#14243a_48%,#091523_100%)] text-white shadow-[0_18px_50px_rgba(2,12,24,.18)]">
@@ -1139,14 +1170,15 @@ export default function ComoNextTodayPage() {
                 <div><p className="text-xs font-black text-amber-200">{new Intl.DateTimeFormat("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-5xl">ما الذي يحتاج إنجازًا الآن؟</h2><p className="mt-3 max-w-xl text-sm leading-7 text-white/65">كل موضوع في سطر مستقل، مرتب من الأعلى إلى الأسفل. افتح واحدًا فتختفي البقية حتى تنهيه أو تحدّثه.</p></div>
                 <Button type="button" variant="outline" onClick={() => setShowSections(value => !value)} className="rounded-2xl border-white/15 bg-white/10 text-white hover:bg-white/20 hover:text-white">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button>
               </div>
-              <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
-                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "owner_review").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">لمراجعتك</p></div>
-                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "act_now" || item.phase === "verify").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">للتنفيذ</p></div>
-                <div className="rounded-[22px] border border-white/10 bg-white/8 p-3 text-center"><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "waiting_external").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">بانتظار الغير</p></div>
+              <div className="mt-7 grid grid-cols-2 gap-2 sm:max-w-3xl sm:grid-cols-4 sm:gap-3">
+                <button type="button" aria-pressed={queueOwnerFilter === "owner"} onClick={() => setQueueOwnerFilter(value => value === "owner" ? "all" : "owner")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "owner" ? "border-amber-200 bg-white/20 ring-2 ring-amber-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{ownerWorkCount}</p><p className="mt-1 text-[10px] font-bold text-white/55">مطلوب منك</p></button>
+                <button type="button" aria-pressed={queueOwnerFilter === "manus"} onClick={() => setQueueOwnerFilter(value => value === "manus" ? "all" : "manus")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "manus" ? "border-violet-200 bg-violet-300/20 ring-2 ring-violet-200/60" : "border-violet-300/15 bg-violet-300/10 hover:bg-violet-300/15"}`}><p className="text-2xl font-black text-violet-200">{manusWorkCount}</p><p className="mt-1 text-[10px] font-bold text-white/55">ينفذه Manus</p></button>
+                <button type="button" aria-pressed={queueOwnerFilter === "external"} onClick={() => setQueueOwnerFilter(value => value === "external" ? "all" : "external")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "external" ? "border-amber-200 bg-white/20 ring-2 ring-amber-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "waiting_external").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">بانتظار الغير</p></button>
+                <button type="button" aria-pressed={queueOwnerFilter === "scheduled"} onClick={() => setQueueOwnerFilter(value => value === "scheduled" ? "all" : "scheduled")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "scheduled" ? "border-blue-200 bg-white/20 ring-2 ring-blue-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "scheduled").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">مواعيد قادمة</p></button>
               </div>
             </div>
             {showSections ? <div className="mb-6 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[92px] overflow-hidden rounded-[24px] border border-white bg-white p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span><span className="mt-1 block text-[10px] font-bold text-slate-400">افتح العناوين ثم سجل واحد</span></span><bdi className="text-2xl font-black text-slate-300">{item.count}</bdi></span></button>; })}</div> : null}
-            <ol aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل" className="space-y-3">{data.executionQueue.length ? data.executionQueue.map((item: any, index: number) => <li key={item.id}><ExecutiveQueueCard item={item} index={index} onOpen={openQueueItem} /></li>) : <li className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل مفتوح الآن</li>}</ol>
+            <ol aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل" className="space-y-3">{visibleExecutionQueue.length ? visibleExecutionQueue.map((item: any, index: number) => <li key={item.id}><ExecutiveQueueCard item={item} index={index} onOpen={openQueueItem} /></li>) : <li className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل في هذا التصنيف الآن</li>}</ol>
           </section> : <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>

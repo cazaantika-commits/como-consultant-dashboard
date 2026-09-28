@@ -13,7 +13,7 @@ function seed() {
   return {
     actions: [
       { id: 1, title: "بانتظار الرد", actionStatus: "waiting_external", projectId: 1, workFileId: 10, priority: "urgent", attentionAt: "2026-09-27 09:00:00" },
-      { id: 2, title: "تحقق من المستند", actionStatus: "completed_pending_verification", projectId: 1, workFileId: 10, priority: "normal", attentionAt: "2026-09-27 08:00:00" },
+      { id: 2, title: "تحقق من المستند", actionStatus: "completed_pending_verification", ownerType: "manus", projectId: 1, workFileId: 10, priority: "normal", attentionAt: "2026-09-27 08:00:00" },
     ],
     decisions: [{ id: 3, title: "اعتماد القرار", projectId: 1, workFileId: 10, dueAt: null }],
     draftCommunications: [{ id: 4, subject: "مراجعة المسودة", projectId: 1, workFileId: 10, occurredAt: null }],
@@ -33,6 +33,7 @@ describe("COMO Next executive kitchen", () => {
     expect(queue[0]?.kind).toBe("decision");
     expect(queue[0]?.reviewItemCount).toBe(3);
     expect(queue[0]?.relatedReviewIds).toEqual(["decision:3", "communication:4", "email:5"]);
+    expect(queue.find(item => item.id === "action:2")?.ownerType).toBe("manus");
     expect(queue.at(-1)?.phase).toBe("waiting_external");
   });
 
@@ -111,10 +112,18 @@ describe("COMO Next executive kitchen", () => {
 
   it("opens on one title-only Now queue and preserves full focus for one record", () => {
     expect(kitchenPage).toContain("ما الذي يحتاج إنجازًا الآن؟");
-    expect(kitchenPage).toContain("data.executionQueue.map");
+    expect(kitchenPage).toContain("visibleExecutionQueue.map");
     expect(kitchenPage).toContain('aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل"');
     expect(kitchenPage).toContain('<li key={item.id}><ExecutiveQueueCard');
     expect(kitchenPage).not.toContain('className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length');
+    expect(kitchenPage).toContain("ينفذه Manus");
+    expect(kitchenPage).toContain("مطلوب منك: مراجعة أو حسم");
+    expect(kitchenPage).toContain("ownerWorkCount");
+    expect(kitchenPage).toContain("manusWorkCount");
+    expect(kitchenPage).toContain("queueOwnerFilter");
+    expect(kitchenPage).toContain('aria-pressed={queueOwnerFilter === "manus"}');
+    expect(kitchenPage).toContain("فتح التقرير المحمي");
+    expect(kitchenPage).toContain("/api/como-next/documents/");
     expect(kitchenPage).toContain("حفظ وتحليل الخطوة التالية");
     expect(kitchenPage).toContain("تحويلها إلى إجراء");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
