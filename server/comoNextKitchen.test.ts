@@ -110,7 +110,7 @@ describe("COMO Next executive kitchen", () => {
     expect(prompt.indexOf("انتظار تأكيد موعد الاثنين")).toBeLessThan(prompt.indexOf("Yes Confirmed"));
   });
 
-  it("opens on one title-only Now queue and preserves full focus for one record", () => {
+  it("opens a queue topic on its calm dossier and drills into a record only from its stage", () => {
     expect(kitchenPage).toContain("ما الذي يحتاج إنجازًا الآن؟");
     expect(kitchenPage).toContain("visibleExecutionQueue.map");
     expect(kitchenPage).toContain('aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل"');
@@ -127,6 +127,8 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain("حفظ وتحليل الخطوة التالية");
     expect(kitchenPage).toContain("تحويلها إلى إجراء");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
+    expect(kitchenPage).toContain('if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);');
+    expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');
   });
 
   it("schedules read-only inbox and sent sync with contextual analysis through the configured task UID", () => {

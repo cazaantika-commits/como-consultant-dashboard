@@ -63,7 +63,7 @@ describe("COMO Next read-only email inbox", () => {
     expect(serverStartup).toContain('process.env.COMO_TELEGRAM_ENABLED === "true"');
   });
 
-  it("stores only attachment metadata during sync and bytes only after owner-approved linking", () => {
+  it("stores attachment bytes only through the protected linking command, never in the raw import", () => {
     const importBlock = service.slice(service.indexOf("export async function importReadonlyBatch"), service.indexOf("export async function syncReadonlyInboxCommand"));
     expect(importBlock).not.toContain("storagePut(");
     expect(service).toContain("await fetchEmailByUID(email.imapUid, email.uidValidity, email.folderName)");
@@ -71,11 +71,35 @@ describe("COMO Next read-only email inbox", () => {
     expect(service).toContain("/api/como-next/documents/");
   });
 
-  it("keeps Manus analysis as a draft and creates no operational outcome automatically", () => {
+  it("auto-links only a unique very-high-confidence work-file match and leaves weaker matches reviewable", () => {
+    const strong = scoreEmailSuggestionCandidate({
+      projectName: "Majan",
+      plotNumber: "RT.040",
+      workFileTitle: "Design International revised proposal",
+      partyName: "Design International",
+      contactEmail: "paolo@designinternational.com",
+      partyLinkedToFile: 1,
+    }, {
+      from: "paolo@designinternational.com",
+      to: "owner@como.ae",
+      cc: "",
+      subject: "Design International revised proposal for Majan RT.040",
+      textBody: "Please find attached the revised proposal.",
+    } as any);
+    expect(strong.score).toBeGreaterThanOrEqual(130);
+    expect(service).toContain("suggestion.confidenceScore >= 130");
+    expect(service).toContain("await linkEmailToWorkFileCommand");
+    expect(service).toContain("Keep the message as a reviewable suggestion");
+  });
+
+  it("keeps narrative proposals as drafts but reconciles linked inbound evidence through the guarded service", () => {
     const analysisBlock = service.slice(service.indexOf("export async function analyzeEmailCommand"), service.indexOf("export async function createReplyDraftFromEmailCommand"));
     expect(analysisBlock).toContain('analysisStatus: "draft"');
     expect(analysisBlock).toContain("operationalRecordsCreated: 0");
     expect(analysisBlock).not.toMatch(/createActionCommand|createDecisionCommand|recordCommunicationSentCommand/);
+    expect(analysisBlock).toContain("reconcileWorkFileEvidenceCommand");
+    expect(analysisBlock).toContain('email.folderName === "INBOX" && email.linkedWorkFileId');
+    expect(service).not.toMatch(/sendReply\s*\(|sendMail\s*\(/i);
   });
 
   it("forces email analysis to reconcile a later sent approval before proposing a next step", () => {

@@ -1096,8 +1096,7 @@ export default function ComoNextTodayPage() {
     syncFocusUrl(null, null, null, "replace");
   };
   const openQueueItem = (item: any) => {
-    if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);
-    if (["decision", "communication", "meeting"].includes(item.kind) && item.workFileId) return openFocusedRecord(item.workFileId, item.kind as ExecutiveFocusKind, item.recordId);
+    if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);
     if (item.kind === "email") return openSection("email");
     if (item.kind === "proposal") return openProposal(item.recordId);
     if (item.kind === "specialist") return openSection("specialists");

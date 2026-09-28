@@ -27,6 +27,7 @@ import {
 import { storagePut } from "../storage";
 import { appendEvent, createCommunicationDraftCommand, requireProjectAccess } from "./comoNextCommands";
 import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
+import { reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
 const rowsOf = <T>(result: unknown): T[] => Array.isArray(result) && Array.isArray(result[0]) ? result[0] as T[] : result as T[];
@@ -126,6 +127,7 @@ async function buildSuggestion(db: any, userId: number, message: EmailMessage) {
     projectId: Number(best.projectId),
     workFileId: best.workFileId == null ? null : Number(best.workFileId),
     projectPartyId: best.projectPartyId == null ? null : Number(best.projectPartyId),
+    confidenceScore: Number(best.score),
     reason: [...new Set(best.reasons)].join("؛ "),
   };
 }
@@ -177,6 +179,7 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
   let duplicates = 0;
   let suggested = 0;
   let unmatched = 0;
+  let autoLinked = 0;
   const importedIds: number[] = [];
 
   for (const message of batch.messages) {
@@ -226,10 +229,25 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
         disposition: attachment.disposition?.slice(0, 80) || null,
       })));
     }
+    if (suggestion?.workFileId && suggestion.confidenceScore >= 130) {
+      try {
+        await linkEmailToWorkFileCommand({
+          userId,
+          emailId,
+          projectId: suggestion.projectId,
+          workFileId: suggestion.workFileId,
+          projectPartyId: suggestion.projectPartyId,
+        });
+        autoLinked += 1;
+      } catch {
+        // Keep the message as a reviewable suggestion when protected linking
+        // or attachment storage cannot complete safely.
+      }
+    }
     imported += 1;
     if (suggestion) suggested += 1; else unmatched += 1;
   }
-  return { imported, duplicates, suggested, unmatched, importedIds, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
+  return { imported, duplicates, suggested, unmatched, autoLinked, importedIds, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
 }
 
 export async function syncReadonlyInboxCommand(input: { userId: number; hours: number; maxMessages: number }) {
@@ -244,6 +262,7 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
     duplicates: inbox.duplicates + sent.duplicates,
     suggested: inbox.suggested + sent.suggested,
     unmatched: inbox.unmatched + sent.unmatched,
+    autoLinked: inbox.autoLinked + sent.autoLinked,
     importedIds: [...inbox.importedIds, ...sent.importedIds],
     scanned: inboxBatch.messages.length + sentBatch.messages.length,
     uidValidity: { inbox: inboxBatch.uidValidity, sent: sentBatch.uidValidity },
@@ -419,7 +438,12 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
-  if (email.inboxStatus === "linked" && email.communicationId) return { communicationId: Number(email.communicationId), replayed: true as const, documents: 0 };
+  if (email.inboxStatus === "linked" && email.communicationId) {
+    const reconciliation = email.folderName === "INBOX"
+      ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: input.workFileId, triggerEmailId: input.emailId }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
+      : null;
+    return { communicationId: Number(email.communicationId), replayed: true as const, documents: 0, reconciliation };
+  }
   const [workFile] = await db.select().from(comoNextWorkFiles).where(and(eq(comoNextWorkFiles.id, input.workFileId), eq(comoNextWorkFiles.projectId, input.projectId))).limit(1);
   if (!workFile) throw new TRPCError({ code: "NOT_FOUND", message: "ملف العمل لا يتبع المشروع المختار" });
   await requireProjectAccess(db, input.projectId, input.userId, "write");
@@ -431,7 +455,7 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
   const storedDocuments = await storeEmailAttachments(email);
   const isSent = email.folderName !== "INBOX";
   const sourceRecordId = `imap:${email.mailboxKey.slice(0, 24)}:${email.folderName}:${email.uidValidity}:${email.imapUid}`;
-  return db.transaction(async tx => {
+  const linked = await db.transaction(async tx => {
     const [existingCommunication] = await tx.select({ id: comoNextCommunications.id }).from(comoNextCommunications).where(and(eq(comoNextCommunications.sourceSystem, "imap"), eq(comoNextCommunications.sourceRecordId, sourceRecordId))).limit(1);
     if (existingCommunication) {
       await tx.update(comoNextEmailMessages).set({ inboxStatus: "linked", linkedProjectId: input.projectId, linkedWorkFileId: input.workFileId, linkedProjectPartyId: input.projectPartyId || null, communicationId: existingCommunication.id, linkedAt: nowSql() }).where(eq(comoNextEmailMessages.id, input.emailId));
@@ -497,6 +521,10 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
     });
     return { communicationId, replayed: false as const, documents: storedDocuments.length };
   });
+  const reconciliation = isSent
+    ? null
+    : await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: input.workFileId, triggerEmailId: input.emailId }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }));
+  return { ...linked, reconciliation };
 }
 
 const emailAnalysisSchema = {
@@ -702,7 +730,10 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
       proposals: (Array.isArray(parsed.proposals) ? parsed.proposals : []) as IntakeProposalDraft[],
     });
   }
-  return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created };
+  const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
+    ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
+    : null;
+  return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation };
 }
 
 export async function createReplyDraftFromEmailCommand(input: { userId: number; emailId: number; body: string; ccText?: string | null }) {
