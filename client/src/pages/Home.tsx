@@ -78,7 +78,7 @@ const PRIMARY_GATEWAYS: GatewayItem[] = [
 
 const WORKSPACES: GatewayItem[] = [
   { id: "financial-studies", title: "الدراسات والتخطيط المالي", description: "المحركات المالية المحمية كما هي.", path: "/bateekha", icon: Layers, theme: "border-emerald-100 bg-white", iconTone: "bg-emerald-50 text-emerald-800", label: "STUDIES" },
-  { id: "consultants", title: "مساحة الاستشاريين", description: "النطاق والتقييم والتكليف.", path: "/consultant-portal", icon: Building2, theme: "border-orange-100 bg-white", iconTone: "bg-orange-50 text-orange-800", label: "CONSULTANTS" },
+  { id: "consultants", title: "المكاتب الاستشارية", description: "نطاق المشروع والعروض والتحليل والتقييم والتكليف.", path: "/consultant-proposals", icon: Building2, theme: "border-orange-100 bg-white", iconTone: "bg-orange-50 text-orange-800", label: "CONSULTANTS" },
   { id: "knowledge", title: "المعرفة والتحليل", description: "السوق والدليل والقرار.", path: "/knowledge-analysis", icon: BookOpen, theme: "border-indigo-100 bg-white", iconTone: "bg-indigo-50 text-indigo-800", label: "KNOWLEDGE" },
   { id: "development-tour", title: "جولة مراحل التطوير", description: "المراحل والبرنامج والمتابعة.", path: "/development-phases", icon: Route, theme: "border-fuchsia-100 bg-white", iconTone: "bg-fuchsia-50 text-fuchsia-800", label: "DEVELOPMENT" },
 ];

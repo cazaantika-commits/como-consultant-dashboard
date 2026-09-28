@@ -2645,11 +2645,15 @@ export default function CPAPage() {
   const initialParams = new URLSearchParams(window.location.search);
   const initialScopeProjectId = Number(initialParams.get("scopeProjectId"));
   const initialCpaProjectId = Number(initialParams.get("cpaProjectId"));
+  const requestedSystemProjectId = Number(initialParams.get("projectId"));
   const initialSettings = initialParams.get("settings") === "1";
   const returnTo = initialParams.get("returnTo");
   const [, navigate] = useLocation();
   const [screen, setScreen] = useState<Screen>(Number.isInteger(initialCpaProjectId) && initialCpaProjectId > 0 ? "project-detail" : Number.isInteger(initialScopeProjectId) && initialScopeProjectId > 0 ? "project-requirements" : initialSettings ? "settings" : "home");
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const directProjectQuery = trpc.cpa.projects.list.useQuery(undefined, {
+    enabled: Number.isInteger(requestedSystemProjectId) && requestedSystemProjectId > 0,
+  });
   const [selectedPcId, setSelectedPcId] = useState<number | null>(null);
   const [selectedConsultantName, setSelectedConsultantName] = useState("");
 
@@ -2680,6 +2684,14 @@ export default function CPAPage() {
       setSelectedProjectId(initialScopeProjectId);
     }
   }, [initialCpaProjectId, initialScopeProjectId, setSelectedProjectId]);
+
+  useEffect(() => {
+    if (!Number.isInteger(requestedSystemProjectId) || requestedSystemProjectId <= 0 || !directProjectQuery.data) return;
+    const matchedProject = (directProjectQuery.data as any[]).find(project => Number(project.project_id) === requestedSystemProjectId);
+    if (!matchedProject) return;
+    setSelectedProjectId(Number(matchedProject.id));
+    setScreen("project-requirements");
+  }, [directProjectQuery.data, requestedSystemProjectId, setSelectedProjectId]);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">

@@ -1,12 +1,13 @@
 import { useLocation } from "wouter";
-import { BriefcaseBusiness, Building2, MessageCircleMore } from "lucide-react";
+import { BriefcaseBusiness, Building2, MessageCircleMore, Users } from "lucide-react";
 import saraPortrait from "@/assets/como/sara.webp";
 
-type PrimaryArea = "kitchen" | "projects" | "sara";
+type PrimaryArea = "kitchen" | "projects" | "consultants" | "sara";
 
 const items = [
   { key: "kitchen" as const, label: "المطبخ", mobileLabel: "المطبخ", path: "/como-next", icon: BriefcaseBusiness },
   { key: "projects" as const, label: "المشاريع", mobileLabel: "المشاريع", path: "/project-management", icon: Building2 },
+  { key: "consultants" as const, label: "المكاتب الاستشارية", mobileLabel: "المكاتب", path: "/consultant-proposals", icon: Users },
   { key: "sara" as const, label: "سارة", mobileLabel: "سارة", path: "/sara", icon: MessageCircleMore },
 ];
 
@@ -16,7 +17,7 @@ export function ComoPrimaryNav({ active, beforeNavigate, dark = false }: { activ
   return (
     <nav
       aria-label="التنقل الرئيسي"
-      className={`fixed inset-x-0 bottom-0 z-[120] grid w-full min-w-0 grid-cols-3 gap-1 border-t px-2 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_40px_rgba(15,23,42,.13)] backdrop-blur-xl sm:static sm:rounded-[20px] sm:border sm:p-1 sm:shadow-none ${dark ? "border-white/10 bg-[#071522]/94 sm:bg-white/7" : "border-slate-200/80 bg-[#fffdf7]/94 sm:bg-[#f3f1ea]"}`}
+      className={`fixed inset-x-0 bottom-0 z-[120] grid w-full min-w-0 grid-cols-4 gap-1 border-t px-2 pb-[max(.35rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_40px_rgba(15,23,42,.13)] backdrop-blur-xl sm:static sm:rounded-[20px] sm:border sm:p-1 sm:shadow-none ${dark ? "border-white/10 bg-[#071522]/94 sm:bg-white/7" : "border-slate-200/80 bg-[#fffdf7]/94 sm:bg-[#f3f1ea]"}`}
       dir="rtl"
     >
       {items.map(item => {

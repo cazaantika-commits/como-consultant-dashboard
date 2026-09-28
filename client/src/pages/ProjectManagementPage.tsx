@@ -15,6 +15,7 @@ import {
   MapPinned,
   Route,
   ShieldCheck,
+  Users,
   WalletCards,
 } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -38,6 +39,16 @@ const MANAGEMENT_CARDS = [
     surface: "border-cyan-100 bg-cyan-50/85",
     accent: "text-[#1f6478]",
     href: (projectId: number) => `/como-next/projects/${projectId}`,
+  },
+  {
+    id: "consultant-offices",
+    title: "المكاتب الاستشارية",
+    description: "نطاق المشروع المحفوظ، المكاتب، العروض الأصلية، التحليل والمقارنة ثم قرار التعيين.",
+    icon: Users,
+    tone: "from-[#7a4b24] to-[#c17b38]",
+    surface: "border-orange-100 bg-orange-50/90",
+    accent: "text-orange-700",
+    href: (projectId: number) => `/consultant-proposals?projectId=${projectId}`,
   },
   {
     id: "feasibility",
@@ -137,7 +148,7 @@ export default function ProjectManagementPage() {
     <main className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10">
       <section className="rounded-[28px] bg-[#102b35] p-5 text-white shadow-[0_20px_60px_rgba(15,36,45,.16)] sm:p-7"><p className="mb-3 text-xs font-black text-amber-200">المشروع النشط</p><div className="rounded-2xl bg-white p-2 text-slate-900"><ProjectSelector selectedId={selectedProjectId} onSelect={selectProject} className="w-full justify-between" /></div></section>
 
-      {!selectedProjectId ? <Card className="mt-6 rounded-[30px] border-dashed border-slate-300 bg-white/75 p-9 text-center"><LayoutDashboard className="mx-auto h-9 w-9 text-slate-400" /><h2 className="mt-4 text-xl font-black text-slate-900">اختر مشروعًا للبدء</h2><p className="mt-2 text-sm leading-7 text-slate-500">بعد الاختيار ستظهر بيانات الأرض والمساحات، ثم البطاقات الأربع الخاصة بالمشروع نفسه.</p></Card> : projectQuery.isLoading ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[1,2,3,4].map(item => <Skeleton key={item} className="h-48 rounded-[28px]" />)}</div> : projectQuery.isError || !project ? <Card className="mt-6 rounded-[30px] border-rose-200 bg-rose-50 p-8 text-center"><CircleAlert className="mx-auto h-8 w-8 text-rose-600" /><h2 className="mt-4 text-xl font-black text-rose-950">تعذر فتح المشروع المختار</h2><p className="mt-2 text-sm text-rose-700">{projectQuery.error?.message || "لا تتوفر صلاحية المشروع."}</p></Card> : <>
+      {!selectedProjectId ? <Card className="mt-6 rounded-[30px] border-dashed border-slate-300 bg-white/75 p-9 text-center"><LayoutDashboard className="mx-auto h-9 w-9 text-slate-400" /><h2 className="mt-4 text-xl font-black text-slate-900">اختر مشروعًا للبدء</h2><p className="mt-2 text-sm leading-7 text-slate-500">بعد الاختيار ستظهر بيانات الأرض والمساحات ومسارات المشروع المحفوظة.</p></Card> : projectQuery.isLoading ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{[1,2,3,4,5].map(item => <Skeleton key={item} className="h-48 rounded-[28px]" />)}</div> : projectQuery.isError || !project ? <Card className="mt-6 rounded-[30px] border-rose-200 bg-rose-50 p-8 text-center"><CircleAlert className="mx-auto h-8 w-8 text-rose-600" /><h2 className="mt-4 text-xl font-black text-rose-950">تعذر فتح المشروع المختار</h2><p className="mt-2 text-sm text-rose-700">{projectQuery.error?.message || "لا تتوفر صلاحية المشروع."}</p></Card> : <>
         <section className="mt-6 overflow-hidden rounded-[30px] border border-slate-200 bg-white/90 shadow-sm">
 						<div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
@@ -152,7 +163,7 @@ export default function ProjectManagementPage() {
           <div className="grid gap-3 border-t border-slate-100 bg-[#fbfcfb] p-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"><ProjectFact label="رقم القطعة" value={project.plotNumber} icon={MapPinned} /><ProjectFact label="سند الملكية" value={project.titleDeedNumber} icon={BookOpenCheck} /><ProjectFact label="مرجع DDA" value={project.ddaNumber || project.masterDevRef} icon={Landmark} /><ProjectFact label="الاستخدام" value={project.permittedUse} icon={Building2} /><ProjectFact label="مساحة الأرض" value={formatArea(project.plotAreaSqm, "م²")} icon={MapPinned} /><ProjectFact label="المساحة الطابقية" value={formatArea(project.gfaSqm, "م²")} icon={Building2} /></div>
         </section>
 
-        <section className="mt-7"><h2 className="mb-4 text-xl font-black text-slate-950">مسارات المشروع</h2><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{MANAGEMENT_CARDS.map(item => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.href(selectedProjectId))} className={`group relative min-h-[150px] overflow-hidden rounded-[26px] border p-4 text-right shadow-[0_12px_35px_rgba(15,23,42,.06)] transition hover:-translate-y-1 hover:shadow-lg ${item.surface}`}><span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-lg`}><Icon className="h-5 w-5" /></span><span className="mt-5 block text-base font-black leading-6 text-slate-950">{item.title}</span><span className="mt-2 hidden text-[11px] leading-5 text-slate-500 sm:block">{item.description}</span><ChevronLeft className={`absolute bottom-4 left-4 h-5 w-5 ${item.accent}`} /></button>; })}</div></section>
+        <section className="mt-7"><h2 className="mb-4 text-xl font-black text-slate-950">مسارات المشروع</h2><div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5">{MANAGEMENT_CARDS.map(item => { const Icon = item.icon; return <button key={item.id} type="button" onClick={() => navigate(item.href(selectedProjectId))} className={`group relative min-h-[150px] overflow-hidden rounded-[26px] border p-4 text-right shadow-[0_12px_35px_rgba(15,23,42,.06)] transition hover:-translate-y-1 hover:shadow-lg ${item.surface}`}><span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${item.tone} text-white shadow-lg`}><Icon className="h-5 w-5" /></span><span className="mt-5 block text-base font-black leading-6 text-slate-950">{item.title}</span><span className="mt-2 hidden text-[11px] leading-5 text-slate-500 sm:block">{item.description}</span><ChevronLeft className={`absolute bottom-4 left-4 h-5 w-5 ${item.accent}`} /></button>; })}</div></section>
 
         {foundation ? <section className="mt-6 rounded-[28px] border border-amber-200 bg-[#fffaf0] p-5 sm:p-6"><p className="text-[10px] font-black text-amber-800">القرار التالي بحسب مصادر المشروع</p><div className="mt-2 flex flex-wrap items-center justify-between gap-4"><div><h2 className="text-lg font-black leading-8 text-slate-950">{foundation.nextDecision}</h2><p className="mt-1 text-xs text-slate-600">اقتراح مسار فقط؛ لا يتحول إلى تنفيذ أو التزام تلقائي.</p></div><Button variant="outline" className="rounded-xl bg-white" onClick={() => navigate(`/project-launch/${selectedProjectId}`)}>عرض أساس المشروع <ChevronLeft className="mr-2 h-4 w-4" /></Button></div></section> : null}
       </>}

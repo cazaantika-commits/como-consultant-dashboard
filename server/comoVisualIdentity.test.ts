@@ -9,6 +9,7 @@ const sara = readFileSync("client/src/pages/SaraPage.tsx", "utf8");
 const navigation = readFileSync("client/src/components/ComoPrimaryNav.tsx", "utf8");
 const app = readFileSync("client/src/App.tsx", "utf8");
 const projects = readFileSync("client/src/pages/ProjectManagementPage.tsx", "utf8");
+const consultants = readFileSync("client/src/pages/CPAPage.tsx", "utf8");
 
 describe("COMO visual identity", () => {
   it("restores rich gateway cards without turning Home into an operational dashboard", () => {
@@ -47,9 +48,11 @@ describe("COMO visual identity", () => {
     expect(sara).toContain("streamlined");
   });
 
-  it("uses one warm mobile navigation for the kitchen, projects, and Sara", () => {
+  it("uses one warm mobile navigation for the kitchen, projects, consultants, and Sara", () => {
     expect(navigation).toContain('active: PrimaryArea');
     expect(navigation).toContain('fixed inset-x-0 bottom-0');
+    expect(navigation).toContain('path: "/consultant-proposals"');
+    expect(navigation).toContain('grid-cols-4');
     expect(navigation).toContain('saraPortrait');
     expect(kitchen).toContain('<ComoPrimaryNav active="kitchen" dark />');
     expect(app).toContain('<Redirect to="/como-next" />');
@@ -57,7 +60,11 @@ describe("COMO visual identity", () => {
   });
 
   it("presents project destinations as calm colored tiles instead of a monochrome list", () => {
-    expect(projects).toContain("grid grid-cols-2 gap-3 lg:grid-cols-4");
+    expect(projects).toContain('title: "المكاتب الاستشارية"');
+    expect(projects).toContain('/consultant-proposals?projectId=${projectId}');
+    expect(projects).toContain("grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-5");
+    expect(consultants).toContain('requestedSystemProjectId');
+    expect(consultants).toContain('setScreen("project-requirements")');
     expect(projects).toContain("bg-cyan-50/85");
     expect(projects).toContain("bg-emerald-50/85");
     expect(projects).toContain("bg-amber-50/90");
