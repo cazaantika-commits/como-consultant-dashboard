@@ -117,6 +117,9 @@ describe("COMO Next meeting safety invariants", () => {
     expect(workspaceSource).toContain("importMeetingTranscript");
     expect(workspaceSource).toContain("رفع تسجيل أو تفريغ Zoom");
     expect(workspaceSource).toContain('params.get("focusKind") !== "meeting"');
+    expect(workspaceSource).toContain("function MeetingAgendaNavigator");
+    expect(workspaceSource).toContain("نقطة واحدة في كل مرة");
+    expect(workspaceSource).toContain("النقطة {safeCursor + 1} من {items.length}");
     expect(documentRouteSource).toContain("comoNextMeetingRecordings");
   });
 });
