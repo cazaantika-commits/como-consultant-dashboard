@@ -168,23 +168,21 @@ function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number;
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className={`group relative min-h-[116px] w-full min-w-0 overflow-hidden rounded-[26px] border p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,.12)] active:scale-[.99] sm:p-5 ${meta.card}`}
+      className={`group relative min-h-[82px] w-full min-w-0 overflow-hidden rounded-[22px] border p-3.5 text-right shadow-[0_8px_22px_rgba(15,23,42,.06)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,.10)] active:scale-[.99] sm:p-4 ${meta.card}`}
     >
       <span className={`absolute inset-y-0 right-0 w-1.5 ${item.priority === "urgent" ? "bg-rose-500" : item.priority === "important" ? "bg-amber-400" : "bg-[#1d6577]"}`} />
-      <div className="flex h-full min-w-0 items-start gap-4 pr-1">
-        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ${meta.iconClass}`}><Icon className="h-5 w-5" /></span>
+      <div className="flex h-full min-w-0 items-center gap-3 pr-1 sm:gap-4">
+        <bdi className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white bg-white/80 text-sm font-black text-slate-500 shadow-sm">{String(index + 1).padStart(2, "0")}</bdi>
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${meta.iconClass}`}><Icon className="h-4.5 w-4.5" /></span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
             <span className={`text-[10px] font-black tracking-wide ${meta.eyebrow}`}>{meta.label}</span>
             <span className="rounded-full border border-white bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{queueKindLabel[item.kind] || "عمل"}</span>
             {Number(item.reviewItemCount || 0) > 1 ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black text-violet-800">{item.reviewItemCount} سجلات ضمن الموضوع</span> : null}
           </span>
-          <span className="mt-2 block break-words text-[15px] font-black leading-7 text-slate-950 sm:text-base">{item.title}</span>
+          <span className="mt-1.5 block break-words text-[15px] font-black leading-6 text-slate-950 sm:text-base">{item.title}</span>
         </span>
-        <span className="flex shrink-0 flex-col items-end justify-between self-stretch">
-          <bdi className="text-[10px] font-black text-slate-300">{String(index + 1).padStart(2, "0")}</bdi>
-          <ChevronLeft className="h-5 w-5 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1d6577]" />
-        </span>
+        <ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1d6577]" />
       </div>
     </button>
   );
@@ -1138,7 +1136,7 @@ export default function ComoNextTodayPage() {
           {!selectedSection ? <section>
             <div className="mb-5 overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#0a2b35_0%,#113f45_55%,#1f5d50_100%)] p-6 text-white shadow-[0_26px_70px_rgba(8,47,54,.22)] sm:p-9">
               <div className="flex flex-wrap items-start justify-between gap-5">
-                <div><p className="text-xs font-black text-amber-200">{new Intl.DateTimeFormat("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-5xl">ما الذي يحتاج إنجازًا الآن؟</h2><p className="mt-3 max-w-xl text-sm leading-7 text-white/65">كل بطاقة مرتبطة بخطوة عملية. افتح واحدة فتختفي البقية حتى تنهيها أو تحدّثها.</p></div>
+                <div><p className="text-xs font-black text-amber-200">{new Intl.DateTimeFormat("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-5xl">ما الذي يحتاج إنجازًا الآن؟</h2><p className="mt-3 max-w-xl text-sm leading-7 text-white/65">كل موضوع في سطر مستقل، مرتب من الأعلى إلى الأسفل. افتح واحدًا فتختفي البقية حتى تنهيه أو تحدّثه.</p></div>
                 <Button type="button" variant="outline" onClick={() => setShowSections(value => !value)} className="rounded-2xl border-white/15 bg-white/10 text-white hover:bg-white/20 hover:text-white">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button>
               </div>
               <div className="mt-7 grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
@@ -1148,7 +1146,7 @@ export default function ComoNextTodayPage() {
               </div>
             </div>
             {showSections ? <div className="mb-6 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[92px] overflow-hidden rounded-[24px] border border-white bg-white p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span><span className="mt-1 block text-[10px] font-bold text-slate-400">افتح العناوين ثم سجل واحد</span></span><bdi className="text-2xl font-black text-slate-300">{item.count}</bdi></span></button>; })}</div> : null}
-            <div className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length ? data.executionQueue.map((item: any, index: number) => <ExecutiveQueueCard key={item.id} item={item} index={index} onOpen={openQueueItem} />) : <div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500 sm:col-span-2">لا يوجد عمل مفتوح الآن</div>}</div>
+            <ol aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل" className="space-y-3">{data.executionQueue.length ? data.executionQueue.map((item: any, index: number) => <li key={item.id}><ExecutiveQueueCard item={item} index={index} onOpen={openQueueItem} /></li>) : <li className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل مفتوح الآن</li>}</ol>
           </section> : <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>

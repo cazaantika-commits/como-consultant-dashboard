@@ -112,6 +112,9 @@ describe("COMO Next executive kitchen", () => {
   it("opens on one title-only Now queue and preserves full focus for one record", () => {
     expect(kitchenPage).toContain("ما الذي يحتاج إنجازًا الآن؟");
     expect(kitchenPage).toContain("data.executionQueue.map");
+    expect(kitchenPage).toContain('aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل"');
+    expect(kitchenPage).toContain('<li key={item.id}><ExecutiveQueueCard');
+    expect(kitchenPage).not.toContain('className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length');
     expect(kitchenPage).toContain("حفظ وتحليل الخطوة التالية");
     expect(kitchenPage).toContain("تحويلها إلى إجراء");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
