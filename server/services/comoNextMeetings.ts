@@ -5,19 +5,23 @@ import {
   comoNextActions,
   comoNextCommunications,
   comoNextDecisions,
+  comoNextDocuments,
   comoNextMeetingAgendaItems,
   comoNextMeetingAnalyses,
   comoNextMeetingConsents,
   comoNextMeetingMinutes,
   comoNextMeetingParticipants,
   comoNextMeetingProposals,
+  comoNextMeetingRecordings,
   comoNextMeetingSources,
   comoNextMeetings,
   comoNextWorkFiles,
   comoNextWorkMemory,
 } from "../../drizzle/schema";
 import { invokeLLM } from "../_core/llm";
+import { transcribeAudio } from "../_core/voiceTranscription";
 import { getDb } from "../db";
+import { storagePut } from "../storage";
 import { appendEvent, requireProjectAccess, toSqlUtcTimestamp } from "./comoNextCommands";
 
 export type MeetingSourceKind = "preparation" | "notes" | "transcript";
@@ -45,6 +49,32 @@ async function requireMeetingAccess(meetingId: number, userId: number, required:
 export function assertTranscriptConsent(status?: string | null) {
   if (status !== "granted") {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن حفظ تفريغ قبل تسجيل موافقة صريحة على التفريغ" });
+  }
+}
+
+export function assertRecordingConsent(status?: string | null) {
+  if (status !== "granted") {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن بدء أو رفع تسجيل قبل توثيق موافقة صريحة على التسجيل" });
+  }
+}
+
+const supportedRecordingMimeTypes = new Set([
+  "audio/webm",
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/ogg",
+  "audio/mp4",
+  "video/mp4",
+]);
+
+export function assertMeetingRecordingFile(input: { mimeType: string; byteSize: number }) {
+  if (!supportedRecordingMimeTypes.has(input.mimeType)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "صيغة التسجيل غير مدعومة. استخدم webm أو mp3 أو wav أو ogg أو m4a/mp4" });
+  }
+  if (input.byteSize <= 0 || input.byteSize > 16 * 1024 * 1024) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "حجم التسجيل يجب ألا يتجاوز 16MB. لتسجيل Zoom طويل ارفع ملف التفريغ VTT/TXT بدل الفيديو" });
   }
 }
 
@@ -333,6 +363,214 @@ export async function addMeetingSourceCommand(input: {
       idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
     });
     return { id, replayed: false as const };
+  });
+}
+
+function recordingExtension(mimeType: string) {
+  const normalized = mimeType.split(";")[0].trim().toLowerCase();
+  if (normalized === "audio/webm") return "webm";
+  if (normalized === "audio/mpeg" || normalized === "audio/mp3") return "mp3";
+  if (normalized === "audio/wav" || normalized === "audio/x-wav") return "wav";
+  if (normalized === "audio/ogg") return "ogg";
+  if (normalized === "video/mp4") return "mp4";
+  return "m4a";
+}
+
+async function meetingConsentByScope(meetingId: number, scope: "recording" | "transcription") {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [consent] = await db.select().from(comoNextMeetingConsents)
+    .where(and(eq(comoNextMeetingConsents.meetingId, meetingId), eq(comoNextMeetingConsents.consentScope, scope))).limit(1);
+  return consent;
+}
+
+export async function uploadMeetingRecordingCommand(input: {
+  userId: number;
+  meetingId: number;
+  recordingKind: "browser_recording" | "zoom_recording";
+  fileName: string;
+  mimeType: string;
+  audioBase64: string;
+  durationSeconds?: number | null;
+  idempotencyKey?: string;
+}) {
+  const { db, meeting } = await requireMeetingAccess(input.meetingId, input.userId, "write");
+  if (["completed", "cancelled"].includes(meeting.meetingStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "الاجتماع مغلق ولا يقبل تسجيلًا جديدًا" });
+  const [recordingConsent, transcriptionConsent] = await Promise.all([
+    meetingConsentByScope(input.meetingId, "recording"),
+    meetingConsentByScope(input.meetingId, "transcription"),
+  ]);
+  assertRecordingConsent(recordingConsent?.consentStatus);
+  assertTranscriptConsent(transcriptionConsent?.consentStatus);
+
+  const mimeType = input.mimeType.split(";")[0].trim().toLowerCase();
+  const audioBuffer = Buffer.from(input.audioBase64, "base64");
+  assertMeetingRecordingFile({ mimeType, byteSize: audioBuffer.byteLength });
+  const sha256 = createHash("sha256").update(audioBuffer).digest("hex");
+  const [duplicate] = await db.select().from(comoNextMeetingRecordings)
+    .where(and(eq(comoNextMeetingRecordings.meetingId, input.meetingId), eq(comoNextMeetingRecordings.sha256, sha256))).limit(1);
+  if (duplicate) return { id: Number(duplicate.id), status: duplicate.recordingStatus, transcriptSourceId: duplicate.transcriptSourceId ? Number(duplicate.transcriptSourceId) : null, replayed: true as const };
+
+  const storageKey = `como-next/meetings/${meeting.projectId}/${meeting.id}/${Date.now()}-${sha256.slice(0, 16)}.${recordingExtension(mimeType)}`;
+  const stored = await storagePut(storageKey, audioBuffer, mimeType);
+  const [document] = await db.select().from(comoNextDocuments).where(eq(comoNextDocuments.sha256, sha256)).limit(1);
+  let documentId = document ? Number(document.id) : 0;
+  if (!documentId) {
+    const result = await db.insert(comoNextDocuments).values({
+      title: `تسجيل اجتماع — ${meeting.title}`,
+      fileName: input.fileName.trim() || `meeting-${meeting.id}.${recordingExtension(mimeType)}`,
+      mimeType,
+      byteSize: audioBuffer.byteLength,
+      sha256,
+      storageKey: stored.key,
+      storageUrl: stored.url,
+      sourceSystem: "como_next_meeting",
+      sourceKey: `meeting-recording:${meeting.id}:${sha256}`,
+    });
+    documentId = Number(result[0].insertId);
+  }
+
+  const recordingResult = await db.insert(comoNextMeetingRecordings).values({
+    meetingId: meeting.id,
+    recordingKind: input.recordingKind,
+    recordingStatus: "transcribing",
+    documentId,
+    originalFileName: input.fileName.trim() || `meeting-${meeting.id}.${recordingExtension(mimeType)}`,
+    mimeType,
+    byteSize: audioBuffer.byteLength,
+    durationSeconds: input.durationSeconds ? Math.max(1, Math.round(input.durationSeconds)) : null,
+    sha256,
+    createdByUserId: input.userId,
+    sourceSystem: "como_next",
+    sourceRecordId: input.idempotencyKey ?? null,
+  });
+  const recordingId = Number(recordingResult[0].insertId);
+  await appendEvent(db, {
+    userId: input.userId,
+    projectId: meeting.projectId,
+    workFileId: meeting.workFileId!,
+    eventType: "meeting_recording_uploaded",
+    summary: `حفظ تسجيل الاجتماع تمهيدًا لتفريغه: ${meeting.title}`,
+    payload: { meetingId: meeting.id, recordingId, documentId, recordingKind: input.recordingKind, byteSize: audioBuffer.byteLength, externalSideEffect: false },
+    idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
+  });
+
+  const transcription = await transcribeAudio({
+    audioUrl: stored.url,
+    language: "ar",
+    prompt: `اجتماع أعمال عقاري قد يتضمن العربية والإنجليزية وأسماء شركات. فرّغ الكلام بدقة واحفظ أسماء الأشخاص والشركات والأرقام كما قيلت. عنوان الاجتماع: ${meeting.title}`,
+  });
+  if ("error" in transcription) {
+    await db.update(comoNextMeetingRecordings).set({ recordingStatus: "failed", errorMessage: transcription.error }).where(eq(comoNextMeetingRecordings.id, recordingId));
+    await appendEvent(db, {
+      userId: input.userId,
+      projectId: meeting.projectId,
+      workFileId: meeting.workFileId!,
+      eventType: "meeting_transcription_failed",
+      summary: `تعذر تفريغ تسجيل الاجتماع: ${meeting.title}`,
+      payload: { meetingId: meeting.id, recordingId, error: transcription.error, externalSideEffect: false },
+    });
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `حُفظ التسجيل، لكن تعذر تفريغه الآن: ${transcription.error}` });
+  }
+
+  const transcript = String(transcription.text || "").trim();
+  if (!transcript) {
+    await db.update(comoNextMeetingRecordings).set({ recordingStatus: "failed", errorMessage: "empty_transcript" }).where(eq(comoNextMeetingRecordings.id, recordingId));
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "حُفظ التسجيل، لكن خدمة التفريغ لم تُرجع نصًا" });
+  }
+  const transcriptSha256 = createHash("sha256").update(transcript, "utf8").digest("hex");
+  return db.transaction(async tx => {
+    const sourceResult = await tx.insert(comoNextMeetingSources).values({
+      meetingId: meeting.id,
+      sourceKind: "transcript",
+      visibility: "meeting_record",
+      title: input.recordingKind === "zoom_recording" ? "تفريغ تسجيل Zoom" : "تفريغ التسجيل المباشر",
+      rawText: transcript,
+      sourceDocumentId: documentId,
+      consentId: Number(transcriptionConsent!.id),
+      sourceSha256: transcriptSha256,
+      sourceStatus: "captured",
+      createdByUserId: input.userId,
+      sourceSystem: "como_next_meeting_recording",
+      sourceRecordId: `recording:${recordingId}:transcript`,
+    });
+    const transcriptSourceId = Number(sourceResult[0].insertId);
+    await tx.update(comoNextMeetingRecordings).set({ recordingStatus: "transcribed", transcriptSourceId, errorMessage: null }).where(eq(comoNextMeetingRecordings.id, recordingId));
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: meeting.projectId,
+      workFileId: meeting.workFileId!,
+      eventType: "meeting_transcript_created",
+      summary: `اكتمل تفريغ تسجيل الاجتماع: ${meeting.title}`,
+      payload: { meetingId: meeting.id, recordingId, transcriptSourceId, analysisStarted: false, outcomesApplied: 0, externalSideEffect: false },
+    });
+    return { id: recordingId, status: "transcribed" as const, transcriptSourceId, replayed: false as const };
+  });
+}
+
+export async function importMeetingTranscriptCommand(input: {
+  userId: number;
+  meetingId: number;
+  fileName: string;
+  mimeType: "text/plain" | "text/vtt" | "application/x-subrip";
+  rawText: string;
+  idempotencyKey?: string;
+}) {
+  const { db, meeting } = await requireMeetingAccess(input.meetingId, input.userId, "write");
+  if (["completed", "cancelled"].includes(meeting.meetingStatus)) throw new TRPCError({ code: "BAD_REQUEST", message: "الاجتماع مغلق ولا يقبل تفريغًا جديدًا" });
+  const transcriptionConsent = await meetingConsentByScope(input.meetingId, "transcription");
+  assertTranscriptConsent(transcriptionConsent?.consentStatus);
+  const rawText = input.rawText.trim();
+  const bytes = Buffer.from(rawText, "utf8");
+  if (bytes.byteLength > 4 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "ملف التفريغ النصي أكبر من 4MB" });
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const [duplicate] = await db.select({ id: comoNextMeetingSources.id }).from(comoNextMeetingSources)
+    .where(and(eq(comoNextMeetingSources.meetingId, meeting.id), eq(comoNextMeetingSources.sourceSha256, sha256))).limit(1);
+  if (duplicate) return { sourceId: Number(duplicate.id), replayed: true as const };
+  const storageKey = `como-next/meetings/${meeting.projectId}/${meeting.id}/${Date.now()}-${sha256.slice(0, 16)}.${input.mimeType === "text/vtt" ? "vtt" : input.mimeType === "application/x-subrip" ? "srt" : "txt"}`;
+  const stored = await storagePut(storageKey, bytes, input.mimeType);
+  const [document] = await db.select().from(comoNextDocuments).where(eq(comoNextDocuments.sha256, sha256)).limit(1);
+  let documentId = document ? Number(document.id) : 0;
+  if (!documentId) {
+    const documentResult = await db.insert(comoNextDocuments).values({
+      title: `تفريغ اجتماع — ${meeting.title}`,
+      fileName: input.fileName.trim(),
+      mimeType: input.mimeType,
+      byteSize: bytes.byteLength,
+      sha256,
+      storageKey: stored.key,
+      storageUrl: stored.url,
+      sourceSystem: "como_next_meeting",
+      sourceKey: `meeting-transcript:${meeting.id}:${sha256}`,
+    });
+    documentId = Number(documentResult[0].insertId);
+  }
+  return db.transaction(async tx => {
+    const sourceResult = await tx.insert(comoNextMeetingSources).values({
+      meetingId: meeting.id,
+      sourceKind: "transcript",
+      visibility: "meeting_record",
+      title: `تفريغ Zoom — ${input.fileName.trim()}`,
+      rawText,
+      sourceDocumentId: documentId,
+      consentId: Number(transcriptionConsent!.id),
+      sourceSha256: sha256,
+      sourceStatus: "captured",
+      createdByUserId: input.userId,
+      sourceSystem: "como_next_zoom_transcript",
+      sourceRecordId: input.idempotencyKey ?? null,
+    });
+    const sourceId = Number(sourceResult[0].insertId);
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: meeting.projectId,
+      workFileId: meeting.workFileId!,
+      eventType: "meeting_transcript_imported",
+      summary: `استيراد تفريغ Zoom للاجتماع: ${meeting.title}`,
+      payload: { meetingId: meeting.id, sourceId, documentId, analysisStarted: false, outcomesApplied: 0, externalSideEffect: false },
+      idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
+    });
+    return { sourceId, replayed: false as const };
   });
 }
 
@@ -662,11 +900,12 @@ export async function reviewMeetingMinutesCommand(input: { userId: number; minut
 
 export async function getMeetingWorkspace(meetingId: number, userId: number) {
   const { db, meeting } = await requireMeetingAccess(meetingId, userId, "read");
-  const [participants, agenda, consents, sources, analyses, proposals, minutes] = await Promise.all([
+  const [participants, agenda, consents, sources, recordings, analyses, proposals, minutes] = await Promise.all([
     db.select().from(comoNextMeetingParticipants).where(eq(comoNextMeetingParticipants.meetingId, meetingId)).orderBy(asc(comoNextMeetingParticipants.id)),
     db.select().from(comoNextMeetingAgendaItems).where(eq(comoNextMeetingAgendaItems.meetingId, meetingId)).orderBy(asc(comoNextMeetingAgendaItems.sortOrder), asc(comoNextMeetingAgendaItems.id)),
     db.select().from(comoNextMeetingConsents).where(eq(comoNextMeetingConsents.meetingId, meetingId)).orderBy(asc(comoNextMeetingConsents.id)),
     db.select({ id: comoNextMeetingSources.id, meetingId: comoNextMeetingSources.meetingId, sourceKind: comoNextMeetingSources.sourceKind, visibility: comoNextMeetingSources.visibility, title: comoNextMeetingSources.title, rawText: comoNextMeetingSources.rawText, sourceDocumentId: comoNextMeetingSources.sourceDocumentId, sourceSha256: comoNextMeetingSources.sourceSha256, sourceStatus: comoNextMeetingSources.sourceStatus, createdAt: comoNextMeetingSources.createdAt }).from(comoNextMeetingSources).where(eq(comoNextMeetingSources.meetingId, meetingId)).orderBy(desc(comoNextMeetingSources.createdAt), desc(comoNextMeetingSources.id)),
+    db.select({ id: comoNextMeetingRecordings.id, recordingKind: comoNextMeetingRecordings.recordingKind, recordingStatus: comoNextMeetingRecordings.recordingStatus, documentId: comoNextMeetingRecordings.documentId, transcriptSourceId: comoNextMeetingRecordings.transcriptSourceId, originalFileName: comoNextMeetingRecordings.originalFileName, mimeType: comoNextMeetingRecordings.mimeType, byteSize: comoNextMeetingRecordings.byteSize, durationSeconds: comoNextMeetingRecordings.durationSeconds, errorMessage: comoNextMeetingRecordings.errorMessage, createdAt: comoNextMeetingRecordings.createdAt }).from(comoNextMeetingRecordings).where(eq(comoNextMeetingRecordings.meetingId, meetingId)).orderBy(desc(comoNextMeetingRecordings.createdAt), desc(comoNextMeetingRecordings.id)),
     db.select().from(comoNextMeetingAnalyses).where(eq(comoNextMeetingAnalyses.meetingId, meetingId)).orderBy(desc(comoNextMeetingAnalyses.createdAt), desc(comoNextMeetingAnalyses.id)),
     db.select().from(comoNextMeetingProposals).where(eq(comoNextMeetingProposals.meetingId, meetingId)).orderBy(desc(comoNextMeetingProposals.createdAt), asc(comoNextMeetingProposals.ordinal)),
     db.select().from(comoNextMeetingMinutes).where(eq(comoNextMeetingMinutes.meetingId, meetingId)).orderBy(desc(comoNextMeetingMinutes.version)),
@@ -677,9 +916,17 @@ export async function getMeetingWorkspace(meetingId: number, userId: number) {
     agenda,
     consents,
     sources,
+    recordings,
     analyses: analyses.map(item => ({ ...item, openQuestions: item.openQuestionsJson ? JSON.parse(item.openQuestionsJson) : [] })),
     proposals,
     minutes,
-    safeguards: { automaticOutcomeCreation: false, externalSending: false, recordingActive: false, transcriptionActive: false },
+    safeguards: {
+      automaticOutcomeCreation: false,
+      externalSending: false,
+      recordingActive: recordings.some(item => item.recordingStatus === "uploaded"),
+      transcriptionActive: recordings.some(item => item.recordingStatus === "transcribing"),
+      recordingAvailable: true,
+      zoomAutomaticImport: false,
+    },
   };
 }

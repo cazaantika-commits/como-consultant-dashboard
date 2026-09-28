@@ -34,10 +34,12 @@ import {
   analyzeMeetingSourceCommand,
   createMeetingCommand,
   getMeetingWorkspace,
+  importMeetingTranscriptCommand,
   prepareMeetingMinutesCommand,
   recordMeetingConsentCommand,
   reviewMeetingMinutesCommand,
   reviewMeetingProposalCommand,
+  uploadMeetingRecordingCommand,
   updateMeetingAgendaItemCommand,
 } from "../services/comoNextMeetings";
 import { getProjectExecutiveFile } from "../services/comoNextProjectDossier";
@@ -894,6 +896,34 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return addMeetingSourceCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  uploadMeetingRecording: protectedProcedure
+    .input(z.object({
+      meetingId: z.number().int().positive(),
+      recordingKind: z.enum(["browser_recording", "zoom_recording"]),
+      fileName: z.string().trim().min(1).max(1000),
+      mimeType: z.string().trim().min(3).max(255),
+      audioBase64: z.string().min(16).max(24_000_000),
+      durationSeconds: z.number().int().positive().max(24 * 60 * 60).optional().nullable(),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return uploadMeetingRecordingCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  importMeetingTranscript: protectedProcedure
+    .input(z.object({
+      meetingId: z.number().int().positive(),
+      fileName: z.string().trim().min(1).max(1000),
+      mimeType: z.enum(["text/plain", "text/vtt", "application/x-subrip"]),
+      rawText: z.string().trim().min(10).max(500_000),
+      idempotencyKey: z.string().trim().min(8).max(128).optional(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return importMeetingTranscriptCommand({ userId: ctx.user.id, ...input });
     }),
 
   analyzeMeetingSource: protectedProcedure

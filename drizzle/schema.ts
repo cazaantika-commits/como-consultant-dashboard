@@ -3300,6 +3300,30 @@ export const comoNextMeetingSources = mysqlTable("como_next_meeting_sources", {
   index("como_next_meeting_source_meeting_idx").on(table.meetingId, table.sourceStatus, table.createdAt),
 ]);
 
+export const comoNextMeetingRecordings = mysqlTable("como_next_meeting_recordings", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),
+  recordingKind: mysqlEnum("recording_kind", ["browser_recording", "zoom_recording"]).notNull(),
+  recordingStatus: mysqlEnum("recording_status", ["uploaded", "transcribing", "transcribed", "failed", "discarded"]).notNull().default("uploaded"),
+  documentId: bigint("document_id", { mode: "number" }).notNull().references(() => comoNextDocuments.id, { onDelete: "restrict" }),
+  transcriptSourceId: bigint("transcript_source_id", { mode: "number" }).references(() => comoNextMeetingSources.id, { onDelete: "restrict" }),
+  originalFileName: varchar("original_file_name", { length: 1000 }).notNull(),
+  mimeType: varchar("mime_type", { length: 255 }).notNull(),
+  byteSize: bigint("byte_size", { mode: "number" }).notNull(),
+  durationSeconds: int("duration_seconds"),
+  sha256: varchar("sha256", { length: 64 }).notNull(),
+  errorMessage: text("error_message"),
+  createdByUserId: int("created_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("como_next"),
+  sourceRecordId: varchar("source_record_id", { length: 128 }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_meeting_recording_file_uq").on(table.meetingId, table.sha256),
+  uniqueIndex("como_next_meeting_recording_source_uq").on(table.sourceSystem, table.sourceRecordId),
+  index("como_next_meeting_recording_status_idx").on(table.meetingId, table.recordingStatus, table.createdAt),
+]);
+
 export const comoNextMeetingAnalyses = mysqlTable("como_next_meeting_analyses", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   meetingId: int("meeting_id").notNull().references(() => comoNextMeetings.id, { onDelete: "restrict" }),

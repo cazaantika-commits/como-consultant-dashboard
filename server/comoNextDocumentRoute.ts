@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Express } from "express";
 import { asc, eq } from "drizzle-orm";
-import { comoNextDocumentChunks, comoNextDocuments, comoNextMeetingSources, comoNextMeetings, comoNextProjectOpportunities, comoNextProjectOpportunityDocuments, comoNextWorkMemoryDocuments } from "../drizzle/schema";
+import { comoNextDocumentChunks, comoNextDocuments, comoNextMeetingRecordings, comoNextMeetingSources, comoNextMeetings, comoNextProjectOpportunities, comoNextProjectOpportunityDocuments, comoNextWorkMemoryDocuments } from "../drizzle/schema";
 import { getDb } from "./db";
 import { requireProjectAccess } from "./services/comoNextCommands";
 import { storageGet } from "./storage";
@@ -56,6 +56,19 @@ export function registerComoNextDocumentRoute(app: Express) {
         .innerJoin(comoNextMeetings, eq(comoNextMeetings.id, comoNextMeetingSources.meetingId))
         .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextMeetingSources.sourceDocumentId))
         .where(eq(comoNextMeetingSources.sourceDocumentId, documentId));
+      const recordingLinks = await db
+        .select({
+          projectId: comoNextMeetings.projectId,
+          storageKey: comoNextDocuments.storageKey,
+          fileName: comoNextDocuments.fileName,
+          mimeType: comoNextDocuments.mimeType,
+          byteSize: comoNextDocuments.byteSize,
+          sha256: comoNextDocuments.sha256,
+        })
+        .from(comoNextMeetingRecordings)
+        .innerJoin(comoNextMeetings, eq(comoNextMeetings.id, comoNextMeetingRecordings.meetingId))
+        .innerJoin(comoNextDocuments, eq(comoNextDocuments.id, comoNextMeetingRecordings.documentId))
+        .where(eq(comoNextMeetingRecordings.documentId, documentId));
       const opportunityLinks = await db
         .select({
           userId: comoNextProjectOpportunities.userId,
@@ -72,6 +85,7 @@ export function registerComoNextDocumentRoute(app: Express) {
       const links = [
         ...memoryLinks,
         ...meetingLinks,
+        ...recordingLinks,
         ...opportunityLinks.map(({ userId: _userId, ...document }) => document),
       ];
       if (!links.length) {

@@ -4,15 +4,20 @@ import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./_core/context";
 import { comoNextRouter } from "./routers/comoNext";
 import {
+  assertMeetingRecordingFile,
   assertMeetingClosable,
   assertProposalApplication,
+  assertRecordingConsent,
   assertTranscriptConsent,
   composeReviewedMinutes,
 } from "./services/comoNextMeetings";
 
 const migration = readFileSync(new URL("../drizzle/0084_como_next_meeting_workspace.sql", import.meta.url), "utf8");
 const metadataMigration = readFileSync(new URL("../drizzle/0085_como_next_meeting_proposal_metadata.sql", import.meta.url), "utf8");
+const recordingsMigration = readFileSync(new URL("../drizzle/0095_como_next_meeting_recordings.sql", import.meta.url), "utf8");
 const serviceSource = readFileSync(new URL("./services/comoNextMeetings.ts", import.meta.url), "utf8");
+const workspaceSource = readFileSync(new URL("../client/src/components/ComoNextMeetingWorkspace.tsx", import.meta.url), "utf8");
+const documentRouteSource = readFileSync(new URL("./comoNextDocumentRoute.ts", import.meta.url), "utf8");
 
 function context(userId: number): TrpcContext {
   return {
@@ -37,6 +42,14 @@ describe("COMO Next meeting safety invariants", () => {
     expect(() => assertTranscriptConsent("granted")).not.toThrow();
     expect(() => assertTranscriptConsent("pending")).toThrow(TRPCError);
     expect(() => assertTranscriptConsent(null)).toThrow("لا يمكن حفظ تفريغ");
+  });
+
+  it("requires explicit recording consent and enforces the transcription size boundary", () => {
+    expect(() => assertRecordingConsent("granted")).not.toThrow();
+    expect(() => assertRecordingConsent("pending")).toThrow("لا يمكن بدء أو رفع تسجيل");
+    expect(() => assertMeetingRecordingFile({ mimeType: "audio/webm", byteSize: 1024 })).not.toThrow();
+    expect(() => assertMeetingRecordingFile({ mimeType: "application/octet-stream", byteSize: 1024 })).toThrow("صيغة التسجيل غير مدعومة");
+    expect(() => assertMeetingRecordingFile({ mimeType: "audio/webm", byteSize: 17 * 1024 * 1024 })).toThrow("16MB");
   });
 
   it("keeps internal-only findings out of external correspondence", () => {
@@ -88,9 +101,23 @@ describe("COMO Next meeting safety invariants", () => {
     expect(migration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
     expect(metadataMigration).toMatch(/ALTER TABLE `como_next_meeting_proposals`/);
     expect(metadataMigration).not.toMatch(/ALTER TABLE `(?!como_next_meeting_proposals`)/);
+    expect(recordingsMigration).toContain("CREATE TABLE IF NOT EXISTS `como_next_meeting_recordings`");
+    expect(recordingsMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
     expect(serviceSource).toContain("outcomesApplied: 0");
     expect(serviceSource).toContain("externalSideEffect: false");
     expect(serviceSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
+  });
+
+  it("presents one meeting path with recording and Zoom import instead of a stacked wall", () => {
+    expect(workspaceSource).toContain('before: { title: "قبل الاجتماع"');
+    expect(workspaceSource).toContain('during: { title: "أثناء الاجتماع"');
+    expect(workspaceSource).toContain('after: { title: "بعد الاجتماع"');
+    expect(workspaceSource).toContain("navigator.mediaDevices.getUserMedia");
+    expect(workspaceSource).toContain("uploadMeetingRecording");
+    expect(workspaceSource).toContain("importMeetingTranscript");
+    expect(workspaceSource).toContain("رفع تسجيل أو تفريغ Zoom");
+    expect(workspaceSource).toContain('params.get("focusKind") !== "meeting"');
+    expect(documentRouteSource).toContain("comoNextMeetingRecordings");
   });
 });
 
@@ -104,8 +131,8 @@ describe("COMO Next meeting workspace reads", () => {
     expect(workspace.sources).toHaveLength(2);
     expect(workspace.sources.every(source => source.sourceStatus === "archived")).toBe(true);
     expect(workspace.sources.map(source => source.visibility).sort()).toEqual(["internal_only", "meeting_record"]);
-    expect(workspace.safeguards).toEqual({ automaticOutcomeCreation: false, externalSending: false, recordingActive: false, transcriptionActive: false });
-  });
+    expect(workspace.safeguards).toEqual({ automaticOutcomeCreation: false, externalSending: false, recordingActive: false, transcriptionActive: false, recordingAvailable: true, zoomAutomaticImport: false });
+  }, 15_000);
 
   it("hides an existing meeting from a user without project access", async () => {
     const caller = comoNextRouter.createCaller(context(999_999_999));
