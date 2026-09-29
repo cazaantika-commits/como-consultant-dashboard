@@ -259,14 +259,14 @@ function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snap
       return {
         title: "ما الجديد؟",
         itemCount: 0,
-        text: "أهلين يا زعيم. ما في أي تغيير جوهري من آخر مرة حكينا فيها، والوضع ماشي على نفس الخطة. إذا بدك، منمرق سوا على شغل اليوم.",
+        text: "أهلين. ما في أي تغيير جوهري من آخر مرة حكينا فيها، والوضع ماشي على نفس الخطة. إذا بتحب، منمرق سوا على شغل اليوم.",
       };
     }
     return {
       title: "ما الجديد؟",
       itemCount: changes.length,
       text: [
-        `يا كبير، صار عندك ${snapshot.changes.length} تحديث${snapshot.changes.length === 1 ? "" : "ات"} من آخر مرة. خلّيني أبلّش بالأهم:`,
+        `صار عندك ${snapshot.changes.length} تحديث${snapshot.changes.length === 1 ? "" : "ات"} من آخر مرة. خلّيني أبلّش بالأهم:`,
         "---",
         ...changes.map((item, index) => `${index + 1}. ${item.title}${item.project ? ` بـ${item.project}` : ""}.`),
         "---",
@@ -282,14 +282,14 @@ function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snap
       return {
         title: "أعمال اليوم",
         itemCount: 0,
-        text: "يا زعيم، شغل اليوم نظيف وما عندك شي مستحق فورًا. منضل عيننا على الانتظارات والمواعيد الجاية، وإذا استجد شي بخبرك دغري.",
+        text: "شغل اليوم هادئ وما عندك شي مستحق فورًا. منضل عيننا على الانتظارات والمواعيد الجاية، وإذا استجد شي بخبرك دغري.",
       };
     }
     return {
       title: "أعمال اليوم",
       itemCount: items.length,
       text: [
-        `يا زعيم، عندك اليوم ${today.length} موضوع${today.length === 1 ? "" : "ات"}. رتبتلك ياهم حسب الوقت والأثر، مش حسب مين صوته أعلى:`,
+        `عندك اليوم ${today.length} موضوع${today.length === 1 ? "" : "ات"}. رتبتلك ياهم حسب الوقت والأثر، مش حسب مين صوته أعلى:`,
         "---",
         ...items.map((item, index) => `${index + 1}. ${spokenItem(item, now, end)}.`),
         "---",
@@ -299,10 +299,10 @@ function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snap
   }
 
   const intro = period === "evening"
-    ? "مساء الخير يا كبير. خلّيني سكّرلك اليوم على رواقة: شو صار، شو بعده مفتوح، وشو لازم يسبقنا بكرا."
+    ? "مساء الخير. خلّيني سكّرلك اليوم على رواقة: شو صار، شو بعده مفتوح، وشو لازم يسبقنا بكرا."
     : period === "morning"
-      ? "صباح الخير يا زعيم. جهّزتلك الصورة كاملة ومرتبتها، وهيك منبلّش النهار وإنت ماسك الخيط من أوله."
-      : "أهلين يا زعيم. هاي الصورة الكاملة هلق، مرتبتلك ياها من الأقرب والأثقل أثرًا.";
+      ? "صباح الخير. جهّزتلك الصورة كاملة ومرتبتها، وهيك منبلّش النهار وإنت ماسك الخيط من أوله."
+      : "أهلين. هاي الصورة الكاملة هلق، مرتبتلك ياها من الأقرب والأثقل أثرًا.";
   const completedToday = period === "evening" ? snapshot.dayEvents.slice(0, 12).map(item => `${item.title}${item.project ? ` بـ${item.project}` : ""}`) : [];
   const decisions = snapshot.decisions.slice(0, 5).map(item => spokenItem(item, now, end));
   const reviews = [...snapshot.proposals, ...snapshot.emails, ...snapshot.communications]
@@ -319,7 +319,7 @@ function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snap
   ].filter(Boolean);
   const itemCount = today.length + decisions.length + reviews.length + upcomingMeetings.length + snapshot.workFiles.length;
   const ending = period === "evening"
-    ? "هيدي الخلاصة يا زعيم. اللي ما خلص اليوم حطيته بترتيبه لبكرا، وما في شي رح نخبّيه تحت السجادة."
+    ? "هيدي الخلاصة. اللي ما خلص اليوم حطيته بترتيبه لبكرا، وما في شي رح نخبّيه تحت السجادة."
     : today[0]
       ? `ومن دون لف ودوران، أول ضربة اليوم هي: ${today[0].title}.`
       : "والوضع اليوم مرتاح، بس عيني على أي مستجد بيفوت.";
@@ -361,7 +361,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_actions a
       JOIN como_next_work_files wf ON wf.id=a.work_file_id AND wf.project_id=a.project_id
       JOIN projects p ON p.id=a.project_id AND p.is_test_project=0
-      WHERE a.user_id=${userId} AND a.action_status NOT IN ('verified','cancelled')
+      WHERE a.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND a.action_status NOT IN ('verified','cancelled')
       LIMIT 80
     `),
     db.execute(sql`
@@ -370,7 +371,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_decisions d
       JOIN como_next_work_files wf ON wf.id=d.work_file_id AND wf.project_id=d.project_id
       JOIN projects p ON p.id=d.project_id AND p.is_test_project=0
-      WHERE d.user_id=${userId} AND d.decision_status IN ('required','deferred')
+      WHERE d.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND d.decision_status IN ('required','deferred')
       LIMIT 40
     `),
     db.execute(sql`
@@ -379,7 +381,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_meetings m
       JOIN como_next_work_files wf ON wf.id=m.work_file_id AND wf.project_id=m.project_id
       JOIN projects p ON p.id=m.project_id AND p.is_test_project=0
-      WHERE wf.user_id=${userId} AND m.meeting_status IN ('planned','confirmed')
+      WHERE wf.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND m.meeting_status IN ('planned','confirmed')
       LIMIT 40
     `),
     db.execute(sql`
@@ -388,7 +391,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_intake_proposals proposal
       JOIN como_next_work_files wf ON wf.id=proposal.work_file_id AND wf.project_id=proposal.project_id
       JOIN projects p ON p.id=proposal.project_id AND p.is_test_project=0
-      WHERE proposal.user_id=${userId} AND proposal.review_status='pending'
+      WHERE proposal.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND proposal.review_status='pending'
       LIMIT 40
     `),
     db.execute(sql`
@@ -397,7 +401,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_communications c
       JOIN como_next_work_files wf ON wf.id=c.work_file_id AND wf.project_id=c.project_id
       JOIN projects p ON p.id=c.project_id AND p.is_test_project=0
-      WHERE c.user_id=${userId} AND c.communication_status IN ('draft','approved_for_send')
+      WHERE c.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND c.communication_status IN ('draft','approved_for_send')
       LIMIT 40
     `),
     db.execute(sql`
@@ -418,7 +423,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_work_file_events event
       JOIN como_next_work_files wf ON wf.id=event.work_file_id AND wf.project_id=event.project_id
       JOIN projects p ON p.id=event.project_id AND p.is_test_project=0
-      WHERE event.user_id=${userId} AND event.occurred_at >= ${sinceSql}
+      WHERE event.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND event.occurred_at >= ${sinceSql}
         AND event.event_type NOT IN ('email_intake_proposals_captured','email_received_linked','work_file_context_reconciled','intake_proposal_context_reconciled','linked_email_state_reconciled','operational_update_recorded')
       ORDER BY event.occurred_at DESC LIMIT 40
     `),
@@ -429,7 +435,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_work_file_updates updateRow
       JOIN como_next_work_files wf ON wf.id=updateRow.work_file_id AND wf.project_id=updateRow.project_id
       JOIN projects p ON p.id=updateRow.project_id AND p.is_test_project=0
-      WHERE updateRow.user_id=${userId} AND updateRow.updated_at >= ${sinceSql}
+      WHERE updateRow.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND updateRow.updated_at >= ${sinceSql}
       ORDER BY updateRow.updated_at DESC LIMIT 30
     `),
     db.execute(sql`
@@ -438,7 +445,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_actions a
       JOIN como_next_work_files wf ON wf.id=a.work_file_id AND wf.project_id=a.project_id
       JOIN projects p ON p.id=a.project_id AND p.is_test_project=0
-      WHERE a.user_id=${userId} AND a.updated_at >= ${sinceSql}
+      WHERE a.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND a.updated_at >= ${sinceSql}
       ORDER BY a.updated_at DESC LIMIT 30
     `),
     db.execute(sql`
@@ -447,7 +455,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_decisions d
       JOIN como_next_work_files wf ON wf.id=d.work_file_id AND wf.project_id=d.project_id
       JOIN projects p ON p.id=d.project_id AND p.is_test_project=0
-      WHERE d.user_id=${userId} AND d.updated_at >= ${sinceSql}
+      WHERE d.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND d.updated_at >= ${sinceSql}
       ORDER BY d.updated_at DESC LIMIT 20
     `),
     db.execute(sql`
@@ -456,7 +465,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_meetings m
       JOIN como_next_work_files wf ON wf.id=m.work_file_id AND wf.project_id=m.project_id
       JOIN projects p ON p.id=m.project_id AND p.is_test_project=0
-      WHERE wf.user_id=${userId} AND m.updated_at >= ${sinceSql}
+      WHERE wf.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND m.updated_at >= ${sinceSql}
       ORDER BY m.updated_at DESC LIMIT 20
     `),
     db.execute(sql`
@@ -479,7 +489,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_actions a
       JOIN como_next_work_files wf ON wf.id=a.work_file_id AND wf.project_id=a.project_id
       JOIN projects p ON p.id=a.project_id AND p.is_test_project=0
-      WHERE a.user_id=${userId} AND a.updated_at >= ${dayStartSql}
+      WHERE a.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND a.updated_at >= ${dayStartSql}
         AND a.action_status IN ('verified','completed_pending_verification')
       UNION ALL
       SELECT d.id, 'decision' AS kind, p.name AS project, wf.title AS workFile,
@@ -487,7 +498,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_decisions d
       JOIN como_next_work_files wf ON wf.id=d.work_file_id AND wf.project_id=d.project_id
       JOIN projects p ON p.id=d.project_id AND p.is_test_project=0
-      WHERE d.user_id=${userId} AND d.updated_at >= ${dayStartSql}
+      WHERE d.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND d.updated_at >= ${dayStartSql}
         AND d.decision_status IN ('approved','rejected','superseded')
       UNION ALL
       SELECT m.id, 'meeting' AS kind, p.name AS project, wf.title AS workFile,
@@ -495,14 +507,16 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       FROM como_next_meetings m
       JOIN como_next_work_files wf ON wf.id=m.work_file_id AND wf.project_id=m.project_id
       JOIN projects p ON p.id=m.project_id AND p.is_test_project=0
-      WHERE wf.user_id=${userId} AND m.updated_at >= ${dayStartSql}
+      WHERE wf.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND m.updated_at >= ${dayStartSql}
       UNION ALL
       SELECT c.id, 'communication' AS kind, p.name AS project, wf.title AS workFile,
         CONCAT('تسجل إرسال: ', c.subject) AS title, c.sent_at AS occurredAt
       FROM como_next_communications c
       JOIN como_next_work_files wf ON wf.id=c.work_file_id AND wf.project_id=c.project_id
       JOIN projects p ON p.id=c.project_id AND p.is_test_project=0
-      WHERE c.user_id=${userId} AND c.communication_status='sent' AND c.sent_at >= ${dayStartSql}
+      WHERE c.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
+        AND c.communication_status='sent' AND c.sent_at >= ${dayStartSql}
       ORDER BY occurredAt DESC LIMIT 30
     `),
   ]);

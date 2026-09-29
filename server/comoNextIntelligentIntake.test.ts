@@ -35,7 +35,7 @@ describe("COMO Next intelligent intake safeguards", () => {
 
   it("gives Sara one proposal-only write and passes the owner utterance as evidence", () => {
     expect(saraService).toContain('name: "capture_intake_proposal"');
-    expect(saraService).toContain("تسجل مقترحًا فقط ينتظر مراجعة عبدالرحمن");
+    expect(saraService).toContain("تسجل مقترحًا فقط ينتظر مراجعة عبد الرحمن");
     expect(saraRouter).toContain("createSaraIntakeProposalCommand");
     expect(intakeService).toContain('memberId !== "abdulrahman"');
     expect(saraRoom).toContain("lastMemberTextRef.current");
@@ -48,8 +48,8 @@ describe("COMO Next intelligent intake safeguards", () => {
     expect(intakeService).toContain("createDecisionCommand");
     expect(intakeService).toContain("createCommunicationDraftCommand");
     expect(intakeService).toContain("externalSideEffect: false");
-    expect(reviewUi).toContain("اعتماد وتحويل إلى");
-    expect(reviewUi).toContain("استبعاد المقترح دون أثر تشغيلي");
+    expect(reviewUi).toContain("اعتماد وتحويل");
+    expect(reviewUi).toContain("استبعاد دون أثر");
   });
 
   it("surfaces proposals in Today and blocks closing their work file before review", () => {

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   collapseSaraAttentionByTopic,
@@ -17,6 +18,7 @@ const baseItem = {
   dueAt: null,
   updatedAt: "2026-09-27 08:00:00",
 };
+const briefingSource = readFileSync("server/services/saraBriefings.ts", "utf8");
 
 describe("Sara executive briefings", () => {
   it("uses Dubai time to select morning, day, and evening periods", () => {
@@ -55,5 +57,11 @@ describe("Sara executive briefings", () => {
     expect(grouped).toHaveLength(2);
     expect(grouped[0].title).toContain("كولييرز: 2 نقاط تحتاج حركة");
     expect(grouped[1].title).toBe("تحضير الاجتماع");
+  });
+
+  it("uses only active COMO Next files and avoids exaggerated pet names", () => {
+    expect(briefingSource).toContain("wf.work_file_status NOT IN ('closed','cancelled')");
+    expect(briefingSource).not.toContain("يا زعيم");
+    expect(briefingSource).not.toContain("يا كبير");
   });
 });

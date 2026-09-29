@@ -1,13 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import * as schema from "../../drizzle/schema";
 import { commandCenterChat } from "../../drizzle/schema";
 import { ENV } from "../_core/env";
 import { publicProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { SARA_LIVE_AVATAR_ID, createSaraLiveAvatarToken } from "../liveAvatar";
-import { loadLaylaCommandCenterSnapshot, runLaylaCommandCenterTool } from "../laylaCommandCenterContext";
 import { verifyToken } from "./commandCenter";
 import {
   createSaraRealtimeClientSecret,
@@ -23,7 +21,7 @@ import {
 } from "../services/saraBriefings";
 
 const tokenInput = z.object({ token: z.string().trim().min(1).max(256) });
-const realtimeToolName = z.enum(["lookup_command_center", "lookup_executive_workspace", "capture_intake_proposal"]);
+const realtimeToolName = z.enum(["lookup_executive_workspace", "capture_intake_proposal"]);
 const briefingMode = z.enum(["auto", "full", "today", "changes"]);
 const captureProposalArguments = z.object({
   project_id: z.number().int().positive(),
@@ -133,10 +131,7 @@ export const saraRealtimeRouter = router({
       if (input.toolName === "lookup_executive_workspace") {
         return lookupExecutiveWorkspace(normalizedMember, input.arguments);
       }
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
-      const snapshot = await loadLaylaCommandCenterSnapshot(db, normalizedMember, schema);
-      return runLaylaCommandCenterTool(snapshot, input.arguments);
+      throw new TRPCError({ code: "BAD_REQUEST", message: "مصدر سارة التشغيلي هو COMO Next فقط" });
     }),
 
   recordTranscript: publicProcedure

@@ -33,7 +33,10 @@ describe("Sara Realtime architecture", () => {
     expect(instructions).toContain("القرار ليس تنفيذًا، والمسودة ليست إرسالًا");
     expect(instructions).toContain("Speak in natural Lebanese Arabic");
     expect(instructions).toContain("soft, warm feminine delivery");
-    expect(instructions).toContain("playfully flattering");
+    expect(instructions).toContain("one notch faster than a normal conversation");
+    expect(instructions).toContain("ممنوع ألقاب مثل «يا زعيم» و«يا كبير»");
+    expect(instructions).toContain("مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة");
+    expect(instructions).not.toContain("playfully flattering");
     expect(instructions).toContain("occasional natural chuckle");
     expect(instructions).toContain("لا تلقي نشرة طويلة كقطار");
     expect(instructions).toContain("لا تمزحي في مبلغ مالي");
@@ -49,10 +52,11 @@ describe("Sara Realtime architecture", () => {
   });
 
   it("exposes read-only lookups plus proposal-only capture and no send, approve, or execute function", () => {
-    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_command_center", "lookup_executive_workspace", "capture_intake_proposal"]);
+    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "capture_intake_proposal"]);
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
-    expect(saraRealtimeTools[2].description).toContain("لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية");
+    expect(saraRealtimeTools[1].description).toContain("لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية");
+    expect(names).not.toContain("lookup_command_center");
   });
 
   it("creates a short-lived client secret on the server without exposing the API key", async () => {
@@ -75,7 +79,7 @@ describe("Sara Realtime architecture", () => {
   it("keeps COMO Next private to Abdulrahman in the voice tool", async () => {
     await expect(lookupExecutiveWorkspace(wael, JSON.stringify({ category: "overview" }))).resolves.toEqual({
       found: false,
-      reason: "مكتب COMO Next التنفيذي خاص بعبدالرحمن.",
+      reason: "مكتب COMO Next التنفيذي خاص بعبد الرحمن.",
     });
   });
 
@@ -114,6 +118,8 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("أعمال اليوم");
     expect(roomSource).toContain("ما الجديد؟");
     expect(roomSource).toContain('playBriefing("auto")');
+    expect(roomSource).not.toContain('event.name !== "lookup_command_center"');
+    expect(routerSource).not.toContain('"lookup_command_center"');
     expect(roomSource).toContain('type: "response.cancel"');
     expect(roomSource).toContain("completeBriefing.mutate");
     expect(roomSource).not.toContain("أهم ثلاث أولويات حالية فقط");

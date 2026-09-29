@@ -188,7 +188,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const playBriefing = useCallback(async (mode: BriefingMode) => {
     const channel = dataChannelRef.current;
     if (!channel || channel.readyState !== "open") {
-      if (mode !== "auto") toast.info("لحظة يا زعيم، سارة بعدها عم تتصل");
+      if (mode !== "auto") toast.info("لحظة، سارة بعدها عم تتصل");
       return;
     }
     try {
@@ -207,7 +207,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       sendRealtimeEvent({
         type: "response.create",
         response: {
-          instructions: `هذه نشرة أعدّها Manus من مصادر COMO الحالية. قدّمي محتواها بالترتيب نفسه ومن دون حذف حقيقة أو إضافة معلومة. لا تقرئي العلامة ---؛ استخدميها كوقفة قصيرة طبيعية واتركي مجالًا لعبدالرحمن أن يقاطعك أو يعلّق. التزمي بشخصية سارة اللبنانية المرحة المحددة في تعليمات الجلسة.\n\nالنشرة:\n${briefing.text}`,
+          instructions: `هذه نشرة أعدّها Manus من COMO Next الحالي فقط. قدّمي محتواها بالترتيب نفسه ومن دون حذف حقيقة أو إضافة معلومة. لا تقرئي العلامة ---؛ استخدميها كوقفة قصيرة طبيعية واتركي مجالًا لعبد الرحمن أن يقاطعك أو يعلّق. تكلمي بلبنانية لطيفة ومحترمة، أسرع بدرجة واحدة فقط من الطبيعي، ومن دون ألقاب أو تملق زائد.\n\nالنشرة:\n${briefing.text}`,
         },
       });
     } catch (reason) {
@@ -218,7 +218,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
 
   const handleToolCall = useCallback(async (event: RealtimeEvent) => {
     if (!event.call_id || !event.name) return;
-    if (event.name !== "lookup_command_center" && event.name !== "lookup_executive_workspace" && event.name !== "capture_intake_proposal") {
+    if (event.name !== "lookup_executive_workspace" && event.name !== "capture_intake_proposal") {
       sendRealtimeEvent({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ found: false, reason: "الأداة المطلوبة غير مسموحة" }) },
