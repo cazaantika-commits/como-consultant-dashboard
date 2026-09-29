@@ -121,7 +121,7 @@ export async function appendEvent(
     actionId: input.actionId ?? null,
     sequenceNo,
     actorType: input.actorType ?? "human",
-    actorUserId: input.actorUserId ?? input.userId,
+    actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
     eventType: input.eventType,
     summary: input.summary.slice(0, 1000),
     payloadJson: input.payload ? JSON.stringify(input.payload) : null,

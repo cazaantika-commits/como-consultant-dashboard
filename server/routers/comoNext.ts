@@ -301,6 +301,7 @@ export const comoNextRouter = router({
         AND (
           (
             meeting.meeting_status IN ('planned','confirmed')
+            AND meeting.starts_at IS NOT NULL
             AND NOT EXISTS (
               SELECT 1 FROM como_next_work_file_updates update_row
               WHERE update_row.work_file_id = meeting.work_file_id
@@ -326,6 +327,20 @@ export const comoNextRouter = router({
           inboxStatus: comoNextEmailMessages.inboxStatus,
           suggestedProjectId: comoNextEmailMessages.suggestedProjectId,
           suggestedWorkFileId: comoNextEmailMessages.suggestedWorkFileId,
+          analysisSummary: sql<string | null>`(
+            SELECT analysis.summary_ar
+            FROM como_next_email_analyses analysis
+            WHERE analysis.email_message_id = como_next_email_messages.id
+            ORDER BY analysis.id DESC
+            LIMIT 1
+          )`,
+          suggestedNextStep: sql<string | null>`(
+            SELECT analysis.suggested_next_step
+            FROM como_next_email_analyses analysis
+            WHERE analysis.email_message_id = como_next_email_messages.id
+            ORDER BY analysis.id DESC
+            LIMIT 1
+          )`,
         })
         .from(comoNextEmailMessages)
         .where(and(

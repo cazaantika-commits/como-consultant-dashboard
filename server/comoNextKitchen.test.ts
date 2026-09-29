@@ -65,8 +65,35 @@ describe("COMO Next executive kitchen", () => {
     expect(item.title).toBe("أخبر Manus بما حدث في اجتماع Realistic");
   });
 
+  it("does not query undated planned meetings as upcoming appointments", () => {
+    expect(mainRouter).toContain("AND meeting.starts_at IS NOT NULL");
+  });
+
   it("counts only inbox messages in the kitchen attention badge", () => {
     expect(mainRouter).toContain('eq(comoNextEmailMessages.folderName, "INBOX")');
+    expect(mainRouter).toContain("analysis.suggested_next_step");
+  });
+
+  it("shows Manus's executive next step instead of a raw email subject", () => {
+    const input = seed();
+    input.actions = [];
+    input.decisions = [];
+    input.draftCommunications = [];
+    input.meetings = [];
+    input.intakeProposals = [];
+    input.filesWithoutNextAction = [];
+    input.emails = [{
+      id: 5,
+      subject: "RE: long raw subject",
+      suggestedNextStep: "حسم موقف الفاتورة ومسار المشروع\nتفصيل إضافي",
+      suggestedProjectId: null,
+      suggestedWorkFileId: null,
+      importance: "urgent",
+    }];
+
+    const [item] = buildExecutiveKitchenQueue(input);
+    expect(item.title).toBe("حسم موقف الفاتورة ومسار المشروع");
+    expect(item.phase).toBe("owner_review");
   });
 
   it("keeps updates append-only and lets Manus open safe internal work automatically", () => {
@@ -141,6 +168,10 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain("/api/como-next/documents/");
     expect(kitchenPage).toContain("تسجيل النتيجة ومتابعة Manus");
     expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
+    expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
+    expect(kitchenPage).toContain('ownerCommunication?.subject');
+    expect(kitchenPage).toContain('مراجعة المسودة');
+    expect(kitchenPage).toContain("!activeActions.length ? <WorkFileUpdateComposer");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
     expect(kitchenPage).toContain('if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);');
     expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');

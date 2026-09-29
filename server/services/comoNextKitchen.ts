@@ -129,7 +129,19 @@ export function buildExecutiveKitchenQueue(input: {
       ownerType: needsOutcome ? "human" : null,
     });
   }
-  for (const email of input.emails) items.push({ id: `email:${email.id}`, kind: "email", phase: "owner_review", title: email.subject, projectId: email.suggestedProjectId, workFileId: email.suggestedWorkFileId, recordId: email.id, priority: email.importance });
+  for (const email of input.emails) {
+    const executiveTitle = String(email.suggestedNextStep || "").split("\n")[0].trim();
+    items.push({
+      id: `email:${email.id}`,
+      kind: "email",
+      phase: "owner_review",
+      title: executiveTitle || email.subject,
+      projectId: email.suggestedProjectId,
+      workFileId: email.suggestedWorkFileId,
+      recordId: email.id,
+      priority: email.importance,
+    });
+  }
   for (const review of input.specialistReviews) items.push({ id: `specialist:${review.id}`, kind: "specialist", phase: "owner_review", title: review.executiveSummary || review.requestText, projectId: review.projectId, workFileId: review.workFileId, recordId: review.id });
   for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority });
 
