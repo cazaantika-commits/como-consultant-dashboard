@@ -8,32 +8,42 @@ const router = readFileSync("server/routers/comoNextEmail.ts", "utf8");
 const emailUi = readFileSync("client/src/components/ComoNextEmailInbox.tsx", "utf8");
 const kitchenUi = readFileSync("client/src/pages/ComoNextTodayPage.tsx", "utf8");
 
-describe("COMO Next explicit owner email outbox", () => {
+function mailboxDraftFunction() {
+  return emailMonitor.slice(
+    emailMonitor.indexOf("export async function saveComoMailboxDraft"),
+    emailMonitor.indexOf("export async function sendApprovedComoReply"),
+  );
+}
+
+describe("COMO Next mailbox drafts", () => {
   it("keeps mailbox synchronization read-only", () => {
     expect(inbox).toContain("assertReadonlyEmailArchitecture");
     expect(inbox).not.toContain('import { sendApprovedComoReply');
     expect(inbox).not.toMatch(/sendApprovedComoReply\s*\(/);
   });
 
-  it("sends only a reviewed draft owned by the authenticated user", () => {
+  it("saves a reviewed draft in the authenticated mailbox without SMTP delivery", () => {
     expect(outbox).toContain("eq(comoNextEmailMessages.userId, input.userId)");
     expect(outbox).toContain('analysisStatus, "draft"');
-    expect(outbox).toContain("sendCommunicationDraftCommand");
-    expect(outbox).toContain("sendApprovedComoReply");
+    expect(outbox).toContain("saveComoMailboxDraft");
     expect(outbox).toContain("email.replyDraftCommunicationId");
+    expect(mailboxDraftFunction()).toContain('flags: ["\\\\Draft"]');
+    expect(mailboxDraftFunction()).toContain('"X-COMO-Draft-Key"');
+    expect(mailboxDraftFunction()).not.toContain("smtpTransport");
   });
 
-  it("preserves reply-thread headers and does not schedule outbound email", () => {
-    expect(emailMonitor).toContain("inReplyTo: input.inReplyTo, references: input.inReplyTo");
-    expect(emailMonitor).toContain("In-Reply-To: ${inReplyTo}");
+  it("preserves reply-thread headers and never schedules outbound email", () => {
+    expect(mailboxDraftFunction()).toContain("inReplyTo: input.inReplyTo, references: input.inReplyTo");
+    expect(mailboxDraftFunction()).toContain("imap.append");
     expect(outbox).not.toMatch(/cron|schedule/i);
   });
 
-  it("exposes editing and sending only behind protected mutations and explicit buttons", () => {
+  it("exposes Drafts saving only and removes direct send buttons and mutations", () => {
     expect(router).toContain("updateReplyDraft: protectedProcedure");
-    expect(router).toContain("sendReplyDraft: protectedProcedure");
-    expect(emailUi).toContain("إرسال الآن");
-    expect(emailUi).toContain("حفظ التعديل");
-    expect(kitchenUi).toContain("هذه هي الرسالة كاملة. يمكنك تعديلها، ثم الضغط على إرسال؛ لا يرسل Manus شيئًا قبل ضغطك.");
+    expect(router).not.toContain("sendReplyDraft: protectedProcedure");
+    expect(emailUi).toContain("حفظ في Drafts");
+    expect(emailUi).not.toContain("إرسال الآن");
+    expect(kitchenUi).toContain("يحفظ Manus الرسالة في Drafts داخل بريدك الحقيقي");
+    expect(kitchenUi).not.toContain("sendCommunicationDraft.useMutation");
   });
 });

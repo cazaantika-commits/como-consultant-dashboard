@@ -13,7 +13,7 @@ import {
   projects,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { sendApprovedComoReply } from "../emailMonitor";
+import { saveComoMailboxDraft } from "../emailMonitor";
 
 export type ComoNextAccessRole = "manager" | "contributor" | "viewer";
 export type ComoNextActionStatus =
@@ -436,7 +436,7 @@ export async function createCommunicationDraftCommand(input: {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إنشاء مسودة في ملف مغلق" });
   }
 
-  return db.transaction(async tx => {
+  const draftRecord = await db.transaction(async tx => {
     if (input.idempotencyKey) {
       const [existing] = await tx
         .select({ id: comoNextCommunications.id })
@@ -474,6 +474,60 @@ export async function createCommunicationDraftCommand(input: {
     });
     return { id, replayed: false as const };
   });
+
+  if (input.channel !== "email") return draftRecord;
+
+  const sourceEmailId = Number(String(input.idempotencyKey || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
+  let inReplyTo: string | undefined;
+  if (sourceEmailId) {
+    const [sourceEmail] = await db.select({ messageId: comoNextEmailMessages.messageId })
+      .from(comoNextEmailMessages)
+      .where(and(eq(comoNextEmailMessages.id, sourceEmailId), eq(comoNextEmailMessages.userId, input.userId)))
+      .limit(1);
+    inReplyTo = sourceEmail?.messageId || undefined;
+  }
+  const mailboxDraft = await saveComoMailboxDraft({
+    to: input.toText?.trim() || "",
+    cc: input.ccText?.trim() || undefined,
+    subject: input.subject,
+    body: input.body,
+    inReplyTo,
+    draftKey: input.idempotencyKey || `como-next-communication-${draftRecord.id}`,
+  });
+  const savedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
+  await db.transaction(async tx => {
+    await tx.update(comoNextCommunications).set({
+      communicationStatus: "archived",
+      approvalStatus: "not_required",
+      externalMessageRef: mailboxDraft.uid ? `${mailboxDraft.folder} UID ${mailboxDraft.uid}` : mailboxDraft.folder,
+      evidenceReference: mailboxDraft.uid
+        ? `Private Email ${mailboxDraft.folder} · UID ${mailboxDraft.uid}`
+        : `Private Email ${mailboxDraft.folder}`,
+      reviewNote: "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
+      occurredAt: savedAt,
+    }).where(eq(comoNextCommunications.id, draftRecord.id));
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: workFile.projectId,
+      workFileId: workFile.id,
+      actorType: "manus",
+      actorUserId: null,
+      eventType: "communication_mailbox_draft_created",
+      summary: `حفظ Manus المسودة في Private Email Drafts: ${input.subject.trim()}`,
+      payload: {
+        communicationId: draftRecord.id,
+        folder: mailboxDraft.folder,
+        uid: mailboxDraft.uid,
+        sent: false,
+      },
+      idempotencyKey: `mailbox-draft:event:${draftRecord.id}`,
+    });
+  });
+  return {
+    ...draftRecord,
+    mailboxDraft: { folder: mailboxDraft.folder, uid: mailboxDraft.uid },
+    externalSideEffect: false as const,
+  };
 }
 
 export async function reviewCommunicationDraftCommand(input: {
@@ -534,76 +588,35 @@ export async function updateCommunicationDraftCommand(input: {
     toText: input.toText.trim(),
     ccText: input.ccText?.trim() || null,
   }).where(eq(comoNextCommunications.id, input.communicationId));
-  return { success: true, externalSideEffect: false as const };
-}
+  if (communication.channel !== "email") return { success: true, externalSideEffect: false as const };
 
-export async function sendCommunicationDraftCommand(input: {
-  userId: number;
-  communicationId: number;
-  subject: string;
-  body: string;
-  toText: string;
-  ccText?: string | null;
-}) {
-  const db = await getDb();
-  if (!db) databaseUnavailable();
-  const [communication] = await db.select().from(comoNextCommunications).where(eq(comoNextCommunications.id, input.communicationId)).limit(1);
-  if (!communication) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المسودة" });
-  await requireProjectAccess(db, communication.projectId, input.userId, "write");
-  if (communication.communicationStatus === "sent") return { success: true, replayed: true as const, messageId: communication.externalMessageRef || null };
-  if (!['draft', 'approved_for_send'].includes(communication.communicationStatus)) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "هذه المراسلة غير قابلة للإرسال" });
-  }
-  const toText = input.toText.trim();
-  if (!toText || !toText.includes("@")) throw new TRPCError({ code: "BAD_REQUEST", message: "عنوان المستلم غير صالح" });
-  const subject = input.subject.trim();
-  const body = input.body.trim();
-  if (!subject || !body) throw new TRPCError({ code: "BAD_REQUEST", message: "العنوان والنص مطلوبان قبل الإرسال" });
-
-  let inReplyTo: string | undefined;
   const sourceEmailId = Number(String(communication.sourceRecordId || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
+  let inReplyTo: string | undefined;
   if (sourceEmailId) {
-    const [sourceEmail] = await db.select({ messageId: comoNextEmailMessages.messageId }).from(comoNextEmailMessages)
-      .where(and(eq(comoNextEmailMessages.id, sourceEmailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
+    const [sourceEmail] = await db.select({ messageId: comoNextEmailMessages.messageId })
+      .from(comoNextEmailMessages)
+      .where(and(eq(comoNextEmailMessages.id, sourceEmailId), eq(comoNextEmailMessages.userId, input.userId)))
+      .limit(1);
     inReplyTo = sourceEmail?.messageId || undefined;
   }
-
-  const delivery = await sendApprovedComoReply({
-    to: toText,
-    subject,
-    body,
-    inReplyTo,
+  const mailboxDraft = await saveComoMailboxDraft({
+    to: input.toText,
     cc: input.ccText?.trim() || undefined,
+    subject: input.subject,
+    body: input.body,
+    inReplyTo,
+    draftKey: communication.sourceRecordId || `como-next-communication-${communication.id}`,
   });
-  const sentAt = new Date().toISOString().slice(0, 19).replace("T", " ");
-  await db.transaction(async tx => {
-    await tx.update(comoNextCommunications).set({
-      subject,
-      body,
-      toText,
-      ccText: input.ccText?.trim() || null,
-      communicationStatus: "sent",
-      approvalStatus: "approved",
-      approvedByUserId: input.userId,
-      approvedAt: sentAt,
-      sentAt,
-      occurredAt: sentAt,
-      externalMessageRef: delivery.messageId,
-      evidenceReference: `SMTP + Sent folder · ${sentAt}`,
-    }).where(eq(comoNextCommunications.id, input.communicationId));
-    await appendEvent(tx, {
-      userId: input.userId,
-      projectId: communication.projectId,
-      workFileId: communication.workFileId,
-      actorType: "human",
-      actorUserId: input.userId,
-      eventType: "communication_sent",
-      summary: `أرسل عبد الرحمن المراسلة من COMO: ${subject}`,
-      payload: { communicationId: communication.id, externalSideEffect: true, messageId: delivery.messageId },
-      idempotencyKey: `communication-sent:${communication.id}`,
-    });
-  });
-  return { success: true, replayed: false as const, messageId: delivery.messageId };
+  await db.update(comoNextCommunications).set({
+    communicationStatus: "archived",
+    approvalStatus: "not_required",
+    externalMessageRef: mailboxDraft.uid ? `${mailboxDraft.folder} UID ${mailboxDraft.uid}` : mailboxDraft.folder,
+    evidenceReference: mailboxDraft.uid
+      ? `Private Email ${mailboxDraft.folder} · UID ${mailboxDraft.uid}`
+      : `Private Email ${mailboxDraft.folder}`,
+    reviewNote: "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
+  }).where(eq(comoNextCommunications.id, input.communicationId));
+  return { success: true, externalSideEffect: false as const, mailboxDraft };
 }
 
 export async function recordCommunicationSentCommand(input: {

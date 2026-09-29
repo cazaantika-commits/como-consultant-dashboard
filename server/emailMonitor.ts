@@ -758,6 +758,130 @@ function plainTextToSafeHtml(body: string) {
     .replace(/\r?\n/g, "<br>");
 }
 
+type ImapMailboxNode = {
+  attribs?: string[];
+  delimiter?: string;
+  children?: Record<string, ImapMailboxNode>;
+};
+
+function findDraftMailbox(boxes: Record<string, ImapMailboxNode>) {
+  const rows: Array<{ path: string; attribs: string[] }> = [];
+  const walk = (nodes: Record<string, ImapMailboxNode>, parent = "") => {
+    for (const [name, node] of Object.entries(nodes || {})) {
+      const path = parent ? `${parent}${node.delimiter || "/"}${name}` : name;
+      rows.push({ path, attribs: node.attribs || [] });
+      if (node.children) walk(node.children, path);
+    }
+  };
+  walk(boxes);
+  return rows.find(row => row.attribs.includes("\\Drafts"))?.path
+    || rows.find(row => /(^|[./])drafts?$/i.test(row.path))?.path
+    || "Drafts";
+}
+
+/**
+ * Save a message in the real Private Email Drafts folder. This is the review
+ * boundary: the owner opens the normal email client, edits if needed, and sends
+ * from there. No SMTP delivery occurs in this function.
+ */
+export async function saveComoMailboxDraft(input: {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  inReplyTo?: string;
+  draftKey: string;
+}): Promise<{ folder: string; uid: number | null; created: boolean }> {
+  if (!EMAIL_PASSWORD) throw new Error("EMAIL_PASSWORD not configured");
+  const to = input.to.trim();
+  const subject = input.subject.replace(/[\r\n]+/g, " ").trim();
+  const body = input.body.trim();
+  const draftKey = input.draftKey.trim();
+  if (!to || !to.includes("@") || !subject || !body || !draftKey) {
+    throw new Error("Draft recipient, subject, body, and key are required");
+  }
+
+  const streamTransport = nodemailer.createTransport({
+    streamTransport: true,
+    buffer: true,
+    newline: "unix",
+  });
+  const generated = await streamTransport.sendMail({
+    from: { name: "Abdalrahman Zaqout", address: EMAIL_USER },
+    to,
+    cc: input.cc?.trim() || undefined,
+    subject,
+    text: body,
+    html: `<div dir="auto" style="white-space:normal;line-height:1.7">${plainTextToSafeHtml(body)}</div>`,
+    ...(input.inReplyTo ? { inReplyTo: input.inReplyTo, references: input.inReplyTo } : {}),
+    headers: { "X-COMO-Draft-Key": draftKey },
+  });
+  const raw = generated.message as Buffer;
+
+  return new Promise((resolve, reject) => {
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      connTimeout: 15000,
+      authTimeout: 10000,
+    });
+    let settled = false;
+    const finish = (error?: Error, result?: { folder: string; uid: number | null; created: boolean }) => {
+      if (settled) return;
+      settled = true;
+      imap.end();
+      if (error) reject(error);
+      else resolve(result!);
+    };
+    const searchDraft = (folder: string, created: boolean) => {
+      imap.openBox(folder, true, openError => {
+        if (openError) return finish(openError);
+        imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (searchError, uids) => {
+          if (searchError) return finish(searchError);
+          const uid = Array.isArray(uids) && uids.length ? Math.max(...uids) : null;
+          if (uid || created) return finish(undefined, { folder, uid, created });
+          imap.append(raw, { mailbox: folder, flags: ["\\Draft"], date: new Date() }, appendError => {
+            if (appendError) return finish(appendError);
+            imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (verifyError, createdUids) => {
+              if (verifyError) return finish(verifyError);
+              finish(undefined, {
+                folder,
+                uid: Array.isArray(createdUids) && createdUids.length ? Math.max(...createdUids) : null,
+                created: true,
+              });
+            });
+          });
+        });
+      });
+    };
+    imap.once("ready", () => {
+      imap.getBoxes((boxesError, boxes) => {
+        if (boxesError) return finish(boxesError);
+        const folder = findDraftMailbox(boxes as unknown as Record<string, ImapMailboxNode>);
+        imap.openBox(folder, true, openError => {
+          if (openError) return finish(openError);
+          imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (searchError, uids) => {
+            if (searchError) return finish(searchError);
+            if (Array.isArray(uids) && uids.length) {
+              return finish(undefined, { folder, uid: Math.max(...uids), created: false });
+            }
+            imap.append(raw, { mailbox: folder, flags: ["\\Draft"], date: new Date() }, appendError => {
+              if (appendError) return finish(appendError);
+              searchDraft(folder, true);
+            });
+          });
+        });
+      });
+    });
+    imap.once("error", (error: Error) => finish(error));
+    imap.connect();
+  });
+}
+
 /**
  * Send a COMO Next draft after the authenticated owner explicitly presses Send.
  * This deliberately does not enable the legacy/global outbound flag: callers must

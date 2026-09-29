@@ -26,7 +26,6 @@ import {
   requireProjectAccess,
   resolveDecisionCommand,
   reviewCommunicationDraftCommand,
-  sendCommunicationDraftCommand,
   updateCommunicationDraftCommand,
 } from "../services/comoNextCommands";
 import { buildComoNextTodayProjection, type ComoNextTodayRow } from "../services/comoNextToday";
@@ -826,19 +825,6 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return updateCommunicationDraftCommand({ userId: ctx.user.id, ...input });
-    }),
-
-  sendCommunicationDraft: protectedProcedure
-    .input(z.object({
-      communicationId: z.number().int().positive(),
-      subject: z.string().trim().min(1).max(1000),
-      body: z.string().trim().min(1).max(100_000),
-      toText: z.string().trim().min(3).max(5000),
-      ccText: z.string().trim().max(5000).optional().nullable(),
-    }))
-    .mutation(({ ctx, input }) => {
-      assertComoNextEnabled();
-      return sendCommunicationDraftCommand({ userId: ctx.user.id, ...input });
     }),
 
   recordCommunicationSent: protectedProcedure

@@ -533,9 +533,10 @@ function NewCommunicationDraftDialog({ workFileId, onCreated }: { workFileId: nu
   const mutation = trpc.comoNext.createCommunicationDraft.useMutation();
   const submit = async () => {
     if (!subject.trim() || !body.trim()) { toast.error("أدخل عنوان المسودة ونصها"); return; }
+    if (channel === "email" && !toText.includes("@")) { toast.error("أدخل بريد المستلم"); return; }
     try {
       await mutation.mutateAsync({ workFileId, channel, subject: subject.trim(), body: body.trim(), toText: toText.trim() || undefined, ccText: ccText.trim() || undefined, idempotencyKey: crypto.randomUUID() });
-      toast.success("حُفظت المسودة للمراجعة — لم تُرسل");
+      toast.success(channel === "email" ? "حُفظت المسودة في Drafts داخل بريدك" : "حُفظت المسودة للمراجعة");
       setOpen(false); setSubject(""); setBody(""); setToText(""); setCcText("");
       onCreated();
     } catch (error: any) { toast.error(error?.message || "تعذر حفظ المسودة"); }
@@ -543,14 +544,14 @@ function NewCommunicationDraftDialog({ workFileId, onCreated }: { workFileId: nu
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger asChild><Button size="sm" variant="outline" className="rounded-xl border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100"><Mail className="ms-1.5 h-4 w-4" />مسودة جديدة</Button></DialogTrigger>
     <DialogContent dir="rtl" className="max-w-2xl rounded-3xl bg-[#fdfcf9]">
-      <DialogHeader className="text-right"><DialogTitle>مسودة مراسلة</DialogTitle><DialogDescription>هذه الخطوة تحفظ المسودة داخل الملف فقط. لا يوجد إرسال أو اتصال خارجي.</DialogDescription></DialogHeader>
+      <DialogHeader className="text-right"><DialogTitle>مسودة مراسلة</DialogTitle><DialogDescription>{channel === "email" ? "تُحفظ في Drafts داخل بريدك؛ أرسلها من تطبيق البريد بعد المراجعة." : "تُحفظ للمراجعة داخل ملف الموضوع."}</DialogDescription></DialogHeader>
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2"><div className="grid gap-2"><Label>القناة</Label><Select value={channel} onValueChange={value => setChannel(value as CommunicationChannel)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(communicationChannelLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectContent></Select></div><div className="grid gap-2"><Label>إلى</Label><Input value={toText} onChange={event => setToText(event.target.value)} className="h-11 rounded-xl bg-white" placeholder="الاسم أو البريد" /></div></div>
         <div className="grid gap-2"><Label>نسخة إلى</Label><Input value={ccText} onChange={event => setCcText(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
         <div className="grid gap-2"><Label>العنوان</Label><Input value={subject} onChange={event => setSubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div>
         <div className="grid gap-2"><Label>نص المسودة</Label><Textarea value={body} onChange={event => setBody(event.target.value)} className="min-h-52 rounded-xl bg-white" /></div>
       </div>
-      <DialogFooter className="gap-2 sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">حفظ للمراجعة</Button><Button variant="outline" onClick={() => setOpen(false)} className="rounded-xl bg-white">إلغاء</Button></DialogFooter>
+      <DialogFooter className="gap-2 sm:justify-start"><Button onClick={submit} disabled={mutation.isPending} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">{channel === "email" ? "حفظ في Drafts" : "حفظ للمراجعة"}</Button><Button variant="outline" onClick={() => setOpen(false)} className="rounded-xl bg-white">إلغاء</Button></DialogFooter>
     </DialogContent>
   </Dialog>;
 }
@@ -563,8 +564,7 @@ function CommunicationControls({ communication, onUpdated }: { communication: an
   const [ccText, setCcText] = useState(communication.ccText || "");
   const review = trpc.comoNext.reviewCommunicationDraft.useMutation();
   const update = trpc.comoNext.updateCommunicationDraft.useMutation();
-  const send = trpc.comoNext.sendCommunicationDraft.useMutation();
-  const busy = review.isPending || update.isPending || send.isPending;
+  const busy = review.isPending || update.isPending;
   useEffect(() => {
     setSubject(communication.subject || "");
     setBody(communication.body || "");
@@ -576,18 +576,10 @@ function CommunicationControls({ communication, onUpdated }: { communication: an
     if (!subject.trim() || !body.trim() || !toText.trim()) return toast.error("أكمل المستلم والعنوان والنص");
     try {
       await update.mutateAsync(payload());
-      toast.success("حُفظ تعديل المسودة");
-      await onUpdated();
-    } catch (error: any) { toast.error(error?.message || "تعذر حفظ المسودة"); }
-  };
-  const sendNow = async () => {
-    if (!subject.trim() || !body.trim() || !toText.trim()) return toast.error("أكمل المستلم والعنوان والنص");
-    try {
-      await send.mutateAsync(payload());
-      toast.success("أُرسلت الرسالة وحُفظت في السجل");
+      toast.success("حُفظت المسودة في Drafts داخل بريدك");
       setOpen(false);
       await onUpdated();
-    } catch (error: any) { toast.error(error?.message || "تعذر إرسال الرسالة؛ بقيت المسودة محفوظة"); }
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ المسودة"); }
   };
   const cancel = async () => {
     try {
@@ -601,7 +593,7 @@ function CommunicationControls({ communication, onUpdated }: { communication: an
   const isEmail = communication.channel === "email";
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-amber-700 hover:bg-amber-800">فتح المسودة</Button></DialogTrigger>
-    <DialogContent dir="rtl" className="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>راجع الرسالة ثم أرسلها</DialogTitle><DialogDescription>{isEmail ? "هذه هي الرسالة كاملة. يمكنك تعديلها، ثم الضغط على إرسال؛ لا يرسل Manus شيئًا قبل ضغطك." : "راجع المسودة ثم احفظها أو ألغها. الإرسال المباشر متاح للبريد فقط."}</DialogDescription></DialogHeader><div className="grid gap-4"><div className="grid gap-2"><Label>إلى</Label><Input dir="ltr" value={toText} onChange={event => setToText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>نسخة إلى — اختياري</Label><Input dir="ltr" value={ccText} onChange={event => setCcText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>العنوان</Label><Input value={subject} onChange={event => setSubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div><div className="grid gap-2"><Label>النص</Label><Textarea value={body} onChange={event => setBody(event.target.value)} className="min-h-64 rounded-xl bg-white leading-7" /></div></div><DialogFooter className="gap-2 sm:justify-start">{isEmail ? <Button onClick={sendNow} disabled={busy} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">{send.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="ms-2 h-4 w-4" />}إرسال الآن</Button> : null}<Button variant="outline" onClick={save} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl bg-white">حفظ التعديل</Button><Button variant="ghost" onClick={cancel} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl text-rose-700">إلغاء المسودة</Button></DialogFooter></DialogContent>
+    <DialogContent dir="rtl" className="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>{isEmail ? "حفظ في بريدك" : "مراجعة المسودة"}</DialogTitle><DialogDescription>{isEmail ? "يحفظ Manus الرسالة في Drafts داخل بريدك الحقيقي. افتح تطبيق البريد هناك لتراجعها أو تعدّلها أو ترسلها." : "راجع المسودة ثم احفظها أو ألغها."}</DialogDescription></DialogHeader><div className="grid gap-4"><div className="grid gap-2"><Label>إلى</Label><Input dir="ltr" value={toText} onChange={event => setToText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>نسخة إلى — اختياري</Label><Input dir="ltr" value={ccText} onChange={event => setCcText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>العنوان</Label><Input value={subject} onChange={event => setSubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div><div className="grid gap-2"><Label>النص</Label><Textarea value={body} onChange={event => setBody(event.target.value)} className="min-h-64 rounded-xl bg-white leading-7" /></div></div><DialogFooter className="gap-2 sm:justify-start"><Button variant="outline" onClick={save} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl bg-white">{isEmail ? "حفظ في Drafts" : "حفظ التعديل"}</Button><Button variant="ghost" onClick={cancel} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl text-rose-700">إلغاء المسودة</Button></DialogFooter></DialogContent>
   </Dialog>;
 }
 

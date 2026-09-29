@@ -30,12 +30,12 @@ describe("COMO Next read-only email inbox", () => {
     expect(migration).toContain("como_next_email_mailbox_message_uq");
   });
 
-  it("keeps inbox synchronization read-only and isolates owner-approved sending in the outbox", () => {
+  it("keeps inbox synchronization read-only and saves replies to the real mailbox Drafts", () => {
     expect(() => assertReadonlyEmailArchitecture(service)).not.toThrow();
     expect(service).not.toMatch(/sendReply\s*\(|sendMail\s*\(|markAsSeen\s*\(|addFlags\s*\(/i);
-    expect(outbox).toContain("sendReplyDraftFromEmailCommand");
-    expect(outbox).toContain("sendApprovedComoReply");
-    expect(router).toContain("sendReplyDraft:");
+    expect(outbox).toContain("saveComoMailboxDraft");
+    expect(outbox).not.toContain("sendApprovedComoReply");
+    expect(router).not.toContain("sendReplyDraft:");
     expect(router).toContain("assertOwner(ctx.user.role)");
     expect(ui).not.toContain("recordCommunicationSent");
   });
@@ -148,14 +148,13 @@ describe("COMO Next read-only email inbox", () => {
     expect(commands).toContain("externalSideEffect: false");
   });
 
-  it("allows editing any analyzed inbox draft and sends only through an explicit owner mutation", () => {
+  it("saves any analyzed inbox reply in Drafts and leaves sending to the email client", () => {
     expect(outbox).toContain("updateReplyDraftFromEmailCommand");
-    expect(outbox).toContain("sendReplyDraftFromEmailCommand");
-    expect(outbox).toContain('email.folderName !== "INBOX"');
-    expect(outbox).toContain("externalSideEffect: true");
-    expect(ui).toContain("الضغط على «إرسال الآن» هو الإذن الوحيد بالإرسال الخارجي");
-    expect(ui).toContain("sendDraftMutation.mutateAsync");
-    expect(ui).toContain("حفظ التعديل");
+    expect(outbox).toContain("saveComoMailboxDraft");
+    expect(outbox).toContain("externalSideEffect: false");
+    expect(ui).toContain("المراجعة والتعديل والإرسال تتم من تطبيق البريد نفسه");
+    expect(ui).not.toContain("sendDraftMutation.mutateAsync");
+    expect(ui).toContain("حفظ في Drafts");
   });
 
   it("makes the inbox owner-only and gives unmatched mail its own review state", () => {

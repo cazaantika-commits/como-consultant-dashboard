@@ -778,8 +778,14 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
     ccText: input.ccText,
     idempotencyKey: `email-reply-draft:${email.id}`,
   });
-  await db.update(comoNextEmailMessages).set({ replyDraftCommunicationId: draft.id }).where(eq(comoNextEmailMessages.id, email.id));
-  return { id: Number(draft.id), replayed: draft.replayed, sent: false as const };
+  const mailboxRef = "mailboxDraft" in draft && draft.mailboxDraft?.uid
+    ? `${draft.mailboxDraft.folder} UID ${draft.mailboxDraft.uid}`
+    : "Private Email Drafts";
+  await db.update(comoNextEmailMessages).set({
+    replyDraftCommunicationId: draft.id,
+    suggestionReason: `مسودة الرد محفوظة في ${mailboxRef}؛ المراجعة والإرسال من تطبيق البريد.`.slice(0, 4000),
+  }).where(eq(comoNextEmailMessages.id, email.id));
+  return { id: Number(draft.id), replayed: draft.replayed, sent: false as const, mailboxDraft: "mailboxDraft" in draft ? draft.mailboxDraft : null };
 }
 
 export async function dismissEmailCommand(input: { userId: number; emailId: number }) {

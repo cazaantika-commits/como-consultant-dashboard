@@ -22,7 +22,6 @@ import {
   MailQuestion,
   Paperclip,
   RefreshCw,
-  Send,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
@@ -70,7 +69,6 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
   const linkMutation = trpc.comoNextEmail.linkToWorkFile.useMutation();
   const analyzeMutation = trpc.comoNextEmail.analyze.useMutation();
   const updateDraftMutation = trpc.comoNextEmail.updateReplyDraft.useMutation();
-  const sendDraftMutation = trpc.comoNextEmail.sendReplyDraft.useMutation();
   const dismissMutation = trpc.comoNextEmail.dismiss.useMutation();
   const [projectId, setProjectId] = useState("");
   const [workFileId, setWorkFileId] = useState("");
@@ -137,18 +135,9 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
     if (!emailId || !replyBody.trim() || !replySubject.trim() || !replyTo.trim()) { toast.error("أكمل المستلم والعنوان والنص"); return; }
     try {
       await updateDraftMutation.mutateAsync({ emailId, subject: replySubject.trim(), body: replyBody.trim(), toText: replyTo.trim(), ccText: replyCc.trim() || undefined });
-      toast.success("حُفظ تعديل المسودة — لم تُرسل");
+      toast.success("حُفظت المسودة في Drafts داخل بريدك — لم تُرسل");
       await refresh();
     } catch (error: any) { toast.error(error?.message || "تعذر حفظ تعديل المسودة"); }
-  };
-
-  const sendDraft = async () => {
-    if (!emailId || !replyBody.trim() || !replySubject.trim() || !replyTo.trim()) { toast.error("أكمل المستلم والعنوان والنص"); return; }
-    try {
-      await sendDraftMutation.mutateAsync({ emailId, subject: replySubject.trim(), body: replyBody.trim(), toText: replyTo.trim(), ccText: replyCc.trim() || undefined });
-      toast.success("أُرسل الرد وحُفظ في Sent وسجل COMO");
-      await refresh();
-    } catch (error: any) { toast.error(error?.message || "تعذر الإرسال؛ بقيت المسودة محفوظة"); }
   };
 
   const dismiss = async () => {
@@ -173,7 +162,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
           </DialogHeader>
 
           <div className="min-w-0 space-y-5 p-4 sm:p-6">
-            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-6 text-emerald-900"><ShieldCheck className="ms-2 inline h-4 w-4" />قراءة البريد ومزامنته تبقيان read-only ولا تغيّران flags. الإرسال يحدث فقط عندما تراجع النص وتضغط «إرسال الآن» بنفسك.</div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-6 text-emerald-900"><ShieldCheck className="ms-2 inline h-4 w-4" />Manus يحفظ الرد في Drafts داخل بريدك. المراجعة والتعديل والإرسال تتم من تطبيق البريد نفسه.</div>
 
             <Card className="rounded-3xl border-slate-200 bg-white p-5 shadow-sm"><p className="whitespace-pre-wrap text-sm leading-8 text-slate-700">{detail.message.bodyText || "لا يوجد نص مستخرج"}</p></Card>
 
@@ -197,7 +186,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
               <Button onClick={linkMessage} disabled={linkMutation.isPending || detail.message.inboxStatus === "linked"} className="mt-4 rounded-xl bg-[#153746] text-white hover:bg-[#1f5266]">{linkMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailCheck className="ms-2 h-4 w-4" />}{detail.message.inboxStatus === "linked" ? "مرتبطة بملف العمل" : "اعتماد الربط وحفظ المرفقات"}</Button>
             </Card>
 
-            {detail.message.folderName === "INBOX" && detail.analysis?.replyDraftText ? <Card className="rounded-3xl border-sky-100 bg-[#f7fbfd] p-5 shadow-sm"><h3 className="text-sm font-black text-sky-950">رد أعدّه Manus</h3><p className="mt-1 text-xs leading-6 text-sky-700">راجع النص أو عدّله. الضغط على «إرسال الآن» هو الإذن الوحيد بالإرسال الخارجي.</p><div className="mt-4 grid gap-3"><div className="grid gap-2"><Label>إلى</Label><Input dir="ltr" value={replyTo} onChange={event => setReplyTo(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>نسخة إلى — اختياري</Label><Input dir="ltr" value={replyCc} onChange={event => setReplyCc(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>العنوان</Label><Input value={replySubject} onChange={event => setReplySubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div><Textarea value={replyBody} onChange={event => setReplyBody(event.target.value)} className="min-h-48 rounded-2xl bg-white leading-7" /></div><div className="mt-3 flex flex-wrap gap-2"><Button onClick={sendDraft} disabled={sendDraftMutation.isPending || String(detail.message.suggestionReason || "").startsWith("تم الرد من COMO")} className="rounded-xl bg-emerald-700 text-white hover:bg-emerald-800">{sendDraftMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Send className="ms-2 h-4 w-4" />}{String(detail.message.suggestionReason || "").startsWith("تم الرد من COMO") ? "تم الإرسال" : "إرسال الآن"}</Button><Button onClick={saveDraft} disabled={updateDraftMutation.isPending || String(detail.message.suggestionReason || "").startsWith("تم الرد من COMO")} variant="outline" className="rounded-xl border-sky-200 bg-white text-sky-800">{updateDraftMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailQuestion className="ms-2 h-4 w-4" />}حفظ التعديل</Button></div></Card> : null}
+            {detail.message.folderName === "INBOX" && detail.analysis?.replyDraftText ? String(detail.message.suggestionReason || "").startsWith("مسودة الرد محفوظة في") ? <Card className="rounded-3xl border-sky-100 bg-[#f7fbfd] p-5 shadow-sm"><h3 className="text-sm font-black text-sky-950">المسودة في بريدك</h3><p className="mt-2 text-xs leading-6 text-sky-700">{detail.message.suggestionReason}</p></Card> : <Card className="rounded-3xl border-sky-100 bg-[#f7fbfd] p-5 shadow-sm"><h3 className="text-sm font-black text-sky-950">رد أعدّه Manus</h3><p className="mt-1 text-xs leading-6 text-sky-700">احفظه في Drafts، ثم راجعه وأرسله من تطبيق بريدك.</p><div className="mt-4 grid gap-3"><div className="grid gap-2"><Label>إلى</Label><Input dir="ltr" value={replyTo} onChange={event => setReplyTo(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>نسخة إلى — اختياري</Label><Input dir="ltr" value={replyCc} onChange={event => setReplyCc(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>العنوان</Label><Input value={replySubject} onChange={event => setReplySubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div><Textarea value={replyBody} onChange={event => setReplyBody(event.target.value)} className="min-h-48 rounded-2xl bg-white leading-7" /></div><div className="mt-3"><Button onClick={saveDraft} disabled={updateDraftMutation.isPending} variant="outline" className="rounded-xl border-sky-200 bg-white text-sky-800">{updateDraftMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <MailQuestion className="ms-2 h-4 w-4" />}حفظ في Drafts</Button></div></Card> : null}
 
             {detail.message.inboxStatus !== "linked" && detail.message.inboxStatus !== "dismissed" ? <div className="flex justify-end"><Button onClick={dismiss} disabled={dismissMutation.isPending} variant="ghost" className="rounded-xl text-slate-500"><Archive className="ms-2 h-4 w-4" />استبعاد من صندوق المطابقة</Button></div> : null}
           </div>
