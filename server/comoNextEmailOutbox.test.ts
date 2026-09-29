@@ -12,7 +12,7 @@ const kitchenUi = readFileSync("client/src/pages/ComoNextTodayPage.tsx", "utf8")
 function mailboxDraftFunction() {
   return emailMonitor.slice(
     emailMonitor.indexOf("export async function saveComoMailboxDraft"),
-    emailMonitor.indexOf("export async function sendApprovedComoReply"),
+    emailMonitor.indexOf("function saveSentEmailToIMAP"),
   );
 }
 
@@ -49,6 +49,7 @@ describe("COMO Next mailbox drafts", () => {
   it("exposes Drafts saving only and removes direct send buttons and mutations", () => {
     expect(router).toContain("updateReplyDraft: protectedProcedure");
     expect(router).not.toContain("sendReplyDraft: protectedProcedure");
+    expect(emailMonitor).not.toContain("sendApprovedComoReply");
     expect(emailUi).toContain("حفظ في Drafts");
     expect(emailUi).not.toContain("إرسال الآن");
     expect(kitchenUi).toContain("يحفظ Manus الرسالة في Drafts داخل بريدك الحقيقي");
