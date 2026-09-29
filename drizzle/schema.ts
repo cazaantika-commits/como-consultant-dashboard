@@ -2975,8 +2975,8 @@ export const comoNextWorkFileEvents = mysqlTable("como_next_work_file_events", {
 ]);
 
 // Append-only operational updates captured from calls, meetings, WhatsApp, email,
-// site visits, or internal notes. Manus analysis remains draft-only until the
-// owner explicitly applies a suggested action.
+// site visits, or internal notes. Manus analyzes each update and may open the next
+// internal action automatically; external effects and true owner decisions stay gated.
 export const comoNextWorkFileUpdates = mysqlTable("como_next_work_file_updates", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),

@@ -90,7 +90,7 @@ describe("COMO Next meeting safety invariants", () => {
     expect(minutes).not.toContain("غير مراجع");
   });
 
-  it("uses additive tables and records zero automatic side effects in analysis", () => {
+  it("uses additive tables, advances safe internal outcomes, and keeps external effects at zero", () => {
     expect([...migration.matchAll(/CREATE TABLE IF NOT EXISTS `([^`]+)`/g)].map(match => match[1])).toEqual([
       "como_next_meeting_consents",
       "como_next_meeting_sources",
@@ -104,6 +104,9 @@ describe("COMO Next meeting safety invariants", () => {
     expect(recordingsMigration).toContain("CREATE TABLE IF NOT EXISTS `como_next_meeting_recordings`");
     expect(recordingsMigration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE\s+FROM|UPDATE\s+|ALTER\s+TABLE)/im);
     expect(serviceSource).toContain("outcomesApplied: 0");
+    expect(serviceSource).toContain("AUTO_MANUS:");
+    expect(serviceSource).toContain("autoApplied");
+    expect(serviceSource).toContain('normalized.includes("مانوس")');
     expect(serviceSource).toContain("externalSideEffect: false");
     expect(serviceSource).toContain("sourceSystem: comoNextMeetingSources.sourceSystem");
     expect(serviceSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
@@ -139,7 +142,7 @@ describe("COMO Next meeting workspace reads", () => {
     expect(workspace.sources).toHaveLength(2);
     expect(workspace.sources.every(source => source.sourceStatus === "archived")).toBe(true);
     expect(workspace.sources.map(source => source.visibility).sort()).toEqual(["internal_only", "meeting_record"]);
-    expect(workspace.safeguards).toEqual({ automaticOutcomeCreation: false, externalSending: false, recordingActive: false, transcriptionActive: false, recordingAvailable: true, zoomAutomaticImport: false });
+    expect(workspace.safeguards).toEqual({ automaticOutcomeCreation: true, externalSending: false, recordingActive: false, transcriptionActive: false, recordingAvailable: true, zoomAutomaticImport: false });
   }, 15_000);
 
   it("hides an existing meeting from a user without project access", async () => {

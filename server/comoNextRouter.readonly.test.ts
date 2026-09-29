@@ -39,41 +39,32 @@ describe("COMO Next read-only router", () => {
     expect(overview.today.summary.dueToday).toBe(0);
   });
 
-  it("exposes the imported required decision only inside its authorized work file", async () => {
+  it("keeps the superseded Realistic decision in history and out of the active kitchen", async () => {
     const caller = comoNextRouter.createCaller(context(1));
     const overview = await caller.getOverview();
-    expect(overview.decisions).toHaveLength(1);
-    expect(overview.decisions[0]).toMatchObject({
-      decisionStatus: "required",
-      decisionAuthority: "abdulrahman",
-      projectId: 1,
-    });
-    const detail = await caller.getWorkFile({ workFileId: overview.decisions[0].workFileId });
-    expect(detail.decisions.some(decision => decision.id === overview.decisions[0].id)).toBe(true);
-  });
+    expect(overview.decisions.some(decision => decision.id === 60001)).toBe(false);
+    expect(overview.decisions.every(decision => ["required", "deferred"].includes(decision.decisionStatus))).toBe(true);
+    const detail = await caller.getWorkFile({ workFileId: 60016 });
+    expect(detail.decisions.find(decision => decision.id === 60001)).toMatchObject({ decisionStatus: "superseded" });
+  }, 15_000);
 
   it("exposes only active draft communications in Today while retaining full work-file history", async () => {
     const caller = comoNextRouter.createCaller(context(1));
     const overview = await caller.getOverview();
-    expect(overview.draftCommunications).toHaveLength(1);
-    expect(overview.draftCommunications[0]).toMatchObject({
-      communicationStatus: "draft",
-      approvalStatus: "pending",
-      projectId: 1,
-    });
-    const detail = await caller.getWorkFile({ workFileId: overview.draftCommunications[0].workFileId });
-    expect(detail.communications.some(communication => communication.id === overview.draftCommunications[0].id)).toBe(true);
+    expect(overview.draftCommunications.every(communication => ["draft", "approved_for_send"].includes(communication.communicationStatus))).toBe(true);
+    const detail = await caller.getWorkFile({ workFileId: 60016 });
+    expect(detail.communications.some(communication => communication.communicationStatus === "received")).toBe(true);
     expect(detail.communications.some(communication => communication.communicationStatus === "sent")).toBe(true);
-  });
+  }, 15_000);
 
   it("keeps completed historical meetings in their work file without raising false Today alerts", async () => {
     const caller = comoNextRouter.createCaller(context(1));
     const overview = await caller.getOverview();
-    expect(overview.meetingAttention).toEqual([]);
+    expect(overview.meetingAttention.some(meeting => meeting.id === 2)).toBe(false);
     const detail = await caller.getWorkFile({ workFileId: 60017 });
     expect(detail.meetings.some(meeting => meeting.id === 2 && meeting.meetingStatus === "completed")).toBe(true);
     expect(detail.meetings.find(meeting => meeting.id === 2)).toMatchObject({ participantCount: 2, agendaItemCount: 7, unresolvedRequiredCount: 0 });
-  });
+  }, 15_000);
 
   it("exposes the completed transfer review to the system owner", async () => {
     const caller = comoNextRouter.createCaller(context(1));

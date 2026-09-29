@@ -607,7 +607,12 @@ function analysisPrompt(source: typeof comoNextMeetingSources.$inferSelect) {
   if (source.sourceKind === "preparation") {
     return `حلل مادة التحضير التالية لبناء إحاطة عملية للاجتماع. استخدم النص فقط ولا تخترع معلومة. رتّب النقاط ضمن: الافتتاح، الأمور الحرجة، النطاق، التجاري، التعاقدي، التنفيذ، والإغلاق. كل ناتج يبقى مقترحًا للمراجعة ولا تنشئ أي قرار أو إجراء أو رسالة. اجعل audience=internal_only لأي نقطة لا ينبغي أن تظهر في المحضر أو المراسلات. evidenceExcerpt اقتباس قصير حرفي من المصدر.\n\nالمصدر:\n${source.rawText}`;
   }
-  return `حلل مادة الاجتماع التالية اعتمادًا على الدليل الموجود فيها فقط. لا تنفذ إجراءً، ولا تنشئ مهمة أو قرارًا معتمدًا أو مراسلة، ولا تستنتج ما لا تدعمه المادة. صنّف النتائج المقترحة إلى decision أو action أو external_commitment أو risk أو note، وأبقِ الأسئلة غير المحسومة ضمن openQuestions. evidenceExcerpt يجب أن يكون اقتباسًا حرفيًا قصيرًا. كل النتائج مسودات بانتظار مراجعة عبد الرحمن الانتقائية. اجعل audience=internal_only لأي نقطة داخلية لا يجوز أن تظهر تلقائيًا في المحضر أو رسالة خارجية.\n\nالمصدر:\n${source.rawText}`;
+  return `حلل مادة الاجتماع التالية اعتمادًا على الدليل الموجود فيها فقط. صنّف النتائج إلى decision أو action أو external_commitment أو risk أو note، وأبقِ الأسئلة غير المحسومة ضمن openQuestions. evidenceExcerpt يجب أن يكون اقتباسًا حرفيًا قصيرًا. عيّن أي تحليل أو مقارنة أو إعداد محضر أو تقرير أو مسودة إلى Manus بكتابة assignedTo=Manus؛ لا تسندها لعبد الرحمن. لا يُطلب تدخل عبد الرحمن إلا لقرار حقيقي أو التزام خارجي أو فعل واقعي لا يستطيع Manus أداءه. لا ترسل ولا تعتمد ولا تقبل ولا تعيّن ولا تدفع. اجعل audience=internal_only لأي نقطة داخلية لا يجوز أن تظهر تلقائيًا في المحضر أو رسالة خارجية.\n\nالمصدر:\n${source.rawText}`;
+}
+
+function isManusAssignment(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return normalized.includes("manus") || normalized.includes("مانوس");
 }
 
 export async function analyzeMeetingSourceCommand(input: { userId: number; sourceId: number; requestKey: string }) {
@@ -626,7 +631,7 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
   const response = await invokeLLM({
     model: MEETING_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. أخرج JSON مطابقًا للمخطط فقط. التحليل مسودة مرتبطة بالدليل ولا يترتب عليه أي تنفيذ تلقائي." },
+      { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. أخرج JSON مطابقًا للمخطط فقط. اربط كل نتيجة بالدليل؛ ستُحوّل النتائج الداخلية الآمنة إلى سجل أو عمل Manus تلقائيًا، بينما يبقى القرار الحقيقي والالتزام الخارجي بانتظار عبد الرحمن." },
       { role: "user", content: analysisPrompt(source) },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_meeting_analysis", strict: true, schema: analysisSchema as unknown as Record<string, unknown> } },
@@ -637,7 +642,7 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة مسودة تحليل Manus" }); }
   const proposals = Array.isArray(parsed.proposals) ? parsed.proposals : [];
 
-  return db.transaction(async tx => {
+  const drafted = await db.transaction(async tx => {
     const [replay] = await tx.select({ id: comoNextMeetingAnalyses.id }).from(comoNextMeetingAnalyses).where(eq(comoNextMeetingAnalyses.requestKey, input.requestKey)).limit(1);
     if (replay) return { id: Number(replay.id), replayed: true as const };
     const result = await tx.insert(comoNextMeetingAnalyses).values({
@@ -683,6 +688,30 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
     });
     return { id, replayed: false as const };
   });
+  if (drafted.replayed || source.sourceKind === "preparation") return { ...drafted, autoApplied: 0 };
+
+  const pending = await db.select().from(comoNextMeetingProposals).where(and(
+    eq(comoNextMeetingProposals.analysisId, drafted.id),
+    eq(comoNextMeetingProposals.reviewStatus, "pending"),
+  )).orderBy(asc(comoNextMeetingProposals.ordinal));
+  let autoApplied = 0;
+  for (const proposal of pending) {
+    const applyAs: MeetingProposalTarget | null = proposal.proposalKind === "action" && isManusAssignment(proposal.assignedTo)
+      ? "action"
+      : ["note", "risk", "question", "check"].includes(proposal.proposalKind)
+        ? "note"
+        : null;
+    if (!applyAs) continue;
+    await reviewMeetingProposalCommand({
+      userId: input.userId,
+      proposalId: Number(proposal.id),
+      decision: "apply",
+      applyAs,
+      reviewNote: "AUTO_MANUS: نتيجة داخلية آمنة طُبقت تلقائيًا؛ لا أثر خارجي.",
+    });
+    autoApplied += 1;
+  }
+  return { ...drafted, autoApplied };
 }
 
 export async function reviewMeetingProposalCommand(input: {
@@ -749,8 +778,8 @@ export async function reviewMeetingProposalCommand(input: {
           title: proposal.title,
           description: proposal.content,
           acceptanceCriteria: `التحقق من النتيجة وربط الدليل الأصلي: ${proposal.evidenceExcerpt}`,
-          ownerType: proposal.assignedTo?.toLowerCase().includes("manus") ? "manus" : "human",
-          ownerUserId: proposal.assignedTo?.toLowerCase().includes("manus") ? null : input.userId,
+          ownerType: isManusAssignment(proposal.assignedTo) ? "manus" : "human",
+          ownerUserId: isManusAssignment(proposal.assignedTo) ? null : input.userId,
           priority: proposal.priority === "critical" ? "urgent" : proposal.priority === "high" ? "important" : "normal",
           dueAt: proposal.dueAt,
           attentionAt: proposal.dueAt,
@@ -921,7 +950,7 @@ export async function getMeetingWorkspace(meetingId: number, userId: number) {
     proposals,
     minutes,
     safeguards: {
-      automaticOutcomeCreation: false,
+      automaticOutcomeCreation: true,
       externalSending: false,
       recordingActive: recordings.some(item => item.recordingStatus === "uploaded"),
       transcriptionActive: recordings.some(item => item.recordingStatus === "transcribing"),

@@ -26,19 +26,19 @@ function seed() {
 }
 
 describe("COMO Next executive kitchen", () => {
-  it("unifies every operational type and counts one owner-review topic instead of every linked record", () => {
+  it("unifies every operational type into one current topic per work file", () => {
     const queue = buildExecutiveKitchenQueue(seed());
-    expect(queue).toHaveLength(4);
+    expect(queue).toHaveLength(2);
     expect(queue[0]?.phase).toBe("owner_review");
     expect(queue[0]?.kind).toBe("decision");
-    expect(queue[0]?.reviewItemCount).toBe(3);
-    expect(queue[0]?.relatedReviewIds).toEqual(["decision:3", "communication:4", "email:5"]);
-    expect(queue.find(item => item.id === "action:2")?.ownerType).toBe("manus");
-    expect(queue.at(-1)?.phase).toBe("waiting_external");
+    expect(queue[0]?.reviewItemCount).toBe(5);
+    expect(queue[0]?.relatedReviewIds).toEqual(["action:1", "action:2", "decision:3", "communication:4", "email:5"]);
+    expect(queue.at(-1)?.phase).toBe("define_next_step");
   });
 
   it("collapses several proposals for the same work file into one review topic", () => {
     const input = seed();
+    input.actions = [];
     input.decisions = [];
     input.draftCommunications = [];
     input.emails = [];
@@ -52,20 +52,35 @@ describe("COMO Next executive kitchen", () => {
     expect(review[0]?.reviewItemCount).toBe(2);
   });
 
+  it("turns a past confirmed meeting into one outcome-capture intervention", () => {
+    const input = seed();
+    input.actions = [];
+    input.decisions = [];
+    input.draftCommunications = [];
+    input.emails = [];
+    input.filesWithoutNextAction = [];
+    input.meetings = [{ id: 9, title: "اجتماع Realistic", projectId: 1, workFileId: 10, startsAt: "2000-01-01 08:00:00" }];
+    const [item] = buildExecutiveKitchenQueue(input);
+    expect(item).toMatchObject({ kind: "meeting", phase: "act_now", ownerType: "human" });
+    expect(item.title).toBe("أخبر Manus بما حدث في اجتماع Realistic");
+  });
+
   it("counts only inbox messages in the kitchen attention badge", () => {
     expect(mainRouter).toContain('eq(comoNextEmailMessages.folderName, "INBOX")');
   });
 
-  it("keeps operational updates append-only and Manus suggestions review-only", () => {
+  it("keeps updates append-only and lets Manus open safe internal work automatically", () => {
     expect(migration).toContain("CREATE TABLE como_next_work_file_updates");
     expect(migration).not.toMatch(/^\s*(DROP|TRUNCATE|DELETE|UPDATE)\s/im);
     expect(kitchenService).toContain('model: UPDATE_ANALYSIS_MODEL');
-    expect(kitchenService).toContain('analysisStatus: "draft"');
+    expect(kitchenService).toContain('suggestedOwnerType');
+    expect(kitchenService).toContain('analysisStatus: "applied"');
     expect(kitchenService).toContain("نص التحديث كتبه عبد الرحمن داخل التطبيق");
     expect(kitchenService).toContain("كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل");
     expect(kitchenService).toContain("لا تقترح إرفاقها أو ربطها مرة أخرى");
     expect(kitchenService).toContain("ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا");
-    expect(kitchenService).toContain('input.decision === "dismiss"');
+    expect(kitchenService).toContain('ownerType: suggestedOwnerType');
+    expect(kitchenService).toContain('startsWith("أخبر Manus بما حدث")');
     expect(kitchenService).toContain('createActionCommand');
     expect(kitchenService).not.toContain("sendReply(");
   });
@@ -124,8 +139,8 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain('aria-pressed={queueOwnerFilter === "manus"}');
     expect(kitchenPage).toContain("فتح التقرير المحمي");
     expect(kitchenPage).toContain("/api/como-next/documents/");
-    expect(kitchenPage).toContain("حفظ وتحليل الخطوة التالية");
-    expect(kitchenPage).toContain("تحويلها إلى إجراء");
+    expect(kitchenPage).toContain("تسجيل النتيجة ومتابعة Manus");
+    expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
     expect(kitchenPage).toContain('if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);');
     expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');

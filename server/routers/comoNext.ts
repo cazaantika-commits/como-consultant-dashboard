@@ -299,7 +299,15 @@ export const comoNextRouter = router({
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND (
-          meeting.meeting_status IN ('planned','confirmed')
+          (
+            meeting.meeting_status IN ('planned','confirmed')
+            AND NOT EXISTS (
+              SELECT 1 FROM como_next_work_file_updates update_row
+              WHERE update_row.work_file_id = meeting.work_file_id
+                AND update_row.source_channel = 'meeting'
+                AND (meeting.starts_at IS NULL OR update_row.occurred_at >= meeting.starts_at)
+            )
+          )
           OR EXISTS (SELECT 1 FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id = meeting.id AND proposal.review_status = 'pending')
           OR EXISTS (SELECT 1 FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id = meeting.id AND minutes.minutes_status = 'draft')
         )
@@ -381,7 +389,15 @@ export const comoNextRouter = router({
       draftMinutesCount: Number(row.draftMinutesCount || 0),
     }));
 
-    const filesWithoutNextAction = workFiles.filter(file => !file.nextActionId);
+    const workFilesWithOperationalStep = new Set<number>([
+      ...todayRows.map(row => row.workFileId),
+      ...decisions.map(row => row.workFileId),
+      ...draftCommunications.map(row => row.workFileId),
+      ...meetingAttention.map(row => row.workFileId),
+      ...intakeProposals.map(row => Number(row.workFileId || 0)),
+      ...specialistAttention.map(row => Number(row.workFileId || 0)),
+    ].filter(Boolean));
+    const filesWithoutNextAction = workFiles.filter(file => !workFilesWithOperationalStep.has(file.id));
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       actions: todayRows,

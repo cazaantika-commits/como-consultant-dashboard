@@ -10,6 +10,7 @@ import { invokeLLM } from "../_core/llm";
 import { getDb } from "../db";
 import {
   appendEvent,
+  changeActionStatusCommand,
   createActionCommand,
   requireProjectAccess,
   toSqlUtcTimestamp,
@@ -37,10 +38,11 @@ const updateAnalysisSchema = {
     suggestedActionTitle: { anyOf: [{ type: "string" }, { type: "null" }] },
     suggestedActionDescription: { anyOf: [{ type: "string" }, { type: "null" }] },
     suggestedAcceptanceCriteria: { anyOf: [{ type: "string" }, { type: "null" }] },
+    suggestedOwnerType: { anyOf: [{ type: "string", enum: ["manus", "human", "team"] }, { type: "null" }] },
     suggestedPriority: { anyOf: [{ type: "string", enum: ["normal", "important", "urgent"] }, { type: "null" }] },
     suggestedDueAt: { anyOf: [{ type: "string" }, { type: "null" }] },
   },
-  required: ["summary", "nextStepRequired", "rationale", "suggestedActionTitle", "suggestedActionDescription", "suggestedAcceptanceCriteria", "suggestedPriority", "suggestedDueAt"],
+  required: ["summary", "nextStepRequired", "rationale", "suggestedActionTitle", "suggestedActionDescription", "suggestedAcceptanceCriteria", "suggestedOwnerType", "suggestedPriority", "suggestedDueAt"],
   additionalProperties: false,
 } as const;
 
@@ -112,43 +114,57 @@ export function buildExecutiveKitchenQueue(input: {
   for (const decision of input.decisions) items.push({ id: `decision:${decision.id}`, kind: "decision", phase: "owner_review", title: decision.title, projectId: decision.projectId, workFileId: decision.workFileId, recordId: decision.id, dueAt: decision.dueAt });
   for (const draft of input.draftCommunications) items.push({ id: `communication:${draft.id}`, kind: "communication", phase: "owner_review", title: draft.subject, projectId: draft.projectId, workFileId: draft.workFileId, recordId: draft.id, dueAt: draft.occurredAt });
   for (const proposal of input.intakeProposals) items.push({ id: `proposal:${proposal.id}`, kind: "proposal", phase: "owner_review", title: proposal.title, projectId: proposal.projectId, workFileId: proposal.workFileId, recordId: proposal.id, priority: proposal.priority, dueAt: proposal.dueAt });
-  for (const meeting of input.meetings) items.push({ id: `meeting:${meeting.id}`, kind: "meeting", phase: "scheduled", title: meeting.title, projectId: meeting.projectId, workFileId: meeting.workFileId, recordId: meeting.id, dueAt: meeting.startsAt });
+  for (const meeting of input.meetings) {
+    const startsAt = meeting.startsAt ? new Date(`${String(meeting.startsAt).replace(" ", "T")}Z`).getTime() : Number.POSITIVE_INFINITY;
+    const needsOutcome = Number.isFinite(startsAt) && startsAt <= Date.now();
+    items.push({
+      id: `meeting:${meeting.id}`,
+      kind: "meeting",
+      phase: needsOutcome ? "act_now" : "scheduled",
+      title: needsOutcome ? `أخبر Manus بما حدث في ${meeting.title}` : meeting.title,
+      projectId: meeting.projectId,
+      workFileId: meeting.workFileId,
+      recordId: meeting.id,
+      dueAt: meeting.startsAt,
+      ownerType: needsOutcome ? "human" : null,
+    });
+  }
   for (const email of input.emails) items.push({ id: `email:${email.id}`, kind: "email", phase: "owner_review", title: email.subject, projectId: email.suggestedProjectId, workFileId: email.suggestedWorkFileId, recordId: email.id, priority: email.importance });
   for (const review of input.specialistReviews) items.push({ id: `specialist:${review.id}`, kind: "specialist", phase: "owner_review", title: review.executiveSummary || review.requestText, projectId: review.projectId, workFileId: review.workFileId, recordId: review.id });
   for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority });
 
-  const reviewKindRank: Record<string, number> = { decision: 0, proposal: 1, communication: 2, email: 3, specialist: 4 };
+  const itemRank = (item: Record<string, unknown>) => {
+    if (item.kind === "decision") return 0;
+    if (item.kind === "communication" || item.kind === "proposal") return 1;
+    if (item.kind === "action" && item.ownerType === "human") return 2;
+    if (item.kind === "meeting") return 3;
+    if (item.kind === "action" && item.ownerType === "manus") return 4;
+    if (item.kind === "email" || item.kind === "specialist") return 5;
+    if (item.phase === "waiting_external") return 6;
+    return 7;
+  };
   const groupedItems: Array<Record<string, unknown>> = [];
-  const groupedReviewIndex = new Map<string, number>();
+  const groupedIndex = new Map<string, number>();
   for (const item of items) {
-    if (item.phase !== "owner_review") {
+    const workFileId = Number(item.workFileId || 0);
+    if (!workFileId) {
       groupedItems.push(item);
       continue;
     }
-    const workFileId = Number(item.workFileId || 0);
-    const normalizedTitle = String(item.title || "")
-      .replace(/^\s*((re|fw|fwd)\s*:\s*)+/gi, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-    const groupKey = workFileId > 0
-      ? `work-file:${workFileId}`
-      : item.kind === "email" && normalizedTitle
-        ? `email-thread:${normalizedTitle}`
-        : String(item.id);
-    const existingIndex = groupedReviewIndex.get(groupKey);
+    const groupKey = `work-file:${workFileId}`;
+    const existingIndex = groupedIndex.get(groupKey);
     if (existingIndex === undefined) {
-      groupedReviewIndex.set(groupKey, groupedItems.length);
-      groupedItems.push({ ...item, id: `review:${groupKey}`, reviewItemCount: 1, relatedReviewIds: [String(item.id)] });
+      groupedIndex.set(groupKey, groupedItems.length);
+      groupedItems.push({ ...item, id: `topic:${groupKey}`, reviewItemCount: 1, relatedReviewIds: [String(item.id)] });
       continue;
     }
     const existing = groupedItems[existingIndex];
     const existingCount = Number(existing.reviewItemCount || 1);
     const relatedReviewIds = [...((existing.relatedReviewIds as string[] | undefined) || [String(existing.id)]), String(item.id)];
-    const shouldReplacePrimary = (reviewKindRank[String(item.kind)] ?? 9) < (reviewKindRank[String(existing.kind)] ?? 9);
+    const shouldReplacePrimary = itemRank(item) < itemRank(existing);
     groupedItems[existingIndex] = {
       ...(shouldReplacePrimary ? item : existing),
-      id: `review:${groupKey}`,
+      id: `topic:${groupKey}`,
       reviewItemCount: existingCount + 1,
       relatedReviewIds,
     };
@@ -255,7 +271,7 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
   const response = await invokeLLM({
     model: UPDATE_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مع كامل الأدلة المرتبطة المعروضة. نص التحديث كتبه عبد الرحمن داخل التطبيق؛ تسمية قناة المصدر لا تعني أنه نص وارد من الطرف الخارجي، فلا تنسب تعليق عبد الرحمن إلى الطرف ولا تقترح ردًا خارجيًا لمجرد أنه سأل النظام أو اشتكى من التتبع. كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل، لذلك لا تقترح إرفاقها أو ربطها مرة أخرى. رتّب الحقائق زمنيًا؛ الدليل الأحدث ينسخ وصف حالة أقدم عندما يتعارضان. لا تقل إن دليلاً مفقود إذا كانت مراسلة مرتبطة في السياق تثبته. إذا أكد بريد وارد موعدًا كان منتظرًا، فصرّح بأن شرط الانتظار تحقق واقترح التحضير أو الخطوة التالية، لا إعادة طلب التأكيد. إذا كانت الخطوة التالية موجودة ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا واجعل nextStepRequired=false. لا تنفذ، لا ترسل، لا تعتمد قرارًا، ولا تغيّر حالة الإجراء. حدّد هل توجد خطوة عملية جديدة فعلًا، ولا تكرر إجراءً قائمًا. اكتب اقتراحًا واحدًا فقط قابلًا للمراجعة ومعيار قبول واضحًا إن لزم." },
+      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مع كامل الأدلة المرتبطة المعروضة، وحدد خطوة واحدة تالية فقط. نص التحديث كتبه عبد الرحمن داخل التطبيق؛ تسمية قناة المصدر لا تعني أنه نص وارد من الطرف الخارجي، فلا تنسب تعليق عبد الرحمن إلى الطرف. كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل، لذلك لا تقترح إرفاقها أو ربطها مرة أخرى. رتّب الحقائق زمنيًا؛ الدليل الأحدث ينسخ وصف حالة أقدم عندما يتعارضان. لا تقل إن دليلاً مفقود إذا كانت مراسلة مرتبطة في السياق تثبته. إذا أكد بريد وارد موعدًا كان منتظرًا، فصرّح بأن شرط الانتظار تحقق واقترح التحضير أو الخطوة التالية، لا إعادة طلب التأكيد. إذا كانت الخطوة التالية موجودة ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا واجعل nextStepRequired=false. اجعل suggestedOwnerType=manus لكل تحليل أو مقارنة أو إعداد تقرير أو محضر أو مسودة أو متابعة معلوماتية يستطيع Manus إنجازها. استخدم human فقط لتدخل واقعي لا يستطيع Manus أداءه: حضور اجتماع، إجراء مكالمة شخصية، تزويد معلومة غير موجودة، أو قرار حقيقي بعد اكتمال التحليل. لا تجعل مراجعة اقتراح Manus خطوة مستقلة. لا ترسل ولا تعتمد ولا تقبل ولا تعيّن ولا تدفع. اكتب خطوة واحدة ومعيار قبول واضحًا إن لزم." },
       { role: "user", content: buildOperationalUpdatePrompt({ workFile, action, update, activeActions, communications: recentCommunications.map(row => ({ ...row, id: Number(row.id) })) }) },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_operational_update_analysis", strict: true, schema: updateAnalysisSchema as unknown as Record<string, unknown> } },
@@ -265,6 +281,7 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
   let parsed: any;
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة اقتراح Manus" }); }
   const hasAction = Boolean(parsed.nextStepRequired && String(parsed.suggestedActionTitle || "").trim() && String(parsed.suggestedAcceptanceCriteria || "").trim());
+  const suggestedOwnerType = hasAction && ["manus", "human", "team"].includes(parsed.suggestedOwnerType) ? parsed.suggestedOwnerType as "manus" | "human" | "team" : "manus";
   await db.update(comoNextWorkFileUpdates).set({
     analysisStatus: "draft",
     analysisSummary: `${String(parsed.summary || "").trim()}\n\nالمنطق: ${String(parsed.rationale || "").trim()}`.trim(),
@@ -275,7 +292,53 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
     suggestedDueAt: hasAction && parsed.suggestedDueAt ? toSqlUtcTimestamp(parsed.suggestedDueAt) : null,
     modelId: response.model || UPDATE_ANALYSIS_MODEL,
   }).where(eq(comoNextWorkFileUpdates.id, update.id));
-  return { id: Number(update.id), analysisStatus: "draft" as const, nextStepRequired: hasAction, externalSideEffect: false as const, operationalRecordsCreated: 0 as const };
+  let targetActionId: number | null = null;
+  if (hasAction) {
+    const created = await createActionCommand({
+      userId: input.userId,
+      workFileId: Number(workFile.id),
+      title: String(parsed.suggestedActionTitle).trim(),
+      description: String(parsed.suggestedActionDescription || "").trim() || undefined,
+      acceptanceCriteria: String(parsed.suggestedAcceptanceCriteria).trim(),
+      ownerType: suggestedOwnerType,
+      priority: ["normal", "important", "urgent"].includes(parsed.suggestedPriority) ? parsed.suggestedPriority : "normal",
+      dueAt: parsed.suggestedDueAt || undefined,
+      idempotencyKey: `operational-update:${update.id}`,
+    });
+    targetActionId = Number(created.id);
+  }
+  if (
+    action
+    && action.ownerType === "human"
+    && ["open", "in_progress"].includes(action.actionStatus)
+    && action.title.trim().startsWith("أخبر Manus بما حدث")
+  ) {
+    await changeActionStatusCommand({
+      userId: input.userId,
+      actionId: Number(action.id),
+      nextStatus: "completed_pending_verification",
+    });
+    await changeActionStatusCommand({
+      userId: input.userId,
+      actionId: Number(action.id),
+      nextStatus: "verified",
+      evidenceReference: `تحديث تشغيلي #${update.id} · ${update.sourceChannel} · ${update.occurredAt}`,
+    });
+  }
+  await db.update(comoNextWorkFileUpdates).set({
+    analysisStatus: "applied",
+    targetActionId,
+    reviewedAt: nowSql(),
+  }).where(eq(comoNextWorkFileUpdates.id, update.id));
+  return {
+    id: Number(update.id),
+    analysisStatus: "applied" as const,
+    nextStepRequired: hasAction,
+    nextActionId: targetActionId,
+    nextOwnerType: hasAction ? suggestedOwnerType : null,
+    externalSideEffect: false as const,
+    operationalRecordsCreated: hasAction ? 1 as const : 0 as const,
+  };
 }
 
 export async function reviewWorkFileUpdateCommand(input: { userId: number; updateId: number; decision: "apply" | "dismiss" }) {
