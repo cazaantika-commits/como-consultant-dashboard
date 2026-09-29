@@ -625,7 +625,19 @@ ${email.bodyText}${contextText}
 - الرسالة الصادرة توثق ما فعله عبد الرحمن؛ لا تكتب مسودة رد عليها.
 - كل رسالة واردة بشرية/مهنية من طرف مشروع تحتاج ردًا مهنيًا: اجعل shouldReply=true واكتب replyDraftText كاملًا بلغة الرسالة، حتى لو كان الرد مجرد تأكيد استلام وخطوة تالية منضبطة. الاستثناء فقط رسالة نظام/no-reply أو رسالة يثبت السياق أن عبد الرحمن أجاب عنها لاحقًا.
 - لا تعد في المسودة بقبول أو تعيين أو دفع أو موعد غير مثبت. ثبّت الاستلام، أجب عما يمكن، واذكر بوضوح ما هو قيد المراجعة أو ما المطلوب من الطرف.
+- عند توقيع أي مسودة إنجليزية، اكتب الاسم حصراً هكذا: Abdalrahman Zaqout. لا تستخدم Abdulrahman أو Abdul Rahman.
 - كل مقترح يبقى review-only ولا يغير أي حالة تشغيلية.`;
+}
+
+export function normalizeOwnerEmailSignature(body: string) {
+  const lines = String(body || "").trim().split("\n");
+  const signatureWindow = Math.max(0, lines.length - 12);
+  for (let index = signatureWindow; index < lines.length; index += 1) {
+    if (/^\s*(?:abdul\s*rahman|abdulrahman|abdalrahman)(?:\s+zaqout)?\s*$/i.test(lines[index] || "")) {
+      lines[index] = "Abdalrahman Zaqout";
+    }
+  }
+  return lines.join("\n").trim();
 }
 
 async function loadEmailAnalysisContext(db: any, email: typeof comoNextEmailMessages.$inferSelect): Promise<EmailAnalysisContext | null> {
@@ -723,7 +735,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
       importance: parsed.importance,
       whyImportant: parsed.whyImportant ? String(parsed.whyImportant).trim() : null,
       suggestedNextStep: parsed.suggestedNextStep ? String(parsed.suggestedNextStep).trim() : null,
-      replyDraftText: parsed.shouldReply && parsed.replyDraftText ? String(parsed.replyDraftText).trim() : null,
+      replyDraftText: parsed.shouldReply && parsed.replyDraftText ? normalizeOwnerEmailSignature(String(parsed.replyDraftText)) : null,
       evidenceJson: JSON.stringify(Array.isArray(parsed.evidenceExcerpts) ? parsed.evidenceExcerpts : []),
       modelId: response.model || EMAIL_ANALYSIS_MODEL,
       requestedByUserId: input.userId,
@@ -749,7 +761,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
     : null;
   const replyDraft = email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
-    ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: String(parsed.replyDraftText).trim() })
+    ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: normalizeOwnerEmailSignature(String(parsed.replyDraftText)) })
     : null;
   return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };
 }
@@ -761,11 +773,12 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
   if (!email.linkedWorkFileId || !email.linkedProjectId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اربط الرسالة بملف العمل قبل إنشاء مسودة الرد" });
   if (email.folderName !== "INBOX") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "الرسالة صادرة ولا تحتاج مسودة رد" });
+  const normalizedBody = normalizeOwnerEmailSignature(input.body);
   const [latestAnalysis] = await db.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses)
     .where(and(eq(comoNextEmailAnalyses.emailMessageId, input.emailId), eq(comoNextEmailAnalyses.analysisStatus, "draft")))
     .orderBy(desc(comoNextEmailAnalyses.id)).limit(1);
   if (latestAnalysis) {
-    await db.update(comoNextEmailAnalyses).set({ replyDraftText: input.body.trim() }).where(eq(comoNextEmailAnalyses.id, latestAnalysis.id));
+    await db.update(comoNextEmailAnalyses).set({ replyDraftText: normalizedBody }).where(eq(comoNextEmailAnalyses.id, latestAnalysis.id));
   }
   if (email.replyDraftCommunicationId) return { id: Number(email.replyDraftCommunicationId), replayed: true as const, sent: false as const };
   const draft = await createCommunicationDraftCommand({
@@ -773,7 +786,7 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
     workFileId: email.linkedWorkFileId,
     channel: "email",
     subject: /^\s*re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`,
-    body: input.body,
+    body: normalizedBody,
     toText: email.fromEmail,
     ccText: input.ccText,
     idempotencyKey: `email-reply-draft:${email.id}`,

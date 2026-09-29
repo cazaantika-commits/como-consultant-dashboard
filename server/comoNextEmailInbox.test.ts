@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, mailboxKeyFor, messageIdentitySha, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -126,6 +126,12 @@ describe("COMO Next read-only email inbox", () => {
     expect(prompt).toContain("Sent UID 173");
     expect(prompt).toContain("فلا تقل إن الاعتماد ما زال معلقًا");
     expect(prompt).toContain("لا تعتبر الدفع منفذًا بلا تأكيد صريح");
+  });
+
+  it("uses Abdalrahman Zaqout exactly in generated English email signatures", () => {
+    expect(normalizeOwnerEmailSignature("Dear Team,\n\nThank you.\n\nKind regards,\nAbdulrahman")).toBe("Dear Team,\n\nThank you.\n\nKind regards,\nAbdalrahman Zaqout");
+    expect(normalizeOwnerEmailSignature("Dear Team,\n\nThank you.\n\nKind regards,\nAbdul Rahman")).toContain("Abdalrahman Zaqout");
+    expect(buildEmailAnalysisPrompt({ folderName: "INBOX", fromEmail: "x@example.com", subject: "x", receivedAt: "2026-09-29", bodyText: "x" }, null)).toContain("Abdalrahman Zaqout");
   });
 
   it("prefers the linked Colliers file over a generic design-title match", () => {
