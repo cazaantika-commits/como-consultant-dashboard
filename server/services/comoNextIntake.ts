@@ -168,15 +168,30 @@ export async function listPendingIntakeProposals(userId: number, workFileId?: nu
   return rowsOf<any>(result).map(row => ({ ...row, id: Number(row.id), projectId: Number(row.projectId), workFileId: Number(row.workFileId) }));
 }
 
+export function selectSaraOwnerUserId(input: {
+  configuredOpenId?: string | null;
+  adminUsers: Array<{ id: number; openId: string }>;
+}) {
+  const configuredOpenId = String(input.configuredOpenId || "").trim();
+  const configuredOwner = configuredOpenId
+    ? input.adminUsers.find(user => user.openId === configuredOpenId)
+    : undefined;
+  if (configuredOwner) return Number(configuredOwner.id);
+  if (input.adminUsers.length === 1) return Number(input.adminUsers[0].id);
+  if (input.adminUsers.length === 0) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يوجد حساب إدارة يمكن ربطه بمالك COMO" });
+  }
+  throw new TRPCError({ code: "PRECONDITION_FAILED", message: "يوجد أكثر من حساب إدارة؛ يجب تحديد مالك COMO صراحة" });
+}
+
 export async function resolveOwnerUserIdForSara(memberId: string) {
   if (memberId !== "abdulrahman") throw new TRPCError({ code: "FORBIDDEN", message: "سجل المقترحات من سارة متاح لعبد الرحمن فقط" });
   const db = await getDb();
   if (!db) databaseUnavailable();
-  const ownerOpenId = ENV.ownerOpenId.trim();
-  if (!ownerOpenId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هوية مالك COMO غير مهيأة" });
-  const [owner] = await db.select({ id: users.id }).from(users).where(and(eq(users.openId, ownerOpenId), eq(users.role, "admin"))).limit(1);
-  if (!owner) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تعذر ربط هوية عبد الرحمن بحساب مالك COMO" });
-  return Number(owner.id);
+  const adminUsers = await db.select({ id: users.id, openId: users.openId })
+    .from(users)
+    .where(eq(users.role, "admin"));
+  return selectSaraOwnerUserId({ configuredOpenId: ENV.ownerOpenId, adminUsers });
 }
 
 export async function createSaraIntakeProposalCommand(input: {

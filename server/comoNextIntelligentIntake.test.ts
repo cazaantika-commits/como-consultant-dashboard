@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import mysql from "mysql2/promise";
 import { describe, expect, it } from "vitest";
+import { selectSaraOwnerUserId } from "./services/comoNextIntake";
 
 const migration = readFileSync("drizzle/0088_como_next_intelligent_intake.sql", "utf8");
 const intakeService = readFileSync("server/services/comoNextIntake.ts", "utf8");
@@ -40,6 +41,30 @@ describe("COMO Next intelligent intake safeguards", () => {
     expect(intakeService).toContain('memberId !== "abdulrahman"');
     expect(saraRoom).toContain("lastMemberTextRef.current");
     expect(saraRoom).toContain('sourceText: event.name === "capture_intake_proposal"');
+  });
+
+  it("resolves the unique COMO admin when the deployment owner variable is absent", () => {
+    expect(selectSaraOwnerUserId({
+      configuredOpenId: "",
+      adminUsers: [{ id: 1, openId: "owner-open-id" }],
+    })).toBe(1);
+  });
+
+  it("prefers the configured owner and fails safely when several admins are ambiguous", () => {
+    expect(selectSaraOwnerUserId({
+      configuredOpenId: "owner-2",
+      adminUsers: [
+        { id: 1, openId: "owner-1" },
+        { id: 2, openId: "owner-2" },
+      ],
+    })).toBe(2);
+    expect(() => selectSaraOwnerUserId({
+      configuredOpenId: "",
+      adminUsers: [
+        { id: 1, openId: "owner-1" },
+        { id: 2, openId: "owner-2" },
+      ],
+    })).toThrow("يوجد أكثر من حساب إدارة");
   });
 
   it("requires explicit apply or dismiss and maps each approved kind through controlled commands", () => {
