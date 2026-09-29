@@ -748,6 +748,53 @@ export async function sendReply(
   }
 }
 
+function plainTextToSafeHtml(body: string) {
+  return body
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+    .replace(/\r?\n/g, "<br>");
+}
+
+/**
+ * Send a COMO Next draft after the authenticated owner explicitly presses Send.
+ * This deliberately does not enable the legacy/global outbound flag: callers must
+ * enforce draft ownership, current status, and the exact reviewed payload first.
+ */
+export async function sendApprovedComoReply(input: {
+  to: string;
+  subject: string;
+  body: string;
+  inReplyTo?: string;
+  cc?: string;
+}): Promise<{ messageId: string | null }> {
+  if (!EMAIL_PASSWORD) throw new Error("EMAIL_PASSWORD not configured");
+  const transporter = nodemailer.createTransport({
+    host: EMAIL_HOST,
+    port: 465,
+    secure: true,
+    auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+  });
+  const finalSubject = input.subject.trim();
+  const info = await transporter.sendMail({
+    from: `"Como Developments" <${EMAIL_USER}>`,
+    to: input.to,
+    subject: finalSubject,
+    text: input.body,
+    html: `<div dir="auto" style="white-space:normal;line-height:1.7">${plainTextToSafeHtml(input.body)}</div>`,
+    ...(input.inReplyTo ? { inReplyTo: input.inReplyTo, references: input.inReplyTo } : {}),
+    ...(input.cc ? { cc: input.cc } : {}),
+  });
+  try {
+    await saveSentEmailToIMAP(input.to, finalSubject, plainTextToSafeHtml(input.body), input.inReplyTo, input.cc);
+  } catch (error) {
+    console.warn("[COMO Next] Email sent but Sent-folder copy failed:", error);
+  }
+  return { messageId: typeof info.messageId === "string" ? info.messageId : null };
+}
+
 /**
  * Save a sent email to the IMAP Sent folder so it appears in the user's email client
  */

@@ -524,7 +524,15 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
   const reconciliation = isSent
     ? null
     : await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: input.workFileId, triggerEmailId: input.emailId }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }));
-  return { ...linked, reconciliation };
+  const [latestAnalysis] = isSent ? [] : await db.select({ replyDraftText: comoNextEmailAnalyses.replyDraftText })
+    .from(comoNextEmailAnalyses)
+    .where(and(eq(comoNextEmailAnalyses.emailMessageId, input.emailId), eq(comoNextEmailAnalyses.analysisStatus, "draft")))
+    .orderBy(desc(comoNextEmailAnalyses.id))
+    .limit(1);
+  const replyDraft = latestAnalysis?.replyDraftText
+    ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: input.emailId, body: latestAnalysis.replyDraftText })
+    : null;
+  return { ...linked, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };
 }
 
 const emailAnalysisSchema = {
@@ -615,6 +623,8 @@ ${email.bodyText}${contextText}
 - لا تعتبر الدفع منفذًا بلا تأكيد صريح من وائل أو المالية أو دليل دفع.
 - لا تكرر إجراءً نشطًا قائمًا ولا تقترح ربط رسالة مرتبطة أصلًا.
 - الرسالة الصادرة توثق ما فعله عبد الرحمن؛ لا تكتب مسودة رد عليها.
+- كل رسالة واردة بشرية/مهنية من طرف مشروع تحتاج ردًا مهنيًا: اجعل shouldReply=true واكتب replyDraftText كاملًا بلغة الرسالة، حتى لو كان الرد مجرد تأكيد استلام وخطوة تالية منضبطة. الاستثناء فقط رسالة نظام/no-reply أو رسالة يثبت السياق أن عبد الرحمن أجاب عنها لاحقًا.
+- لا تعد في المسودة بقبول أو تعيين أو دفع أو موعد غير مثبت. ثبّت الاستلام، أجب عما يمكن، واذكر بوضوح ما هو قيد المراجعة أو ما المطلوب من الطرف.
 - كل مقترح يبقى review-only ولا يغير أي حالة تشغيلية.`;
 }
 
@@ -681,8 +691,13 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
-  const [existing] = await db.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
-  if (existing) return { id: Number(existing.id), replayed: true as const };
+  const [existing] = await db.select({ id: comoNextEmailAnalyses.id, replyDraftText: comoNextEmailAnalyses.replyDraftText }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
+  if (existing) {
+    const replyDraft = email.folderName === "INBOX" && email.linkedWorkFileId && !email.replyDraftCommunicationId && existing.replyDraftText
+      ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: existing.replyDraftText })
+      : null;
+    return { id: Number(existing.id), replayed: true as const, replyDraftId: replyDraft ? Number(replyDraft.id) : email.replyDraftCommunicationId ? Number(email.replyDraftCommunicationId) : null };
+  }
   const context = await loadEmailAnalysisContext(db, email);
   const response = await invokeLLM({
     model: EMAIL_ANALYSIS_MODEL,
@@ -733,7 +748,10 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
     : null;
-  return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation };
+  const replyDraft = email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
+    ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: String(parsed.replyDraftText).trim() })
+    : null;
+  return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };
 }
 
 export async function createReplyDraftFromEmailCommand(input: { userId: number; emailId: number; body: string; ccText?: string | null }) {
@@ -743,6 +761,12 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
   if (!email.linkedWorkFileId || !email.linkedProjectId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اربط الرسالة بملف العمل قبل إنشاء مسودة الرد" });
   if (email.folderName !== "INBOX") throw new TRPCError({ code: "PRECONDITION_FAILED", message: "الرسالة صادرة ولا تحتاج مسودة رد" });
+  const [latestAnalysis] = await db.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses)
+    .where(and(eq(comoNextEmailAnalyses.emailMessageId, input.emailId), eq(comoNextEmailAnalyses.analysisStatus, "draft")))
+    .orderBy(desc(comoNextEmailAnalyses.id)).limit(1);
+  if (latestAnalysis) {
+    await db.update(comoNextEmailAnalyses).set({ replyDraftText: input.body.trim() }).where(eq(comoNextEmailAnalyses.id, latestAnalysis.id));
+  }
   if (email.replyDraftCommunicationId) return { id: Number(email.replyDraftCommunicationId), replayed: true as const, sent: false as const };
   const draft = await createCommunicationDraftCommand({
     userId: input.userId,

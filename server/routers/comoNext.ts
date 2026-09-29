@@ -26,6 +26,8 @@ import {
   requireProjectAccess,
   resolveDecisionCommand,
   reviewCommunicationDraftCommand,
+  sendCommunicationDraftCommand,
+  updateCommunicationDraftCommand,
 } from "../services/comoNextCommands";
 import { buildComoNextTodayProjection, type ComoNextTodayRow } from "../services/comoNextToday";
 import {
@@ -57,6 +59,7 @@ import {
   recordWorkFileUpdateCommand,
   reviewWorkFileUpdateCommand,
 } from "../services/comoNextKitchen";
+import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -412,7 +415,7 @@ export const comoNextRouter = router({
       ...intakeProposals.map(row => Number(row.workFileId || 0)),
       ...specialistAttention.map(row => Number(row.workFileId || 0)),
     ].filter(Boolean));
-    const filesWithoutNextAction = workFiles.filter(file => !workFilesWithOperationalStep.has(file.id));
+    const filesWithoutNextAction = workFiles.filter(file => file.workFileStatus !== "waiting" && !workFilesWithOperationalStep.has(file.id));
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       actions: todayRows,
@@ -747,6 +750,19 @@ export const comoNextRouter = router({
       return analyzeWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
     }),
 
+  executeExecutiveDirective: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      actionId: z.number().int().positive().optional().nullable(),
+      currentDecisionId: z.number().int().positive().optional().nullable(),
+      sourceChannel: kitchenUpdateChannelSchema.default("internal"),
+      directiveText: z.string().trim().min(3).max(100_000),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return executeExecutiveDirectiveCommand({ userId: ctx.user.id, ...input });
+    }),
+
   reviewWorkFileUpdate: protectedProcedure
     .input(z.object({ updateId: z.number().int().positive(), decision: z.enum(["apply", "dismiss"]) }))
     .mutation(({ ctx, input }) => {
@@ -797,6 +813,32 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return reviewCommunicationDraftCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  updateCommunicationDraft: protectedProcedure
+    .input(z.object({
+      communicationId: z.number().int().positive(),
+      subject: z.string().trim().min(1).max(1000),
+      body: z.string().trim().min(1).max(100_000),
+      toText: z.string().trim().min(3).max(5000),
+      ccText: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return updateCommunicationDraftCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  sendCommunicationDraft: protectedProcedure
+    .input(z.object({
+      communicationId: z.number().int().positive(),
+      subject: z.string().trim().min(1).max(1000),
+      body: z.string().trim().min(1).max(100_000),
+      toText: z.string().trim().min(3).max(5000),
+      ccText: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      return sendCommunicationDraftCommand({ userId: ctx.user.id, ...input });
     }),
 
   recordCommunicationSent: protectedProcedure

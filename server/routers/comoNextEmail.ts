@@ -14,6 +14,7 @@ import {
   listEmailLinkingOptions,
   syncAndAnalyzeReadonlyMailboxCommand,
 } from "../services/comoNextEmailInbox";
+import { sendReplyDraftFromEmailCommand, updateReplyDraftFromEmailCommand } from "../services/comoNextEmailOutbox";
 
 function assertOwner(role?: string) {
   if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "صندوق بريد عبد الرحمن متاح للمالك فقط" });
@@ -89,6 +90,32 @@ export const comoNextEmailRouter = router({
     .mutation(({ ctx, input }) => {
       assertOwner(ctx.user.role);
       return createReplyDraftFromEmailCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  updateReplyDraft: protectedProcedure
+    .input(z.object({
+      emailId: z.number().int().positive(),
+      subject: z.string().trim().min(1).max(1000),
+      body: z.string().trim().min(1).max(100_000),
+      toText: z.string().trim().min(3).max(5000),
+      ccText: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertOwner(ctx.user.role);
+      return updateReplyDraftFromEmailCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  sendReplyDraft: protectedProcedure
+    .input(z.object({
+      emailId: z.number().int().positive(),
+      subject: z.string().trim().min(1).max(1000),
+      body: z.string().trim().min(1).max(100_000),
+      toText: z.string().trim().min(3).max(5000),
+      ccText: z.string().trim().max(5000).optional().nullable(),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertOwner(ctx.user.role);
+      return sendReplyDraftFromEmailCommand({ userId: ctx.user.id, ...input });
     }),
 
   dismiss: protectedProcedure

@@ -5,6 +5,7 @@ import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, mailboxKeyFo
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
+const outbox = readFileSync("server/services/comoNextEmailOutbox.ts", "utf8");
 const mailService = readFileSync("server/emailMonitor.ts", "utf8");
 const router = readFileSync("server/routers/comoNextEmail.ts", "utf8");
 const ui = readFileSync("client/src/components/ComoNextEmailInbox.tsx", "utf8");
@@ -29,10 +30,13 @@ describe("COMO Next read-only email inbox", () => {
     expect(migration).toContain("como_next_email_mailbox_message_uq");
   });
 
-  it("keeps the inbox service free of send, reply, server-flag, and mailbox-write calls", () => {
+  it("keeps inbox synchronization read-only and isolates owner-approved sending in the outbox", () => {
     expect(() => assertReadonlyEmailArchitecture(service)).not.toThrow();
     expect(service).not.toMatch(/sendReply\s*\(|sendMail\s*\(|markAsSeen\s*\(|addFlags\s*\(/i);
-    expect(router).not.toMatch(/\b(send|reply|forward|markSeen|deleteRemote)\s*:/i);
+    expect(outbox).toContain("sendReplyDraftFromEmailCommand");
+    expect(outbox).toContain("sendApprovedComoReply");
+    expect(router).toContain("sendReplyDraft:");
+    expect(router).toContain("assertOwner(ctx.user.role)");
     expect(ui).not.toContain("recordCommunicationSent");
   });
 
@@ -132,14 +136,26 @@ describe("COMO Next read-only email inbox", () => {
     expect(correct.reasons.join(" ")).toContain("Colliers");
   });
 
-  it("creates an outbound draft only after the inbound email is linked and never sends it", () => {
+  it("creates a linked outbound draft automatically while keeping the inbox analysis draft available before linking", () => {
     const draftBlock = service.slice(service.indexOf("export async function createReplyDraftFromEmailCommand"), service.indexOf("export async function dismissEmailCommand"));
     expect(draftBlock).toContain("اربط الرسالة بملف العمل قبل إنشاء مسودة الرد");
     expect(draftBlock).toContain('email.folderName !== "INBOX"');
     expect(draftBlock).toContain("createCommunicationDraftCommand");
     expect(draftBlock).toContain("sent: false");
+    expect(service).toContain("replyDraftId");
+    expect(service).toContain("كل رسالة واردة بشرية/مهنية من طرف مشروع تحتاج ردًا مهنيًا");
     expect(commands).toContain('communicationStatus: "draft"');
     expect(commands).toContain("externalSideEffect: false");
+  });
+
+  it("allows editing any analyzed inbox draft and sends only through an explicit owner mutation", () => {
+    expect(outbox).toContain("updateReplyDraftFromEmailCommand");
+    expect(outbox).toContain("sendReplyDraftFromEmailCommand");
+    expect(outbox).toContain('email.folderName !== "INBOX"');
+    expect(outbox).toContain("externalSideEffect: true");
+    expect(ui).toContain("الضغط على «إرسال الآن» هو الإذن الوحيد بالإرسال الخارجي");
+    expect(ui).toContain("sendDraftMutation.mutateAsync");
+    expect(ui).toContain("حفظ التعديل");
   });
 
   it("makes the inbox owner-only and gives unmatched mail its own review state", () => {
@@ -148,6 +164,6 @@ describe("COMO Next read-only email inbox", () => {
     expect(ui).toContain("تحتاج مراجعة");
     expect(ui).toContain("صادر موثق");
     expect(ui).toContain("غير مطابق");
-    expect(ui).toContain("لا يوجد زر إرسال في هذا الصندوق");
+    expect(ui).toContain("مغلقة/مستبعدة");
   });
 });

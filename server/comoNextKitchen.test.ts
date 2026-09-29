@@ -166,7 +166,7 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain('aria-pressed={queueOwnerFilter === "manus"}');
     expect(kitchenPage).toContain("فتح التقرير المحمي");
     expect(kitchenPage).toContain("/api/como-next/documents/");
-    expect(kitchenPage).toContain("تسجيل النتيجة ومتابعة Manus");
+    expect(kitchenPage).toContain("نفّذ يا Manus");
     expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
     expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
     expect(kitchenPage).toContain('ownerCommunication?.subject');

@@ -45,6 +45,7 @@ import {
   Loader2,
   LogIn,
   Mail,
+  Mic,
   Inbox,
   MessagesSquare,
   Paperclip,
@@ -555,37 +556,53 @@ function NewCommunicationDraftDialog({ workFileId, onCreated }: { workFileId: nu
 }
 
 function CommunicationControls({ communication, onUpdated }: { communication: any; onUpdated: () => void }) {
-  const [reviewOpen, setReviewOpen] = useState(false);
-  const [sentOpen, setSentOpen] = useState(false);
-  const [note, setNote] = useState("");
-  const [evidence, setEvidence] = useState("");
-  const [externalRef, setExternalRef] = useState("");
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState(communication.subject || "");
+  const [body, setBody] = useState(communication.body || "");
+  const [toText, setToText] = useState(communication.toText || "");
+  const [ccText, setCcText] = useState(communication.ccText || "");
   const review = trpc.comoNext.reviewCommunicationDraft.useMutation();
-  const recordSent = trpc.comoNext.recordCommunicationSent.useMutation();
-  const decide = async (decision: "approve" | "reject") => {
+  const update = trpc.comoNext.updateCommunicationDraft.useMutation();
+  const send = trpc.comoNext.sendCommunicationDraft.useMutation();
+  const busy = review.isPending || update.isPending || send.isPending;
+  useEffect(() => {
+    setSubject(communication.subject || "");
+    setBody(communication.body || "");
+    setToText(communication.toText || "");
+    setCcText(communication.ccText || "");
+  }, [communication.id, communication.subject, communication.body, communication.toText, communication.ccText]);
+  const payload = () => ({ communicationId: communication.id, subject: subject.trim(), body: body.trim(), toText: toText.trim(), ccText: ccText.trim() || undefined });
+  const save = async () => {
+    if (!subject.trim() || !body.trim() || !toText.trim()) return toast.error("أكمل المستلم والعنوان والنص");
     try {
-      await review.mutateAsync({ communicationId: communication.id, decision, reviewNote: note.trim() || undefined });
-      toast.success(decision === "approve" ? "اعتمدت المسودة — لم تُرسل" : "رُفضت المسودة");
-      setReviewOpen(false); setNote(""); onUpdated();
-    } catch (error: any) { toast.error(error?.message || "تعذر تحديث المسودة"); }
+      await update.mutateAsync(payload());
+      toast.success("حُفظ تعديل المسودة");
+      await onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ المسودة"); }
   };
-  const markSent = async () => {
-    if (!evidence.trim()) { toast.error("أدخل دليل الإرسال"); return; }
+  const sendNow = async () => {
+    if (!subject.trim() || !body.trim() || !toText.trim()) return toast.error("أكمل المستلم والعنوان والنص");
     try {
-      await recordSent.mutateAsync({ communicationId: communication.id, evidenceReference: evidence.trim(), externalMessageRef: externalRef.trim() || undefined });
-      toast.success("تم تسجيل دليل الإرسال");
-      setSentOpen(false); setEvidence(""); setExternalRef(""); onUpdated();
-    } catch (error: any) { toast.error(error?.message || "تعذر تسجيل الإرسال"); }
+      await send.mutateAsync(payload());
+      toast.success("أُرسلت الرسالة وحُفظت في السجل");
+      setOpen(false);
+      await onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر إرسال الرسالة؛ بقيت المسودة محفوظة"); }
   };
-  if (communication.communicationStatus === "draft") return <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
-    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-amber-700 hover:bg-amber-800">مراجعة المسودة</Button></DialogTrigger>
-    <DialogContent dir="rtl" className="max-w-2xl rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>{communication.subject}</DialogTitle><DialogDescription>اعتماد المسودة لا يرسلها. الإرسال الخارجي غير مفعّل في هذه المرحلة.</DialogDescription></DialogHeader><div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4"><div className="mb-3 grid gap-1 text-[11px] text-slate-500">{communication.toText ? <p>إلى: <bdi dir="ltr">{communication.toText}</bdi></p> : null}{communication.ccText ? <p>نسخة: <bdi dir="ltr">{communication.ccText}</bdi></p> : null}</div><p className="whitespace-pre-wrap text-xs leading-7 text-slate-700">{communication.body}</p></div><div className="grid gap-2"><Label>ملاحظة المراجعة — اختياري</Label><Textarea value={note} onChange={event => setNote(event.target.value)} className="min-h-24 rounded-xl bg-white" /></div><DialogFooter className="gap-2 sm:justify-start"><Button onClick={() => decide("approve")} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">اعتماد دون إرسال</Button><Button variant="outline" onClick={() => decide("reject")} className="rounded-xl border-rose-200 bg-rose-50 text-rose-700">رفض المسودة</Button></DialogFooter></DialogContent>
+  const cancel = async () => {
+    try {
+      await review.mutateAsync({ communicationId: communication.id, decision: "reject", reviewNote: "ألغيت من المالك داخل COMO" });
+      toast.success("أُلغيت المسودة دون إرسال");
+      setOpen(false);
+      await onUpdated();
+    } catch (error: any) { toast.error(error?.message || "تعذر إلغاء المسودة"); }
+  };
+  if (!["draft", "approved_for_send"].includes(communication.communicationStatus)) return null;
+  const isEmail = communication.channel === "email";
+  return <Dialog open={open} onOpenChange={setOpen}>
+    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-amber-700 hover:bg-amber-800">فتح المسودة</Button></DialogTrigger>
+    <DialogContent dir="rtl" className="max-h-[92dvh] max-w-2xl overflow-y-auto rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>راجع الرسالة ثم أرسلها</DialogTitle><DialogDescription>{isEmail ? "هذه هي الرسالة كاملة. يمكنك تعديلها، ثم الضغط على إرسال؛ لا يرسل Manus شيئًا قبل ضغطك." : "راجع المسودة ثم احفظها أو ألغها. الإرسال المباشر متاح للبريد فقط."}</DialogDescription></DialogHeader><div className="grid gap-4"><div className="grid gap-2"><Label>إلى</Label><Input dir="ltr" value={toText} onChange={event => setToText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>نسخة إلى — اختياري</Label><Input dir="ltr" value={ccText} onChange={event => setCcText(event.target.value)} className="h-11 rounded-xl bg-white text-left" /></div><div className="grid gap-2"><Label>العنوان</Label><Input value={subject} onChange={event => setSubject(event.target.value)} className="h-11 rounded-xl bg-white" /></div><div className="grid gap-2"><Label>النص</Label><Textarea value={body} onChange={event => setBody(event.target.value)} className="min-h-64 rounded-xl bg-white leading-7" /></div></div><DialogFooter className="gap-2 sm:justify-start">{isEmail ? <Button onClick={sendNow} disabled={busy} className="rounded-xl bg-emerald-700 hover:bg-emerald-800">{send.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <SendHorizontal className="ms-2 h-4 w-4" />}إرسال الآن</Button> : null}<Button variant="outline" onClick={save} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl bg-white">حفظ التعديل</Button><Button variant="ghost" onClick={cancel} disabled={busy || communication.communicationStatus !== "draft"} className="rounded-xl text-rose-700">إلغاء المسودة</Button></DialogFooter></DialogContent>
   </Dialog>;
-  if (communication.communicationStatus === "approved_for_send") return <Dialog open={sentOpen} onOpenChange={setSentOpen}>
-    <DialogTrigger asChild><Button size="sm" className="rounded-xl bg-violet-700 hover:bg-violet-800">تسجيل الإرسال</Button></DialogTrigger>
-    <DialogContent dir="rtl" className="max-w-lg rounded-3xl bg-[#fdfcf9]"><DialogHeader className="text-right"><DialogTitle>تسجيل إرسال تم خارج COMO</DialogTitle><DialogDescription>هذا الزر لا يرسل الرسالة؛ يسجل فقط دليلًا على إرسالها عبر القناة الخارجية.</DialogDescription></DialogHeader><div className="grid gap-4"><div className="grid gap-2"><Label>دليل الإرسال</Label><Textarea value={evidence} onChange={event => setEvidence(event.target.value)} className="min-h-24 rounded-xl bg-white" placeholder="رقم الرسالة في Sent أو مرجع موثق" /></div><div className="grid gap-2"><Label>مرجع خارجي — اختياري</Label><Input value={externalRef} onChange={event => setExternalRef(event.target.value)} className="h-11 rounded-xl bg-white" /></div></div><DialogFooter className="sm:justify-start"><Button onClick={markSent} className="rounded-xl bg-[#16243b] hover:bg-[#203554]">حفظ دليل الإرسال</Button></DialogFooter></DialogContent>
-  </Dialog>;
-  return null;
 }
 
 function ActionStatusDialog({ action, onUpdated }: { action: any; onUpdated: () => void }) {
@@ -687,27 +704,43 @@ function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => voi
   );
 }
 
-function WorkFileUpdateComposer({ workFileId, actionId, updates, onChanged, defaultSourceChannel = "phone" }: { workFileId: number; actionId?: number | null; updates: any[]; onChanged: () => void; defaultSourceChannel?: "phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal" }) {
+function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updates, onChanged, defaultSourceChannel = "internal" }: { workFileId: number; actionId?: number | null; currentDecisionId?: number | null; updates: any[]; onChanged: () => void; defaultSourceChannel?: "phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal" }) {
   const [open, setOpen] = useState(false);
-  const [sourceChannel, setSourceChannel] = useState<"phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal">(defaultSourceChannel);
   const [updateText, setUpdateText] = useState("");
-  const recordMutation = trpc.comoNext.recordWorkFileUpdate.useMutation();
-  const analyzeMutation = trpc.comoNext.analyzeWorkFileUpdate.useMutation();
+  const [listening, setListening] = useState(false);
+  const directiveMutation = trpc.comoNext.executeExecutiveDirective.useMutation();
   const reviewMutation = trpc.comoNext.reviewWorkFileUpdate.useMutation();
-  const busy = recordMutation.isPending || analyzeMutation.isPending || reviewMutation.isPending;
+  const busy = directiveMutation.isPending || reviewMutation.isPending;
 
   const submit = async () => {
-    if (updateText.trim().length < 3) return toast.error("اكتب ما حدث أولًا");
+    if (updateText.trim().length < 3) return toast.error("اكتب أو سجّل توجيهك أولًا");
     try {
-      const saved = await recordMutation.mutateAsync({ workFileId, actionId: actionId || null, sourceChannel, updateText: updateText.trim() });
-      const analysis = await analyzeMutation.mutateAsync({ updateId: saved.id });
+      const result = await directiveMutation.mutateAsync({ workFileId, actionId: actionId || null, currentDecisionId: currentDecisionId || null, sourceChannel: defaultSourceChannel, directiveText: updateText.trim() });
       setUpdateText("");
       setOpen(false);
-      toast.success(analysis.nextStepRequired
-        ? `حُفظ ما حدث وفتح Manus الخطوة التالية${analysis.nextOwnerType === "manus" ? " للتنفيذ" : " عند جهة التنفيذ الصحيحة"}`
-        : "حُفظ ما حدث ولم يلزم فتح عمل جديد");
+      toast.success(result.completedNow
+        ? "نفّذ Manus التوجيه وحفظ المخرج للمراجعة"
+        : result.nextActionId
+          ? "فهم Manus التوجيه وبدأ الخطوة التنفيذية التالية"
+          : result.acknowledgement || "تم تسجيل التوجيه");
       await onChanged();
-    } catch (error: any) { toast.error(error?.message || "تعذر حفظ التحديث"); }
+    } catch (error: any) { toast.error(error?.message || "تعذر تنفيذ التوجيه"); }
+  };
+  const startVoice = () => {
+    const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Recognition) return toast.error("التسجيل الصوتي غير مدعوم في هذا المتصفح؛ يمكنك كتابة التوجيه");
+    const recognition = new Recognition();
+    recognition.lang = "ar-AE";
+    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results || []).slice(event.resultIndex).map((result: any) => result?.[0]?.transcript || "").join(" ").trim();
+      if (transcript) setUpdateText(current => `${current}${current.trim() ? " " : ""}${transcript}`);
+    };
+    recognition.onerror = () => { setListening(false); toast.error("تعذر التقاط الصوت؛ حاول مرة أخرى أو اكتب التوجيه"); };
+    recognition.onend = () => setListening(false);
+    setListening(true);
+    recognition.start();
   };
   const review = async (updateId: number, decision: "apply" | "dismiss") => {
     try {
@@ -718,12 +751,11 @@ function WorkFileUpdateComposer({ workFileId, actionId, updates, onChanged, defa
   };
 
   return <section className="rounded-2xl border border-[#cfe3df] bg-[#f4faf8] p-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">أخبر Manus ماذا حدث</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">سجّل نتيجة المكالمة أو الاجتماع فقط؛ يحللها Manus ويفتح العمل التالي عند الجهة الصحيحة تلقائيًا.</p></div><Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "تسجيل ما حدث"}</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">وجّه Manus</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">قل ما تريد تنفيذه أو ما حدث في الاجتماع؛ يفهم Manus السياق ويتولى بقية العمل.</p></div><Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button></div>
     {open ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">
-      <Select value={sourceChannel} onValueChange={(value: any) => setSourceChannel(value)}><SelectTrigger className="h-11 rounded-xl bg-white"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="phone">مكالمة هاتفية</SelectItem><SelectItem value="meeting">اجتماع</SelectItem><SelectItem value="whatsapp">واتساب</SelectItem><SelectItem value="email">بريد</SelectItem><SelectItem value="site_visit">زيارة موقع</SelectItem><SelectItem value="internal">تحديث داخلي</SelectItem></SelectContent></Select>
-      <Textarea value={updateText} onChange={event => setUpdateText(event.target.value)} className="min-h-28 rounded-xl bg-white leading-7" placeholder={sourceChannel === "meeting" ? "مثال: اتفقنا على تعديل كذا، بقي بند كذا مفتوحًا، وسيرسل الطرف النسخة يوم..." : "مثال: أكد الاستشاري الموعد هاتفيًا ليوم الثلاثاء الساعة 10..."} />
-      <p className="text-[10px] leading-5 text-slate-400">يحلل Manus النتيجة، يغلق ما انتهى، ويفتح العمل الداخلي التالي تلقائيًا. لا إرسال ولا قبول ولا تعيين أو دفع.</p>
-      <Button type="button" onClick={submit} disabled={busy} className="w-full rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}تسجيل النتيجة ومتابعة Manus</Button>
+      <Textarea value={updateText} onChange={event => setUpdateText(event.target.value)} className="min-h-32 rounded-xl bg-white leading-7" placeholder={defaultSourceChannel === "meeting" ? "قل ما اتُفق عليه، ما بقي مفتوحًا، ومن سيفعل ماذا..." : "مثال: راجعت التقرير. ثبّت النطاق الحالي، وقارن العروض الثلاثة على أساس خمسة أشهر، ثم اعرض النتيجة والتوصية."} />
+      <div className="grid gap-2 sm:grid-cols-[auto_1fr]"><Button type="button" variant="outline" onClick={startVoice} disabled={listening || busy} className="rounded-xl bg-white"><Mic className={`ms-2 h-4 w-4 ${listening ? "animate-pulse text-rose-600" : ""}`} />{listening ? "أستمع الآن..." : "سجّل صوتيًا"}</Button><Button type="button" onClick={submit} disabled={busy} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}نفّذ يا Manus</Button></div>
+      <p className="text-[10px] leading-5 text-slate-400">ينفذ Manus كل ما يمكن داخليًا ويعيدك فقط لمراجعة مخرج أو قرار. لا إرسال أو قبول أو تعيين أو دفع دون ضغطك الصريح.</p>
     </div> : null}
       {updates.length ? <div className="mt-4 space-y-2 border-t border-[#d9e9e5] pt-4">{updates.slice(0, 5).map(update => <div key={update.id} className="rounded-xl border border-white bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline" className="rounded-full bg-slate-50">{update.sourceChannel === "phone" ? "مكالمة" : update.sourceChannel === "meeting" ? "اجتماع" : update.sourceChannel}</Badge><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(update.occurredAt)}</bdi></div><p className="mt-2 whitespace-pre-wrap text-xs font-semibold leading-6 text-slate-800">{update.updateText}</p>{update.analysisSummary ? <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-[11px] leading-6 text-slate-500">{update.analysisSummary}</p> : null}{update.analysisStatus === "applied" && update.targetActionId ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">فتح Manus الخطوة التالية تلقائيًا وربطها بهذا التحديث.</div> : update.analysisStatus === "applied" ? <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">لا تستلزم النتيجة خطوة جديدة؛ حُفظت في سجل الملف.</div> : update.analysisStatus === "draft" && update.suggestedActionTitle ? <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-[10px] font-black text-violet-700">اقتراح قديم بانتظار الحسم</p><p className="mt-1 text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تطبيق الاقتراح القديم</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">استبعاده</Button></div></div> : null}</div>)}</div> : null}
   </section>;
@@ -747,7 +779,7 @@ function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { a
   </div>;
 }
 
-function FocusedRecordView({ kind, item, workFileId, isClosed, onBack, onUpdated }: { kind: Exclude<ExecutiveFocusKind, "action">; item: any; workFileId: number; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onBack, onUpdated }: { kind: Exclude<ExecutiveFocusKind, "action">; item: any; workFileId: number; updates?: any[]; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" />العودة إلى القائمة</button>
     <article className="mx-auto mt-4 min-w-0 max-w-2xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
@@ -757,7 +789,7 @@ function FocusedRecordView({ kind, item, workFileId, isClosed, onBack, onUpdated
         <p className="mt-5 whitespace-pre-wrap text-sm font-semibold leading-8 text-slate-800">{item.question}</p>
         {item.contextSummary ? <p className="mt-4 whitespace-pre-wrap border-t border-slate-100 pt-4 text-sm leading-8 text-slate-600">{item.contextSummary}</p> : null}
         {item.recommendation ? <div className="mt-4 rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm leading-7 text-cyan-950">{item.recommendation}</div> : null}
-        {!isClosed && ["required", "deferred"].includes(item.decisionStatus) ? <div className="mt-6 border-t border-slate-100 pt-5"><ResolveDecisionDialog decision={item} onUpdated={onUpdated} /></div> : null}
+        {!isClosed && ["required", "deferred"].includes(item.decisionStatus) ? <div className="mt-6 space-y-4 border-t border-slate-100 pt-5"><WorkFileUpdateComposer workFileId={workFileId} currentDecisionId={item.id} updates={updates.filter((update: any) => !update.actionId)} onChanged={onUpdated} /><div className="flex justify-end"><ResolveDecisionDialog decision={item} onUpdated={onUpdated} /></div></div> : null}
       </> : null}
       {kind === "communication" ? <>
         <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).className}`}>{(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div>
@@ -892,7 +924,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent dir="rtl" side="left" className="!left-0 !right-0 !h-[100dvh] !w-screen !max-w-none overflow-x-hidden overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} action={<Button type="button" variant="outline" onClick={() => detailQuery.refetch()}>إعادة المحاولة</Button>} /></div> : data ? <>
-          {focusedAction ? <FocusedActionView action={focusedAction} updates={(data.updates || []).filter((update: any) => update.actionId === focusedAction.id)} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
+          {focusedAction ? <FocusedActionView action={focusedAction} updates={(data.updates || []).filter((update: any) => update.actionId === focusedAction.id)} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
           <div className="border-b border-slate-700 bg-[radial-gradient(circle_at_12%_0%,rgba(198,158,91,.26),transparent_30%),linear-gradient(135deg,#0d2335_0%,#173948_62%,#1f5a54_100%)] px-4 py-7 text-white sm:px-8 sm:py-9">
             <div className="mx-auto max-w-5xl">
               <SheetHeader className="text-right">
@@ -922,7 +954,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
                 </Card>
                 <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{activeActions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء نشط</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.intakeProposals.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">مقترح للمراجعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.meetings.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">اجتماع مرتبط</p></div></div></Card>
               </div>
-              {!isClosed && !pendingDecisions.length && !data.intakeProposals.length && !ownerCommunication && !currentAction && !activeMeeting ? <WorkFileUpdateComposer workFileId={data.workFile.id} updates={(data.updates || []).filter((update: any) => !update.actionId)} onChanged={onChanged} /> : null}
+              {!isClosed ? <WorkFileUpdateComposer workFileId={data.workFile.id} updates={(data.updates || []).filter((update: any) => !update.actionId)} onChanged={onChanged} /> : null}
               <div className="grid gap-3 sm:grid-cols-3">{!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions || hasPendingCommunications || hasPendingMeetings || hasPendingIntake} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}<Button onClick={() => navigate(`/como-next/projects/${data.workFile.projectId}`)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]"><FolderOpen className="ms-2 h-4 w-4" />ملف المشروع</Button><Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />بطاقة المشروع</Button></div>
             </section> : null}
 
