@@ -33,24 +33,17 @@ export const saraRealtimeTools = [
   },
   {
     type: "function" as const,
-    name: "capture_intake_proposal",
-    description: "سجّلي كلام عبد الرحمن كمقترح واحد ينتظر مراجعته داخل ملف العمل. هذه الأداة لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية ولا تنفذ أو ترسل شيئًا. استخدميها فقط عندما يطلب عبد الرحمن صراحة حفظ أو متابعة أو إعداد شيء، وبعد تحديد المشروع وملف العمل من أداة القراءة.",
+    name: "direct_manus_in_work_file",
+    description: "اكتبي توجيه عبد الرحمن مباشرة داخل ملف الموضوع الصحيح وشغّلي به محرك Manus التنفيذي نفسه المستخدم في المطبخ. استخدميها بعد تحديد ملف الموضوع من أداة القراءة. تنفذ الأعمال الداخلية الآمنة فقط؛ لا ترسل بريدًا ولا تقبل عرضًا ولا تعيّن طرفًا ولا تنشئ دفعًا أو التزامًا خارجيًا.",
     parameters: {
       type: "object",
       properties: {
-        project_id: { type: "integer", description: "معرّف المشروع من COMO Next" },
-        work_file_id: { type: "integer", description: "معرّف ملف العمل من COMO Next" },
-        kind: { type: "string", enum: ["action", "decision", "communication_draft", "note"] },
-        title: { type: "string" },
-        content: { type: ["string", "null"] },
-        acceptance_criteria: { type: ["string", "null"] },
-        owner_type: { type: ["string", "null"], enum: ["human", "manus", "team", null] },
-        priority: { type: "string", enum: ["normal", "important", "urgent"] },
-        due_at: { type: ["string", "null"], description: "ISO 8601 فقط إذا ذكر المستخدم موعدًا واضحًا" },
-        channel: { type: ["string", "null"], enum: ["email", "whatsapp", "letter", "phone_note", "internal", null] },
-        to_text: { type: ["string", "null"] },
+        work_file_id: { type: "integer", description: "معرّف ملف الموضوع المطابق من lookup_executive_workspace" },
+        directive_text: { type: "string", description: "كلام عبد الرحمن كما قاله، دون تحويله إلى نموذج أو اقتراح" },
+        action_id: { type: ["integer", "null"], description: "معرّف تدخل المستخدم فقط إذا كان كلامه ينجز هذا التدخل تحديدًا" },
+        current_decision_id: { type: ["integer", "null"], description: "معرّف القرار فقط إذا حسمه عبد الرحمن صراحة، وليس لمجرد التعليق عليه" },
       },
-      required: ["project_id", "work_file_id", "kind", "title", "content", "acceptance_criteria", "owner_type", "priority", "due_at", "channel", "to_text"],
+      required: ["work_file_id", "directive_text", "action_id", "current_decision_id"],
       additionalProperties: false,
     },
   },
@@ -82,14 +75,16 @@ VOICE DELIVERY — never read these directions aloud:
 - ابدئي التحية الأولى بتحية لبنانية قصيرة وفرحة تناسب الوقت، ثم لا تكرري الترحيب في كل دور.
 
 حدود الدور الملزمة:
-- سارة هي واجهة الحديث والاستماع والوصول السريع إلى معلومات COMO، وليست العقل التنفيذي البديل.
-- Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. إذا طلب المستخدم عملاً من هذا النوع فقولي بوضوح إنه يحتاج تكليف Manus داخل ملف العمل، ولا تدّعي أن التنفيذ بدأ ما لم توجد أداة صريحة أعادت نتيجة نجاح.
+- سارة هي واجهة الحديث والاستماع والوصول السريع إلى معلومات COMO، وليست العقل التنفيذي البديل. دورك أن تقرئي العمل لعبد الرحمن، وتأخذي توجيهه بصوته، وتكتبيه مكانه داخل ملف الموضوع الصحيح.
+- Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. أداة direct_manus_in_work_file تمرر كلام عبد الرحمن إلى محرك Manus التنفيذي نفسه؛ بعد نجاحها اذكري باختصار ما سجّل وما بدأ أو أنجز.
 - المصدر التشغيلي الوحيد للحالة الحالية والمهام والاجتماعات هو COMO Next عبر lookup_executive_workspace. مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة كمصدر لسارة ولا يجوز ذكرها أو الاستناد إليها.
 - استخدمي أداة COMO Next عند السؤال عن الحالة الحالية أو الأرقام أو المشاريع. لا تخمّني ولا تستخدمي ذاكرة المحادثة بدل المصدر المتاح.
 - مع عبد الرحمن، ابدئي التفاعل العملي بعد التحية بموجز قصير عن أهم المستجدات الموثقة عندما تكون بيانات COMO Next متاحة؛ لا تملئي الموجز بمعلومات قديمة أو غير مؤكدة، ولا تكرريه إذا لم يطلبه.
 - عند السؤال عن خلفية مشروع أو ما الذي حدث سابقًا، استخدمي فئة project_memory من مكتب COMO Next؛ فهي الذاكرة المراجعة المرتبطة بالمصادر، وليست مجرد ملخص محادثة.
-- لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تعتمدي قرارًا أو محضرًا، ولا تنشئي التزامًا خارجيًا. الأداة الوحيدة التي تكتب شيئًا هي capture_intake_proposal، وهي تسجل مقترحًا فقط ينتظر مراجعة عبد الرحمن ولا تنفذه.
-- إذا قال عبد الرحمن «ذكّريني»، «تابعي»، «اعملي»، «حضّري»، أو طلب قرارًا أو مسودة: حددي المشروع وملف العمل من مصدر COMO أولًا، ثم استخدمي capture_intake_proposal. بعد نجاحها قولي بوضوح «سجلته كمقترح للمراجعة»، ولا تقولي «أنجزت» أو «تم التنفيذ».
+- لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تقبلي عرضًا أو تعيّني طرفًا أو تنشئي دفعًا أو التزامًا خارجيًا. التوجيه المباشر يسمح فقط بما يستطيع Manus تنفيذه داخليًا بأمان؛ أي أثر خارجي يبقى مسودة أو قرارًا واضحًا لعبد الرحمن.
+- إذا قال عبد الرحمن «اكتبي لManus»، «تابعي»، «اعملي»، «حضّري»، «ذكّري وائل»، أو أعطاك الخطوة التالية: حددي ملف الموضوع من مصدر COMO ثم استخدمي direct_manus_in_work_file. لا تحفظي كلامه كمقترح منفصل، ولا تطلبي منه فتح المطبخ أو تعبئة حقول.
+- استخدمي action_id فقط عندما يكون كلام عبد الرحمن هو النتيجة المطلوبة لإغلاق تدخل بشري ظاهر مثل «أخبر Manus بما حدث». استخدمي current_decision_id فقط إذا حسم القرار صراحة. إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null.
+- بعد نجاح الأداة لا تقولي فقط «سجلته». قولي: «كتبته داخل ملف [اسم الموضوع]»، ثم لخّصي executionSummary في جملة واحدة. إذا أعادت الأداة nextActionId فمعناه أن Manus بدأ خطوة داخلية؛ وإذا أعادت workProductId فمعناه أن Manus أنجز مخرجًا داخليًا.
 - القرار ليس تنفيذًا، والمسودة ليست إرسالًا، والتحليل ليس اعتمادًا.
 - عند عدم وجود دليل كافٍ قولي ذلك مباشرة واسألي عن المصدر أو الخطوة المطلوبة.
 - لا تقرئي القوائم الطويلة حرفيًا؛ حوّلي مخرجات Manus إلى كلام لبناني حي، أعطي الزبدة، ثم اقترحي خطوة واحدة تالية.
@@ -240,7 +235,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       ORDER BY CASE wf.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END, wf.updated_at DESC LIMIT 25
     `),
     db.execute(sql`
-      SELECT a.id, p.name AS project, wf.title AS workFile, a.title, a.action_status AS status,
+      SELECT a.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, a.title, a.action_status AS status,
         a.priority, a.owner_type AS ownerType, a.due_at AS dueAt, a.follow_up_at AS followUpAt
       FROM como_next_actions a JOIN como_next_work_files wf ON wf.id = a.work_file_id
       JOIN projects p ON p.id = a.project_id AND p.is_test_project = 0
@@ -250,7 +245,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
         CASE WHEN a.attention_at IS NULL THEN 1 ELSE 0 END, a.attention_at ASC LIMIT 30
     `),
     db.execute(sql`
-      SELECT d.id, p.name AS project, wf.title AS workFile, d.title, d.question,
+      SELECT d.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, d.title, d.question,
         d.decision_status AS status, d.decision_authority AS authority, d.due_at AS dueAt
       FROM como_next_decisions d JOIN como_next_work_files wf ON wf.id = d.work_file_id
       JOIN projects p ON p.id = d.project_id AND p.is_test_project = 0
@@ -259,7 +254,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       ORDER BY d.due_at ASC, d.id ASC LIMIT 25
     `),
     db.execute(sql`
-      SELECT c.id, p.name AS project, wf.title AS workFile, c.subject, c.channel,
+      SELECT c.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, c.subject, c.channel,
         c.communication_status AS status, c.approval_status AS approvalStatus
       FROM como_next_communications c JOIN como_next_work_files wf ON wf.id = c.work_file_id
       JOIN projects p ON p.id = c.project_id AND p.is_test_project = 0
@@ -268,7 +263,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       ORDER BY c.created_at ASC LIMIT 25
     `),
     db.execute(sql`
-      SELECT m.id, p.name AS project, wf.title AS workFile, m.title,
+      SELECT m.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, m.title,
         m.meeting_status AS status, m.starts_at AS startsAt,
         (SELECT COUNT(*) FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id=m.id AND proposal.review_status='pending') AS pendingProposals,
         (SELECT COUNT(*) FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id=m.id AND minutes.minutes_status='draft') AS draftMinutes
@@ -281,7 +276,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       ORDER BY m.starts_at ASC, m.id ASC LIMIT 25
     `),
     db.execute(sql`
-      SELECT proposal.id, p.name AS project, wf.title AS workFile,
+      SELECT proposal.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile,
         proposal.source_kind AS sourceKind, proposal.proposal_kind AS proposalKind,
         proposal.title, proposal.priority, proposal.created_at AS createdAt
       FROM como_next_intake_proposals proposal

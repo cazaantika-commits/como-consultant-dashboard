@@ -34,13 +34,14 @@ describe("COMO Next intelligent intake safeguards", () => {
     expect(emailService).not.toContain("sendMail(");
   });
 
-  it("gives Sara one proposal-only write and passes the owner utterance as evidence", () => {
-    expect(saraService).toContain('name: "capture_intake_proposal"');
-    expect(saraService).toContain("تسجل مقترحًا فقط ينتظر مراجعة عبد الرحمن");
-    expect(saraRouter).toContain("createSaraIntakeProposalCommand");
+  it("passes Sara's owner utterance into the same executive directive path as the kitchen", () => {
+    expect(saraService).toContain('name: "direct_manus_in_work_file"');
+    expect(saraService).toContain("محرك Manus التنفيذي نفسه المستخدم في المطبخ");
+    expect(saraRouter).toContain("executeExecutiveDirectiveCommand");
+    expect(saraRouter).not.toContain("createSaraIntakeProposalCommand");
     expect(intakeService).toContain('memberId !== "abdulrahman"');
-    expect(saraRoom).toContain("lastMemberTextRef.current");
-    expect(saraRoom).toContain('sourceText: event.name === "capture_intake_proposal"');
+    expect(saraRoom).toContain('event.name !== "direct_manus_in_work_file"');
+    expect(saraRouter).toContain("directiveText: parsed.directive_text");
   });
 
   it("resolves the unique COMO admin when the deployment owner variable is absent", () => {

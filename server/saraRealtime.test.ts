@@ -51,11 +51,12 @@ describe("Sara Realtime architecture", () => {
     expect(session.audio.input.turn_detection).toMatchObject({ type: "semantic_vad", interrupt_response: true });
   });
 
-  it("exposes read-only lookups plus proposal-only capture and no send, approve, or execute function", () => {
-    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "capture_intake_proposal"]);
+  it("lets Sara write Abdulrahman's words into the executive directive path without external actions", () => {
+    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "direct_manus_in_work_file"]);
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
-    expect(saraRealtimeTools[1].description).toContain("لا تنشئ إجراءً أو قرارًا أو مراسلة تشغيلية");
+    expect(saraRealtimeTools[1].description).toContain("محرك Manus التنفيذي نفسه المستخدم في المطبخ");
+    expect(saraRealtimeTools[1].description).toContain("لا ترسل بريدًا");
     expect(names).not.toContain("lookup_command_center");
   });
 
@@ -81,6 +82,13 @@ describe("Sara Realtime architecture", () => {
       found: false,
       reason: "مكتب COMO Next التنفيذي خاص بعبد الرحمن.",
     });
+  });
+
+  it("returns work-file ids with operational rows so Sara targets the correct dossier", () => {
+    const source = readFileSync("server/services/saraRealtime.ts", "utf8");
+    expect(source.match(/wf\.id AS workFileId/g)?.length).toBe(5);
+    expect(source).toContain("current_decision_id");
+    expect(source).toContain("إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null");
   });
 
   it("connects through ephemeral WebRTC and auto-starts the streamlined Sara page", () => {
@@ -120,6 +128,8 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain('playBriefing("auto")');
     expect(roomSource).not.toContain('event.name !== "lookup_command_center"');
     expect(routerSource).not.toContain('"lookup_command_center"');
+    expect(roomSource).toContain('event.name !== "direct_manus_in_work_file"');
+    expect(routerSource).toContain('input.toolName === "direct_manus_in_work_file"');
     expect(roomSource).toContain('type: "response.cancel"');
     expect(roomSource).toContain("completeBriefing.mutate");
     expect(roomSource).not.toContain("أهم ثلاث أولويات حالية فقط");
@@ -137,7 +147,9 @@ describe("Sara Realtime architecture", () => {
     expect(rootRouterSource).toContain("saraRealtime: saraRealtimeRouter");
     expect(routerSource).toContain("await verifyToken(input.token)");
     expect(routerSource).toContain("externalActionsEnabled: false");
-    expect(routerSource).toContain("manusDelegationConfigured: false");
+    expect(routerSource).toContain("manusDelegationConfigured: true");
+    expect(routerSource).toContain("executeExecutiveDirectiveCommand");
+    expect(routerSource).not.toContain("createSaraIntakeProposalCommand");
     expect(routerSource).toContain("process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY");
   });
 });
