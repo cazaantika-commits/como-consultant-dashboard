@@ -640,6 +640,34 @@ export function normalizeOwnerEmailSignature(body: string) {
   return lines.join("\n").trim();
 }
 
+function recipientAddress(value: string) {
+  return value.match(/<([^>]+@[^>]+)>/)?.[1]?.trim().toLowerCase()
+    || value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]?.toLowerCase()
+    || value.trim().toLowerCase();
+}
+
+export function buildReplyAllCc(input: {
+  fromEmail: string;
+  toText?: string | null;
+  ccText?: string | null;
+  explicitCcText?: string | null;
+  ownerEmail?: string;
+}) {
+  const primary = input.fromEmail.trim().toLowerCase();
+  const owner = (input.ownerEmail || process.env.EMAIL_USER || "a.zaqout@comodevelopments.com").trim().toLowerCase();
+  const recipients = [input.toText, input.ccText, input.explicitCcText]
+    .flatMap(value => String(value || "").split(/[;,]/))
+    .map(value => value.trim())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  return recipients.filter(recipient => {
+    const address = recipientAddress(recipient);
+    if (!address || address === primary || address === owner || seen.has(address)) return false;
+    seen.add(address);
+    return true;
+  }).join(", ") || null;
+}
+
 async function loadEmailAnalysisContext(db: any, email: typeof comoNextEmailMessages.$inferSelect): Promise<EmailAnalysisContext | null> {
   const workFileId = Number(email.linkedWorkFileId || email.suggestedWorkFileId || 0);
   if (!workFileId) return null;
@@ -788,7 +816,12 @@ export async function createReplyDraftFromEmailCommand(input: { userId: number; 
     subject: /^\s*re:/i.test(email.subject) ? email.subject : `Re: ${email.subject}`,
     body: normalizedBody,
     toText: email.fromEmail,
-    ccText: input.ccText,
+    ccText: buildReplyAllCc({
+      fromEmail: email.fromEmail,
+      toText: email.toText,
+      ccText: email.ccText,
+      explicitCcText: input.ccText,
+    }),
     idempotencyKey: `email-reply-draft:${email.id}`,
   });
   const mailboxRef = "mailboxDraft" in draft && draft.mailboxDraft?.uid

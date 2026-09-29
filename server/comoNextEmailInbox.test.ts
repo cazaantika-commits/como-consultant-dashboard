@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -132,6 +132,16 @@ describe("COMO Next read-only email inbox", () => {
     expect(normalizeOwnerEmailSignature("Dear Team,\n\nThank you.\n\nKind regards,\nAbdulrahman")).toBe("Dear Team,\n\nThank you.\n\nKind regards,\nAbdalrahman Zaqout");
     expect(normalizeOwnerEmailSignature("Dear Team,\n\nThank you.\n\nKind regards,\nAbdul Rahman")).toContain("Abdalrahman Zaqout");
     expect(buildEmailAnalysisPrompt({ folderName: "INBOX", fromEmail: "x@example.com", subject: "x", receivedAt: "2026-09-29", bodyText: "x" }, null)).toContain("Abdalrahman Zaqout");
+  });
+
+  it("keeps every original To and CC participant in reply-all except the owner and primary sender", () => {
+    expect(buildReplyAllCc({
+      fromEmail: "sender@consultant.com",
+      toText: "a.zaqout@comodevelopments.com, colleague@consultant.com",
+      ccText: "wael@zooma.ae, pa@zooma.ae, director@consultant.com",
+      explicitCcText: "extra@consultant.com",
+      ownerEmail: "a.zaqout@comodevelopments.com",
+    })).toBe("colleague@consultant.com, wael@zooma.ae, pa@zooma.ae, director@consultant.com, extra@consultant.com");
   });
 
   it("prefers the linked Colliers file over a generic design-title match", () => {

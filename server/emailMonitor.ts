@@ -779,6 +779,29 @@ function findDraftMailbox(boxes: Record<string, ImapMailboxNode>) {
     || "Drafts";
 }
 
+const WAEL_EMAIL = "wael@zooma.ae";
+const MIA_EMAIL = "pa@zooma.ae";
+
+function recipientAddress(value: string) {
+  return value.match(/<([^>]+@[^>]+)>/)?.[1]?.trim().toLowerCase()
+    || value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0]?.toLowerCase()
+    || value.trim().toLowerCase();
+}
+
+export function applyComoCcPolicy(input: { to: string; cc?: string }) {
+  const toAddresses = new Set(input.to.split(/[;,]/).map(recipientAddress).filter(Boolean));
+  const ccRecipients = (input.cc || "").split(/[;,]/).map(item => item.trim()).filter(Boolean);
+  const required = toAddresses.has(WAEL_EMAIL) ? MIA_EMAIL : WAEL_EMAIL;
+  const merged = [...ccRecipients, required];
+  const seen = new Set<string>();
+  return merged.filter(recipient => {
+    const address = recipientAddress(recipient);
+    if (!address || toAddresses.has(address) || seen.has(address)) return false;
+    seen.add(address);
+    return true;
+  }).join(", ");
+}
+
 /**
  * Save a message in the real Private Email Drafts folder. This is the review
  * boundary: the owner opens the normal email client, edits if needed, and sends
@@ -796,6 +819,7 @@ export async function saveComoMailboxDraft(input: {
   const to = input.to.trim();
   const subject = input.subject.replace(/[\r\n]+/g, " ").trim();
   const body = input.body.trim();
+  const cc = applyComoCcPolicy({ to, cc: input.cc });
   const draftKey = input.draftKey.trim();
   if (!to || !to.includes("@") || !subject || !body || !draftKey) {
     throw new Error("Draft recipient, subject, body, and key are required");
@@ -809,7 +833,7 @@ export async function saveComoMailboxDraft(input: {
   const generated = await streamTransport.sendMail({
     from: { name: "Abdalrahman Zaqout", address: EMAIL_USER },
     to,
-    cc: input.cc?.trim() || undefined,
+    cc: cc || undefined,
     subject,
     text: body,
     html: `<div dir="auto" style="white-space:normal;line-height:1.7">${plainTextToSafeHtml(body)}</div>`,

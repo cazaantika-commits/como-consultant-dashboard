@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { applyComoCcPolicy } from "./emailMonitor";
 
 const inbox = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
 const outbox = readFileSync("server/services/comoNextEmailOutbox.ts", "utf8");
@@ -36,6 +37,13 @@ describe("COMO Next mailbox drafts", () => {
     expect(mailboxDraftFunction()).toContain("inReplyTo: input.inReplyTo, references: input.inReplyTo");
     expect(mailboxDraftFunction()).toContain("imap.append");
     expect(outbox).not.toMatch(/cron|schedule/i);
+  });
+
+  it("always copies Wael, or Mia when Wael is the primary recipient", () => {
+    expect(applyComoCcPolicy({ to: "consultant@example.com" })).toBe("wael@zooma.ae");
+    expect(applyComoCcPolicy({ to: "consultant@example.com", cc: "team@example.com, Wael <wael@zooma.ae>" })).toBe("team@example.com, Wael <wael@zooma.ae>");
+    expect(applyComoCcPolicy({ to: "Wael <wael@zooma.ae>" })).toBe("pa@zooma.ae");
+    expect(applyComoCcPolicy({ to: "wael@zooma.ae", cc: "pa@zooma.ae" })).toBe("pa@zooma.ae");
   });
 
   it("exposes Drafts saving only and removes direct send buttons and mutations", () => {
