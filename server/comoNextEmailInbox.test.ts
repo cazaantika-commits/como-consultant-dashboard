@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, extractConfirmedMeetingEvidence, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -126,6 +126,41 @@ describe("COMO Next read-only email inbox", () => {
     expect(prompt).toContain("Sent UID 173");
     expect(prompt).toContain("فلا تقل إن الاعتماد ما زال معلقًا");
     expect(prompt).toContain("لا تعتبر الدفع منفذًا بلا تأكيد صريح");
+  });
+
+  it("promotes a corroborated email confirmation into precise Dubai meeting evidence", () => {
+    const email = {
+      folderName: "INBOX",
+      subject: "Re: Meeting Confirmation – Nad Al Sheba Plot 6180578 (4 Villas) – 30 September at 10:00 AM",
+      receivedAt: "2026-09-29 08:19:00",
+      bodyText: "Thank you for the information; I will take note of this on the schedule.\nThis email must be deleted from your computer and destroy any copies.\n> The meeting with Eng. Majed from Artec has been confirmed at our office at\n> Zooma Properties.\n> The purpose of the meeting is to discuss our proposed vision and initial\n> design direction for the Nad Al Sheba project.\n> Please add the meeting to the calendar.",
+    } as any;
+    expect(extractConfirmedMeetingEvidence(email)).toMatchObject({
+      plotNumber: "6180578",
+      startsAt: "2026-09-30T06:00:00.000Z",
+      location: "Zooma Properties",
+      personName: "Majed",
+      organizationName: "Artec",
+      topic: "our proposed vision and initial design direction for the Nad Al Sheba project",
+    });
+    expect(isMeetingScheduleAcknowledgement(email)).toBe(true);
+    expect(service).toContain("reconcileConfirmedMeetingsFromEmailCommand");
+    expect(service).toContain('meetingStatus: "confirmed"');
+  });
+
+  it("does not promote a proposed meeting or a message without an explicit date and time", () => {
+    expect(extractConfirmedMeetingEvidence({
+      folderName: "INBOX",
+      subject: "Proposed meeting with Artec",
+      receivedAt: "2026-09-29 08:19:00",
+      bodyText: "Could we meet tomorrow morning to discuss the four villas?",
+    } as any)).toBeNull();
+    expect(extractConfirmedMeetingEvidence({
+      folderName: "INBOX",
+      subject: "Meeting Confirmation – Plot 6180578",
+      receivedAt: "2026-09-29 08:19:00",
+      bodyText: "The meeting has been confirmed, but the time will follow.",
+    } as any)).toBeNull();
   });
 
   it("uses Abdalrahman Zaqout exactly in generated English email signatures", () => {

@@ -109,6 +109,7 @@ describe("COMO Next meeting safety invariants", () => {
     expect(serviceSource).toContain('normalized.includes("مانوس")');
     expect(serviceSource).toContain("externalSideEffect: false");
     expect(serviceSource).toContain("sourceSystem: comoNextMeetingSources.sourceSystem");
+    expect(serviceSource).toContain('meetingStatus: input.meetingStatus ?? "planned"');
     expect(serviceSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
   });
 

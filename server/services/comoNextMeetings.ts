@@ -143,6 +143,7 @@ export async function createMeetingCommand(input: {
   objective?: string | null;
   meetingType?: string | null;
   meetingFormat?: string | null;
+  meetingStatus?: "planned" | "confirmed";
   startsAt?: string | null;
   endsAt?: string | null;
   location?: string | null;
@@ -172,7 +173,7 @@ export async function createMeetingCommand(input: {
       objective: input.objective?.trim() || null,
       meetingType: input.meetingType?.trim() || null,
       meetingFormat: input.meetingFormat?.trim() || null,
-      meetingStatus: "planned",
+      meetingStatus: input.meetingStatus ?? "planned",
       startsAt,
       endsAt,
       location: input.location?.trim() || null,

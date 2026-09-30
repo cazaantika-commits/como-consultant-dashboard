@@ -9,10 +9,12 @@ import {
   comoNextEmailAttachments,
   comoNextEmailMessages,
   comoNextIntakeProposals,
+  comoNextMeetings,
   comoNextProjectParties,
   comoNextWorkFiles,
   comoNextWorkMemory,
   comoNextWorkMemoryDocuments,
+  projects,
 } from "../../drizzle/schema";
 import { invokeLLM } from "../_core/llm";
 import { getDb } from "../db";
@@ -25,9 +27,10 @@ import {
   type ReadonlyMailboxBatch,
 } from "../emailMonitor";
 import { storagePut } from "../storage";
-import { appendEvent, createCommunicationDraftCommand, requireProjectAccess } from "./comoNextCommands";
+import { appendEvent, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
 import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
 import { reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
+import { createMeetingCommand } from "./comoNextMeetings";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
 const rowsOf = <T>(result: unknown): T[] => Array.isArray(result) && Array.isArray(result[0]) ? result[0] as T[] : result as T[];
@@ -39,6 +42,178 @@ const extractEmails = (value?: string | null) => (String(value || "").toLowerCas
 const normalizeText = (value?: string | null) => String(value || "").normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
 const parseStoredUtc = (value: string) => new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(" ", "T")}Z`);
 const genericWorkTokens = new Set(["design", "project", "review", "analysis", "offer", "proposal", "consultant", "architectural", "meeting", "scope", "work"]);
+
+export type ConfirmedMeetingEvidence = {
+  canonicalSubject: string;
+  plotNumber: string | null;
+  startsAt: string;
+  location: string | null;
+  personName: string | null;
+  organizationName: string | null;
+  topic: string;
+};
+
+const monthNumbers: Record<string, number> = {
+  january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+  july: 6, august: 7, september: 8, october: 9, november: 10, december: 11,
+  يناير: 0, فبراير: 1, مارس: 2, أبريل: 3, ابريل: 3, مايو: 4, يونيو: 5,
+  يوليو: 6, أغسطس: 7, اغسطس: 7, سبتمبر: 8, أكتوبر: 9, اكتوبر: 9, نوفمبر: 10, ديسمبر: 11,
+};
+
+function asciiDigits(value: string) {
+  return value.replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+}
+
+function canonicalMeetingSubject(subject: string) {
+  return normalizeText(subject.replace(/^\s*(?:(?:re|fw|fwd)\s*:\s*)+/i, ""));
+}
+
+function sqlUtcFromDubaiParts(year: number, month: number, day: number, hour: number, minute: number) {
+  const utc = new Date(Date.UTC(year, month, day, hour - 4, minute, 0));
+  const dubaiCheck = new Date(utc.getTime() + 4 * 60 * 60 * 1000);
+  if (dubaiCheck.getUTCFullYear() !== year || dubaiCheck.getUTCMonth() !== month || dubaiCheck.getUTCDate() !== day || dubaiCheck.getUTCHours() !== hour || dubaiCheck.getUTCMinutes() !== minute) return null;
+  return utc.toISOString();
+}
+
+export function extractConfirmedMeetingEvidence(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">): ConfirmedMeetingEvidence | null {
+  const subject = asciiDigits(email.subject || "");
+  const body = asciiDigits(email.bodyText || "").split("\n").map(line => line.replace(/^\s*>+\s?/, "")).join("\n");
+  const text = `${subject}\n${body}`;
+  const isMeeting = /\bmeeting\b|اجتماع/i.test(subject);
+  const explicitConfirmation = /\b(?:has been|is|was) confirmed\b|\bconfirmed for\b|تم\s+تأكيد|موعد\s+مؤكد/i.test(body);
+  const scheduleAcknowledgement = /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(body);
+  if (!isMeeting || (!explicitConfirmation && !scheduleAcknowledgement)) return null;
+
+  const dateMatch = text.match(/\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر)(?:\s+(20\d{2}))?\b[\s\S]{0,80}?\b(?:at|الساعة)?\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباح(?:ًا|ا)?|مساء(?:ً|ًا|ا)?)\b/i);
+  if (!dateMatch) return null;
+  const receivedYear = parseStoredUtc(email.receivedAt).getUTCFullYear();
+  const year = Number(dateMatch[3] || receivedYear);
+  const month = monthNumbers[String(dateMatch[2]).toLowerCase()];
+  const day = Number(dateMatch[1]);
+  let hour = Number(dateMatch[4]);
+  const minute = Number(dateMatch[5] || 0);
+  const period = String(dateMatch[6]).toLowerCase();
+  if (/pm|مساء/.test(period) && hour < 12) hour += 12;
+  if (/am|صباح/.test(period) && hour === 12) hour = 0;
+  if (month === undefined || hour > 23 || minute > 59) return null;
+  const startsAt = sqlUtcFromDubaiParts(year, month, day, hour, minute);
+  if (!startsAt) return null;
+
+  const plotNumber = text.match(/(?:plot(?:\s*(?:no\.?|number))?|قطعة)\s*(?:-|–|:)?\s*(\d{5,})/i)?.[1] || null;
+  const personAndOrganization = text.match(/(?:Eng\.?|Engineer|المهندس)\s+([\p{L}][\p{L} .'-]{1,60}?)\s+(?:from|من)\s+([\p{L}][\p{L}0-9 .&'-]{1,60}?)(?=\s+(?:has been|is|was)\s+confirmed|\s+تم\s+تأكيد|\s+for\s+tomorrow|\s+لمناقشة|[,\n.])/iu);
+  const personName = personAndOrganization?.[1]?.trim() || null;
+  const organizationName = personAndOrganization?.[2]?.trim() || null;
+  const location = text.match(/(?:at our office at|location\s*:|المكان\s*:|في مكتب(?:نا)?\s+(?:في|بـ)?)\s*([^\n.]{3,160})/i)?.[1]?.replace(/^>+\s*/, "").trim() || null;
+  const topic = text.match(/(?:purpose of the meeting is to discuss|meeting is to discuss|الغرض من الاجتماع(?:\s+هو)?|لمناقشة)\s+([\s\S]{8,280}?)(?=\.\s*(?:\n|$)|\n\s*(?:Please|يرجى))/i)?.[1]?.replace(/\n\s*>?\s*/g, " ").trim()
+    || (plotNumber ? `التصور والتوجه التصميمي الأولي لمشروع الفلل الأربع — قطعة ${plotNumber}` : "موضوع الاجتماع المؤكد");
+  return { canonicalSubject: canonicalMeetingSubject(subject), plotNumber, startsAt, location, personName, organizationName, topic };
+}
+
+export function isMeetingScheduleAcknowledgement(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">) {
+  return email.folderName === "INBOX" && Boolean(extractConfirmedMeetingEvidence(email)) && /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(email.bodyText);
+}
+
+function meetingDisplayPerson(value?: string | null) {
+  const cleaned = String(value || "").trim();
+  if (/^majed$/i.test(cleaned)) return "ماجد";
+  return cleaned || "ممثل الطرف";
+}
+
+function confirmedMeetingKey(projectId: number, evidence: ConfirmedMeetingEvidence) {
+  return createHash("sha256").update([
+    projectId,
+    evidence.startsAt,
+    evidence.plotNumber || "",
+  ].join("|")).digest("hex").slice(0, 32);
+}
+
+export async function reconcileConfirmedMeetingEmailCommand(input: { userId: number; emailId: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [email] = await db.select().from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.id, input.emailId),
+    eq(comoNextEmailMessages.userId, input.userId),
+  )).limit(1);
+  if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
+  const evidence = extractConfirmedMeetingEvidence(email);
+  if (!evidence?.plotNumber) return { skipped: "not_explicit_confirmed_meeting", meetingId: null, workFileId: null, externalSideEffect: false as const };
+
+  const relatedEmails = await db.select().from(comoNextEmailMessages).where(eq(comoNextEmailMessages.userId, input.userId))
+    .orderBy(desc(comoNextEmailMessages.receivedAt), desc(comoNextEmailMessages.id)).limit(150);
+  const sameThread = relatedEmails.filter(item => canonicalMeetingSubject(item.subject) === evidence.canonicalSubject);
+  const corroborated = sameThread.some(item => isMeetingScheduleAcknowledgement(item) || (
+    item.folderName === "INBOX" && /\b(?:yes,?\s*)?confirmed\b|تم\s+تأكيد|الموعد\s+مؤكد/i.test(item.bodyText.slice(0, 2_500))
+  ));
+  if (!corroborated) return { skipped: "confirmation_not_corroborated", meetingId: null, workFileId: null, externalSideEffect: false as const };
+
+  const candidates = await db.select({ id: projects.id, name: projects.name }).from(projects).where(and(
+    eq(projects.plotNumber, evidence.plotNumber),
+    eq(projects.isTestProject, 0),
+  ));
+  const accessible = [] as typeof candidates;
+  for (const candidate of candidates) {
+    try { await requireProjectAccess(db, candidate.id, input.userId, "read"); accessible.push(candidate); } catch { /* inaccessible project */ }
+  }
+  if (accessible.length !== 1) return { skipped: "project_not_unique", meetingId: null, workFileId: null, externalSideEffect: false as const };
+  const project = accessible[0];
+  const key = confirmedMeetingKey(project.id, evidence);
+  const [existingMeeting] = await db.select().from(comoNextMeetings).where(and(
+    eq(comoNextMeetings.sourceSystem, "como_next"),
+    eq(comoNextMeetings.sourceRecordId, `confirmed-meeting:${key}`),
+  )).limit(1);
+  if (existingMeeting) {
+    for (const item of sameThread) {
+      if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
+      await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(existingMeeting.workFileId), suppressReplyDraft: true });
+    }
+    return { replayed: true as const, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), externalSideEffect: false as const };
+  }
+
+  const person = meetingDisplayPerson(evidence.personName);
+  const organization = evidence.organizationName || "الطرف الخارجي";
+  const workFile = await createWorkFileCommand({
+    userId: input.userId,
+    projectId: project.id,
+    title: `اجتماع ${organization} — المهندس ${person} — تصور الفلل الأربع`,
+    governingQuestion: `ما الذي يجب تحضيره لاجتماع ${organization}، وما النتيجة التي ستحدد الخطوة التنفيذية التالية؟`,
+    desiredOutcome: "يظهر الموعد المؤكد في COMO وسارة؛ بعد الاجتماع يذكر عبد الرحمن ما حدث مرة واحدة، ثم يحلل Manus النتيجة وينشئ العمل الداخلي التالي.",
+    priority: "urgent",
+    idempotencyKey: `confirmed-meeting-file:${key}`,
+  });
+  const meeting = await createMeetingCommand({
+    userId: input.userId,
+    workFileId: Number(workFile.id),
+    title: `اجتماع مع المهندس ${person} من ${organization} — تصور الفلل الأربع`,
+    objective: evidence.topic,
+    meetingType: "consultant_discussion",
+    meetingFormat: "in_person",
+    meetingStatus: "confirmed",
+    startsAt: evidence.startsAt,
+    location: evidence.location,
+    participantNames: [`المهندس ${person} — ${organization}`, "Abdalrahman Zaqout", "Wael Zooma"],
+    idempotencyKey: `confirmed-meeting:${key}`,
+  });
+  for (const item of sameThread) {
+    if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
+    await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(workFile.id), suppressReplyDraft: true });
+  }
+  return { replayed: false as const, meetingId: Number(meeting.id), workFileId: Number(workFile.id), externalSideEffect: false as const };
+}
+
+export async function reconcileConfirmedMeetingsFromEmailCommand(input: { userId: number; limit?: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const rows = await db.select({ id: comoNextEmailMessages.id }).from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.userId, input.userId),
+    or(eq(comoNextEmailMessages.inboxStatus, "unmatched"), eq(comoNextEmailMessages.inboxStatus, "suggested")),
+  )).orderBy(desc(comoNextEmailMessages.receivedAt), desc(comoNextEmailMessages.id)).limit(Math.max(1, Math.min(input.limit || 100, 200)));
+  const results = [];
+  for (const row of rows) {
+    const result = await reconcileConfirmedMeetingEmailCommand({ userId: input.userId, emailId: Number(row.id) });
+    if (!("skipped" in result)) results.push(result);
+  }
+  return { reconciled: results.length, results, externalSideEffect: false as const };
+}
 
 export function scoreEmailSuggestionCandidate(row: any, message: Pick<EmailMessage, "from" | "to" | "cc" | "subject" | "textBody">) {
   const haystack = normalizeText(`${message.subject}\n${message.textBody.slice(0, 20_000)}`);
@@ -275,6 +450,7 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
 
 export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: number; hours: number; maxMessages: number; analysisLimit?: number }) {
   const result = await syncReadonlyInboxCommand(input);
+  const meetingReconciliation = await reconcileConfirmedMeetingsFromEmailCommand({ userId: input.userId, limit: 100 });
   const db = await getDb();
   if (!db) databaseUnavailable();
   const pendingResult = await db.execute(sql`
@@ -307,7 +483,7 @@ export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: numb
       }
     }
   }
-  return { ...result, analyzed, analysisFailures };
+  return { ...result, analyzed, analysisFailures, meetingReconciliation };
 }
 
 export async function listEmailInbox(userId: number, status?: "unmatched" | "suggested" | "linked" | "dismissed") {
@@ -433,7 +609,7 @@ async function storeEmailAttachments(email: typeof comoNextEmailMessages.$inferS
   return stored;
 }
 
-export async function linkEmailToWorkFileCommand(input: { userId: number; emailId: number; projectId: number; workFileId: number; projectPartyId?: number | null }) {
+export async function linkEmailToWorkFileCommand(input: { userId: number; emailId: number; projectId: number; workFileId: number; projectPartyId?: number | null; suppressReplyDraft?: boolean }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
@@ -529,7 +705,7 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
     .where(and(eq(comoNextEmailAnalyses.emailMessageId, input.emailId), eq(comoNextEmailAnalyses.analysisStatus, "draft")))
     .orderBy(desc(comoNextEmailAnalyses.id))
     .limit(1);
-  const replyDraft = latestAnalysis?.replyDraftText
+  const replyDraft = !input.suppressReplyDraft && latestAnalysis?.replyDraftText
     ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: input.emailId, body: latestAnalysis.replyDraftText })
     : null;
   return { ...linked, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };
@@ -751,6 +927,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   if (typeof content !== "string") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "لم يُرجع Manus تحليلاً قابلاً للمراجعة" });
   let parsed: any;
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة مسودة تحليل Manus" }); }
+  const scheduleAcknowledgement = isMeetingScheduleAcknowledgement(email);
   const analysisResult = await db.transaction(async tx => {
     const [replay] = await tx.select({ id: comoNextEmailAnalyses.id }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
     if (replay) return { id: Number(replay.id), replayed: true as const };
@@ -763,7 +940,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
       importance: parsed.importance,
       whyImportant: parsed.whyImportant ? String(parsed.whyImportant).trim() : null,
       suggestedNextStep: parsed.suggestedNextStep ? String(parsed.suggestedNextStep).trim() : null,
-      replyDraftText: parsed.shouldReply && parsed.replyDraftText ? normalizeOwnerEmailSignature(String(parsed.replyDraftText)) : null,
+      replyDraftText: !scheduleAcknowledgement && parsed.shouldReply && parsed.replyDraftText ? normalizeOwnerEmailSignature(String(parsed.replyDraftText)) : null,
       evidenceJson: JSON.stringify(Array.isArray(parsed.evidenceExcerpts) ? parsed.evidenceExcerpts : []),
       modelId: response.model || EMAIL_ANALYSIS_MODEL,
       requestedByUserId: input.userId,
@@ -788,7 +965,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
     : null;
-  const replyDraft = email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
+  const replyDraft = !scheduleAcknowledgement && email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
     ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: normalizeOwnerEmailSignature(String(parsed.replyDraftText)) })
     : null;
   return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };
