@@ -198,12 +198,17 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain('aria-pressed={queueOwnerFilter === "manus"}');
     expect(kitchenPage).toContain("فتح التقرير المحمي");
     expect(kitchenPage).toContain("/api/como-next/documents/");
-    expect(kitchenPage).toContain("نفّذ يا Manus");
+    expect(kitchenPage).toContain("سلّم التوجيه إلى Manus");
     expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
     expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
     expect(kitchenPage).toContain("activeMeetingNeedsOutcome");
     expect(kitchenPage).toContain("أخبر Manus بما حدث");
     expect(kitchenPage).toContain('defaultSourceChannel="meeting"');
+    expect(kitchenPage).toContain('alwaysOpen submissionLabel="سلّم نتيجة الاجتماع إلى Manus"');
+    expect(kitchenPage).toContain("مسودة محفوظة على هذا الجهاز فقط — لم تصل إلى Manus بعد");
+    expect(kitchenPage).toContain("وصلت إلى Manus وحُفظت في الملف — تحديث #");
+    expect(kitchenPage).toContain("وصلت النتيجة إلى Manus وحُفظت في ملف الاجتماع");
+    expect(kitchenPage).toContain("meetingOutcome.id");
     expect(kitchenPage).toContain("Manus سيحلل النتيجة، يغلق الاجتماع، ويحدّث الخطوات التالية تلقائيًا");
     expect(kitchenPage).toContain('ownerCommunication?.subject');
     expect(kitchenPage).toContain('مراجعة المسودة');

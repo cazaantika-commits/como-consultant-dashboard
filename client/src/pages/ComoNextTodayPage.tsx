@@ -708,25 +708,37 @@ function WorkFileCard({ file, onOpen }: { file: any; onOpen: (id: number) => voi
   );
 }
 
-function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updates, onChanged, defaultSourceChannel = "internal" }: { workFileId: number; actionId?: number | null; currentDecisionId?: number | null; updates: any[]; onChanged: () => void; defaultSourceChannel?: "phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal" }) {
-  const [open, setOpen] = useState(false);
+function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updates, onChanged, defaultSourceChannel = "internal", alwaysOpen = false, submissionLabel }: { workFileId: number; actionId?: number | null; currentDecisionId?: number | null; updates: any[]; onChanged: () => void; defaultSourceChannel?: "phone" | "meeting" | "whatsapp" | "email" | "site_visit" | "internal"; alwaysOpen?: boolean; submissionLabel?: string }) {
+  const [open, setOpen] = useState(alwaysOpen);
   const [updateText, setUpdateText] = useState("");
   const [listening, setListening] = useState(false);
   const directiveMutation = trpc.comoNext.executeExecutiveDirective.useMutation();
   const reviewMutation = trpc.comoNext.reviewWorkFileUpdate.useMutation();
   const busy = directiveMutation.isPending || reviewMutation.isPending;
+  const localDraftKey = `como-next:directive-draft:${workFileId}:${actionId || currentDecisionId || defaultSourceChannel}`;
+
+  useEffect(() => {
+    try {
+      const savedDraft = window.localStorage.getItem(localDraftKey);
+      if (savedDraft) setUpdateText(savedDraft);
+    } catch { /* local persistence is optional; server receipt remains authoritative */ }
+  }, [localDraftKey]);
+
+  useEffect(() => {
+    try {
+      if (updateText.trim()) window.localStorage.setItem(localDraftKey, updateText);
+      else window.localStorage.removeItem(localDraftKey);
+    } catch { /* keep typing usable when storage is unavailable */ }
+  }, [localDraftKey, updateText]);
 
   const submit = async () => {
     if (updateText.trim().length < 3) return toast.error("اكتب أو سجّل توجيهك أولًا");
     try {
       const result = await directiveMutation.mutateAsync({ workFileId, actionId: actionId || null, currentDecisionId: currentDecisionId || null, sourceChannel: defaultSourceChannel, directiveText: updateText.trim() });
+      try { window.localStorage.removeItem(localDraftKey); } catch { /* already persisted on the server */ }
       setUpdateText("");
-      setOpen(false);
-      toast.success(result.completedNow
-        ? "نفّذ Manus التوجيه وحفظ المخرج للمراجعة"
-        : result.nextActionId
-          ? "فهم Manus التوجيه وبدأ الخطوة التنفيذية التالية"
-          : result.acknowledgement || "تم تسجيل التوجيه");
+      if (!alwaysOpen) setOpen(false);
+      toast.success(`وصلت إلى Manus وحُفظت في الملف — تحديث #${result.updateId}`);
       await onChanged();
     } catch (error: any) { toast.error(error?.message || "تعذر تنفيذ التوجيه"); }
   };
@@ -755,10 +767,11 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
   };
 
   return <section className="rounded-2xl border border-[#cfe3df] bg-[#f4faf8] p-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">وجّه Manus</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">قل ما تريد تنفيذه أو ما حدث في الاجتماع؛ يفهم Manus السياق ويتولى بقية العمل.</p></div><Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">{defaultSourceChannel === "meeting" ? "نتيجة الاجتماع" : "وجّه Manus"}</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">{defaultSourceChannel === "meeting" ? "اكتب ما حدث ثم سلّمه مرة واحدة؛ بعد ظهور رقم التحديث يكون قد وصل فعلًا." : "قل ما تريد تنفيذه؛ يفهم Manus السياق ويتولى بقية العمل."}</p></div>{!alwaysOpen ? <Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button> : null}</div>
     {open ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">
       <Textarea value={updateText} onChange={event => setUpdateText(event.target.value)} className="min-h-32 rounded-xl bg-white leading-7" placeholder={defaultSourceChannel === "meeting" ? "قل ما اتُفق عليه، ما بقي مفتوحًا، ومن سيفعل ماذا..." : "مثال: راجعت التقرير. ثبّت النطاق الحالي، وقارن العروض الثلاثة على أساس خمسة أشهر، ثم اعرض النتيجة والتوصية."} />
-      <div className="grid gap-2 sm:grid-cols-[auto_1fr]"><Button type="button" variant="outline" onClick={startVoice} disabled={listening || busy} className="rounded-xl bg-white"><Mic className={`ms-2 h-4 w-4 ${listening ? "animate-pulse text-rose-600" : ""}`} />{listening ? "أستمع الآن..." : "سجّل صوتيًا"}</Button><Button type="button" onClick={submit} disabled={busy} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}نفّذ يا Manus</Button></div>
+      {updateText.trim() && !busy ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">مسودة محفوظة على هذا الجهاز فقط — لم تصل إلى Manus بعد.</div> : null}
+      <div className="grid gap-2 sm:grid-cols-[auto_1fr]"><Button type="button" variant="outline" onClick={startVoice} disabled={listening || busy} className="rounded-xl bg-white"><Mic className={`ms-2 h-4 w-4 ${listening ? "animate-pulse text-rose-600" : ""}`} />{listening ? "أستمع الآن..." : "سجّل صوتيًا"}</Button><Button type="button" onClick={submit} disabled={busy} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}{busy ? "يُسلَّم الآن..." : submissionLabel || "سلّم التوجيه إلى Manus"}</Button></div>
       <p className="text-[10px] leading-5 text-slate-400">ينفذ Manus كل ما يمكن داخليًا ويعيدك فقط لمراجعة مخرج أو قرار. لا إرسال أو قبول أو تعيين أو دفع دون ضغطك الصريح.</p>
     </div> : null}
       {updates.length ? <div className="mt-4 space-y-2 border-t border-[#d9e9e5] pt-4">{updates.slice(0, 5).map(update => <div key={update.id} className="rounded-xl border border-white bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline" className="rounded-full bg-slate-50">{update.sourceChannel === "phone" ? "مكالمة" : update.sourceChannel === "meeting" ? "اجتماع" : update.sourceChannel}</Badge><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(update.occurredAt)}</bdi></div><p className="mt-2 whitespace-pre-wrap text-xs font-semibold leading-6 text-slate-800">{update.updateText}</p>{update.analysisSummary ? <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-[11px] leading-6 text-slate-500">{update.analysisSummary}</p> : null}{update.analysisStatus === "applied" && update.targetActionId ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">فتح Manus الخطوة التالية تلقائيًا وربطها بهذا التحديث.</div> : update.analysisStatus === "applied" ? <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">{update.analysisSummary?.includes("Drafts UID") ? "نُفذ الفعل وثُبت برقم المسودة في البريد." : "اكتملت المعالجة الداخلية وحُفظ دليلها في سجل الملف."}</div> : update.analysisStatus === "draft" && update.suggestedActionTitle ? <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-[10px] font-black text-violet-700">اقتراح قديم بانتظار الحسم</p><p className="mt-1 text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تطبيق الاقتراح القديم</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">استبعاده</Button></div></div> : null}</div>)}</div> : null}
@@ -784,6 +797,9 @@ function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { a
 }
 
 function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onBack, onUpdated }: { kind: Exclude<ExecutiveFocusKind, "action">; item: any; workFileId: number; updates?: any[]; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
+  const meetingStartMs = kind === "meeting" && item.startsAt ? new Date(normalizeUtc(item.startsAt) || 0).getTime() : Number.POSITIVE_INFINITY;
+  const meetingOutcome = kind === "meeting" ? updates.find((update: any) => update.sourceChannel === "meeting" && new Date(normalizeUtc(update.occurredAt) || 0).getTime() >= meetingStartMs) : null;
+  const meetingNeedsOutcome = kind === "meeting" && !isClosed && ["planned", "confirmed"].includes(item.meetingStatus) && Number.isFinite(meetingStartMs) && meetingStartMs <= Date.now() && !meetingOutcome;
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" />العودة إلى القائمة</button>
     <article className="mx-auto mt-4 min-w-0 max-w-2xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
@@ -804,10 +820,11 @@ function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onB
         {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><CommunicationControls communication={item} onUpdated={onUpdated} /></div> : null}
       </> : null}
       {kind === "meeting" ? <div className="space-y-5">
-        {!isClosed && item.startsAt && new Date(normalizeUtc(item.startsAt) || 0).getTime() <= Date.now() ? <>
+        {meetingNeedsOutcome ? <>
           <div><Badge className="rounded-full bg-rose-700 text-white hover:bg-rose-700">نتيجة الاجتماع مطلوبة</Badge><h2 className="mt-4 text-2xl font-black leading-10 text-slate-950">أخبر Manus بما حدث في {item.title}</h2><p className="mt-3 text-sm leading-8 text-slate-600">اكتب أو سجّل ما اتُّفق عليه وما بقي مفتوحًا. Manus سيحلل النتيجة، يغلق الاجتماع، ويحدّث الخطوات التالية تلقائيًا.</p></div>
-          <WorkFileUpdateComposer workFileId={workFileId} updates={updates.filter((update: any) => !update.actionId)} onChanged={onUpdated} defaultSourceChannel="meeting" />
+          <WorkFileUpdateComposer workFileId={workFileId} updates={updates.filter((update: any) => !update.actionId)} onChanged={onUpdated} defaultSourceChannel="meeting" alwaysOpen submissionLabel="سلّم نتيجة الاجتماع إلى Manus" />
         </> : null}
+        {meetingOutcome ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5"><div className="flex flex-wrap items-center justify-between gap-2"><p className="font-black text-emerald-900">وصلت النتيجة إلى Manus وحُفظت في ملف الاجتماع</p><Badge className="rounded-full bg-emerald-700 text-white hover:bg-emerald-700">تحديث #{meetingOutcome.id}</Badge></div><p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-emerald-950">{meetingOutcome.updateText}</p><p className="mt-3 text-[11px] font-bold text-emerald-800">{meetingOutcome.analysisStatus === "applied" ? "اكتملت المعالجة الداخلية." : meetingOutcome.analysisStatus === "failed" ? "وصلت التفاصيل، لكن تعذر التحليل وسيعيد Manus المحاولة." : "وصلت التفاصيل ويعالجها Manus الآن."} · <bdi dir="ltr">{formatDateTime(meetingOutcome.occurredAt)}</bdi></p></div> : null}
         <WorkFileMeetingsSection workFileId={workFileId} meetings={[item]} isClosed={isClosed} onUpdated={onUpdated} />
       </div> : null}
     </article>
