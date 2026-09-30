@@ -128,6 +128,8 @@ export function buildExecutiveKitchenQueue(input: {
       recordId: meeting.id,
       dueAt: meeting.startsAt,
       ownerType: needsOutcome ? "human" : null,
+      needsOutcome,
+      priority: needsOutcome ? "urgent" : null,
     });
   }
   for (const email of input.emails) {
@@ -147,6 +149,7 @@ export function buildExecutiveKitchenQueue(input: {
   for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority });
 
   const itemRank = (item: Record<string, unknown>) => {
+    if (item.kind === "meeting" && item.needsOutcome) return -1;
     if (item.kind === "decision") return 0;
     if (item.kind === "communication" || item.kind === "proposal") return 1;
     if (item.kind === "action" && item.ownerType === "human") return 2;
@@ -186,6 +189,9 @@ export function buildExecutiveKitchenQueue(input: {
   const phaseRank: Record<string, number> = { owner_review: 0, verify: 1, act_now: 2, define_next_step: 3, waiting_external: 4, scheduled: 5 };
   const priorityRank: Record<string, number> = { urgent: 0, important: 1, normal: 2 };
   return groupedItems.sort((a, b) => {
+    const aNeedsOutcome = a.kind === "meeting" && a.needsOutcome ? 0 : 1;
+    const bNeedsOutcome = b.kind === "meeting" && b.needsOutcome ? 0 : 1;
+    if (aNeedsOutcome !== bNeedsOutcome) return aNeedsOutcome - bNeedsOutcome;
     const phaseDelta = (phaseRank[String(a.phase)] ?? 9) - (phaseRank[String(b.phase)] ?? 9);
     if (phaseDelta) return phaseDelta;
     const priorityDelta = (priorityRank[String(a.priority)] ?? 9) - (priorityRank[String(b.priority)] ?? 9);

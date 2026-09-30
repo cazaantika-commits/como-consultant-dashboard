@@ -65,6 +65,19 @@ describe("COMO Next executive kitchen", () => {
     expect(item.title).toBe("أخبر Manus بما حدث في اجتماع Realistic");
   });
 
+  it("keeps a finished meeting as the primary topic even when an older decision exists in the same work file", () => {
+    const input = seed();
+    input.actions = [];
+    input.draftCommunications = [];
+    input.emails = [];
+    input.filesWithoutNextAction = [];
+    input.decisions = [{ id: 3, title: "قرار قديم في الملف", projectId: 1, workFileId: 10, dueAt: null }];
+    input.meetings = [{ id: 9, title: "اجتماع Artec مع المهندس ماجد", projectId: 1, workFileId: 10, startsAt: "2000-01-01 08:00:00" }];
+    const [item] = buildExecutiveKitchenQueue(input);
+    expect(item).toMatchObject({ kind: "meeting", phase: "act_now", ownerType: "human", reviewItemCount: 2 });
+    expect(item.title).toBe("أخبر Manus بما حدث في اجتماع Artec مع المهندس ماجد");
+  });
+
   it("does not query undated planned meetings as upcoming appointments", () => {
     expect(mainRouter).toContain("AND meeting.starts_at IS NOT NULL");
   });
@@ -169,11 +182,17 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain("نفّذ يا Manus");
     expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
     expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
+    expect(kitchenPage).toContain("activeMeetingNeedsOutcome");
+    expect(kitchenPage).toContain("أخبر Manus بما حدث");
+    expect(kitchenPage).toContain('defaultSourceChannel="meeting"');
+    expect(kitchenPage).toContain("Manus سيحلل النتيجة، يغلق الاجتماع، ويحدّث الخطوات التالية تلقائيًا");
     expect(kitchenPage).toContain('ownerCommunication?.subject');
     expect(kitchenPage).toContain('مراجعة المسودة');
     expect(kitchenPage).toContain("!activeActions.length ? <WorkFileUpdateComposer");
     expect(kitchenPage).toContain("!w-screen !max-w-none");
     expect(kitchenPage).toContain('if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);');
+    expect(kitchenPage).toContain('item.kind === "meeting" && item.needsOutcome');
+    expect(kitchenPage).toContain('openFocusedRecord(item.workFileId, "meeting", item.recordId)');
     expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');
   });
 

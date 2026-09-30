@@ -791,7 +791,13 @@ function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onB
         <p className="mt-5 whitespace-pre-wrap border-t border-slate-100 pt-5 text-sm leading-8 text-slate-700">{item.body}</p>
         {!isClosed ? <div className="mt-6 border-t border-slate-100 pt-5"><CommunicationControls communication={item} onUpdated={onUpdated} /></div> : null}
       </> : null}
-      {kind === "meeting" ? <WorkFileMeetingsSection workFileId={workFileId} meetings={[item]} isClosed={isClosed} onUpdated={onUpdated} /> : null}
+      {kind === "meeting" ? <div className="space-y-5">
+        {!isClosed && item.startsAt && new Date(normalizeUtc(item.startsAt) || 0).getTime() <= Date.now() ? <>
+          <div><Badge className="rounded-full bg-rose-700 text-white hover:bg-rose-700">نتيجة الاجتماع مطلوبة</Badge><h2 className="mt-4 text-2xl font-black leading-10 text-slate-950">أخبر Manus بما حدث في {item.title}</h2><p className="mt-3 text-sm leading-8 text-slate-600">اكتب أو سجّل ما اتُّفق عليه وما بقي مفتوحًا. Manus سيحلل النتيجة، يغلق الاجتماع، ويحدّث الخطوات التالية تلقائيًا.</p></div>
+          <WorkFileUpdateComposer workFileId={workFileId} updates={updates.filter((update: any) => !update.actionId)} onChanged={onUpdated} defaultSourceChannel="meeting" />
+        </> : null}
+        <WorkFileMeetingsSection workFileId={workFileId} meetings={[item]} isClosed={isClosed} onUpdated={onUpdated} />
+      </div> : null}
     </article>
   </div>;
 }
@@ -874,19 +880,22 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     update.sourceChannel === "meeting"
     && new Date(normalizeUtc(update.occurredAt) || 0).getTime() >= new Date(normalizeUtc(meeting.startsAt) || Number.POSITIVE_INFINITY).getTime()
   ));
+  const activeMeetingNeedsOutcome = Boolean(activeMeeting?.startsAt && new Date(normalizeUtc(activeMeeting.startsAt) || 0).getTime() <= Date.now());
   const manusAction = activeActions.find((action: any) => action.ownerType === "manus" && action.actionStatus !== "waiting_external");
   const waitingAction = activeActions.find((action: any) => action.actionStatus === "waiting_external");
   const currentAction = ownerAction || manusAction || waitingAction || activeActions[0];
-  const nowLabel = pendingDecisions[0]
-    ? "قرار حقيقي مطلوب منك"
+  const nowLabel = activeMeetingNeedsOutcome
+    ? "دورك الآن: أخبر Manus بما حدث"
+    : pendingDecisions[0]
+      ? "قرار حقيقي مطلوب منك"
     : data?.intakeProposals[0]
       ? "مراجعة لازمة قبل أثر خارجي"
       : ownerCommunication
         ? "مسودة جاهزة لمراجعتك"
         : ownerAction
           ? "تدخلك التالي"
-          : activeMeeting
-            ? "موعدك التالي"
+            : activeMeeting
+              ? "موعدك التالي"
             : manusAction
               ? "ينفذه Manus الآن"
               : waitingAction
@@ -905,7 +914,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     setSelectedMemoryId(null);
   }, [workFileId]);
   const stageCounts: Record<WorkFileStage, number> = {
-    now: activeActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length ? 1 : 0,
+    now: activeMeetingNeedsOutcome || activeActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length ? 1 : 0,
     evidence: evidenceEntries.length + (data?.communications.filter((communication: any) => communication.communicationStatus === "received").length || 0),
     outputs: outputEntries.length + activeCommunications.length + (data?.intakeProposals.length || 0),
     decisions: data?.decisions.length || 0,
@@ -940,9 +949,9 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
             {selectedStage === "now" ? <section className="space-y-5">
               <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
                 <Card className="rounded-[30px] border-amber-100 bg-[linear-gradient(145deg,#fffdf7_0%,#fff6dc_100%)] p-5 shadow-sm sm:p-7">
-                  <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-800"><Sparkles className="h-5 w-5" /></span><div><p className="text-[10px] font-black text-amber-700">{nowLabel}</p><h2 className="text-xl font-black text-slate-950">{pendingDecisions[0]?.title || data.intakeProposals[0]?.title || ownerCommunication?.subject || ownerAction?.title || activeMeeting?.title || currentAction?.title || (isClosed ? "الملف مكتمل ومحفوظ بالسجل" : "لا توجد خطوة مفتوحة")}</h2></div></div>
-                  {pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : data.intakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
-                  <div className="mt-5 flex flex-wrap gap-2">{pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
+                  <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-800"><Sparkles className="h-5 w-5" /></span><div><p className="text-[10px] font-black text-amber-700">{nowLabel}</p><h2 className="text-xl font-black text-slate-950">{activeMeetingNeedsOutcome ? `أخبر Manus بما حدث في ${activeMeeting.title}` : pendingDecisions[0]?.title || data.intakeProposals[0]?.title || ownerCommunication?.subject || ownerAction?.title || activeMeeting?.title || currentAction?.title || (isClosed ? "الملف مكتمل ومحفوظ بالسجل" : "لا توجد خطوة مفتوحة")}</h2></div></div>
+                  {activeMeetingNeedsOutcome ? <p className="mt-5 text-sm leading-8 text-slate-700">سجّل ما اتُّفق عليه، ما رُفض أو بقي مفتوحًا، ومن سيفعل ماذا. يتولى Manus تحليل النتيجة وتحديث الملف وفتح الأعمال الداخلية التالية.</p> : pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : data.intakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
+                  <div className="mt-5 flex flex-wrap gap-2">{activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
                 </Card>
                 <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{activeActions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء نشط</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.intakeProposals.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">مقترح للمراجعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.meetings.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">اجتماع مرتبط</p></div></div></Card>
               </div>
@@ -1151,6 +1160,7 @@ export default function ComoNextTodayPage() {
     syncFocusUrl(null, null, null, "replace");
   };
   const openQueueItem = (item: any) => {
+    if (item.kind === "meeting" && item.needsOutcome && item.workFileId && item.recordId) return openFocusedRecord(item.workFileId, "meeting", item.recordId);
     if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);
     if (item.kind === "email") return openSection("email");
     if (item.kind === "proposal") return openProposal(item.recordId);
