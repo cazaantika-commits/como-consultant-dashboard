@@ -433,6 +433,7 @@ export async function createCommunicationDraftCommand(input: {
   body: string;
   toText?: string | null;
   ccText?: string | null;
+  sourceEmailId?: number | null;
   idempotencyKey?: string;
 }) {
   const db = await getDb();
@@ -489,7 +490,7 @@ export async function createCommunicationDraftCommand(input: {
 
   if (input.channel !== "email") return draftRecord;
 
-  const sourceEmailId = Number(String(input.idempotencyKey || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
+  const sourceEmailId = Number(input.sourceEmailId || String(input.idempotencyKey || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
   let inReplyTo: string | undefined;
   if (sourceEmailId) {
     const [sourceEmail] = await db.select({ messageId: comoNextEmailMessages.messageId })

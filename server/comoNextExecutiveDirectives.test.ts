@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { directiveRequestsCommunicationDraft, normalizeDirectiveEmailBody } from "./services/comoNextExecutiveDirectives";
 
 const service = readFileSync("server/services/comoNextExecutiveDirectives.ts", "utf8");
 const router = readFileSync("server/routers/comoNext.ts", "utf8");
@@ -34,6 +35,22 @@ describe("COMO Next executive directives", () => {
   it("keeps external commitments outside automatic directive execution", () => {
     expect(service).toContain("لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا");
     expect(service).not.toMatch(/sendMail\s*\(|sendApprovedComoReply\s*\(/);
+  });
+
+  it("turns a communication directive into a real mailbox draft and requires Draft UID evidence", () => {
+    expect(directiveRequestsCommunicationDraft("قم بتذكير وائل بأن صرف الدفعة يسرع المرحلة التالية")).toBe(true);
+    expect(directiveRequestsCommunicationDraft("حلل عرض كولييرز وقارن الأرقام")).toBe(false);
+    expect(service).toContain("createCommunicationDraftCommand");
+    expect(service).toContain("executive-directive-email-draft:");
+    expect(service).toContain("if (!mailbox?.uid)");
+    expect(service).toContain("if (!workProductId && !communicationDraftId && parsed.nextActionRequired");
+    expect(service).toContain("ممنوع اعتبار نص داخلي يقول «أعددت مسودة» تنفيذًا");
+  });
+
+  it("removes unsupported attachment promises and normalizes the owner signature", () => {
+    const body = normalizeDirectiveEmailBody("عزيزي وائل،\n\nسأعيد إرفاق نسخة الفاتورة.\n\nشكرًا،\nعبدالرحمن");
+    expect(body).not.toContain("سأعيد إرفاق");
+    expect(body).toContain("عبد الرحمن زقوت");
   });
 
   it("exposes the same write-or-voice directive channel inside the dossier and an open decision", () => {

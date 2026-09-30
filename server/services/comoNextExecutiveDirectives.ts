@@ -4,6 +4,7 @@ import {
   comoNextActions,
   comoNextCommunications,
   comoNextDecisions,
+  comoNextEmailMessages,
   comoNextWorkFileEvents,
   comoNextWorkFileUpdates,
   comoNextWorkFiles,
@@ -15,6 +16,7 @@ import {
   appendEvent,
   changeActionStatusCommand,
   createActionCommand,
+  createCommunicationDraftCommand,
   createDecisionCommand,
   requireProjectAccess,
   resolveDecisionCommand,
@@ -32,6 +34,23 @@ const directiveResultSchema = {
     completedNow: { type: "boolean" },
     workProductTitle: { anyOf: [{ type: "string" }, { type: "null" }] },
     workProductBody: { anyOf: [{ type: "string" }, { type: "null" }] },
+    communicationDraft: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            toText: { type: "string" },
+            ccText: { anyOf: [{ type: "string" }, { type: "null" }] },
+            subject: { type: "string" },
+            body: { type: "string" },
+            replyToExternalMessageRef: { anyOf: [{ type: "string" }, { type: "null" }] },
+          },
+          required: ["toText", "ccText", "subject", "body", "replyToExternalMessageRef"],
+          additionalProperties: false,
+        },
+        { type: "null" },
+      ],
+    },
     nextActionRequired: { type: "boolean" },
     nextActionTitle: { anyOf: [{ type: "string" }, { type: "null" }] },
     nextActionDescription: { anyOf: [{ type: "string" }, { type: "null" }] },
@@ -49,6 +68,7 @@ const directiveResultSchema = {
     "completedNow",
     "workProductTitle",
     "workProductBody",
+    "communicationDraft",
     "nextActionRequired",
     "nextActionTitle",
     "nextActionDescription",
@@ -68,6 +88,26 @@ function nowSql() {
 
 function compact(value: unknown, max = 4_000) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+export function directiveRequestsCommunicationDraft(directiveText: string) {
+  const normalized = directiveText.replace(/\s+/g, " ").trim().toLowerCase();
+  const actionVerb = /(?:أرسل|ارسل|ابعث|ابعت|راسل|رد\s|ذكّر|ذكر\s|تذكير|send|email|e-mail|reply|remind)/i;
+  const communicationTarget = /(?:رسالة|بريد|إيميل|ايميل|وائل|ميا|سكرتير|شركة|مكتب|consultant|wael|mia|email|message)/i;
+  return actionVerb.test(normalized) && communicationTarget.test(normalized);
+}
+
+export function normalizeDirectiveEmailBody(body: string) {
+  const paragraphs = String(body || "").trim().split(/\n{2,}/).filter(paragraph => (
+    !/(?:سأعيد إرفاق|سأرفق|سوف أرفق|we will attach|i will attach|reattach)/i.test(paragraph)
+  ));
+  const lines = paragraphs.join("\n\n").split("\n");
+  const signatureWindow = Math.max(0, lines.length - 12);
+  for (let index = signatureWindow; index < lines.length; index += 1) {
+    if (/^\s*(?:abdul\s*rahman|abdulrahman|abdalrahman)(?:\s+zaqout)?\s*$/i.test(lines[index] || "")) lines[index] = "Abdalrahman Zaqout";
+    if (/^\s*(?:عبدالرحمن|عبد الرحمن)(?:\s+زقوت)?\s*$/.test(lines[index] || "")) lines[index] = "عبد الرحمن زقوت";
+  }
+  return lines.join("\n").trim();
 }
 
 async function loadDirectiveContext(userId: number, workFileId: number) {
@@ -95,7 +135,7 @@ async function loadDirectiveContext(userId: number, workFileId: number) {
       .where(and(eq(comoNextDecisions.projectId, workFile.projectId), inArray(comoNextDecisions.decisionStatus, ["required", "deferred"])))
       .orderBy(desc(comoNextDecisions.updatedAt))
       .limit(20),
-    db.select({ workFileId: comoNextCommunications.workFileId, direction: comoNextCommunications.direction, status: comoNextCommunications.communicationStatus, subject: comoNextCommunications.subject, body: comoNextCommunications.body, occurredAt: comoNextCommunications.occurredAt })
+    db.select({ workFileId: comoNextCommunications.workFileId, direction: comoNextCommunications.direction, status: comoNextCommunications.communicationStatus, subject: comoNextCommunications.subject, body: comoNextCommunications.body, externalMessageRef: comoNextCommunications.externalMessageRef, occurredAt: comoNextCommunications.occurredAt })
       .from(comoNextCommunications)
       .where(eq(comoNextCommunications.projectId, workFile.projectId))
       .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id))
@@ -123,9 +163,11 @@ function buildDirectivePrompt(input: {
 2) إذا كان العمل تحليلاً/مقارنة/صياغة/تنظيم معرفة ويمكن إنجازه من المعلومات أدناه، أنجزه الآن داخل workProductBody، لا تنشئ مجرد مهمة تقول "حلّل".
 3) إذا احتاج العمل وثائق أو بيانات غير موجودة، أنشئ خطوة Manus واحدة محددة تجمع الناقص وتنتج مخرجًا واضحًا؛ لا تجعل المستخدم مسؤولاً عن عمل يستطيع Manus فعله.
 4) اذكر ملفات الموضوع المرتبطة التي يجب تعليق خطواتها المنفردة إلى أن يكتمل العمل الموحد، باستعمال المعرفات المتاحة فقط.
-5) لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا. المسودة أو التقرير الداخلي مسموحان.
-6) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
-7) اكتب بالعربية المهنية الواضحة. اجعل المخرج قابلاً للقراءة لا JSON خامًا.
+5) لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا. إذا طلب عبد الرحمن إرسال/كتابة/تذكير شخص برسالة، جهّز communicationDraft كاملة؛ النظام سيحفظها فعليًا في Private Email Drafts ليُراجعها ويرسلها من بريده. ممنوع اعتبار نص داخلي يقول «أعددت مسودة» تنفيذًا.
+6) في communicationDraft استخدم عنوان البريد المثبت من السياق. وائل هو wael@zooma.ae، وإذا كان هو المستلم الأساسي اجعل CC إلى pa@zooma.ae (Mia). اذكر externalMessageRef الأنسب إذا كانت الرسالة متابعة لخيط سابق.
+7) لا تقل إن ملفًا مرفق أو سيُرفق؛ مسار توجيه Manus الحالي ينشئ نص المسودة ويحفظه في البريد ولا يضيف مرفقات. وقّع الاسم العربي «عبد الرحمن زقوت» أو الإنجليزي حصراً «Abdalrahman Zaqout».
+8) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
+9) اكتب بالعربية المهنية الواضحة. اجعل المخرج قابلاً للقراءة لا JSON خامًا.
 
 التوجيه الحالي من عبد الرحمن:
 ${input.directiveText}
@@ -150,7 +192,7 @@ ${decisions.length ? decisions.map(item => `- قرار ${item.id} في ملف ${
 ${memory.length ? memory.map(item => `- ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}) · ${item.memoryType}/${item.entryType || ""} · ${item.title}\n${compact(item.body, 3_000)}`).join("\n\n") : "لا توجد."}
 
 أحدث المراسلات:
-${communications.length ? communications.map(item => `- ملف ${item.workFileId} · ${item.direction}/${item.status} · ${item.subject}\n${compact(item.body, 1_200)}`).join("\n\n") : "لا توجد."}`;
+${communications.length ? communications.map(item => `- ملف ${item.workFileId} · ${item.direction}/${item.status} · ${item.subject} · المرجع: ${item.externalMessageRef || "لا يوجد"}\n${compact(item.body, 1_200)}`).join("\n\n") : "لا توجد."}`;
 }
 
 export async function executeExecutiveDirectiveCommand(input: {
@@ -191,6 +233,7 @@ export async function executeExecutiveDirectiveCommand(input: {
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة نتيجة Manus" }); }
 
   const allowedRelatedIds = new Set(context.projectFiles.map(file => Number(file.id)));
+  const communicationDraftRequested = directiveRequestsCommunicationDraft(input.directiveText);
   const relatedWorkFileIds = input.executionSource === "executive_control"
     ? []
     : [...new Set((Array.isArray(parsed.relatedWorkFileIds) ? parsed.relatedWorkFileIds : [])
@@ -198,10 +241,57 @@ export async function executeExecutiveDirectiveCommand(input: {
       .filter((id: number) => id !== input.workFileId && allowedRelatedIds.has(id)))];
   const sourceRecordId = `executive-directive:${saved.id}`;
   let workProductId: number | null = null;
+  let communicationDraftId: number | null = null;
+  let mailboxDraftRef: string | null = null;
   let nextActionId: number | null = null;
   let nextDecisionId: number | null = null;
 
-  if (parsed.completedNow && String(parsed.workProductTitle || "").trim() && String(parsed.workProductBody || "").trim()) {
+  if (communicationDraftRequested) {
+    const draft = parsed.communicationDraft;
+    if (!draft || !String(draft.subject || "").trim() || !String(draft.body || "").trim()) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "طلب المراسلة لم يُنفّذ: لم ينتج Manus مسودة بريد كاملة" });
+    }
+    const toText = String(draft.toText || "").trim() || (/وائل|wael/i.test(input.directiveText) ? "wael@zooma.ae" : "");
+    if (!toText.includes("@")) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "طلب المراسلة لم يُنفّذ: عنوان المستلم غير مثبت" });
+    }
+    const externalRef = String(draft.replyToExternalMessageRef || "").trim();
+    const refMatch = externalRef.match(/\b(Inbox|Sent)\s+UID\s+(\d+)\b/i);
+    let sourceEmailId: number | null = null;
+    if (refMatch) {
+      const [sourceEmail] = await context.db.select({ id: comoNextEmailMessages.id })
+        .from(comoNextEmailMessages)
+        .where(and(
+          eq(comoNextEmailMessages.userId, input.userId),
+          eq(comoNextEmailMessages.folderName, refMatch[1][0].toUpperCase() + refMatch[1].slice(1).toLowerCase()),
+          eq(comoNextEmailMessages.imapUid, Number(refMatch[2])),
+        ))
+        .limit(1);
+      sourceEmailId = sourceEmail ? Number(sourceEmail.id) : null;
+    }
+    const ccText = /(?:^|[<\s,;])wael@zooma\.ae(?:$|[>\s,;])/i.test(toText)
+      ? "pa@zooma.ae"
+      : String(draft.ccText || "").trim() || null;
+    const createdDraft = await createCommunicationDraftCommand({
+      userId: input.userId,
+      workFileId: input.workFileId,
+      channel: "email",
+      toText,
+      ccText,
+      subject: String(draft.subject).trim(),
+      body: normalizeDirectiveEmailBody(String(draft.body)),
+      sourceEmailId,
+      idempotencyKey: `executive-directive-email-draft:${saved.id}`,
+    });
+    communicationDraftId = Number(createdDraft.id);
+    const mailbox = "mailboxDraft" in createdDraft ? createdDraft.mailboxDraft : null;
+    if (!mailbox?.uid) {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "طلب المراسلة لم يُنفّذ: لم يرجع البريد Draft UID موثقًا" });
+    }
+    mailboxDraftRef = `${mailbox.folder} UID ${mailbox.uid}`;
+  }
+
+  if (!communicationDraftRequested && parsed.completedNow && String(parsed.workProductTitle || "").trim() && String(parsed.workProductBody || "").trim()) {
     const [existing] = await context.db.select({ id: comoNextWorkMemory.id }).from(comoNextWorkMemory)
       .where(and(eq(comoNextWorkMemory.sourceSystem, "como_directive"), eq(comoNextWorkMemory.sourceRecordId, sourceRecordId))).limit(1);
     if (existing) workProductId = Number(existing.id);
@@ -234,7 +324,7 @@ export async function executeExecutiveDirectiveCommand(input: {
     }
   }
 
-  if (!workProductId && parsed.nextActionRequired && String(parsed.nextActionTitle || "").trim() && String(parsed.nextActionAcceptanceCriteria || "").trim()) {
+  if (!workProductId && !communicationDraftId && parsed.nextActionRequired && String(parsed.nextActionTitle || "").trim() && String(parsed.nextActionAcceptanceCriteria || "").trim()) {
     const created = await createActionCommand({
       userId: input.userId,
       workFileId: input.workFileId,
@@ -302,9 +392,12 @@ export async function executeExecutiveDirectiveCommand(input: {
     });
   }
 
+  const executionSummary = mailboxDraftRef
+    ? `حفظ Manus مسودة البريد فعليًا في Private Email Drafts (${mailboxDraftRef}). لم تُرسل؛ المراجعة والتعديل والإرسال من تطبيق البريد.`
+    : String(parsed.executionSummary || "").trim();
   await context.db.update(comoNextWorkFileUpdates).set({
     analysisStatus: "applied",
-    analysisSummary: `${String(parsed.acknowledgement || "تم فهم التوجيه.").trim()}\n\n${String(parsed.executionSummary || "").trim()}`.trim(),
+    analysisSummary: `${String(parsed.acknowledgement || "تم فهم التوجيه.").trim()}\n\n${executionSummary}`.trim(),
     suggestedActionTitle: nextActionId ? String(parsed.nextActionTitle).trim().slice(0, 500) : null,
     suggestedActionDescription: nextActionId ? String(parsed.nextActionDescription || "").trim().slice(0, 5000) || null : null,
     suggestedAcceptanceCriteria: nextActionId ? String(parsed.nextActionAcceptanceCriteria || "").trim().slice(0, 5000) : null,
@@ -320,10 +413,12 @@ export async function executeExecutiveDirectiveCommand(input: {
     acknowledgement: String(parsed.acknowledgement || "تم فهم التوجيه.").trim(),
     executionSummary: String(parsed.executionSummary || "").trim(),
     workProductId,
+    communicationDraftId,
+    mailboxDraftRef,
     nextActionId,
     nextDecisionId,
     relatedWorkFileIds,
-    completedNow: Boolean(workProductId),
+    completedNow: Boolean(workProductId || mailboxDraftRef),
     externalSideEffect: false as const,
   };
 }
