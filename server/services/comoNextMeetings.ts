@@ -23,6 +23,7 @@ import { transcribeAudio } from "../_core/voiceTranscription";
 import { getDb } from "../db";
 import { storagePut } from "../storage";
 import { appendEvent, requireProjectAccess, toSqlUtcTimestamp } from "./comoNextCommands";
+import { recordWorkFileUpdateCommand } from "./comoNextKitchen";
 
 export type MeetingSourceKind = "preparation" | "notes" | "transcript";
 export type MeetingProposalKind = "question" | "check" | "decision" | "action" | "external_commitment" | "risk" | "note";
@@ -265,8 +266,60 @@ export async function updateMeetingAgendaItemCommand(input: { userId: number; ag
       summary: `${input.isChecked ? "معالجة" : "تحديث"} محور الاجتماع: ${String(row.prompt_ar || "محور")}`,
       payload: { meetingId: Number(row.meeting_id), agendaItemId: input.agendaItemId, checked: input.isChecked },
     });
-    return { success: true };
+    return { success: true, meetingId: Number(row.meeting_id) };
   });
+}
+
+export async function captureMeetingAgendaOutcomeCommand(input: { userId: number; meetingId: number }) {
+  const { db, meeting } = await requireMeetingAccess(input.meetingId, input.userId, "write");
+  if (["completed", "cancelled"].includes(meeting.meetingStatus)) return { captured: false as const, reason: "meeting_closed" as const };
+  if (meeting.startsAt && new Date(`${String(meeting.startsAt).replace(" ", "T")}Z`).getTime() > Date.now()) {
+    return { captured: false as const, reason: "meeting_not_started" as const };
+  }
+  const result = await db.execute(sql`
+    SELECT id,category,prompt_ar AS promptAr,response,is_checked AS isChecked,is_required AS isRequired,sort_order AS sortOrder
+    FROM como_next_meeting_agenda_items
+    WHERE meeting_id=${input.meetingId}
+    ORDER BY sort_order ASC,id ASC
+  `);
+  const agenda = rowsOf<any>(result);
+  const answered = agenda.filter(item => String(item.response || "").trim().length >= 10);
+  if (!answered.length) return { captured: false as const, reason: "no_substantive_result" as const };
+  const required = agenda.filter(item => Number(item.isRequired) === 1);
+  const allRequiredClosed = required.length > 0 && required.every(item => Number(item.isChecked) === 1 && String(item.response || "").trim());
+  const closingItemClosed = agenda.some(item => Number(item.isChecked) === 1 && /إقفال|خلاصة|نتيجة|next step|closing|outcome/i.test(`${item.category || ""} ${item.promptAr || ""}`));
+  if (!allRequiredClosed && !closingItemClosed) return { captured: false as const, reason: "outcome_not_closed" as const };
+
+  const uniqueResponses = new Set<string>();
+  const lines: string[] = [];
+  for (const item of answered) {
+    const response = String(item.response || "").trim();
+    if (uniqueResponses.has(response)) continue;
+    uniqueResponses.add(response);
+    lines.push(`- ${String(item.category || item.promptAr || "محور").trim()}: ${response}`);
+  }
+  const rawText = [`نتيجة الاجتماع كما سجلها عبد الرحمن داخل محاور الاجتماع:`, ...lines].join("\n");
+  const sourceHash = createHash("sha256").update(rawText, "utf8").digest("hex");
+  const source = await addMeetingSourceCommand({
+    userId: input.userId,
+    meetingId: input.meetingId,
+    sourceKind: "notes",
+    visibility: "meeting_record",
+    title: `نتيجة الاجتماع من المحاور — ${meeting.title}`,
+    rawText,
+    idempotencyKey: `meeting:${input.meetingId}:agenda-outcome:${sourceHash.slice(0, 32)}`,
+  });
+  const update = await recordWorkFileUpdateCommand({
+    userId: input.userId,
+    workFileId: Number(meeting.workFileId),
+    sourceChannel: "meeting",
+    updateText: rawText,
+    occurredAt: null,
+    actorType: "human",
+    actorUserId: input.userId,
+    idempotencyKey: `meeting:${input.meetingId}:agenda-outcome-update:${sourceHash.slice(0, 25)}`,
+  });
+  return { captured: true as const, sourceId: Number(source.id), updateId: Number(update.id), replayed: source.replayed && update.replayed };
 }
 
 export async function recordMeetingConsentCommand(input: {
@@ -627,7 +680,7 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
   if (!source) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على مادة الاجتماع" });
   const { meeting } = await requireMeetingAccess(source.meetingId, input.userId, "write");
   const [existing] = await db.select({ id: comoNextMeetingAnalyses.id }).from(comoNextMeetingAnalyses).where(eq(comoNextMeetingAnalyses.requestKey, input.requestKey)).limit(1);
-  if (existing) return { id: Number(existing.id), replayed: true as const };
+  if (existing) return { id: Number(existing.id), replayed: true as const, autoApplied: 0, autoAppliedActionIds: [] as number[] };
   if (source.sourceKind === "transcript") {
     const [consent] = await db.select().from(comoNextMeetingConsents).where(eq(comoNextMeetingConsents.id, source.consentId!)).limit(1);
     assertTranscriptConsent(consent?.consentStatus);

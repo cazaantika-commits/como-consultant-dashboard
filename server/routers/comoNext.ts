@@ -33,6 +33,7 @@ import {
   addMeetingAgendaItemCommand,
   addMeetingSourceCommand,
   analyzeMeetingSourceCommand,
+  captureMeetingAgendaOutcomeCommand,
   createMeetingCommand,
   getMeetingWorkspace,
   importMeetingTranscriptCommand,
@@ -945,9 +946,14 @@ export const comoNextRouter = router({
 
   updateMeetingAgendaItem: protectedProcedure
     .input(z.object({ agendaItemId: z.number().int().positive(), response: z.string().trim().max(20_000).optional().nullable(), isChecked: z.boolean() }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return updateMeetingAgendaItemCommand({ userId: ctx.user.id, ...input });
+      const result = await updateMeetingAgendaItemCommand({ userId: ctx.user.id, ...input });
+      const outcome = await captureMeetingAgendaOutcomeCommand({ userId: ctx.user.id, meetingId: result.meetingId });
+      const executiveControl = outcome?.captured
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", meetingSourceIds: [outcome.sourceId], updateIds: [outcome.updateId], maxItems: 5 })
+        : null;
+      return { ...result, outcome, executiveControl };
     }),
 
   recordMeetingConsent: protectedProcedure

@@ -13,6 +13,7 @@ import {
   SARA_REALTIME_MODEL,
   SARA_REALTIME_VOICE,
 } from "../services/saraRealtime";
+import { readExecutiveWorkFile } from "../services/saraWorkFileReader";
 import { resolveOwnerUserIdForSara } from "../services/comoNextIntake";
 import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
@@ -23,7 +24,7 @@ import {
 } from "../services/saraBriefings";
 
 const tokenInput = z.object({ token: z.string().trim().min(1).max(256) });
-const realtimeToolName = z.enum(["lookup_executive_workspace", "direct_manus_in_work_file"]);
+const realtimeToolName = z.enum(["lookup_executive_workspace", "read_executive_work_file", "direct_manus_in_work_file"]);
 const briefingMode = z.enum(["auto", "full", "today", "changes"]);
 const executiveDirectiveArguments = z.object({
   work_file_id: z.number().int().positive(),
@@ -122,6 +123,9 @@ export const saraRealtimeRouter = router({
       }
       if (input.toolName === "lookup_executive_workspace") {
         return lookupExecutiveWorkspace(normalizedMember, input.arguments);
+      }
+      if (input.toolName === "read_executive_work_file") {
+        return readExecutiveWorkFile(normalizedMember, input.arguments);
       }
       throw new TRPCError({ code: "BAD_REQUEST", message: "مصدر سارة التشغيلي هو COMO Next فقط" });
     }),

@@ -5,6 +5,7 @@ import {
   comoNextCommunications,
   comoNextDecisions,
   comoNextMeetings,
+  comoNextWorkFileEvents,
   comoNextWorkFileUpdates,
   comoNextWorkFiles,
 } from "../../drizzle/schema";
@@ -268,6 +269,7 @@ export async function recordWorkFileUpdateCommand(input: {
   occurredAt?: string | null;
   actorType?: "human" | "manus" | "system";
   actorUserId?: number | null;
+  idempotencyKey?: string | null;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -284,6 +286,15 @@ export async function recordWorkFileUpdateCommand(input: {
   if (!text) throw new TRPCError({ code: "BAD_REQUEST", message: "اكتب التحديث أولًا" });
   const occurredAt = toSqlUtcTimestamp(input.occurredAt) || nowSql();
   return db.transaction(async tx => {
+    if (input.idempotencyKey) {
+      const [existingEvent] = await tx.select({ payloadJson: comoNextWorkFileEvents.payloadJson }).from(comoNextWorkFileEvents)
+        .where(eq(comoNextWorkFileEvents.idempotencyKey, input.idempotencyKey)).limit(1);
+      if (existingEvent) {
+        let updateId = 0;
+        try { updateId = Number(JSON.parse(String(existingEvent.payloadJson || "{}")).updateId || 0); } catch { /* keep zero */ }
+        return { id: updateId, replayed: true as const, analysisStatus: "not_requested" as const, completedMeetingId: null, externalSideEffect: false as const };
+      }
+    }
     const result = await tx.insert(comoNextWorkFileUpdates).values({
       userId: input.userId,
       projectId: workFile.projectId,
@@ -305,6 +316,7 @@ export async function recordWorkFileUpdateCommand(input: {
       eventType: "operational_update_recorded",
       summary: `تسجيل تحديث ${input.sourceChannel === "phone" ? "هاتفي" : input.sourceChannel === "meeting" ? "اجتماع" : "تشغيلي"}: ${text.slice(0, 180)}`,
       payload: { updateId: id, sourceChannel: input.sourceChannel, actionId: action?.id || null, externalSideEffect: false },
+      idempotencyKey: input.idempotencyKey || null,
     });
     let completedMeetingId: number | null = null;
     if (input.sourceChannel === "meeting") {
@@ -328,7 +340,7 @@ export async function recordWorkFileUpdateCommand(input: {
         });
       }
     }
-    return { id, analysisStatus: "not_requested" as const, completedMeetingId, externalSideEffect: false as const };
+    return { id, replayed: false as const, analysisStatus: "not_requested" as const, completedMeetingId, externalSideEffect: false as const };
   });
 }
 

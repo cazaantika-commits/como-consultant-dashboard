@@ -239,7 +239,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
 
   const handleToolCall = useCallback(async (event: RealtimeEvent) => {
     if (!event.call_id || !event.name) return;
-    if (event.name !== "lookup_executive_workspace" && event.name !== "direct_manus_in_work_file") {
+    if (event.name !== "lookup_executive_workspace" && event.name !== "read_executive_work_file" && event.name !== "direct_manus_in_work_file") {
       sendRealtimeEvent({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify({ found: false, reason: "الأداة المطلوبة غير مسموحة" }) },

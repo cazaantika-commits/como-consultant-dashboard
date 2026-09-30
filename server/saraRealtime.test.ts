@@ -9,6 +9,7 @@ import {
   SARA_REALTIME_MODEL,
   SARA_REALTIME_VOICE,
 } from "./services/saraRealtime";
+import { readExecutiveWorkFile } from "./services/saraWorkFileReader";
 
 const abdulrahman = { memberId: "abdulrahman", nameAr: "عبدالرحمن", role: "admin" };
 const wael = { memberId: "wael", nameAr: "وائل", role: "executive" };
@@ -38,6 +39,8 @@ describe("Sara Realtime architecture", () => {
     expect(instructions).toContain("مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة");
     expect(instructions).toContain("كلام عبد الرحمن ليس ملاحظة جانبية");
     expect(instructions).toContain("لا تعيدي تقديم قرار مؤجل قبل موعد عودته");
+    expect(instructions).toContain("لا تجيبي «ليس من صلاحيتي»");
+    expect(instructions).toContain("read_executive_work_file");
     expect(instructions).not.toContain("playfully flattering");
     expect(instructions).toContain("occasional natural chuckle");
     expect(instructions).toContain("لا تلقي نشرة طويلة كقطار");
@@ -54,11 +57,12 @@ describe("Sara Realtime architecture", () => {
   });
 
   it("lets Sara write Abdulrahman's words into the executive directive path without external actions", () => {
-    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "direct_manus_in_work_file"]);
+    expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "read_executive_work_file", "direct_manus_in_work_file"]);
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
-    expect(saraRealtimeTools[1].description).toContain("محرك Manus التنفيذي نفسه المستخدم في المطبخ");
-    expect(saraRealtimeTools[1].description).toContain("لا ترسل بريدًا");
+    expect(saraRealtimeTools.find(tool => tool.name === "read_executive_work_file")?.description).toContain("التقارير والتحليلات");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("محرك Manus التنفيذي نفسه المستخدم في المطبخ");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("لا ترسل بريدًا");
     expect(names).not.toContain("lookup_command_center");
   });
 
@@ -84,6 +88,21 @@ describe("Sara Realtime architecture", () => {
       found: false,
       reason: "مكتب COMO Next التنفيذي خاص بعبد الرحمن.",
     });
+    await expect(readExecutiveWorkFile(wael, JSON.stringify({ work_file_id: 60020, focus: "analysis", question: null, document_id: null }))).resolves.toEqual({
+      found: false,
+      reason: "ملفات COMO التنفيذية خاصة بعبد الرحمن.",
+    });
+  });
+
+  it("can open a work-file dossier and read protected report text without exposing storage URLs", () => {
+    const readerSource = readFileSync("server/services/saraWorkFileReader.ts", "utf8");
+    expect(readerSource).toContain("como_next_meeting_agenda_items");
+    expect(readerSource).toContain("como_next_meeting_minutes");
+    expect(readerSource).toContain("como_next_work_memory_documents");
+    expect(readerSource).toContain("new PDFParse");
+    expect(readerSource).toContain("storageGet(document.storageKey)");
+    expect(readerSource).toContain("بصمة التقرير لا تطابق السجل");
+    expect(readerSource).not.toContain("storageUrl:");
   });
 
   it("returns work-file ids with operational rows so Sara targets the correct dossier", () => {
@@ -135,9 +154,11 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("ما الجديد؟");
     expect(roomSource).toContain('playBriefing("auto")');
     expect(roomSource).not.toContain('event.name !== "lookup_command_center"');
+    expect(roomSource).toContain('event.name !== "read_executive_work_file"');
     expect(routerSource).not.toContain('"lookup_command_center"');
     expect(roomSource).toContain('event.name !== "direct_manus_in_work_file"');
     expect(routerSource).toContain('input.toolName === "direct_manus_in_work_file"');
+    expect(routerSource).toContain('input.toolName === "read_executive_work_file"');
     expect(roomSource).toContain('type: "response.cancel"');
     expect(roomSource).toContain("completeBriefing.mutate");
     expect(roomSource).not.toContain("أهم ثلاث أولويات حالية فقط");

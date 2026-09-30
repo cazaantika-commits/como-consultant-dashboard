@@ -18,6 +18,7 @@ const recordingsMigration = readFileSync(new URL("../drizzle/0095_como_next_meet
 const serviceSource = readFileSync(new URL("./services/comoNextMeetings.ts", import.meta.url), "utf8");
 const workspaceSource = readFileSync(new URL("../client/src/components/ComoNextMeetingWorkspace.tsx", import.meta.url), "utf8");
 const documentRouteSource = readFileSync(new URL("./comoNextDocumentRoute.ts", import.meta.url), "utf8");
+const routerSource = readFileSync(new URL("./routers/comoNext.ts", import.meta.url), "utf8");
 
 function context(userId: number): TrpcContext {
   return {
@@ -110,6 +111,12 @@ describe("COMO Next meeting safety invariants", () => {
     expect(serviceSource).toContain("externalSideEffect: false");
     expect(serviceSource).toContain("sourceSystem: comoNextMeetingSources.sourceSystem");
     expect(serviceSource).toContain('meetingStatus: input.meetingStatus ?? "planned"');
+    expect(serviceSource).toContain("captureMeetingAgendaOutcomeCommand");
+    expect(serviceSource).toContain('sourceKind: "notes"');
+    expect(serviceSource).toContain("meeting:${input.meetingId}:agenda-outcome:");
+    expect(routerSource).toContain('trigger: "meeting_source"');
+    expect(routerSource).toContain("meetingSourceIds: [outcome.sourceId]");
+    expect(routerSource).toContain("updateIds: [outcome.updateId]");
     expect(serviceSource).not.toMatch(/sendMail|nodemailer|smtpTransport|notifyOwner/);
   });
 
