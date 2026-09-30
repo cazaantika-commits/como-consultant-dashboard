@@ -9,8 +9,8 @@ type SessionWithAudioSocket = {
 
 const PCM_SAMPLE_RATE = 24_000;
 const PCM_BYTES_PER_SAMPLE = 2;
-export const LIVE_AVATAR_FIRST_CHUNK_MS = 400;
-export const LIVE_AVATAR_FOLLOWING_CHUNK_MS = 1_000;
+export const LIVE_AVATAR_FIRST_CHUNK_MS = 240;
+export const LIVE_AVATAR_FOLLOWING_CHUNK_MS = 240;
 
 function chunkBytes(milliseconds: number) {
   return Math.floor((PCM_SAMPLE_RATE * PCM_BYTES_PER_SAMPLE * milliseconds) / 1_000);

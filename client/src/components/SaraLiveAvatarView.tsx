@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   AgentEventsEnum,
   LiveAvatarSession,
@@ -8,35 +8,58 @@ import {
 import { Radio } from "lucide-react";
 import { createLiveAvatarPcmStream, type LiveAvatarPcmStream } from "@shared/liveAvatarAudio";
 
-export type SaraVisualAudioDelta = {
-  id: number;
-  pcmBase64: string;
+export type SaraLiveAvatarAudioController = {
+  appendPcmBase64: (pcmBase64: string) => boolean;
+  commit: () => boolean;
+  interrupt: () => boolean;
 };
 
 type Props = {
   portrait: string;
   sessionToken: string | null;
-  audioDelta: SaraVisualAudioDelta | null;
-  commitId: number;
-  interruptId: number;
   playAudio: boolean;
   onStateChange?: (state: { connected: boolean; speaking: boolean; error: string | null }) => void;
   onAudioRouteFailure?: () => void;
   onPlaybackComplete?: () => void;
 };
 
-export function SaraLiveAvatarView({ portrait, sessionToken, audioDelta, commitId, interruptId, playAudio, onStateChange, onAudioRouteFailure, onPlaybackComplete }: Props) {
+export const SaraLiveAvatarView = forwardRef<SaraLiveAvatarAudioController, Props>(function SaraLiveAvatarView({ portrait, sessionToken, playAudio, onStateChange, onAudioRouteFailure, onPlaybackComplete }, ref) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const sessionRef = useRef<LiveAvatarSession | null>(null);
   const pcmStreamRef = useRef<LiveAvatarPcmStream | null>(null);
-  const lastDeltaRef = useRef<number | null>(null);
-  const lastCommitRef = useRef(0);
   const [connected, setConnected] = useState(false);
   const [streamReady, setStreamReady] = useState(false);
   const [liveVideoPlaying, setLiveVideoPlaying] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showLiveVideo = streamReady && liveVideoPlaying && !error;
+
+  useImperativeHandle(ref, () => ({
+    appendPcmBase64(pcmBase64) {
+      const stream = pcmStreamRef.current;
+      if (!stream || !streamReady) return false;
+      try {
+        const appended = stream.appendBase64(pcmBase64);
+        if (!appended) setError("تعذر تمرير صوت سارة إلى الصورة الحية");
+        return appended;
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "تعذر تحريك سارة مع الرد الصوتي");
+        return false;
+      }
+    },
+    commit() {
+      try { return pcmStreamRef.current?.commit() ?? false; } catch { return false; }
+    },
+    interrupt() {
+      try {
+        const interrupted = pcmStreamRef.current?.interrupt() ?? false;
+        setSpeaking(false);
+        return interrupted;
+      } catch {
+        return false;
+      }
+    },
+  }), [streamReady]);
 
   useEffect(() => {
     onStateChange?.({ connected: connected && streamReady && !error, speaking, error });
@@ -115,38 +138,6 @@ export function SaraLiveAvatarView({ portrait, sessionToken, audioDelta, commitI
     };
   }, [onPlaybackComplete, sessionToken]);
 
-  useEffect(() => {
-    if (!audioDelta || lastDeltaRef.current === audioDelta.id || !streamReady) return;
-    const stream = pcmStreamRef.current;
-    if (!stream) return;
-    lastDeltaRef.current = audioDelta.id;
-    try {
-      if (!stream.appendBase64(audioDelta.pcmBase64)) setError("تعذر تمرير صوت سارة إلى الصورة الحية");
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "تعذر تحريك سارة مع الرد الصوتي");
-    }
-  }, [audioDelta, streamReady]);
-
-  useEffect(() => {
-    if (!commitId || commitId === lastCommitRef.current) return;
-    lastCommitRef.current = commitId;
-    try {
-      pcmStreamRef.current?.commit();
-    } catch {
-      // OpenAI audio continues even if the visual stream has already ended.
-    }
-  }, [commitId]);
-
-  useEffect(() => {
-    if (!interruptId) return;
-    try {
-      pcmStreamRef.current?.interrupt();
-      setSpeaking(false);
-    } catch {
-      // The remote stream may have ended just before the interruption.
-    }
-  }, [interruptId]);
-
   return (
     <div className="relative h-full min-h-[170px] overflow-hidden rounded-[20px] bg-[#071522] shadow-[0_24px_70px_rgba(2,12,24,.38)] sm:min-h-[260px] sm:rounded-[26px]">
       <img
@@ -182,4 +173,4 @@ export function SaraLiveAvatarView({ portrait, sessionToken, audioDelta, commitI
       )}
     </div>
   );
-}
+});

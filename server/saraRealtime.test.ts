@@ -111,8 +111,14 @@ describe("Sara Realtime architecture", () => {
     expect(avatarSource).toContain("createLiveAvatarPcmStream");
     expect(roomSource).toContain('case "response.created"');
     expect(roomSource).toContain("float32ToPcmBase64");
+    expect(roomSource).toContain("resampleTo24k");
     expect(roomSource).toContain("createScriptProcessor");
     expect(roomSource).toContain("avatarCommitTimerRef");
+    expect(roomSource).toContain("avatarAudioControllerRef.current?.appendPcmBase64");
+    expect(roomSource).not.toContain("setAvatarAudioDelta");
+    expect(roomSource).toContain("if (avatarResponseStreamingRef.current) return;");
+    expect(avatarSource).toContain("forwardRef<SaraLiveAvatarAudioController");
+    expect(avatarSource).toContain("useImperativeHandle");
     expect(avatarSource).toContain("video.muted = !playAudio");
     expect(roomSource).toContain("avatarOwnsPlayback");
     expect(roomSource).toContain("handleAvatarAudioRouteFailure");

@@ -22,18 +22,18 @@ function harness() {
 }
 
 describe("LiveAvatar PCM streaming", () => {
-  it("keeps one OpenAI response as one avatar utterance and commits only once", () => {
+  it("keeps one OpenAI response as one continuous avatar utterance", () => {
     const { stream, messages } = harness();
 
-    stream.appendBase64(audio(200));
+    stream.appendBase64(audio(120));
     expect(messages).toHaveLength(0);
 
-    stream.appendBase64(audio(200));
+    stream.appendBase64(audio(120));
     expect(messages).toHaveLength(1);
     expect(messages[0].type).toBe("agent.speak");
     expect(Buffer.from(messages[0].audio, "base64")).toHaveLength(bytesFor(LIVE_AVATAR_FIRST_CHUNK_MS));
 
-    stream.appendBase64(audio(1_000));
+    stream.appendBase64(audio(LIVE_AVATAR_FOLLOWING_CHUNK_MS));
     expect(messages).toHaveLength(2);
     expect(messages[1].type).toBe("agent.speak");
     expect(messages[1].event_id).toBe(messages[0].event_id);
@@ -45,9 +45,28 @@ describe("LiveAvatar PCM streaming", () => {
     expect(stream.hasPendingAudio()).toBe(false);
   });
 
+  it("preserves every PCM byte across many small browser frames", () => {
+    const { stream, messages } = harness();
+    const frameDurations = [85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 65];
+    const expectedBytes = frameDurations.reduce((sum, duration) => sum + bytesFor(duration), 0);
+
+    for (const duration of frameDurations) expect(stream.appendBase64(audio(duration))).toBe(true);
+    expect(stream.commit()).toBe(true);
+
+    const audioMessages = messages.filter(message => message.type === "agent.speak" || message.type === "agent.speak_end");
+    const deliveredBytes = audioMessages.reduce((sum, message) => (
+      sum + (message.audio ? Buffer.from(message.audio, "base64").length : 0)
+    ), 0);
+    const utteranceIds = new Set(audioMessages.map(message => message.event_id));
+
+    expect(deliveredBytes).toBe(expectedBytes);
+    expect(utteranceIds.size).toBe(1);
+    expect(messages.at(-1)?.type).toBe("agent.speak_end");
+  });
+
   it("clears buffered audio immediately on barge-in without playing a stale tail", () => {
     const { stream, messages } = harness();
-    stream.appendBase64(audio(250));
+    stream.appendBase64(audio(120));
     expect(stream.hasPendingAudio()).toBe(true);
 
     stream.interrupt();

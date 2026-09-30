@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { BellRing, ListChecks, Mic, MicOff, Newspaper, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
-import { SaraLiveAvatarView, type SaraVisualAudioDelta } from "./SaraLiveAvatarView";
+import { SaraLiveAvatarView, type SaraLiveAvatarAudioController } from "./SaraLiveAvatarView";
 import { ComoPrimaryNav } from "./ComoPrimaryNav";
 
 const SARA_PORTRAIT = saraPortrait;
@@ -42,6 +42,32 @@ function float32ToPcmBase64(input: Float32Array) {
   return globalThis.btoa(binary);
 }
 
+function resampleTo24k(input: Float32Array, sourceRate: number) {
+  const targetRate = 24_000;
+  if (sourceRate === targetRate) return input;
+  const outputLength = Math.max(1, Math.round(input.length * targetRate / sourceRate));
+  const output = new Float32Array(outputLength);
+  const ratio = sourceRate / targetRate;
+  if (sourceRate > targetRate) {
+    for (let index = 0; index < outputLength; index += 1) {
+      const start = Math.floor(index * ratio);
+      const end = Math.max(start + 1, Math.min(input.length, Math.floor((index + 1) * ratio)));
+      let sum = 0;
+      for (let cursor = start; cursor < end; cursor += 1) sum += input[cursor];
+      output[index] = sum / Math.max(1, end - start);
+    }
+    return output;
+  }
+  for (let index = 0; index < outputLength; index += 1) {
+    const position = index * ratio;
+    const left = Math.floor(position);
+    const right = Math.min(input.length - 1, left + 1);
+    const weight = position - left;
+    output[index] = input[left] * (1 - weight) + input[right] * weight;
+  }
+  return output;
+}
+
 function mergeTranscript(entries: TranscriptEntry[], next: TranscriptEntry) {
   const existing = entries.findIndex(item => item.id === next.id);
   if (existing === -1) return [...entries, next].slice(-30);
@@ -73,9 +99,6 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const [textInput, setTextInput] = useState("");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [avatarToken, setAvatarToken] = useState<string | null>(null);
-  const [avatarAudioDelta, setAvatarAudioDelta] = useState<SaraVisualAudioDelta | null>(null);
-  const [avatarCommitId, setAvatarCommitId] = useState(0);
-  const [avatarInterruptId, setAvatarInterruptId] = useState(0);
   const [avatarOwnsPlayback, setAvatarOwnsPlayback] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
 
@@ -85,10 +108,10 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const avatarAudioControllerRef = useRef<SaraLiveAvatarAudioController | null>(null);
   const avatarCommitTimerRef = useRef<number | null>(null);
   const outputItemIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
-  const cueCounterRef = useRef(0);
   const assistantDraftRef = useRef("");
   const lastMemberTextRef = useRef("");
   const avatarTokenRef = useRef<string | null>(null);
@@ -141,9 +164,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     avatarConnectedRef.current = false;
     avatarResponseStreamingRef.current = null;
     setAvatarOwnsPlayback(false);
-    setAvatarAudioDelta(null);
-    setAvatarCommitId(value => value + 1);
-    setAvatarInterruptId(value => value + 1);
+    avatarAudioControllerRef.current?.interrupt();
     setAudioBlocked(false);
   }, [stopOutputCapture]);
 
@@ -259,7 +280,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         avatarCommitTimerRef.current = null;
         avatarResponseStreamingRef.current = null;
         setAvatarOwnsPlayback(false);
-        setAvatarInterruptId(value => value + 1);
+        avatarAudioControllerRef.current?.interrupt();
         finishPendingBriefing(false);
         break;
       case "input_audio_buffer.speech_stopped":
@@ -310,7 +331,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
           avatarCommitTimerRef.current = null;
           avatarResponseStreamingRef.current = null;
           setAvatarOwnsPlayback(false);
-          setAvatarInterruptId(value => value + 1);
+          avatarAudioControllerRef.current?.interrupt();
           finishPendingBriefing(false);
           setPhase("error");
           toast.error(event.response.status_details?.error?.message || "تعذر إكمال رد سارة");
@@ -318,7 +339,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
           if (avatarResponseStreamingRef.current) {
             if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
             avatarCommitTimerRef.current = window.setTimeout(() => {
-              setAvatarCommitId(value => value + 1);
+              if (!avatarAudioControllerRef.current?.commit()) setAvatarOwnsPlayback(false);
               avatarResponseStreamingRef.current = null;
               avatarCommitTimerRef.current = null;
             }, 250);
@@ -334,7 +355,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         avatarCommitTimerRef.current = null;
         avatarResponseStreamingRef.current = null;
         setAvatarOwnsPlayback(false);
-        setAvatarInterruptId(value => value + 1);
+        avatarAudioControllerRef.current?.interrupt();
         setPhase("error");
         toast.error(event.error?.message || "حدث خطأ في جلسة سارة");
         break;
@@ -368,6 +389,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   }, []);
 
   const handleAvatarPlaybackComplete = useCallback(() => {
+    if (avatarResponseStreamingRef.current) return;
     setAvatarOwnsPlayback(false);
   }, []);
 
@@ -383,11 +405,12 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       silence.gain.value = 0;
       processor.onaudioprocess = event => {
         if (!avatarResponseStreamingRef.current) return;
-        cueCounterRef.current += 1;
-        setAvatarAudioDelta({
-          id: cueCounterRef.current,
-          pcmBase64: float32ToPcmBase64(event.inputBuffer.getChannelData(0)),
-        });
+        const pcm24k = resampleTo24k(event.inputBuffer.getChannelData(0), context.sampleRate);
+        const appended = avatarAudioControllerRef.current?.appendPcmBase64(float32ToPcmBase64(pcm24k));
+        if (!appended) {
+          avatarResponseStreamingRef.current = false;
+          setAvatarOwnsPlayback(false);
+        }
       };
       source.connect(processor);
       processor.connect(silence);
@@ -529,8 +552,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       avatarConnectedRef.current = false;
       avatarResponseStreamingRef.current = null;
       setAvatarOwnsPlayback(false);
-      setAvatarAudioDelta(null);
-      setAvatarCommitId(value => value + 1);
+      avatarAudioControllerRef.current?.interrupt();
       toast.info("تم إيقاف الصورة الحية؛ الصوت ما زال يعمل");
       return;
     }
@@ -564,11 +586,9 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
 
         <section className={`relative min-h-0 bg-[#071522] p-1.5 sm:p-4 ${streamlined ? "sm:pt-20" : ""}`}>
           <SaraLiveAvatarView
+            ref={avatarAudioControllerRef}
             portrait={SARA_PORTRAIT}
             sessionToken={avatarToken}
-            audioDelta={avatarAudioDelta}
-            commitId={avatarCommitId}
-            interruptId={avatarInterruptId}
             playAudio={avatarOwnsPlayback}
             onStateChange={handleAvatarStateChange}
             onAudioRouteFailure={handleAvatarAudioRouteFailure}
