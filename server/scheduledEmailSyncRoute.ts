@@ -48,7 +48,7 @@ export function registerScheduledEmailSyncRoute(app: Express) {
           lastDuplicates: result.duplicates,
           lastError: null,
         }).where(eq(comoNextEmailSyncSettings.id, settings.id));
-        res.status(200).json({ ok: true, scanned: result.scanned, imported: result.imported, duplicates: result.duplicates, analyzed: result.analyzed, analysisFailures: result.analysisFailures, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
+        res.status(200).json({ ok: true, scanned: result.scanned, imported: result.imported, duplicates: result.duplicates, analyzed: result.analyzed, analysisFailures: result.analysisFailures, executiveControl: result.executiveControl, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
       } catch (error) {
         const message = error instanceof Error ? error.message.slice(0, 2000) : "scheduled_sync_failed";
         await db.update(comoNextEmailSyncSettings).set({ lastRunAt: nowSql(), lastStatus: "failed", lastError: message }).where(eq(comoNextEmailSyncSettings.id, settings.id));

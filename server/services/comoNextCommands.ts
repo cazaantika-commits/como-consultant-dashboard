@@ -189,6 +189,8 @@ export async function createActionCommand(input: {
   dueAt?: string | null;
   followUpAt?: string | null;
   idempotencyKey?: string;
+  actorType?: "human" | "manus" | "system";
+  actorUserId?: number | null;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -238,6 +240,8 @@ export async function createActionCommand(input: {
       projectId: workFile.projectId,
       workFileId: workFile.id,
       actionId: id,
+      actorType: input.actorType ?? "human",
+      actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
       eventType: "action_created",
       summary: `إضافة الإجراء: ${input.title}`,
       payload: { ownerType: input.ownerType, priority: input.priority, attentionAt },
@@ -257,6 +261,8 @@ export async function createDecisionCommand(input: {
   decisionAuthority: ComoNextDecisionAuthority;
   dueAt?: string | null;
   idempotencyKey?: string;
+  actorType?: "human" | "manus" | "system";
+  actorUserId?: number | null;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -301,6 +307,8 @@ export async function createDecisionCommand(input: {
       userId: input.userId,
       projectId: workFile.projectId,
       workFileId: workFile.id,
+      actorType: input.actorType ?? "human",
+      actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
       eventType: "decision_required",
       summary: `إضافة قرار مطلوب: ${input.title}`,
       payload: { decisionId: id, authority: input.decisionAuthority, dueAt },
@@ -315,6 +323,8 @@ export async function changeActionStatusCommand(input: {
   actionId: number;
   nextStatus: ComoNextActionStatus;
   evidenceReference?: string | null;
+  actorType?: "human" | "manus" | "system";
+  actorUserId?: number | null;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -347,6 +357,8 @@ export async function changeActionStatusCommand(input: {
       projectId: action.projectId,
       workFileId: action.workFileId,
       actionId: action.id,
+      actorType: input.actorType ?? "human",
+      actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
       eventType: "action_status_changed",
       summary: `تغيير حالة الإجراء من ${action.actionStatus} إلى ${input.nextStatus}`,
       payload: {

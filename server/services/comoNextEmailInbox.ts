@@ -27,9 +27,10 @@ import {
   type ReadonlyMailboxBatch,
 } from "../emailMonitor";
 import { storagePut } from "../storage";
-import { appendEvent, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
+import { appendEvent, createActionCommand, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
 import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
 import { reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
+import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
 import { createMeetingCommand } from "./comoNextMeetings";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
@@ -127,6 +128,31 @@ function confirmedMeetingKey(projectId: number, evidence: ConfirmedMeetingEviden
   ].join("|")).digest("hex").slice(0, 32);
 }
 
+async function ensureConfirmedMeetingPreparation(input: {
+  userId: number;
+  meetingId: number;
+  workFileId: number;
+  evidence: ConfirmedMeetingEvidence;
+}) {
+  if (new Date(input.evidence.startsAt).getTime() <= Date.now()) return null;
+  const person = meetingDisplayPerson(input.evidence.personName);
+  const organization = input.evidence.organizationName || "الطرف الخارجي";
+  const action = await createActionCommand({
+    userId: input.userId,
+    workFileId: input.workFileId,
+    title: `جهّز إحاطة ومحاور اجتماع ${organization} مع المهندس ${person}`,
+    description: `اقرأ ملف المشروع والمراسلات المرتبطة، واستخرج ما يجب عرضه أو سؤاله أو حسمه في الاجتماع: ${input.evidence.topic}`,
+    acceptanceCriteria: "إحاطة تنفيذية مختصرة ومحاور مرتبة مرتبطة بالدليل، جاهزة داخل ملف الاجتماع قبل الموعد، بلا إرسال أو التزام خارجي.",
+    ownerType: "manus",
+    priority: "urgent",
+    dueAt: input.evidence.startsAt,
+    idempotencyKey: `confirmed-meeting-preparation:${input.meetingId}`,
+    actorType: "system",
+    actorUserId: null,
+  });
+  return Number(action.id);
+}
+
 export async function reconcileConfirmedMeetingEmailCommand(input: { userId: number; emailId: number }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -166,7 +192,8 @@ export async function reconcileConfirmedMeetingEmailCommand(input: { userId: num
       if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
       await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(existingMeeting.workFileId), suppressReplyDraft: true });
     }
-    return { replayed: true as const, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), externalSideEffect: false as const };
+    const preparationActionId = await ensureConfirmedMeetingPreparation({ userId: input.userId, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), evidence });
+    return { replayed: true as const, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), preparationActionId, externalSideEffect: false as const };
   }
 
   const person = meetingDisplayPerson(evidence.personName);
@@ -197,7 +224,8 @@ export async function reconcileConfirmedMeetingEmailCommand(input: { userId: num
     if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
     await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(workFile.id), suppressReplyDraft: true });
   }
-  return { replayed: false as const, meetingId: Number(meeting.id), workFileId: Number(workFile.id), externalSideEffect: false as const };
+  const preparationActionId = await ensureConfirmedMeetingPreparation({ userId: input.userId, meetingId: Number(meeting.id), workFileId: Number(workFile.id), evidence });
+  return { replayed: false as const, meetingId: Number(meeting.id), workFileId: Number(workFile.id), preparationActionId, externalSideEffect: false as const };
 }
 
 export async function reconcileConfirmedMeetingsFromEmailCommand(input: { userId: number; limit?: number }) {
@@ -483,7 +511,8 @@ export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: numb
       }
     }
   }
-  return { ...result, analyzed, analysisFailures, meetingReconciliation };
+  const executiveControl = await runExecutiveControlLoopCommand({ userId: input.userId, trigger: "email_sync", scanPending: true, maxItems: 2 });
+  return { ...result, analyzed, analysisFailures, meetingReconciliation, executiveControl };
 }
 
 export async function listEmailInbox(userId: number, status?: "unmatched" | "suggested" | "linked" | "dismissed") {

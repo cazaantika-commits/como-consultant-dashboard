@@ -25,11 +25,12 @@ describe("COMO Next intelligent intake safeguards", () => {
     expect(hasDestructiveSql(migration)).toBe(false);
   });
 
-  it("keeps email analysis as evidence-bound proposals rather than direct operational writes", () => {
+  it("keeps general email analysis review-bound while allowing only confirmed-meeting preparation", () => {
     expect(emailService).toContain("proposals: {");
     expect(emailService).toContain("createIntakeProposalsCommand");
     expect(emailService).toContain("review-only");
-    expect(emailService).not.toContain("createActionCommand");
+    expect(emailService).toContain("ensureConfirmedMeetingPreparation");
+    expect(emailService).toContain("confirmed-meeting-preparation:");
     expect(emailService).not.toContain("createDecisionCommand");
     expect(emailService).not.toContain("sendMail(");
   });

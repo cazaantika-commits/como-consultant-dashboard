@@ -210,6 +210,8 @@ export async function addMeetingAgendaItemCommand(input: {
   priority: "critical" | "high" | "normal";
   isRequired: boolean;
   sourceEvidence?: string | null;
+  actorType?: "human" | "manus" | "system";
+  actorUserId?: number | null;
 }) {
   const { db, meeting } = await requireMeetingAccess(input.meetingId, input.userId, "write");
   if (meeting.meetingStatus === "completed" || meeting.meetingStatus === "cancelled") throw new TRPCError({ code: "BAD_REQUEST", message: "الاجتماع مغلق ولا يقبل محاور جديدة" });
@@ -234,6 +236,8 @@ export async function addMeetingAgendaItemCommand(input: {
       userId: input.userId,
       projectId: meeting.projectId,
       workFileId: meeting.workFileId!,
+      actorType: input.actorType ?? "human",
+      actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
       eventType: "meeting_agenda_item_added",
       summary: `إضافة محور اجتماع: ${input.promptAr.trim()}`,
       payload: { meetingId: meeting.id, agendaItemId: id, required: input.isRequired, audience: input.audience },
@@ -689,13 +693,14 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
     });
     return { id, replayed: false as const };
   });
-  if (drafted.replayed || source.sourceKind === "preparation") return { ...drafted, autoApplied: 0 };
+  if (drafted.replayed || source.sourceKind === "preparation") return { ...drafted, autoApplied: 0, autoAppliedActionIds: [] as number[] };
 
   const pending = await db.select().from(comoNextMeetingProposals).where(and(
     eq(comoNextMeetingProposals.analysisId, drafted.id),
     eq(comoNextMeetingProposals.reviewStatus, "pending"),
   )).orderBy(asc(comoNextMeetingProposals.ordinal));
   let autoApplied = 0;
+  const autoAppliedActionIds: number[] = [];
   for (const proposal of pending) {
     const applyAs: MeetingProposalTarget | null = proposal.proposalKind === "action" && isManusAssignment(proposal.assignedTo)
       ? "action"
@@ -703,16 +708,17 @@ export async function analyzeMeetingSourceCommand(input: { userId: number; sourc
         ? "note"
         : null;
     if (!applyAs) continue;
-    await reviewMeetingProposalCommand({
+    const applied = await reviewMeetingProposalCommand({
       userId: input.userId,
       proposalId: Number(proposal.id),
       decision: "apply",
       applyAs,
       reviewNote: "AUTO_MANUS: نتيجة داخلية آمنة طُبقت تلقائيًا؛ لا أثر خارجي.",
     });
+    if (applyAs === "action" && applied.targetId) autoAppliedActionIds.push(Number(applied.targetId));
     autoApplied += 1;
   }
-  return { ...drafted, autoApplied };
+  return { ...drafted, autoApplied, autoAppliedActionIds };
 }
 
 export async function reviewMeetingProposalCommand(input: {
@@ -732,6 +738,7 @@ export async function reviewMeetingProposalCommand(input: {
     if (!input.applyAs) throw new TRPCError({ code: "BAD_REQUEST", message: "حدد أين يطبق المقترح" });
     assertProposalApplication(proposal.proposalKind, input.applyAs, proposal.audience);
   }
+  const appliedByManus = String(input.reviewNote || "").startsWith("AUTO_MANUS:");
   const now = nowSql();
   return db.transaction(async tx => {
     await tx.execute(sql`SELECT id FROM como_next_meeting_proposals WHERE id = ${proposal.id} FOR UPDATE`);
@@ -839,6 +846,8 @@ export async function reviewMeetingProposalCommand(input: {
       userId: input.userId,
       projectId: meeting.projectId,
       workFileId: meeting.workFileId!,
+      actorType: appliedByManus ? "manus" : "human",
+      actorUserId: appliedByManus ? null : input.userId,
       eventType: input.decision === "apply" ? "meeting_proposal_applied" : "meeting_proposal_dismissed",
       summary: `${input.decision === "apply" ? "تطبيق" : "استبعاد"} مقترح الاجتماع: ${proposal.title}`,
       payload: { meetingId: meeting.id, proposalId: Number(proposal.id), appliedAs: input.applyAs || null, targetId, externalSideEffect: false },

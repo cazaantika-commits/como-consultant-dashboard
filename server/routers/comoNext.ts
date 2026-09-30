@@ -59,6 +59,7 @@ import {
   reviewWorkFileUpdateCommand,
 } from "../services/comoNextKitchen";
 import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
+import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -737,16 +738,22 @@ export const comoNextRouter = router({
       updateText: z.string().trim().min(3).max(100_000),
       occurredAt: z.string().optional().nullable(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return recordWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+      const saved = await recordWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "owner_update", updateIds: [Number(saved.id)], maxItems: 4 });
+      return { ...saved, executiveControl };
     }),
 
   analyzeWorkFileUpdate: protectedProcedure
     .input(z.object({ updateId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return analyzeWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+      const result = await analyzeWorkFileUpdateCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = result.nextActionId && result.nextOwnerType === "manus"
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "owner_update", actionIds: [Number(result.nextActionId)], maxItems: 4 })
+        : null;
+      return { ...result, executiveControl };
     }),
 
   executeExecutiveDirective: protectedProcedure
@@ -757,9 +764,13 @@ export const comoNextRouter = router({
       sourceChannel: kitchenUpdateChannelSchema.default("internal"),
       directiveText: z.string().trim().min(3).max(100_000),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return executeExecutiveDirectiveCommand({ userId: ctx.user.id, ...input });
+      const result = await executeExecutiveDirectiveCommand({ userId: ctx.user.id, ...input, executionSource: "owner" });
+      const executiveControl = result.nextActionId
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "owner_update", actionIds: [Number(result.nextActionId)], maxItems: 4 })
+        : null;
+      return { ...result, executiveControl };
     }),
 
   reviewWorkFileUpdate: protectedProcedure
@@ -783,9 +794,13 @@ export const comoNextRouter = router({
       channel: communicationChannelSchema.optional().nullable(),
       toText: z.string().trim().max(5000).optional().nullable(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return reviewIntakeProposalCommand({ userId: ctx.user.id, ...input });
+      const result = await reviewIntakeProposalCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = input.decision === "apply" && result.targetId
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "proposal_review", actionIds: [Number(result.targetId)], maxItems: 4 })
+        : null;
+      return { ...result, executiveControl };
     }),
 
   createCommunicationDraft: protectedProcedure
@@ -952,9 +967,11 @@ export const comoNextRouter = router({
       rawText: z.string().trim().min(10).max(500_000),
       idempotencyKey: z.string().trim().min(8).max(128).optional(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return addMeetingSourceCommand({ userId: ctx.user.id, ...input });
+      const result = await addMeetingSourceCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", meetingSourceIds: [Number(result.id)], maxItems: 4 });
+      return { ...result, executiveControl };
     }),
 
   uploadMeetingRecording: protectedProcedure
@@ -967,9 +984,13 @@ export const comoNextRouter = router({
       durationSeconds: z.number().int().positive().max(24 * 60 * 60).optional().nullable(),
       idempotencyKey: z.string().trim().min(8).max(128).optional(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return uploadMeetingRecordingCommand({ userId: ctx.user.id, ...input });
+      const result = await uploadMeetingRecordingCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = result.transcriptSourceId
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", meetingSourceIds: [Number(result.transcriptSourceId)], maxItems: 4 })
+        : null;
+      return { ...result, executiveControl };
     }),
 
   importMeetingTranscript: protectedProcedure
@@ -980,16 +1001,21 @@ export const comoNextRouter = router({
       rawText: z.string().trim().min(10).max(500_000),
       idempotencyKey: z.string().trim().min(8).max(128).optional(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return importMeetingTranscriptCommand({ userId: ctx.user.id, ...input });
+      const result = await importMeetingTranscriptCommand({ userId: ctx.user.id, ...input });
+      const sourceId = "sourceId" in result ? Number(result.sourceId) : Number(result.id);
+      const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", meetingSourceIds: [sourceId], maxItems: 4 });
+      return { ...result, executiveControl };
     }),
 
   analyzeMeetingSource: protectedProcedure
     .input(z.object({ sourceId: z.number().int().positive(), requestKey: z.string().trim().min(8).max(128) }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return analyzeMeetingSourceCommand({ userId: ctx.user.id, ...input });
+      const result = await analyzeMeetingSourceCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", scanPending: true, maxItems: 4 });
+      return { ...result, executiveControl };
     }),
 
   reviewMeetingProposal: protectedProcedure
@@ -999,9 +1025,13 @@ export const comoNextRouter = router({
       applyAs: meetingProposalTargetSchema.optional(),
       reviewNote: z.string().trim().max(5000).optional().nullable(),
     }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
-      return reviewMeetingProposalCommand({ userId: ctx.user.id, ...input });
+      const result = await reviewMeetingProposalCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = input.decision === "apply" && result.targetId
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "proposal_review", actionIds: [Number(result.targetId)], maxItems: 4 })
+        : null;
+      return { ...result, executiveControl };
     }),
 
   prepareMeetingMinutes: protectedProcedure

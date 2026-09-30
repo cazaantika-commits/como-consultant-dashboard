@@ -268,12 +268,13 @@ export async function reviewIntakeProposalCommand(input: {
   const channel = input.channel || proposal.channel || "internal";
   const toText = clean(input.toText ?? proposal.toText, 5_000) || null;
   const idempotencyKey = `intake-proposal:${proposal.id}`;
+  const appliedByManus = String(input.reviewNote || "").startsWith("AUTO_MANUS:");
   let targetId: number | null = null;
 
   if (input.decision === "apply") {
     if (proposal.proposalKind === "action") {
       if (!acceptanceCriteria) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اعتماد الإجراء يحتاج معيار قبول واضح" });
-      const result = await createActionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, description: content || undefined, acceptanceCriteria, ownerType, priority, dueAt, idempotencyKey });
+      const result = await createActionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, description: content || undefined, acceptanceCriteria, ownerType, priority, dueAt, idempotencyKey, actorType: appliedByManus ? "manus" : "human", actorUserId: appliedByManus ? null : input.userId });
       targetId = Number(result.id);
     } else if (proposal.proposalKind === "decision") {
       const result = await createDecisionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, question: content || title, contextSummary: `مقترح من ${proposal.sourceKind === "email" ? "تحليل بريد" : "محادثة سارة"}. الدليل: ${proposal.evidenceExcerpt}`, decisionAuthority: "abdulrahman", dueAt, idempotencyKey });
@@ -324,6 +325,8 @@ export async function reviewIntakeProposalCommand(input: {
       userId: input.userId,
       projectId: proposal.projectId,
       workFileId: proposal.workFileId,
+      actorType: appliedByManus ? "manus" : "human",
+      actorUserId: appliedByManus ? null : input.userId,
       eventType: input.decision === "apply" ? "intake_proposal_applied" : "intake_proposal_dismissed",
       summary: `${input.decision === "apply" ? "اعتماد وتحويل" : "استبعاد"} المقترح: ${title}`,
       payload: { proposalId: Number(proposal.id), proposalKind: proposal.proposalKind, targetId, externalSideEffect: false },

@@ -15,6 +15,7 @@ import {
   syncAndAnalyzeReadonlyMailboxCommand,
 } from "../services/comoNextEmailInbox";
 import { updateReplyDraftFromEmailCommand } from "../services/comoNextEmailOutbox";
+import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 
 function assertOwner(role?: string) {
   if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "صندوق بريد عبد الرحمن متاح للمالك فقط" });
@@ -80,9 +81,11 @@ export const comoNextEmailRouter = router({
 
   analyze: protectedProcedure
     .input(z.object({ emailId: z.number().int().positive(), requestKey: z.string().trim().min(8).max(128) }))
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       assertOwner(ctx.user.role);
-      return analyzeEmailCommand({ userId: ctx.user.id, ...input });
+      const result = await analyzeEmailCommand({ userId: ctx.user.id, ...input });
+      const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "email_sync", scanPending: true, maxItems: 2 });
+      return { ...result, executiveControl };
     }),
 
   createReplyDraft: protectedProcedure

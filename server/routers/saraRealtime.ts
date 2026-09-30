@@ -15,6 +15,7 @@ import {
 } from "../services/saraRealtime";
 import { resolveOwnerUserIdForSara } from "../services/comoNextIntake";
 import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
+import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 import {
   completeSaraBriefing,
   getSaraBriefingStatus,
@@ -105,14 +106,19 @@ export const saraRealtimeRouter = router({
         try { parsed = executiveDirectiveArguments.parse(JSON.parse(input.arguments || "{}")); }
         catch { throw new TRPCError({ code: "BAD_REQUEST", message: "لم تتمكن سارة من تحديد التوجيه وملف الموضوع بدقة" }); }
         const userId = await resolveOwnerUserIdForSara(member.memberId);
-        return executeExecutiveDirectiveCommand({
+        const result = await executeExecutiveDirectiveCommand({
           userId,
           workFileId: parsed.work_file_id,
           actionId: parsed.action_id,
           currentDecisionId: parsed.current_decision_id,
           sourceChannel: "internal",
           directiveText: parsed.directive_text,
+          executionSource: "sara",
         });
+        const executiveControl = result.nextActionId
+          ? await runExecutiveControlLoopCommand({ userId, trigger: "sara_directive", actionIds: [Number(result.nextActionId)], maxItems: 4 })
+          : null;
+        return { ...result, executiveControl };
       }
       if (input.toolName === "lookup_executive_workspace") {
         return lookupExecutiveWorkspace(normalizedMember, input.arguments);

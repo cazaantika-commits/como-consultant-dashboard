@@ -1,8 +1,9 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, notInArray } from "drizzle-orm";
+import { and, desc, eq, lte, notInArray } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextCommunications,
+  comoNextMeetings,
   comoNextWorkFileUpdates,
   comoNextWorkFiles,
 } from "../../drizzle/schema";
@@ -215,6 +216,8 @@ export async function recordWorkFileUpdateCommand(input: {
   sourceChannel: KitchenUpdateChannel;
   updateText: string;
   occurredAt?: string | null;
+  actorType?: "human" | "manus" | "system";
+  actorUserId?: number | null;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -247,13 +250,35 @@ export async function recordWorkFileUpdateCommand(input: {
       projectId: workFile.projectId,
       workFileId: workFile.id,
       actionId: action?.id || null,
-      actorType: "human",
-      actorUserId: input.userId,
+      actorType: input.actorType ?? "human",
+      actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
       eventType: "operational_update_recorded",
       summary: `تسجيل تحديث ${input.sourceChannel === "phone" ? "هاتفي" : input.sourceChannel === "meeting" ? "اجتماع" : "تشغيلي"}: ${text.slice(0, 180)}`,
       payload: { updateId: id, sourceChannel: input.sourceChannel, actionId: action?.id || null, externalSideEffect: false },
     });
-    return { id, analysisStatus: "not_requested" as const, externalSideEffect: false as const };
+    let completedMeetingId: number | null = null;
+    if (input.sourceChannel === "meeting") {
+      const [meeting] = await tx.select().from(comoNextMeetings).where(and(
+        eq(comoNextMeetings.workFileId, workFile.id),
+        lte(comoNextMeetings.startsAt, occurredAt),
+        notInArray(comoNextMeetings.meetingStatus, ["completed", "cancelled"]),
+      )).orderBy(desc(comoNextMeetings.startsAt), desc(comoNextMeetings.id)).limit(1);
+      if (meeting) {
+        completedMeetingId = Number(meeting.id);
+        await tx.update(comoNextMeetings).set({ meetingStatus: "completed", outcomeSummary: text.slice(0, 20_000), closedAt: occurredAt }).where(eq(comoNextMeetings.id, meeting.id));
+        await appendEvent(tx, {
+          userId: input.userId,
+          projectId: workFile.projectId,
+          workFileId: workFile.id,
+          actorType: input.actorType ?? "human",
+          actorUserId: input.actorUserId === undefined ? input.userId : input.actorUserId,
+          eventType: "meeting_outcome_recorded",
+          summary: `إغلاق الاجتماع بنتيجته المسجلة: ${meeting.title}`,
+          payload: { meetingId: meeting.id, updateId: id, externalSideEffect: false },
+        });
+      }
+    }
+    return { id, analysisStatus: "not_requested" as const, completedMeetingId, externalSideEffect: false as const };
   });
 }
 
@@ -316,6 +341,8 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
       priority: ["normal", "important", "urgent"].includes(parsed.suggestedPriority) ? parsed.suggestedPriority : "normal",
       dueAt: parsed.suggestedDueAt || undefined,
       idempotencyKey: `operational-update:${update.id}`,
+      actorType: "manus",
+      actorUserId: null,
     });
     targetActionId = Number(created.id);
   }

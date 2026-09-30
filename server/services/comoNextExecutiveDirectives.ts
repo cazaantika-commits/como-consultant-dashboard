@@ -160,6 +160,7 @@ export async function executeExecutiveDirectiveCommand(input: {
   currentDecisionId?: number | null;
   sourceChannel?: KitchenUpdateChannel;
   directiveText: string;
+  executionSource?: "owner" | "sara" | "executive_control";
 }) {
   const context = await loadDirectiveContext(input.userId, input.workFileId);
   if (input.currentDecisionId) {
@@ -172,6 +173,8 @@ export async function executeExecutiveDirectiveCommand(input: {
     actionId: input.actionId || null,
     sourceChannel: input.sourceChannel || "internal",
     updateText: input.directiveText,
+    actorType: input.executionSource === "executive_control" ? "manus" : "human",
+    actorUserId: input.executionSource === "executive_control" ? null : input.userId,
   });
 
   const response = await invokeLLM({
@@ -188,9 +191,11 @@ export async function executeExecutiveDirectiveCommand(input: {
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة نتيجة Manus" }); }
 
   const allowedRelatedIds = new Set(context.projectFiles.map(file => Number(file.id)));
-  const relatedWorkFileIds = [...new Set((Array.isArray(parsed.relatedWorkFileIds) ? parsed.relatedWorkFileIds : [])
-    .map(Number)
-    .filter((id: number) => id !== input.workFileId && allowedRelatedIds.has(id)))];
+  const relatedWorkFileIds = input.executionSource === "executive_control"
+    ? []
+    : [...new Set((Array.isArray(parsed.relatedWorkFileIds) ? parsed.relatedWorkFileIds : [])
+      .map(Number)
+      .filter((id: number) => id !== input.workFileId && allowedRelatedIds.has(id)))];
   const sourceRecordId = `executive-directive:${saved.id}`;
   let workProductId: number | null = null;
   let nextActionId: number | null = null;
@@ -239,6 +244,8 @@ export async function executeExecutiveDirectiveCommand(input: {
       ownerType: "manus",
       priority: ["normal", "important", "urgent"].includes(parsed.nextActionPriority) ? parsed.nextActionPriority : "important",
       idempotencyKey: `action:${sourceRecordId}`,
+      actorType: "manus",
+      actorUserId: null,
     });
     nextActionId = Number(created.id);
   }
@@ -253,6 +260,8 @@ export async function executeExecutiveDirectiveCommand(input: {
       recommendation: String(parsed.decisionRecommendation || "").trim() || null,
       decisionAuthority: "abdulrahman",
       idempotencyKey: `decision:${sourceRecordId}`,
+      actorType: "manus",
+      actorUserId: null,
     });
     nextDecisionId = Number(created.id);
   }
