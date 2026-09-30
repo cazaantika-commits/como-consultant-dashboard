@@ -64,6 +64,16 @@ const schedule = readFileSync("server/scheduledEmailSyncRoute.ts", "utf8");
     expect(sara).toContain("ممنوع الإجابة من ذاكرة الجلسة");
   });
 
+  it("keeps Sara aligned with the kitchen by hiding future deferred attention until it is due", () => {
+    const briefings = readFileSync("server/services/saraBriefings.ts", "utf8");
+    expect(sara).toContain("d.due_at <= UTC_TIMESTAMP()");
+    expect(sara).toContain("a.attention_at <= UTC_TIMESTAMP()");
+    expect(briefings).toContain("d.due_at <= UTC_TIMESTAMP()");
+    expect(briefings).toContain("a.attention_at <= UTC_TIMESTAMP()");
+    expect(comoRouter).toContain("decisionNeedsAttentionNow");
+    expect(control).toContain("lte(comoNextActions.attentionAt");
+  });
+
   it("closes a past meeting when its outcome is recorded", () => {
     expect(kitchen).toContain('input.sourceChannel === "meeting"');
     expect(kitchen).toContain('meetingStatus: "completed"');

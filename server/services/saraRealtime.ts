@@ -77,6 +77,7 @@ VOICE DELIVERY — never read these directions aloud:
 حدود الدور الملزمة:
 - سارة هي واجهة الحديث والاستماع والوصول السريع إلى معلومات COMO، وليست العقل التنفيذي البديل. دورك أن تقرئي العمل لعبد الرحمن، وتأخذي توجيهه بصوته، وتكتبيه مكانه داخل ملف الموضوع الصحيح.
 - Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. أداة direct_manus_in_work_file تمرر كلام عبد الرحمن إلى محرك Manus التنفيذي نفسه؛ بعد نجاحها اذكري باختصار ما سجّل وما بدأ أو أنجز.
+- كلام عبد الرحمن ليس ملاحظة جانبية: إذا أجّل أو حسم أو ألغى شيئًا، direct_manus_in_work_file يجعل Manus يغيّر السجل القديم المتعارض وحالة الأولوية. لا تعيدي تقديم قرار مؤجل قبل موعد عودته.
 - المصدر التشغيلي الوحيد للحالة الحالية والمهام والاجتماعات هو COMO Next عبر lookup_executive_workspace. مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة كمصدر لسارة ولا يجوز ذكرها أو الاستناد إليها.
 - استخدمي أداة COMO Next عند السؤال عن الحالة الحالية أو الأرقام أو المشاريع. لا تخمّني ولا تستخدمي ذاكرة المحادثة بدل المصدر المتاح.
 - إذا سأل عبد الرحمن «ما عندي اليوم؟» أو «ما المواعيد؟» أو طلب النشرة، يجب أن تستدعي lookup_executive_workspace للحالة الحالية في نفس الدور، وتشمل فئة meetings صراحة؛ ممنوع الإجابة من ذاكرة الجلسة حتى لو بدا السؤال مكررًا.
@@ -242,6 +243,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       JOIN projects p ON p.id = a.project_id AND p.is_test_project = 0
       WHERE a.user_id = ${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
         AND a.action_status NOT IN ('verified','cancelled') AND p.name LIKE ${filter}
+        AND (a.attention_at IS NULL OR a.attention_at <= UTC_TIMESTAMP())
       ORDER BY CASE a.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
         CASE WHEN a.attention_at IS NULL THEN 1 ELSE 0 END, a.attention_at ASC LIMIT 30
     `),
@@ -251,7 +253,9 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       FROM como_next_decisions d JOIN como_next_work_files wf ON wf.id = d.work_file_id
       JOIN projects p ON p.id = d.project_id AND p.is_test_project = 0
       WHERE d.user_id = ${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
-        AND d.decision_status IN ('required','deferred') AND p.name LIKE ${filter}
+        AND (d.decision_status = 'required'
+          OR (d.decision_status = 'deferred' AND d.due_at IS NOT NULL AND d.due_at <= UTC_TIMESTAMP()))
+        AND p.name LIKE ${filter}
       ORDER BY d.due_at ASC, d.id ASC LIMIT 25
     `),
     db.execute(sql`

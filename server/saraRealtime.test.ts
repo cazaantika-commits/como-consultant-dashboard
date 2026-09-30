@@ -36,6 +36,8 @@ describe("Sara Realtime architecture", () => {
     expect(instructions).toContain("one notch faster than a normal conversation");
     expect(instructions).toContain("ممنوع ألقاب مثل «يا زعيم» و«يا كبير»");
     expect(instructions).toContain("مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة");
+    expect(instructions).toContain("كلام عبد الرحمن ليس ملاحظة جانبية");
+    expect(instructions).toContain("لا تعيدي تقديم قرار مؤجل قبل موعد عودته");
     expect(instructions).not.toContain("playfully flattering");
     expect(instructions).toContain("occasional natural chuckle");
     expect(instructions).toContain("لا تلقي نشرة طويلة كقطار");

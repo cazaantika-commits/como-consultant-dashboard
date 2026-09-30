@@ -3,6 +3,7 @@ import { and, desc, eq, lte, notInArray } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextCommunications,
+  comoNextDecisions,
   comoNextMeetings,
   comoNextWorkFileUpdates,
   comoNextWorkFiles,
@@ -14,6 +15,7 @@ import {
   changeActionStatusCommand,
   createActionCommand,
   requireProjectAccess,
+  resolveDecisionCommand,
   toSqlUtcTimestamp,
 } from "./comoNextCommands";
 
@@ -30,6 +32,21 @@ function nowSql() {
   return new Date().toISOString().slice(0, 19).replace("T", " ");
 }
 
+export function decisionNeedsAttentionNow(decision: { decisionStatus?: string | null; dueAt?: string | Date | null }, nowMs = Date.now()) {
+  if (!decision.decisionStatus || decision.decisionStatus === "required") return true;
+  if (decision.decisionStatus !== "deferred" || !decision.dueAt) return false;
+  const raw = decision.dueAt instanceof Date ? decision.dueAt.toISOString() : String(decision.dueAt);
+  const dueMs = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`).getTime();
+  return Number.isFinite(dueMs) && dueMs <= nowMs;
+}
+
+export function actionNeedsAttentionNow(action: { attentionAt?: string | Date | null }, nowMs = Date.now()) {
+  if (!action.attentionAt) return true;
+  const raw = action.attentionAt instanceof Date ? action.attentionAt.toISOString() : String(action.attentionAt);
+  const attentionMs = new Date(raw.includes("T") ? raw : `${raw.replace(" ", "T")}Z`).getTime();
+  return !Number.isFinite(attentionMs) || attentionMs <= nowMs;
+}
+
 const updateAnalysisSchema = {
   type: "object",
   properties: {
@@ -42,8 +59,24 @@ const updateAnalysisSchema = {
     suggestedOwnerType: { anyOf: [{ type: "string", enum: ["manus", "human", "team"] }, { type: "null" }] },
     suggestedPriority: { anyOf: [{ type: "string", enum: ["normal", "important", "urgent"] }, { type: "null" }] },
     suggestedDueAt: { anyOf: [{ type: "string" }, { type: "null" }] },
+    decisionTransition: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            decisionId: { type: "integer" },
+            nextStatus: { type: "string", enum: ["approved", "rejected", "deferred"] },
+            decisionText: { type: "string" },
+            deferredUntil: { anyOf: [{ type: "string" }, { type: "null" }] },
+          },
+          required: ["decisionId", "nextStatus", "decisionText", "deferredUntil"],
+          additionalProperties: false,
+        },
+        { type: "null" },
+      ],
+    },
   },
-  required: ["summary", "nextStepRequired", "rationale", "suggestedActionTitle", "suggestedActionDescription", "suggestedAcceptanceCriteria", "suggestedOwnerType", "suggestedPriority", "suggestedDueAt"],
+  required: ["summary", "nextStepRequired", "rationale", "suggestedActionTitle", "suggestedActionDescription", "suggestedAcceptanceCriteria", "suggestedOwnerType", "suggestedPriority", "suggestedDueAt", "decisionTransition"],
   additionalProperties: false,
 } as const;
 
@@ -61,6 +94,7 @@ export function buildOperationalUpdatePrompt(input: {
   workFile: { title: string; governingQuestion: string; desiredOutcome: string };
   action?: { title: string; actionStatus: string; acceptanceCriteria: string } | null;
   activeActions?: Array<{ title: string; actionStatus: string; acceptanceCriteria: string }>;
+  activeDecisions?: Array<{ id: number; title: string; decisionStatus: string; dueAt: string | null }>;
   update: { sourceChannel: string; occurredAt: string; updateText: string };
   communications: UpdateEvidenceRow[];
 }) {
@@ -76,6 +110,9 @@ export function buildOperationalUpdatePrompt(input: {
   const activeActions = input.activeActions?.length
     ? input.activeActions.map((row, index) => `${index + 1}. ${row.title} · ${row.actionStatus}\nمعيار القبول: ${row.acceptanceCriteria}`).join("\n\n")
     : "لا توجد إجراءات نشطة أخرى.";
+  const activeDecisions = input.activeDecisions?.length
+    ? input.activeDecisions.map(row => `${row.id}. ${row.title} · ${row.decisionStatus} · موعد العودة: ${row.dueAt || "غير محدد"}`).join("\n")
+    : "لا توجد قرارات مفتوحة.";
 
   return `ملف العمل: ${input.workFile.title}
 السؤال الحاكم المسجل سابقًا: ${input.workFile.governingQuestion}
@@ -88,6 +125,9 @@ ${input.update.updateText}
 
 الإجراءات النشطة الحالية في الملف:
 ${activeActions}
+
+القرارات المفتوحة في الملف:
+${activeDecisions}
 
 أحدث المراسلات المرتبطة والمحفوظة بالفعل داخل الملف، من الأحدث إلى الأقدم:
 ${evidence}`;
@@ -105,6 +145,7 @@ export function buildExecutiveKitchenQueue(input: {
 }) {
   const items: Array<Record<string, unknown>> = [];
   for (const action of input.actions) {
+    if (!actionNeedsAttentionNow(action)) continue;
     const phase = action.actionStatus === "waiting_external"
       ? "waiting_external"
       : action.actionStatus === "completed_pending_verification"
@@ -112,7 +153,10 @@ export function buildExecutiveKitchenQueue(input: {
         : "act_now";
     items.push({ id: `action:${action.id}`, kind: "action", phase, title: action.title, projectId: action.projectId, workFileId: action.workFileId, recordId: action.id, ownerType: action.ownerType, priority: action.priority, attentionAt: action.attentionAt });
   }
-  for (const decision of input.decisions) items.push({ id: `decision:${decision.id}`, kind: "decision", phase: "owner_review", title: decision.title, projectId: decision.projectId, workFileId: decision.workFileId, recordId: decision.id, dueAt: decision.dueAt });
+  for (const decision of input.decisions) {
+    if (!decisionNeedsAttentionNow(decision)) continue;
+    items.push({ id: `decision:${decision.id}`, kind: "decision", phase: "owner_review", title: decision.title, projectId: decision.projectId, workFileId: decision.workFileId, recordId: decision.id, dueAt: decision.dueAt });
+  }
   for (const draft of input.draftCommunications) items.push({ id: `communication:${draft.id}`, kind: "communication", phase: "owner_review", title: draft.subject, projectId: draft.projectId, workFileId: draft.workFileId, recordId: draft.id, dueAt: draft.occurredAt });
   for (const proposal of input.intakeProposals) items.push({ id: `proposal:${proposal.id}`, kind: "proposal", phase: "owner_review", title: proposal.title, projectId: proposal.projectId, workFileId: proposal.workFileId, recordId: proposal.id, priority: proposal.priority, dueAt: proposal.dueAt });
   for (const meeting of input.meetings) {
@@ -311,11 +355,20 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
     .where(and(eq(comoNextActions.workFileId, workFile.id), notInArray(comoNextActions.actionStatus, ["verified", "cancelled"])))
     .orderBy(desc(comoNextActions.updatedAt))
     .limit(12);
+  const activeDecisions = await db.select({
+    id: comoNextDecisions.id,
+    title: comoNextDecisions.title,
+    decisionStatus: comoNextDecisions.decisionStatus,
+    dueAt: comoNextDecisions.dueAt,
+  }).from(comoNextDecisions)
+    .where(and(eq(comoNextDecisions.workFileId, workFile.id), notInArray(comoNextDecisions.decisionStatus, ["approved", "rejected", "superseded"])))
+    .orderBy(desc(comoNextDecisions.updatedAt))
+    .limit(12);
   const response = await invokeLLM({
     model: UPDATE_ANALYSIS_MODEL,
     messages: [
-      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مع كامل الأدلة المرتبطة المعروضة، وحدد خطوة واحدة تالية فقط. نص التحديث كتبه عبد الرحمن داخل التطبيق؛ تسمية قناة المصدر لا تعني أنه نص وارد من الطرف الخارجي، فلا تنسب تعليق عبد الرحمن إلى الطرف. كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل، لذلك لا تقترح إرفاقها أو ربطها مرة أخرى. رتّب الحقائق زمنيًا؛ الدليل الأحدث ينسخ وصف حالة أقدم عندما يتعارضان. لا تقل إن دليلاً مفقود إذا كانت مراسلة مرتبطة في السياق تثبته. إذا أكد بريد وارد موعدًا كان منتظرًا، فصرّح بأن شرط الانتظار تحقق واقترح التحضير أو الخطوة التالية، لا إعادة طلب التأكيد. إذا كانت الخطوة التالية موجودة ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا واجعل nextStepRequired=false. اجعل suggestedOwnerType=manus لكل تحليل أو مقارنة أو إعداد تقرير أو محضر أو مسودة أو متابعة معلوماتية يستطيع Manus إنجازها. استخدم human فقط لتدخل واقعي لا يستطيع Manus أداءه: حضور اجتماع، إجراء مكالمة شخصية، تزويد معلومة غير موجودة، أو قرار حقيقي بعد اكتمال التحليل. لا تجعل مراجعة اقتراح Manus خطوة مستقلة. لا ترسل ولا تعتمد ولا تقبل ولا تعيّن ولا تدفع. اكتب خطوة واحدة ومعيار قبول واضحًا إن لزم." },
-      { role: "user", content: buildOperationalUpdatePrompt({ workFile, action, update, activeActions, communications: recentCommunications.map(row => ({ ...row, id: Number(row.id) })) }) },
+      { role: "system", content: "أنت Manus، العقل التنفيذي لعبد الرحمن. حلل تحديثًا تشغيليًا واحدًا مع كامل الأدلة المرتبطة المعروضة، وحدد خطوة واحدة تالية فقط. نص التحديث كتبه عبد الرحمن داخل التطبيق؛ تسمية قناة المصدر لا تعني أنه نص وارد من الطرف الخارجي، فلا تنسب تعليق عبد الرحمن إلى الطرف. كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل، لذلك لا تقترح إرفاقها أو ربطها مرة أخرى. رتّب الحقائق زمنيًا؛ الدليل الأحدث ينسخ وصف حالة أقدم عندما يتعارضان. إذا حسم عبد الرحمن قرارًا أو رفضه أو أجله، استخدم decisionTransition لتغيير القرار القديم نفسه؛ لا تحفظ التحديث بجانب قرار required متعارض. التأجيل يحتاج تاريخ عودة صريحًا، ولا يظهر كأولوية قبل ذلك التاريخ. لا تقل إن دليلاً مفقود إذا كانت مراسلة مرتبطة في السياق تثبته. إذا أكد بريد وارد موعدًا كان منتظرًا، فصرّح بأن شرط الانتظار تحقق واقترح التحضير أو الخطوة التالية، لا إعادة طلب التأكيد. إذا كانت الخطوة التالية موجودة ضمن الإجراءات النشطة فلا تنشئ اقتراحًا مكررًا واجعل nextStepRequired=false. اجعل suggestedOwnerType=manus لكل تحليل أو مقارنة أو إعداد تقرير أو محضر أو مسودة أو متابعة معلوماتية يستطيع Manus إنجازها. استخدم human فقط لتدخل واقعي لا يستطيع Manus أداءه: حضور اجتماع، إجراء مكالمة شخصية، تزويد معلومة غير موجودة، أو قرار حقيقي بعد اكتمال التحليل. لا تجعل مراجعة اقتراح Manus خطوة مستقلة. لا ترسل ولا تعتمد ولا تقبل ولا تعيّن ولا تدفع. اكتب خطوة واحدة ومعيار قبول واضحًا إن لزم." },
+      { role: "user", content: buildOperationalUpdatePrompt({ workFile, action, update, activeActions, activeDecisions, communications: recentCommunications.map(row => ({ ...row, id: Number(row.id) })) }) },
     ],
     response_format: { type: "json_schema", json_schema: { name: "como_operational_update_analysis", strict: true, schema: updateAnalysisSchema as unknown as Record<string, unknown> } },
   });
@@ -323,6 +376,26 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
   if (typeof content !== "string") throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "لم يُرجع Manus تحليلًا قابلاً للمراجعة" });
   let parsed: any;
   try { parsed = JSON.parse(content); } catch { throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "تعذر قراءة اقتراح Manus" }); }
+  let transitionedDecisionId: number | null = null;
+  const decisionTransition = parsed.decisionTransition;
+  if (decisionTransition) {
+    const decisionId = Number(decisionTransition.decisionId);
+    const currentDecision = activeDecisions.find(item => Number(item.id) === decisionId);
+    const nextStatus = String(decisionTransition.nextStatus || "");
+    const deferredUntil = nextStatus === "deferred" ? String(decisionTransition.deferredUntil || "").trim() : null;
+    if (currentDecision && ["approved", "rejected", "deferred"].includes(nextStatus) && (nextStatus !== "deferred" || toSqlUtcTimestamp(deferredUntil))) {
+      await resolveDecisionCommand({
+        userId: input.userId,
+        decisionId,
+        nextStatus: nextStatus as "approved" | "rejected" | "deferred",
+        decisionAuthority: "abdulrahman",
+        decisionText: String(decisionTransition.decisionText || update.updateText).trim(),
+        evidenceReference: `تحديث تشغيلي #${update.id}`,
+        deferredUntil,
+      });
+      transitionedDecisionId = decisionId;
+    }
+  }
   const hasAction = Boolean(parsed.nextStepRequired && String(parsed.suggestedActionTitle || "").trim() && String(parsed.suggestedAcceptanceCriteria || "").trim());
   const suggestedOwnerType = hasAction && ["manus", "human", "team"].includes(parsed.suggestedOwnerType) ? parsed.suggestedOwnerType as "manus" | "human" | "team" : "manus";
   await db.update(comoNextWorkFileUpdates).set({
@@ -380,6 +453,7 @@ export async function analyzeWorkFileUpdateCommand(input: { userId: number; upda
     analysisStatus: "applied" as const,
     nextStepRequired: hasAction,
     nextActionId: targetActionId,
+    transitionedDecisionId,
     nextOwnerType: hasAction ? suggestedOwnerType : null,
     externalSideEffect: false as const,
     operationalRecordsCreated: hasAction ? 1 as const : 0 as const,

@@ -363,6 +363,7 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       JOIN projects p ON p.id=a.project_id AND p.is_test_project=0
       WHERE a.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
         AND a.action_status NOT IN ('verified','cancelled')
+        AND (a.attention_at IS NULL OR a.attention_at <= UTC_TIMESTAMP())
       LIMIT 80
     `),
     db.execute(sql`
@@ -372,7 +373,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       JOIN como_next_work_files wf ON wf.id=d.work_file_id AND wf.project_id=d.project_id
       JOIN projects p ON p.id=d.project_id AND p.is_test_project=0
       WHERE d.user_id=${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
-        AND d.decision_status IN ('required','deferred')
+        AND (d.decision_status='required'
+          OR (d.decision_status='deferred' AND d.due_at IS NOT NULL AND d.due_at <= UTC_TIMESTAMP()))
       LIMIT 40
     `),
     db.execute(sql`

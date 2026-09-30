@@ -53,7 +53,9 @@ import {
 } from "../services/comoNextSpecialists";
 import {
   analyzeWorkFileUpdateCommand,
+  actionNeedsAttentionNow,
   buildExecutiveKitchenQueue,
+  decisionNeedsAttentionNow,
   listWorkFileUpdates,
   recordWorkFileUpdateCommand,
   reviewWorkFileUpdateCommand,
@@ -379,19 +381,22 @@ export const comoNextRouter = router({
       nextActionId: row.nextActionId == null ? null : Number(row.nextActionId),
       openActionCount: Number(row.openActionCount ?? 0),
     }));
-    const todayRows = getRows<ComoNextTodayRow>(todayResult).map(row => ({
+    const unresolvedActions = getRows<ComoNextTodayRow>(todayResult).map(row => ({
       ...row,
       id: Number(row.id),
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
       ownerUserId: row.ownerUserId == null ? null : Number(row.ownerUserId),
     }));
-    const decisions = getRows<any>(decisionsResult).map(row => ({
+    const unresolvedDecisions = getRows<any>(decisionsResult).map(row => ({
       ...row,
       id: Number(row.id),
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
     }));
+    const nowMs = Date.now();
+    const todayRows = unresolvedActions.filter(row => actionNeedsAttentionNow(row, nowMs));
+    const decisions = unresolvedDecisions.filter(row => decisionNeedsAttentionNow(row, nowMs));
     const draftCommunications = getRows<any>(draftCommunicationsResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -408,8 +413,8 @@ export const comoNextRouter = router({
     }));
 
     const workFilesWithOperationalStep = new Set<number>([
-      ...todayRows.map(row => row.workFileId),
-      ...decisions.map(row => row.workFileId),
+      ...unresolvedActions.map(row => row.workFileId),
+      ...unresolvedDecisions.map(row => row.workFileId),
       ...draftCommunications.map(row => row.workFileId),
       ...meetingAttention.map(row => row.workFileId),
       ...intakeProposals.map(row => Number(row.workFileId || 0)),

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildExecutiveKitchenQueue, buildOperationalUpdatePrompt } from "./services/comoNextKitchen";
+import { actionNeedsAttentionNow, buildExecutiveKitchenQueue, buildOperationalUpdatePrompt, decisionNeedsAttentionNow } from "./services/comoNextKitchen";
 
 const migration = readFileSync("drizzle/0093_como_next_executive_kitchen.sql", "utf8");
 const kitchenService = readFileSync("server/services/comoNextKitchen.ts", "utf8");
@@ -50,6 +50,23 @@ describe("COMO Next executive kitchen", () => {
     const review = buildExecutiveKitchenQueue(input).filter(item => item.phase === "owner_review");
     expect(review).toHaveLength(1);
     expect(review[0]?.reviewItemCount).toBe(2);
+  });
+
+  it("keeps deferred decisions and scheduled actions out of current priority until their attention time", () => {
+    const now = Date.parse("2026-09-30T08:00:00Z");
+    expect(decisionNeedsAttentionNow({ decisionStatus: "required", dueAt: null }, now)).toBe(true);
+    expect(decisionNeedsAttentionNow({ decisionStatus: "deferred", dueAt: "2026-10-08 18:05:00" }, now)).toBe(false);
+    expect(decisionNeedsAttentionNow({ decisionStatus: "deferred", dueAt: "2026-09-29 18:05:00" }, now)).toBe(true);
+    expect(actionNeedsAttentionNow({ attentionAt: "2026-10-08 18:05:00" }, now)).toBe(false);
+    expect(actionNeedsAttentionNow({ attentionAt: "2026-09-29 18:05:00" }, now)).toBe(true);
+
+    const input = seed();
+    input.actions = [{ id: 41, title: "متابعة لاحقة", actionStatus: "waiting_external", projectId: 1, workFileId: 12, priority: "normal", attentionAt: "2099-01-01 00:00:00" }];
+    input.decisions = [{ id: 42, title: "قرار مؤجل", decisionStatus: "deferred", projectId: 1, workFileId: 12, dueAt: "2099-01-01 00:00:00" }];
+    input.draftCommunications = [];
+    input.emails = [];
+    input.filesWithoutNextAction = [];
+    expect(buildExecutiveKitchenQueue(input)).toEqual([]);
   });
 
   it("turns a past confirmed meeting into one outcome-capture intervention", () => {
@@ -115,6 +132,8 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenService).toContain('model: UPDATE_ANALYSIS_MODEL');
     expect(kitchenService).toContain('suggestedOwnerType');
     expect(kitchenService).toContain('analysisStatus: "applied"');
+    expect(kitchenService).toContain("decisionTransition");
+    expect(kitchenService).toContain("لتغيير القرار القديم نفسه");
     expect(kitchenService).toContain("نص التحديث كتبه عبد الرحمن داخل التطبيق");
     expect(kitchenService).toContain("كل مراسلة معروضة تحت قسم المراسلات المرتبطة محفوظة ومرتبطة بالملف بالفعل");
     expect(kitchenService).toContain("لا تقترح إرفاقها أو ربطها مرة أخرى");

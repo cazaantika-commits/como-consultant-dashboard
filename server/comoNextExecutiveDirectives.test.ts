@@ -24,6 +24,15 @@ describe("COMO Next executive directives", () => {
     expect(service).toContain("externalSideEffect: false");
   });
 
+  it("reconciles newer owner directions into existing decisions and actions instead of storing parallel notes", () => {
+    expect(service).toContain("decisionTransitions");
+    expect(service).toContain("actionTransitions");
+    expect(service).toContain("التوجيه الجديد يغيّر الواقع ولا يُحفظ بجانب حالة قديمة متعارضة");
+    expect(service).toContain("transitionedDecisionIds");
+    expect(service).toContain("transitionedActionIds");
+    expect(service).not.toContain('decisionId: input.currentDecisionId,\n      nextStatus: "approved"');
+  });
+
   it("can coordinate related work files but only inside the same authorized project", () => {
     expect(service).toContain("allowedRelatedIds");
     expect(service).toContain("context.projectFiles.map");

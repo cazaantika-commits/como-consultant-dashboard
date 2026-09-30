@@ -20,6 +20,7 @@ import {
   createDecisionCommand,
   requireProjectAccess,
   resolveDecisionCommand,
+  toSqlUtcTimestamp,
 } from "./comoNextCommands";
 import { recordWorkFileUpdateCommand, type KitchenUpdateChannel } from "./comoNextKitchen";
 
@@ -60,6 +61,36 @@ const directiveResultSchema = {
     decisionTitle: { anyOf: [{ type: "string" }, { type: "null" }] },
     decisionQuestion: { anyOf: [{ type: "string" }, { type: "null" }] },
     decisionRecommendation: { anyOf: [{ type: "string" }, { type: "null" }] },
+    decisionTransitions: {
+      type: "array",
+      maxItems: 12,
+      items: {
+        type: "object",
+        properties: {
+          decisionId: { type: "integer" },
+          nextStatus: { type: "string", enum: ["approved", "rejected", "deferred"] },
+          decisionText: { type: "string" },
+          deferredUntil: { anyOf: [{ type: "string" }, { type: "null" }] },
+        },
+        required: ["decisionId", "nextStatus", "decisionText", "deferredUntil"],
+        additionalProperties: false,
+      },
+    },
+    actionTransitions: {
+      type: "array",
+      maxItems: 12,
+      items: {
+        type: "object",
+        properties: {
+          actionId: { type: "integer" },
+          nextStatus: { type: "string", enum: ["verified", "cancelled", "waiting_external"] },
+          reason: { type: "string" },
+          resumeAt: { anyOf: [{ type: "string" }, { type: "null" }] },
+        },
+        required: ["actionId", "nextStatus", "reason", "resumeAt"],
+        additionalProperties: false,
+      },
+    },
   },
   required: [
     "acknowledgement",
@@ -78,6 +109,8 @@ const directiveResultSchema = {
     "decisionTitle",
     "decisionQuestion",
     "decisionRecommendation",
+    "decisionTransitions",
+    "actionTransitions",
   ],
   additionalProperties: false,
 } as const;
@@ -125,12 +158,12 @@ async function loadDirectiveContext(userId: number, workFileId: number) {
       .from(comoNextWorkFiles)
       .where(and(eq(comoNextWorkFiles.projectId, workFile.projectId), notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"])))
       .orderBy(desc(comoNextWorkFiles.updatedAt)),
-    db.select({ id: comoNextActions.id, workFileId: comoNextActions.workFileId, title: comoNextActions.title, description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria, ownerType: comoNextActions.ownerType, status: comoNextActions.actionStatus })
+    db.select({ id: comoNextActions.id, workFileId: comoNextActions.workFileId, title: comoNextActions.title, description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria, ownerType: comoNextActions.ownerType, status: comoNextActions.actionStatus, attentionAt: comoNextActions.attentionAt })
       .from(comoNextActions)
       .where(and(eq(comoNextActions.projectId, workFile.projectId), notInArray(comoNextActions.actionStatus, ["verified", "cancelled"])))
       .orderBy(desc(comoNextActions.updatedAt))
       .limit(30),
-    db.select({ id: comoNextDecisions.id, workFileId: comoNextDecisions.workFileId, title: comoNextDecisions.title, question: comoNextDecisions.question, recommendation: comoNextDecisions.recommendation, status: comoNextDecisions.decisionStatus })
+    db.select({ id: comoNextDecisions.id, workFileId: comoNextDecisions.workFileId, title: comoNextDecisions.title, question: comoNextDecisions.question, recommendation: comoNextDecisions.recommendation, status: comoNextDecisions.decisionStatus, dueAt: comoNextDecisions.dueAt })
       .from(comoNextDecisions)
       .where(and(eq(comoNextDecisions.projectId, workFile.projectId), inArray(comoNextDecisions.decisionStatus, ["required", "deferred"])))
       .orderBy(desc(comoNextDecisions.updatedAt))
@@ -168,6 +201,9 @@ function buildDirectivePrompt(input: {
 7) لا تقل إن ملفًا مرفق أو سيُرفق؛ مسار توجيه Manus الحالي ينشئ نص المسودة ويحفظه في البريد ولا يضيف مرفقات. وقّع الاسم العربي «عبد الرحمن زقوت» أو الإنجليزي حصراً «Abdalrahman Zaqout».
 8) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
 9) اكتب بالعربية المهنية الواضحة. اجعل المخرج قابلاً للقراءة لا JSON خامًا.
+10) التوجيه الجديد يغيّر الواقع ولا يُحفظ بجانب حالة قديمة متعارضة. إذا قال عبد الرحمن إن قرارًا حُسم أو رُفض أو أُجل، أدرجه في decisionTransitions بالمعرف الصحيح. التأجيل يحتاج deferredUntil صريحًا؛ القرار المؤجل لا يعود أولوية قبل ذلك التاريخ.
+11) إذا قال إن إجراءً انتهى أو أُلغي أو أصبح بانتظار طرف/تاريخ، أدرجه في actionTransitions. عند waiting_external استخدم resumeAt إذا ثُبت موعد العودة. لا تترك الإجراء القديم مفتوحًا بالتوازي مع التوجيه الأحدث.
+12) إذا جاء التوجيه من داخل قرار محدد، لا تفترض الموافقة. اختر حالته الفعلية من كلام عبد الرحمن: approved أو rejected أو deferred. إذا لم يحسمه فلا تغيّر حالته.
 
 التوجيه الحالي من عبد الرحمن:
 ${input.directiveText}
@@ -183,10 +219,10 @@ ${input.currentDecisionId ? `- القرار المفتوح الذي جاء ال�
 ${projectFiles.map(file => `- ${file.id}: ${file.title} [${file.status}]`).join("\n")}
 
 الإجراءات الحالية:
-${actions.length ? actions.map(item => `- ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}): ${item.title} · ${item.ownerType}/${item.status} · معيار القبول: ${compact(item.acceptanceCriteria, 700)}`).join("\n") : "لا توجد."}
+${actions.length ? actions.map(item => `- إجراء ${item.id} في ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}): ${item.title} · ${item.ownerType}/${item.status} · العودة/الانتباه: ${item.attentionAt || "الآن"} · معيار القبول: ${compact(item.acceptanceCriteria, 700)}`).join("\n") : "لا توجد."}
 
 القرارات المفتوحة:
-${decisions.length ? decisions.map(item => `- قرار ${item.id} في ملف ${item.workFileId}: ${item.title} · ${compact(item.question, 900)} · التوصية: ${compact(item.recommendation, 700)}`).join("\n") : "لا توجد."}
+${decisions.length ? decisions.map(item => `- قرار ${item.id} في ملف ${item.workFileId}: ${item.title} · الحالة: ${item.status} · موعد العودة: ${item.dueAt || "غير محدد"} · ${compact(item.question, 900)} · التوصية: ${compact(item.recommendation, 700)}`).join("\n") : "لا توجد."}
 
 أحدث المخرجات والمواد الحالية:
 ${memory.length ? memory.map(item => `- ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}) · ${item.memoryType}/${item.entryType || ""} · ${item.title}\n${compact(item.body, 3_000)}`).join("\n\n") : "لا توجد."}
@@ -245,6 +281,8 @@ export async function executeExecutiveDirectiveCommand(input: {
   let mailboxDraftRef: string | null = null;
   let nextActionId: number | null = null;
   let nextDecisionId: number | null = null;
+  const transitionedDecisionIds: number[] = [];
+  const transitionedActionIds: number[] = [];
 
   if (communicationDraftRequested) {
     const draft = parsed.communicationDraft;
@@ -356,6 +394,63 @@ export async function executeExecutiveDirectiveCommand(input: {
     nextDecisionId = Number(created.id);
   }
 
+  if (input.executionSource !== "executive_control") {
+    const decisionById = new Map(context.decisions.map(item => [Number(item.id), item]));
+    for (const transition of Array.isArray(parsed.decisionTransitions) ? parsed.decisionTransitions : []) {
+      const decisionId = Number(transition.decisionId);
+      const current = decisionById.get(decisionId);
+      if (!current || !["approved", "rejected", "deferred"].includes(String(transition.nextStatus))) continue;
+      const deferredUntil = transition.nextStatus === "deferred" ? String(transition.deferredUntil || "").trim() : null;
+      if (transition.nextStatus === "deferred" && !toSqlUtcTimestamp(deferredUntil)) continue;
+      await resolveDecisionCommand({
+        userId: input.userId,
+        decisionId,
+        nextStatus: transition.nextStatus,
+        decisionAuthority: "abdulrahman",
+        decisionText: String(transition.decisionText || input.directiveText).trim(),
+        evidenceReference: `توجيه تنفيذي #${saved.id}`,
+        deferredUntil,
+      });
+      transitionedDecisionIds.push(decisionId);
+    }
+
+    const actionById = new Map(context.actions.map(item => [Number(item.id), item]));
+    for (const transition of Array.isArray(parsed.actionTransitions) ? parsed.actionTransitions : []) {
+      const actionId = Number(transition.actionId);
+      const current = actionById.get(actionId);
+      const nextStatus = String(transition.nextStatus);
+      if (!current || !["verified", "cancelled", "waiting_external"].includes(nextStatus)) continue;
+      const evidenceReference = `توجيه تنفيذي #${saved.id}: ${String(transition.reason || input.directiveText).trim().slice(0, 1000)}`;
+      if (nextStatus === "verified") {
+        if (current.status !== "completed_pending_verification") {
+          await changeActionStatusCommand({ userId: input.userId, actionId, nextStatus: "completed_pending_verification", actorType: "manus", actorUserId: null });
+        }
+        await changeActionStatusCommand({ userId: input.userId, actionId, nextStatus: "verified", evidenceReference, actorType: "manus", actorUserId: null });
+      } else {
+        await changeActionStatusCommand({ userId: input.userId, actionId, nextStatus: nextStatus as "cancelled" | "waiting_external", actorType: "manus", actorUserId: null });
+        if (nextStatus === "waiting_external" && transition.resumeAt) {
+          const resumeAt = toSqlUtcTimestamp(String(transition.resumeAt));
+          if (resumeAt) {
+            await context.db.update(comoNextActions).set({ followUpAt: resumeAt, attentionAt: resumeAt }).where(eq(comoNextActions.id, actionId));
+            await context.db.transaction(tx => appendEvent(tx, {
+              userId: input.userId,
+              projectId: context.workFile.projectId,
+              workFileId: Number(current.workFileId),
+              actionId,
+              actorType: "manus",
+              actorUserId: null,
+              eventType: "action_attention_rescheduled",
+              summary: `أجّل Manus إعادة إظهار الإجراء حتى ${resumeAt}`,
+              payload: { actionId, resumeAt, directiveUpdateId: Number(saved.id), externalSideEffect: false },
+              idempotencyKey: `directive-action-rescheduled:${saved.id}:${actionId}`,
+            }));
+          }
+        }
+      }
+      transitionedActionIds.push(actionId);
+    }
+  }
+
   for (const relatedId of relatedWorkFileIds) {
     await context.db.transaction(async tx => {
       await tx.update(comoNextWorkFiles).set({ workFileStatus: "waiting" }).where(and(eq(comoNextWorkFiles.id, relatedId), eq(comoNextWorkFiles.projectId, context.workFile.projectId)));
@@ -379,17 +474,6 @@ export async function executeExecutiveDirectiveCommand(input: {
       await changeActionStatusCommand({ userId: input.userId, actionId: Number(action.id), nextStatus: "completed_pending_verification" });
       await changeActionStatusCommand({ userId: input.userId, actionId: Number(action.id), nextStatus: "verified", evidenceReference: `توجيه تنفيذي #${saved.id}` });
     }
-  }
-
-  if (input.currentDecisionId) {
-    await resolveDecisionCommand({
-      userId: input.userId,
-      decisionId: input.currentDecisionId,
-      nextStatus: "approved",
-      decisionAuthority: "abdulrahman",
-      decisionText: input.directiveText.trim(),
-      evidenceReference: `توجيه تنفيذي #${saved.id}`,
-    });
   }
 
   const executionSummary = mailboxDraftRef
@@ -417,6 +501,8 @@ export async function executeExecutiveDirectiveCommand(input: {
     mailboxDraftRef,
     nextActionId,
     nextDecisionId,
+    transitionedDecisionIds,
+    transitionedActionIds,
     relatedWorkFileIds,
     completedNow: Boolean(workProductId || mailboxDraftRef),
     externalSideEffect: false as const,

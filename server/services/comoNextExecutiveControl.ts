@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, notInArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte, notInArray, or } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextIntakeProposals,
@@ -242,6 +242,7 @@ export async function runExecutiveControlLoopCommand(input: {
         eq(comoNextActions.userId, input.userId),
         eq(comoNextActions.ownerType, "manus"),
         eq(comoNextActions.actionStatus, "open"),
+        or(isNull(comoNextActions.attentionAt), lte(comoNextActions.attentionAt, new Date().toISOString().slice(0, 19).replace("T", " "))),
         notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"]),
       )).orderBy(asc(comoNextActions.attentionAt), asc(comoNextActions.createdAt), asc(comoNextActions.id)).limit(maxItems);
     actionQueue.push(...openActions.map(row => Number(row.id)));

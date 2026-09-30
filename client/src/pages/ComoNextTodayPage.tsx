@@ -208,6 +208,18 @@ function normalizeUtc(value: string | null | undefined) {
   return /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
 }
 
+function decisionNeedsAttentionNow(decision: any) {
+  if (decision?.decisionStatus === "required") return true;
+  if (decision?.decisionStatus !== "deferred") return false;
+  const dueAt = normalizeUtc(decision?.dueAt);
+  return Boolean(dueAt && new Date(dueAt).getTime() <= Date.now());
+}
+
+function actionNeedsAttentionNow(action: any) {
+  const attentionAt = normalizeUtc(action?.attentionAt);
+  return !attentionAt || new Date(attentionAt).getTime() <= Date.now();
+}
+
 function formatDateTime(value: string | null | undefined) {
   const normalized = normalizeUtc(value);
   if (!normalized) return "غير مؤرخ";
@@ -866,24 +878,25 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const focusedCommunication = focusKind === "communication" && focusId ? data?.communications.find((communication: any) => communication.id === focusId) : null;
   const focusedMeeting = focusKind === "meeting" && focusId ? data?.meetings.find((meeting: any) => meeting.id === focusId) : null;
   const activeActions = data?.actions.filter((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) || [];
+  const attentionActions = activeActions.filter(actionNeedsAttentionNow);
   const historicalActions = data?.actions.filter((action: any) => ["verified", "cancelled"].includes(action.actionStatus)) || [];
   const evidenceEntries = data?.memory.filter((entry: any) => entry.memoryType === "material" || entry.memoryType === "note") || [];
   const outputEntries = data?.memory.filter((entry: any) => entry.memoryType === "work_product") || [];
   const selectedMemory = selectedMemoryId ? data?.memory.find((entry: any) => entry.id === selectedMemoryId) : null;
-  const pendingDecisions = data?.decisions.filter((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) || [];
+  const pendingDecisions = data?.decisions.filter(decisionNeedsAttentionNow) || [];
   const historicalDecisions = data?.decisions.filter((decision: any) => !["required", "deferred"].includes(decision.decisionStatus)) || [];
   const activeCommunications = data?.communications.filter((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) || [];
   const ownerCommunication = activeCommunications[0];
   const historicalCommunications = data?.communications.filter((communication: any) => !["draft", "approved_for_send", "received"].includes(communication.communicationStatus)) || [];
-  const ownerAction = activeActions.find((action: any) => action.ownerType === "human" && action.actionStatus !== "waiting_external");
+  const ownerAction = attentionActions.find((action: any) => action.ownerType === "human" && action.actionStatus !== "waiting_external");
   const activeMeeting = data?.meetings.find((meeting: any) => meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus) && !(data?.updates || []).some((update: any) =>
     update.sourceChannel === "meeting"
     && new Date(normalizeUtc(update.occurredAt) || 0).getTime() >= new Date(normalizeUtc(meeting.startsAt) || Number.POSITIVE_INFINITY).getTime()
   ));
   const activeMeetingNeedsOutcome = Boolean(activeMeeting?.startsAt && new Date(normalizeUtc(activeMeeting.startsAt) || 0).getTime() <= Date.now());
-  const manusAction = activeActions.find((action: any) => action.ownerType === "manus" && action.actionStatus !== "waiting_external");
-  const waitingAction = activeActions.find((action: any) => action.actionStatus === "waiting_external");
-  const currentAction = ownerAction || manusAction || waitingAction || activeActions[0];
+  const manusAction = attentionActions.find((action: any) => action.ownerType === "manus" && action.actionStatus !== "waiting_external");
+  const waitingAction = attentionActions.find((action: any) => action.actionStatus === "waiting_external");
+  const currentAction = ownerAction || manusAction || waitingAction || attentionActions[0];
   const nowLabel = activeMeetingNeedsOutcome
     ? "دورك الآن: أخبر Manus بما حدث"
     : pendingDecisions[0]
@@ -914,7 +927,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     setSelectedMemoryId(null);
   }, [workFileId]);
   const stageCounts: Record<WorkFileStage, number> = {
-    now: activeMeetingNeedsOutcome || activeActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length ? 1 : 0,
+    now: activeMeetingNeedsOutcome || attentionActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length ? 1 : 0,
     evidence: evidenceEntries.length + (data?.communications.filter((communication: any) => communication.communicationStatus === "received").length || 0),
     outputs: outputEntries.length + activeCommunications.length + (data?.intakeProposals.length || 0),
     decisions: data?.decisions.length || 0,
@@ -953,7 +966,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
                   {activeMeetingNeedsOutcome ? <p className="mt-5 text-sm leading-8 text-slate-700">سجّل ما اتُّفق عليه، ما رُفض أو بقي مفتوحًا، ومن سيفعل ماذا. يتولى Manus تحليل النتيجة وتحديث الملف وفتح الأعمال الداخلية التالية.</p> : pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : data.intakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
                   <div className="mt-5 flex flex-wrap gap-2">{activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
                 </Card>
-                <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{activeActions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء نشط</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.intakeProposals.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">مقترح للمراجعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.meetings.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">اجتماع مرتبط</p></div></div></Card>
+                <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{attentionActions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.intakeProposals.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">مقترح للمراجعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.meetings.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">اجتماع مرتبط</p></div></div></Card>
               </div>
               {!isClosed ? <WorkFileUpdateComposer workFileId={data.workFile.id} updates={(data.updates || []).filter((update: any) => !update.actionId)} onChanged={onChanged} /> : null}
               <div className="grid gap-3 sm:grid-cols-3">{!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions || hasPendingCommunications || hasPendingMeetings || hasPendingIntake} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}<Button onClick={() => navigate(`/como-next/projects/${data.workFile.projectId}`)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]"><FolderOpen className="ms-2 h-4 w-4" />ملف المشروع</Button><Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />بطاقة المشروع</Button></div>
