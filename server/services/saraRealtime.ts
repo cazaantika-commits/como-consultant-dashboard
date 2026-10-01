@@ -108,7 +108,7 @@ VOICE DELIVERY — never read these directions aloud:
 - مع عبد الرحمن، ابدئي التفاعل العملي بعد التحية بموجز قصير عن أهم المستجدات الموثقة عندما تكون بيانات COMO Next متاحة؛ لا تملئي الموجز بمعلومات قديمة أو غير مؤكدة، ولا تكرريه إذا لم يطلبه.
 - عند السؤال عن خلفية مشروع أو ما الذي حدث سابقًا، استخدمي فئة project_memory من مكتب COMO Next؛ فهي الذاكرة المراجعة المرتبطة بالمصادر، وليست مجرد ملخص محادثة.
 - project_memory للفهرس والخلفية العامة فقط. إذا كان السؤال عن داخل ملف أو تقرير أو تحليل أو اجتماع، لا تتوقفي عند الفهرس: افتحي الدوسييه بأداة read_executive_work_file.
-- جميع حقول التاريخ المنتهية بـ Dubai في نتائج أدواتك هي الوقت المحلي الصحيح بتوقيت Asia/Dubai؛ اقرئي منها فقط عند ذكر موعد أو ساعة. الحقول الأصلية المنتهية بـ At صارت ISO UTC بتوقيت Z، فلا تقرئي 06:00 UTC للمستخدم على أنه 06:00 صباحًا بدبي. الاجتماع المكتمل أو الماضي ذو نتيجة ليس موعدًا قادمًا.
+- جميع حقول التاريخ المنتهية بـ Dubai في نتائج أدواتك هي الوقت المحلي الصحيح بتوقيت Asia/Dubai؛ اقرئي منها فقط عند ذكر موعد أو ساعة. الحقول الأصلية المنتهية بـ At صارت ISO UTC بتوقيت Z، فلا تقرئي 06:00 UTC للمستخدم على أنه 06:00 صباحًا بدبي. اعتمدي meetingPhase: upcoming موعد مقبل، needs_outcome اجتماع مضى وينتظر نتيجة، completed اجتماع مكتمل؛ لا تسمي اجتماعًا مضى موعدًا قادمًا.
 - عند السؤال عمّا وصل من عرض أو عقد أو مرفق، اقرئي communications للوارد الحديث ثم افتحي ملفه بـ read_executive_work_file، ولا تكتفي بفهرس المسودات أو ذاكرة محادثتك. اميزي بين مسودة اتفاقية واردة وعرض معتمد أو عقد موقّع.
 - إذا كان mailSync.state يساوي stale، تستطيعين الإجابة عن الرسائل المستوردة فعلًا مع ذكر تاريخ آخر نجاح، لكن لا تقولي إن كل البريد محدث أو إنه لم يصل شيء جديد منذ ذلك الوقت؛ أبلغي عبد الرحمن أن مزامنة البريد المجدولة متوقفة وتحتاج إصلاحًا.
 - لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تقبلي عرضًا أو تعيّني طرفًا أو تنشئي دفعًا أو التزامًا خارجيًا. التوجيه المباشر يسمح فقط بما يستطيع Manus تنفيذه داخليًا بأمان؛ أي أثر خارجي يبقى مسودة أو قرارًا واضحًا لعبد الرحمن.
@@ -344,7 +344,14 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     actions: rows<Record<string, unknown>>(actionsResult),
     decisions: rows<Record<string, unknown>>(decisionsResult),
     communications: rows<Record<string, unknown>>(communicationsResult),
-    meetings: rows<Record<string, unknown>>(meetingsResult),
+    meetings: rows<Record<string, unknown>>(meetingsResult).map(meeting => {
+      const startsAt = saraDubaiTimestamp(meeting.startsAt);
+      return {
+        ...meeting,
+        meetingPhase: meeting.status === "completed" ? "completed"
+          : startsAt && Date.parse(startsAt.utc) <= Date.now() ? "needs_outcome" : "upcoming",
+      };
+    }),
     proposals: rows<Record<string, unknown>>(proposalsResult),
   };
   if (category === "overview") {

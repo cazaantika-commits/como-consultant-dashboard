@@ -131,6 +131,8 @@ describe("Sara Realtime architecture", () => {
     expect(lookup).toContain("presentSaraDubaiTimes({ found: true");
     expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000");
     expect(lookup).toContain('state: syncStale ? "stale" : "current"');
+    expect(lookup).toContain('meetingPhase: meeting.status === "completed" ? "completed"');
+    expect(lookup).toContain('Date.parse(startsAt.utc) <= Date.now() ? "needs_outcome" : "upcoming"');
     expect(reader).toContain("presentSaraDubaiTimes({ ...base, meetings");
     expect(buildSaraRealtimeInstructions(abdulrahman)).toContain("عند السؤال عمّا وصل من عرض أو عقد أو مرفق");
     expect(buildSaraRealtimeInstructions(abdulrahman)).toContain("mailSync.state يساوي stale");
