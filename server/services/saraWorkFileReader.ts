@@ -6,6 +6,7 @@ import { PDFParse } from "pdf-parse";
 import { getDb } from "../db";
 import { storageGet } from "../storage";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
+import { presentSaraDubaiTimes } from "./saraDubaiTimes";
 
 export type SaraWorkFileFocus = "overview" | "analysis" | "meetings" | "communications" | "history" | "full";
 
@@ -220,10 +221,10 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     },
   };
   const documentIndex = linkedDocuments.map(item => ({ documentId: item.documentId, memoryId: item.memoryId, memoryTitle: item.memoryTitle, title: item.title, fileName: item.fileName, mimeType: item.mimeType, byteSize: item.byteSize, isCurrent: item.isCurrent === 1 }));
-  if (focus === "overview") return { ...base, currentMemory: memory.filter(item => item.isCurrent).slice(0, 15), meetings, documents: documentIndex.slice(0, 30) };
-  if (focus === "analysis") return { ...base, currentWorkProducts: memory.filter(item => item.isCurrent && item.memoryType === "work_product"), documents: documentIndex, documentExcerpt };
-  if (focus === "meetings") return { ...base, meetings, participants, agenda, sources, analyses, minutes };
-  if (focus === "communications") return { ...base, communications: rows<any>(communicationsResult), documents: documentIndex };
-  if (focus === "history") return { ...base, memory, events: rows<any>(eventsResult) };
-  return { ...base, memory, documents: documentIndex, documentExcerpt, meetings, participants, agenda, sources, analyses, minutes, communications: rows<any>(communicationsResult), events: rows<any>(eventsResult) };
+  if (focus === "overview") return presentSaraDubaiTimes({ ...base, currentMemory: memory.filter(item => item.isCurrent).slice(0, 15), meetings, documents: documentIndex.slice(0, 30) });
+  if (focus === "analysis") return presentSaraDubaiTimes({ ...base, currentWorkProducts: memory.filter(item => item.isCurrent && item.memoryType === "work_product"), documents: documentIndex, documentExcerpt });
+  if (focus === "meetings") return presentSaraDubaiTimes({ ...base, meetings, participants, agenda, sources, analyses, minutes });
+  if (focus === "communications") return presentSaraDubaiTimes({ ...base, communications: rows<any>(communicationsResult), documents: documentIndex });
+  if (focus === "history") return presentSaraDubaiTimes({ ...base, memory, events: rows<any>(eventsResult) });
+  return presentSaraDubaiTimes({ ...base, memory, documents: documentIndex, documentExcerpt, meetings, participants, agenda, sources, analyses, minutes, communications: rows<any>(communicationsResult), events: rows<any>(eventsResult) });
 }

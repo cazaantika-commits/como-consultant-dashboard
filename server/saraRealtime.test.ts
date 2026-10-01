@@ -10,6 +10,7 @@ import {
   SARA_REALTIME_VOICE,
 } from "./services/saraRealtime";
 import { readExecutiveWorkFile } from "./services/saraWorkFileReader";
+import { presentSaraDubaiTimes, saraDubaiTimestamp } from "./services/saraDubaiTimes";
 
 const abdulrahman = { memberId: "abdulrahman", nameAr: "عبدالرحمن", role: "admin" };
 const wael = { memberId: "wael", nameAr: "وائل", role: "executive" };
@@ -110,6 +111,29 @@ describe("Sara Realtime architecture", () => {
     expect(source.match(/wf\.id AS workFileId/g)?.length).toBe(5);
     expect(source).toContain("current_decision_id");
     expect(source).toContain("إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null");
+  });
+
+  it("presents all SQL UTC meeting and action times explicitly in Dubai without shifting the instant", () => {
+    const meeting = presentSaraDubaiTimes({ startsAt: "2026-09-30 06:00:00", status: "completed", detail: { occurredAt: "2026-09-30 10:13:02" } });
+    expect(meeting.startsAt).toBe("2026-09-30T06:00:00.000Z");
+    expect((meeting as any).startsAtDubai).toContain("10:00");
+    expect((meeting as any).startsAtDubai).toContain("بتوقيت دبي");
+    expect((meeting as any).detail.occurredAtDubai).toContain("2:13");
+    expect(saraDubaiTimestamp("2026-10-01T07:00:00.000Z")?.dubai).toContain("11:00");
+    expect(saraDubaiTimestamp("not a date")).toBeNull();
+    expect(buildSaraRealtimeInstructions(abdulrahman)).toContain("المنتهية بـ Dubai");
+  });
+
+  it("surfaces received Artec agreements as communications and reads dossier timestamps in Dubai", () => {
+    const lookup = readFileSync("server/services/saraRealtime.ts", "utf8");
+    const reader = readFileSync("server/services/saraWorkFileReader.ts", "utf8");
+    expect(lookup).toContain("c.communication_status IN ('received','draft','approved_for_send')");
+    expect(lookup).toContain("presentSaraDubaiTimes({ found: true");
+    expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000");
+    expect(lookup).toContain('state: syncStale ? "stale" : "current"');
+    expect(reader).toContain("presentSaraDubaiTimes({ ...base, meetings");
+    expect(buildSaraRealtimeInstructions(abdulrahman)).toContain("عند السؤال عمّا وصل من عرض أو عقد أو مرفق");
+    expect(buildSaraRealtimeInstructions(abdulrahman)).toContain("mailSync.state يساوي stale");
   });
 
   it("connects through ephemeral WebRTC and auto-starts the streamlined Sara page", () => {

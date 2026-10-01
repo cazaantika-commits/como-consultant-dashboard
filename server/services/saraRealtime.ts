@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+import { comoNextEmailSyncSettings } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
+import { presentSaraDubaiTimes, saraDubaiTimestamp } from "./saraDubaiTimes";
 
 export const SARA_REALTIME_MODEL = "gpt-realtime-2.1";
 export const SARA_REALTIME_VOICE = "marin";
@@ -17,7 +19,7 @@ export const saraRealtimeTools = [
   {
     type: "function" as const,
     name: "lookup_executive_workspace",
-    description: "اقرئي مكتب COMO Next التنفيذي الحالي فقط: ملفات العمل والإجراءات والقرارات والاجتماعات التي تحتاج انتباهًا. لا تقرئي مهام أو اجتماعات مركز القيادة القديم. متاحة لعبد الرحمن فقط، ولا ترسل أو تعدل أي شيء.",
+    description: "اقرئي مكتب COMO Next التنفيذي الحالي فقط: الملفات والإجراءات والقرارات والاجتماعات والمراسلات الواردة حديثًا أيضًا. تعرض النتائج أوقات Dubai وحالة حداثة مزامنة البريد. لا تقرئي مركز القيادة القديم. متاحة لعبد الرحمن فقط، ولا ترسل أو تعدل أي شيء.",
     parameters: {
       type: "object",
       properties: {
@@ -106,6 +108,9 @@ VOICE DELIVERY — never read these directions aloud:
 - مع عبد الرحمن، ابدئي التفاعل العملي بعد التحية بموجز قصير عن أهم المستجدات الموثقة عندما تكون بيانات COMO Next متاحة؛ لا تملئي الموجز بمعلومات قديمة أو غير مؤكدة، ولا تكرريه إذا لم يطلبه.
 - عند السؤال عن خلفية مشروع أو ما الذي حدث سابقًا، استخدمي فئة project_memory من مكتب COMO Next؛ فهي الذاكرة المراجعة المرتبطة بالمصادر، وليست مجرد ملخص محادثة.
 - project_memory للفهرس والخلفية العامة فقط. إذا كان السؤال عن داخل ملف أو تقرير أو تحليل أو اجتماع، لا تتوقفي عند الفهرس: افتحي الدوسييه بأداة read_executive_work_file.
+- جميع حقول التاريخ المنتهية بـ Dubai في نتائج أدواتك هي الوقت المحلي الصحيح بتوقيت Asia/Dubai؛ اقرئي منها فقط عند ذكر موعد أو ساعة. الحقول الأصلية المنتهية بـ At صارت ISO UTC بتوقيت Z، فلا تقرئي 06:00 UTC للمستخدم على أنه 06:00 صباحًا بدبي. الاجتماع المكتمل أو الماضي ذو نتيجة ليس موعدًا قادمًا.
+- عند السؤال عمّا وصل من عرض أو عقد أو مرفق، اقرئي communications للوارد الحديث ثم افتحي ملفه بـ read_executive_work_file، ولا تكتفي بفهرس المسودات أو ذاكرة محادثتك. اميزي بين مسودة اتفاقية واردة وعرض معتمد أو عقد موقّع.
+- إذا كان mailSync.state يساوي stale، تستطيعين الإجابة عن الرسائل المستوردة فعلًا مع ذكر تاريخ آخر نجاح، لكن لا تقولي إن كل البريد محدث أو إنه لم يصل شيء جديد منذ ذلك الوقت؛ أبلغي عبد الرحمن أن مزامنة البريد المجدولة متوقفة وتحتاج إصلاحًا.
 - لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تقبلي عرضًا أو تعيّني طرفًا أو تنشئي دفعًا أو التزامًا خارجيًا. التوجيه المباشر يسمح فقط بما يستطيع Manus تنفيذه داخليًا بأمان؛ أي أثر خارجي يبقى مسودة أو قرارًا واضحًا لعبد الرحمن.
 - إذا قال عبد الرحمن «اكتبي لManus»، «تابعي»، «اعملي»، «حضّري»، «ذكّري وائل»، أو أعطاك الخطوة التالية: حددي ملف الموضوع من مصدر COMO ثم استخدمي direct_manus_in_work_file. لا تحفظي كلامه كمقترح منفصل، ولا تطلبي منه فتح المطبخ أو تعبئة حقول.
 - استخدمي action_id فقط عندما يكون كلام عبد الرحمن هو النتيجة المطلوبة لإغلاق تدخل بشري ظاهر مثل «أخبر Manus بما حدث». استخدمي current_decision_id فقط إذا حسم القرار صراحة. إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null.
@@ -203,6 +208,23 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
   const userId = await resolveOwnerUserIdForSara(member.memberId);
   const { category, projectName } = normalizeToolArgs(rawArguments);
   const filter = projectName ? `%${projectName}%` : "%";
+  const [syncSettings] = await db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, userId)).limit(1);
+  const lastSuccess = saraDubaiTimestamp(syncSettings?.lastSuccessAt);
+  const lastRun = saraDubaiTimestamp(syncSettings?.lastRunAt);
+  const runStuck = syncSettings?.lastStatus === "running" && (!lastRun || Date.now() - Date.parse(lastRun.utc) > 2 * 60_000);
+  const syncStale = !syncSettings?.isEnabled || !lastSuccess || Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+    || syncSettings?.lastStatus === "failed" || runStuck;
+  const mailSync = {
+    state: syncStale ? "stale" : "current",
+    lastSuccessAt: lastSuccess?.utc || null,
+    lastSuccessAtDubai: lastSuccess?.dubai || null,
+    note: syncStale ? "البريد المستورد قد لا يشمل الرسائل الجديدة؛ لا تؤكدي أنه محدث أو خالٍ من وارد جديد." : null,
+  };
   if (category === "project_memory") {
     const [dossiersResult, memoryResult] = await Promise.all([
       db.execute(sql`
@@ -232,10 +254,11 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
       try { const parsed = JSON.parse(String(value || "[]")); return Array.isArray(parsed) ? parsed : []; }
       catch { return []; }
     };
-    return {
+    return presentSaraDubaiTimes({
       found: rows<any>(dossiersResult).length > 0,
       source: "COMO Next reviewed project memory",
       generatedAt: new Date().toISOString(),
+      mailSync,
       dossiers: rows<any>(dossiersResult).map(item => ({
         ...item,
         lifecyclePhases: parseList(item.lifecyclePhases),
@@ -247,7 +270,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
         ...item,
         evidenceRefs: parseList(item.evidenceRefs),
       })),
-    };
+    });
   }
   const [workFilesResult, actionsResult, decisionsResult, communicationsResult, meetingsResult, proposalsResult] = await Promise.all([
     db.execute(sql`
@@ -283,12 +306,12 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     `),
     db.execute(sql`
       SELECT c.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, c.subject, c.channel,
-        c.communication_status AS status, c.approval_status AS approvalStatus
+        c.communication_status AS status, c.approval_status AS approvalStatus, c.occurred_at AS occurredAt
       FROM como_next_communications c JOIN como_next_work_files wf ON wf.id = c.work_file_id
       JOIN projects p ON p.id = c.project_id AND p.is_test_project = 0
       WHERE c.user_id = ${userId} AND wf.work_file_status NOT IN ('closed','cancelled')
-        AND c.communication_status IN ('draft','approved_for_send') AND p.name LIKE ${filter}
-      ORDER BY c.created_at ASC LIMIT 25
+        AND c.communication_status IN ('received','draft','approved_for_send') AND p.name LIKE ${filter}
+      ORDER BY c.occurred_at DESC, c.id DESC LIMIT 25
     `),
     db.execute(sql`
       SELECT m.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, m.title,
@@ -325,15 +348,16 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     proposals: rows<Record<string, unknown>>(proposalsResult),
   };
   if (category === "overview") {
-    return {
+    return presentSaraDubaiTimes({
       found: true,
       source: "COMO Next",
       generatedAt: new Date().toISOString(),
+      mailSync,
       counts: Object.fromEntries(Object.entries(datasets).map(([key, value]) => [key, value.length])),
       urgentActions: datasets.actions.filter((item: any) => item.priority === "urgent").slice(0, 6),
       requiredDecisions: datasets.decisions.slice(0, 6),
-    };
+    });
   }
   if (!(category in datasets)) return { found: false, reason: "نوع معلومات المكتب التنفيذي غير مدعوم" };
-  return { found: true, source: "COMO Next", category, generatedAt: new Date().toISOString(), items: datasets[category as keyof typeof datasets] };
+  return presentSaraDubaiTimes({ found: true, source: "COMO Next", category, generatedAt: new Date().toISOString(), mailSync, items: datasets[category as keyof typeof datasets] });
 }
