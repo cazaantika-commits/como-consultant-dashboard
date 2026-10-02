@@ -216,11 +216,17 @@ export function fetchNewEmails(): Promise<EmailMessage[]> {
   });
 }
 
+export function readonlyCursorAfterUid(cursor: { lastUid: number; uidValidity: string } | undefined, currentValidity: string): number {
+  return cursor?.uidValidity === currentValidity && Number.isSafeInteger(cursor.lastUid)
+    ? Math.max(0, cursor.lastUid)
+    : 0;
+}
+
 /**
  * Strict read-only mailbox snapshot for COMO Next.
  * Every folder is opened read-only and markSeen is explicitly disabled.
  */
-export function fetchReadonlyFolderSince(folderName: string, hours: number = 72, maxMessages: number = 100): Promise<ReadonlyMailboxBatch> {
+export function fetchReadonlyFolderSince(folderName: string, hours: number = 72, maxMessages: number = 100, cursor?: { lastUid: number; uidValidity: string }): Promise<ReadonlyMailboxBatch> {
   return new Promise((resolve, reject) => {
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
@@ -248,13 +254,27 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
       imap.openBox(folderName, true, (openError, box) => {
         if (openError) { imap.end(); fail(openError); return; }
         uidValidity = String(box.uidvalidity ?? "0");
+        // A UID is only meaningful within one UIDVALIDITY. Fall back to the
+        // bounded date search when the mailbox was recreated or reset.
+        const afterUid = readonlyCursorAfterUid(cursor, uidValidity);
+        if (afterUid > 0 && typeof box.uidnext === "number" && box.uidnext <= afterUid + 1) {
+          imap.end();
+          return;
+        }
         const since = new Date(Date.now() - Math.max(1, Math.min(hours, 24 * 365)) * 60 * 60 * 1000);
         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
         const sinceValue = `${since.getDate()}-${months[since.getMonth()]}-${since.getFullYear()}`;
-        imap.search([["SINCE", sinceValue]], (searchError, found) => {
+        // Once a cursor exists, UID is authoritative even after a multi-day
+        // outage; SINCE would silently exclude mail that arrived before the
+        // lookback window but has never been imported.
+        imap.search(afterUid > 0 ? [["UID", `${afterUid + 1}:*`]] : [["SINCE", sinceValue]], (searchError, found) => {
           if (searchError) { imap.end(); fail(searchError); return; }
           const limit = Math.max(1, Math.min(maxMessages, 250));
-          const uids = (found || []).slice(-limit);
+          // Some IMAP servers resolve the '*' range to the last existing UID
+          // even if it precedes our cursor. Filter locally as well.
+          // Consume the oldest unseen UIDs first. Taking the newest N and then
+          // advancing the cursor would permanently skip any earlier overflow.
+          const uids = (found || []).filter(uid => uid > afterUid).sort((a, b) => a - b).slice(0, limit);
           if (!uids.length) { imap.end(); return; }
           let pending = uids.length;
           const fetch = imap.fetch(uids, { bodies: "", struct: true, markSeen: false });
@@ -288,7 +308,8 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
                   isRead: flags.includes("\\Seen"),
                 });
               } catch (parseError) {
-                console.error("[EmailMonitor] Read-only parse error:", parseError);
+                imap.end();
+                fail(parseError instanceof Error ? parseError : new Error("Read-only IMAP parse failed"));
               } finally {
                 pending -= 1;
                 if (pending === 0) imap.end();
@@ -310,12 +331,12 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
   });
 }
 
-export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number = 100) {
-  return fetchReadonlyFolderSince("INBOX", hours, maxMessages);
+export function fetchReadonlyInboxSince(hours: number = 72, maxMessages: number = 100, cursor?: { lastUid: number; uidValidity: string }) {
+  return fetchReadonlyFolderSince("INBOX", hours, maxMessages, cursor);
 }
 
-export function fetchReadonlySentSince(hours: number = 72, maxMessages: number = 100) {
-  return fetchReadonlyFolderSince("Sent", hours, maxMessages);
+export function fetchReadonlySentSince(hours: number = 72, maxMessages: number = 100, cursor?: { lastUid: number; uidValidity: string }) {
+  return fetchReadonlyFolderSince("Sent", hours, maxMessages, cursor);
 }
 
 /**

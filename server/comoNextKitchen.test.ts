@@ -199,7 +199,10 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain("فتح التقرير المحمي");
     expect(kitchenPage).toContain("/api/como-next/documents/");
     expect(kitchenPage).toContain("سلّم التوجيه إلى Manus");
-    expect(kitchenPage).toContain("فتح Manus الخطوة التالية تلقائيًا");
+    expect(kitchenPage).toContain("يُحفظ أولًا للمراجعة في هذا الملف فقط");
+    expect(kitchenPage).toContain('defaultSourceChannel === "meeting"');
+    expect(kitchenPage).toContain('meetingMutation.mutateAsync');
+    expect(kitchenPage).toContain("سجل تسليم مختصر");
     expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
     expect(kitchenPage).toContain("activeMeetingNeedsOutcome");
     expect(kitchenPage).toContain("أخبر Manus بما حدث");
@@ -220,15 +223,16 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');
   });
 
-  it("schedules read-only inbox and sent sync with contextual analysis through the configured task UID", () => {
+  it("schedules read-only import and retryable analysis through signed task identities", () => {
     expect(migration).toContain("CREATE TABLE como_next_email_sync_settings");
     expect(scheduleRoute).toContain("caller.isCron");
-    expect(scheduleRoute).toContain("req.body?.taskUid");
+    expect(scheduleRoute).not.toContain("req.body?.taskUid");
     expect(scheduleRoute).toContain("scheduleCronTaskUid, taskUid");
     expect(scheduleRoute).toContain("settings.isEnabled !== 1");
-    expect(scheduleRoute).toContain("syncAndAnalyzeReadonlyMailboxCommand");
+    expect(scheduleRoute).toContain("syncReadonlyInboxCommand");
+    expect(scheduleRoute).toContain("processPendingReadonlyMailboxCommand");
     expect(scheduleRoute).toContain("serverFlagsChanged: false");
-    expect(scheduleRoute).toContain("analysisFailures");
+    expect(scheduleRoute).toContain('lastStatus: "failed"');
     expect(scheduleRoute).not.toContain("sendReply");
     expect(emailPage).toContain("06:00 · 11:00 · 17:00 بتوقيت دبي");
   });

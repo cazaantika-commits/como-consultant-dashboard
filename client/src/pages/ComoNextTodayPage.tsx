@@ -712,9 +712,17 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
   const [open, setOpen] = useState(alwaysOpen);
   const [updateText, setUpdateText] = useState("");
   const [listening, setListening] = useState(false);
-  const directiveMutation = trpc.comoNext.executeExecutiveDirective.useMutation();
+  const meetingMutation = trpc.comoNext.executeExecutiveDirective.useMutation();
   const reviewMutation = trpc.comoNext.reviewWorkFileUpdate.useMutation();
-  const busy = directiveMutation.isPending || reviewMutation.isPending;
+  const stageMutation = trpc.comoNext.stageExecutiveDirective.useMutation();
+  const updateDirectiveMutation = trpc.comoNext.updateStagedDirective.useMutation();
+  const cancelDirectiveMutation = trpc.comoNext.cancelStagedDirective.useMutation();
+  const submitDirectiveMutation = trpc.comoNext.submitStagedDirective.useMutation();
+  const stagedQuery = trpc.comoNext.listStagedDirectives.useQuery(
+    { workFileId, includeHistory: true },
+    { refetchInterval: 3_000, refetchIntervalInBackground: false },
+  );
+  const busy = meetingMutation.isPending || reviewMutation.isPending || stageMutation.isPending || updateDirectiveMutation.isPending || cancelDirectiveMutation.isPending || submitDirectiveMutation.isPending;
   const localDraftKey = `como-next:directive-draft:${workFileId}:${actionId || currentDecisionId || defaultSourceChannel}`;
 
   useEffect(() => {
@@ -731,16 +739,31 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
     } catch { /* keep typing usable when storage is unavailable */ }
   }, [localDraftKey, updateText]);
 
-  const submit = async () => {
+  const stage = async () => {
     if (updateText.trim().length < 3) return toast.error("اكتب أو سجّل توجيهك أولًا");
     try {
-      const result = await directiveMutation.mutateAsync({ workFileId, actionId: actionId || null, currentDecisionId: currentDecisionId || null, sourceChannel: defaultSourceChannel, directiveText: updateText.trim() });
-      try { window.localStorage.removeItem(localDraftKey); } catch { /* already persisted on the server */ }
+      if (defaultSourceChannel === "meeting") {
+        const result = await meetingMutation.mutateAsync({ workFileId, actionId: actionId || null, currentDecisionId: currentDecisionId || null, sourceChannel: "meeting", directiveText: updateText.trim() });
+        try { window.localStorage.removeItem(localDraftKey); } catch { /* result is persisted on the server */ }
+        setUpdateText("");
+        toast.success(`وصلت إلى Manus وحُفظت في الملف — تحديث #${result.updateId}`);
+        await onChanged();
+        return;
+      }
+      await stageMutation.mutateAsync({
+        workFileId,
+        actionId: actionId || null,
+        currentDecisionId: currentDecisionId || null,
+        directiveText: updateText.trim(),
+        stageKey: crypto.randomUUID(),
+      });
+      try { window.localStorage.removeItem(localDraftKey); } catch { /* review copy is now persisted on the server */ }
       setUpdateText("");
       if (!alwaysOpen) setOpen(false);
-      toast.success(`وصلت إلى Manus وحُفظت في الملف — تحديث #${result.updateId}`);
+      toast.success("حُفظ التوجيه للمراجعة داخل هذا الملف؛ لم يبدأ Manus بعد");
+      await stagedQuery.refetch();
       await onChanged();
-    } catch (error: any) { toast.error(error?.message || "تعذر تنفيذ التوجيه"); }
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ التوجيه للمراجعة"); }
   };
   const startVoice = () => {
     const Recognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -766,16 +789,69 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
     } catch (error: any) { toast.error(error?.message || "تعذرت مراجعة الاقتراح"); }
   };
 
+  const updateDirective = async (directive: any, text: string) => {
+    if (text.trim().length < 3) return toast.error("اكتب التوجيه أولًا");
+    try {
+      await updateDirectiveMutation.mutateAsync({ directiveId: directive.id, directiveText: text.trim() });
+      toast.success("حُفظ التعديل للمراجعة؛ لم يبدأ Manus بعد");
+      await stagedQuery.refetch();
+    } catch (error: any) { toast.error(error?.message || "تعذر حفظ التعديل"); }
+  };
+
+  const cancelDirective = async (directiveId: number) => {
+    try {
+      await cancelDirectiveMutation.mutateAsync({ directiveId });
+      toast.success("أُلغي التوجيه قبل تسليمه؛ لم يبدأ Manus");
+      await stagedQuery.refetch();
+    } catch (error: any) { toast.error(error?.message || "تعذر إلغاء التوجيه"); }
+  };
+
+  const submitDirective = async (directive: any, editedText: string) => {
+    const text = editedText.trim();
+    if (text.length < 3) return toast.error("اكتب التوجيه أولًا");
+    try {
+      // Submit exactly the text visible in the review card, even when the
+      // owner edited it without pressing the separate Save button first.
+      if (text !== directive.directiveText) {
+        await updateDirectiveMutation.mutateAsync({ directiveId: directive.id, directiveText: text });
+      }
+      const result = await submitDirectiveMutation.mutateAsync({ directiveId: directive.id });
+      const receipt = result.directive;
+      toast.success(receipt.updateId ? `سُلّم التوجيه إلى Manus — تحديث #${receipt.updateId}` : "سُلّم التوجيه إلى Manus");
+      await stagedQuery.refetch();
+      await onChanged();
+    } catch (error: any) { toast.error(error?.message || "تعذر تسليم التوجيه إلى Manus؛ لم يُنشأ إيصال" ); }
+  };
+
+  const pendingDirectives = (stagedQuery.data || []).filter((directive: any) => ["pending", "failed", "submitting"].includes(directive.status));
+  const deliveredDirectives = (stagedQuery.data || []).filter((directive: any) => directive.status === "submitted").slice(0, 4);
+
   return <section className="rounded-2xl border border-[#cfe3df] bg-[#f4faf8] p-4">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">{defaultSourceChannel === "meeting" ? "نتيجة الاجتماع" : "وجّه Manus"}</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">{defaultSourceChannel === "meeting" ? "اكتب ما حدث ثم سلّمه مرة واحدة؛ بعد ظهور رقم التحديث يكون قد وصل فعلًا." : "قل ما تريد تنفيذه؛ يفهم Manus السياق ويتولى بقية العمل."}</p></div>{!alwaysOpen ? <Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button> : null}</div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">{defaultSourceChannel === "meeting" ? "نتيجة الاجتماع" : "وجّه Manus"}</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">{defaultSourceChannel === "meeting" ? "اكتب ما حدث ثم سلّمه مرة واحدة؛ بعد ظهور رقم التحديث يكون قد وصل فعلًا." : "اكتب التوجيه أو قلْه؛ يُحفظ أولًا للمراجعة في هذا الملف فقط، ثم تسلّمه أنت مرة واحدة."}</p></div>{!alwaysOpen ? <Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button> : null}</div>
     {open ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">
       <Textarea value={updateText} onChange={event => setUpdateText(event.target.value)} className="min-h-32 rounded-xl bg-white leading-7" placeholder={defaultSourceChannel === "meeting" ? "قل ما اتُفق عليه، ما بقي مفتوحًا، ومن سيفعل ماذا..." : "مثال: راجعت التقرير. ثبّت النطاق الحالي، وقارن العروض الثلاثة على أساس خمسة أشهر، ثم اعرض النتيجة والتوصية."} />
-      {updateText.trim() && !busy ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">مسودة محفوظة على هذا الجهاز فقط — لم تصل إلى Manus بعد.</div> : null}
-      <div className="grid gap-2 sm:grid-cols-[auto_1fr]"><Button type="button" variant="outline" onClick={startVoice} disabled={listening || busy} className="rounded-xl bg-white"><Mic className={`ms-2 h-4 w-4 ${listening ? "animate-pulse text-rose-600" : ""}`} />{listening ? "أستمع الآن..." : "سجّل صوتيًا"}</Button><Button type="button" onClick={submit} disabled={busy} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}{busy ? "يُسلَّم الآن..." : submissionLabel || "سلّم التوجيه إلى Manus"}</Button></div>
-      <p className="text-[10px] leading-5 text-slate-400">ينفذ Manus كل ما يمكن داخليًا ويعيدك فقط لمراجعة مخرج أو قرار. لا إرسال أو قبول أو تعيين أو دفع دون ضغطك الصريح.</p>
+      {updateText.trim() && !busy ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-900">{defaultSourceChannel === "meeting" ? "مسودة محفوظة على هذا الجهاز فقط — لم تصل إلى Manus بعد." : "مسودة على هذا الجهاز فقط — احفظها للمراجعة كي تظهر لك بطاقة تعديل وإلغاء وتسليم."}</div> : null}
+      <div className="grid gap-2 sm:grid-cols-[auto_1fr]"><Button type="button" variant="outline" onClick={startVoice} disabled={listening || busy} className="rounded-xl bg-white"><Mic className={`ms-2 h-4 w-4 ${listening ? "animate-pulse text-rose-600" : ""}`} />{listening ? "أستمع الآن..." : "سجّل صوتيًا"}</Button><Button type="button" onClick={stage} disabled={busy} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{meetingMutation.isPending || stageMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <Sparkles className="ms-2 h-4 w-4" />}{meetingMutation.isPending ? "يُسلَّم الآن..." : stageMutation.isPending ? "يُحفظ..." : defaultSourceChannel === "meeting" ? submissionLabel || "سلّم نتيجة الاجتماع إلى Manus" : "حفظ للمراجعة"}</Button></div>
+      <p className="text-[10px] leading-5 text-slate-400">{defaultSourceChannel === "meeting" ? "بعد التسليم يحلل Manus النتيجة ويحدث الملف؛ لا إرسال أو قبول أو دفع تلقائي." : "لن ينفذ Manus ولن تُنشأ مسودة بريد أو أثر خارجي عند الحفظ. التنفيذ يبدأ فقط من زر «سلّم التوجيه إلى Manus» أدناه."}</p>
     </div> : null}
-      {updates.length ? <div className="mt-4 space-y-2 border-t border-[#d9e9e5] pt-4">{updates.slice(0, 5).map(update => <div key={update.id} className="rounded-xl border border-white bg-white p-3"><div className="flex flex-wrap items-center justify-between gap-2"><Badge variant="outline" className="rounded-full bg-slate-50">{update.sourceChannel === "phone" ? "مكالمة" : update.sourceChannel === "meeting" ? "اجتماع" : update.sourceChannel}</Badge><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(update.occurredAt)}</bdi></div><p className="mt-2 whitespace-pre-wrap text-xs font-semibold leading-6 text-slate-800">{update.updateText}</p>{update.analysisSummary ? <p className="mt-2 whitespace-pre-wrap border-t border-slate-100 pt-2 text-[11px] leading-6 text-slate-500">{update.analysisSummary}</p> : null}{update.analysisStatus === "applied" && update.targetActionId ? <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">فتح Manus الخطوة التالية تلقائيًا وربطها بهذا التحديث.</div> : update.analysisStatus === "applied" ? <div className="mt-2 rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-800">{update.analysisSummary?.includes("Drafts UID") ? "نُفذ الفعل وثُبت برقم المسودة في البريد." : "اكتملت المعالجة الداخلية وحُفظ دليلها في سجل الملف."}</div> : update.analysisStatus === "draft" && update.suggestedActionTitle ? <div className="mt-3 rounded-xl border border-violet-100 bg-violet-50 p-3"><p className="text-[10px] font-black text-violet-700">اقتراح قديم بانتظار الحسم</p><p className="mt-1 text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تطبيق الاقتراح القديم</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">استبعاده</Button></div></div> : null}</div>)}</div> : null}
+    {pendingDirectives.length ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">{pendingDirectives.map((directive: any) => <StagedDirectiveCard key={directive.id} directive={directive} busy={busy} onSave={updateDirective} onCancel={cancelDirective} onSubmit={submitDirective} />)}</div> : null}
+    {deliveredDirectives.length ? <details className="mt-4 rounded-xl border border-[#d9e9e5] bg-white/75"><summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-slate-700">سجل تسليم مختصر ({deliveredDirectives.length})</summary><div className="space-y-2 border-t border-[#d9e9e5] p-3">{deliveredDirectives.map((directive: any) => <div key={directive.id} className="rounded-lg border border-slate-100 bg-white p-2.5 text-[11px] leading-5 text-slate-600"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-black text-emerald-800">سُلّم إلى Manus{directive.updateId ? ` · تحديث #${directive.updateId}` : ""}</span><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(directive.submittedAt)}</bdi></div>{directive.mailboxDraftRef ? <p className="mt-1 font-bold text-amber-800">مسودة بريد: {directive.mailboxDraftRef} — لم تُرسل.</p> : null}{directive.executionSummary ? <p className="mt-1 line-clamp-2">{directive.executionSummary}</p> : null}</div>)}</div></details> : null}
+    {updates.some(update => update.analysisStatus === "draft" && update.suggestedActionTitle) ? <details className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60"><summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-violet-800">اقتراحات قديمة تحتاج حسمًا</summary><div className="space-y-2 border-t border-violet-100 p-3">{updates.filter(update => update.analysisStatus === "draft" && update.suggestedActionTitle).slice(0, 3).map(update => <div key={update.id} className="rounded-xl border border-violet-100 bg-white p-3"><p className="text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تطبيق الاقتراح القديم</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">استبعاده</Button></div></div>)}</div></details> : null}
   </section>;
+}
+
+function StagedDirectiveCard({ directive, busy, onSave, onCancel, onSubmit }: { directive: any; busy: boolean; onSave: (directive: any, text: string) => void; onCancel: (id: number) => void; onSubmit: (directive: any, text: string) => void }) {
+  const [text, setText] = useState(directive.directiveText || "");
+  useEffect(() => { setText(directive.directiveText || ""); }, [directive.id, directive.directiveText]);
+  const isSubmitting = directive.status === "submitting";
+  const editable = ["pending", "failed"].includes(directive.status);
+  return <div className={`rounded-xl border p-3 ${directive.source === "sara" ? "border-violet-200 bg-violet-50/60" : "border-amber-200 bg-amber-50/60"}`}>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Badge variant="outline" className="rounded-full bg-white">{directive.source === "sara" ? "من سارة" : "كتابة المالك"}</Badge><span className="text-[10px] font-black text-slate-500">{isSubmitting ? "قيد التسليم مرة واحدة" : directive.status === "failed" ? "تعذر التسليم — عدّل أو أعد المحاولة" : "معلّق لمراجعتك"}</span></div><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(directive.updatedAt || directive.createdAt)}</bdi></div>
+    <Textarea value={text} disabled={!editable || busy} onChange={event => setText(event.target.value)} className="mt-3 min-h-28 rounded-xl bg-white leading-7 disabled:opacity-100" />
+    {directive.failureMessage ? <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] font-bold leading-5 text-rose-800">فشل واضح: {directive.failureMessage}</p> : null}
+    {editable ? <div className="mt-3 grid gap-2 sm:grid-cols-3"><Button type="button" variant="outline" disabled={busy || text.trim() === directive.directiveText} onClick={() => onSave(directive, text)} className="rounded-xl bg-white">حفظ التعديل</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => onCancel(directive.id)} className="rounded-xl text-rose-700">إلغاء</Button><Button type="button" disabled={busy || text.trim().length < 3} onClick={() => onSubmit(directive, text)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}سلّم التوجيه إلى Manus</Button></div> : <p className="mt-3 text-[11px] font-bold text-slate-500">يُنتظر الإيصال؛ لا يمكن تعديل النص أو تسليمه مرتين.</p>}
+    <p className="mt-2 text-[10px] leading-5 text-slate-400">لا يبدأ Manus ولا تُنشأ مسودة بريد قبل ضغط زر التسليم. بعد التسليم يبقى النص كما هو ولا يعود قابلًا للتعديل.</p>
+  </div>;
 }
 
 function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { action: any; updates: any[]; isClosed: boolean; onBack: () => void; onUpdated: () => void }) {
@@ -883,6 +959,14 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const [, navigate] = useLocation();
   const [selectedStage, setSelectedStage] = useState<WorkFileStage>("now");
   const [selectedMemoryId, setSelectedMemoryId] = useState<number | null>(null);
+  useEffect(() => {
+    const refreshStagedDirective = (event: Event) => {
+      const staged = event as CustomEvent<{ workFileId?: number }>;
+      if (Number(staged.detail?.workFileId) === Number(workFileId)) void detailQuery.refetch();
+    };
+    window.addEventListener("como-next:directive-staged", refreshStagedDirective);
+    return () => window.removeEventListener("como-next:directive-staged", refreshStagedDirective);
+  }, [detailQuery, workFileId]);
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
   const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;

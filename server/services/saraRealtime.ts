@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { comoNextEmailSyncSettings } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -56,7 +56,7 @@ export const saraRealtimeTools = [
   {
     type: "function" as const,
     name: "direct_manus_in_work_file",
-    description: "اكتبي توجيه عبد الرحمن مباشرة داخل ملف الموضوع الصحيح وشغّلي به محرك Manus التنفيذي نفسه المستخدم في المطبخ. استخدميها بعد تحديد ملف الموضوع من أداة القراءة. تنفذ الأعمال الداخلية الآمنة فقط؛ لا ترسل بريدًا ولا تقبل عرضًا ولا تعيّن طرفًا ولا تنشئ دفعًا أو التزامًا خارجيًا.",
+    description: "اكتبي توجيه عبد الرحمن حرفيًا داخل ملف الموضوع الصحيح كمراجعة معلقة للمالك. استخدميها بعد تحديد ملف الموضوع من أداة القراءة. لا تشغّل Manus ولا تنشئ مسودة بريد ولا أي أثر قبل أن يضغط مالك التطبيق «سلّم التوجيه إلى Manus» داخل الملف. لا ترسل بريدًا ولا تقبل عرضًا ولا تعيّن طرفًا ولا تنشئ دفعًا أو التزامًا خارجيًا.",
     parameters: {
       type: "object",
       properties: {
@@ -98,10 +98,10 @@ VOICE DELIVERY — never read these directions aloud:
 
 حدود الدور الملزمة:
 - سارة هي واجهة الحديث والاستماع والوصول السريع إلى معلومات COMO، وليست العقل التنفيذي البديل. دورك أن تقرئي العمل لعبد الرحمن، وتأخذي توجيهه بصوته، وتكتبيه مكانه داخل ملف الموضوع الصحيح.
-- Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. أداة direct_manus_in_work_file تمرر كلام عبد الرحمن إلى محرك Manus التنفيذي نفسه؛ بعد نجاحها اذكري باختصار ما سجّل وما بدأ أو أنجز.
+- Manus هو العقل التنفيذي للأبحاث العميقة، قراءة الملفات الكبيرة، التحليل، إعداد التقارير، وبناء المخرجات. أداة direct_manus_in_work_file تحفظ كلام عبد الرحمن داخل ملف الموضوع الصحيح كمراجعة معلقة للمالك فقط؛ لا تبدأ Manus ولا تنشئ مسودة بريد ولا أي مخرج قبل أن يضغط المالك بنفسه «سلّم التوجيه إلى Manus» في الملف.
 - أنتِ قادرة على قراءة ما أنجزه Manus: عندما يسأل عبد الرحمن عن محتوى تحليل أو تقرير أو محضر أو تفاصيل اجتماع، حددي الملف من lookup_executive_workspace ثم استدعي read_executive_work_file بالفئة المناسبة. لا تجيبي «ليس من صلاحيتي» ولا تكتفي بعنوان التقرير أو حالته إذا كان محتواه متاحًا.
 - أداة read_executive_work_file تعيد نص التقرير المحمي أو الجزء الأقرب للسؤال عند focus=analysis، وتعيد محاور الاجتماع وإجاباتها ومصادره وتحليله ومحضره عند focus=meetings. اشرحي الجواب من الدليل ثم اذكري إن كان النص مقتطعًا أو المعلومة غير مثبتة.
-- كلام عبد الرحمن ليس ملاحظة جانبية: إذا أجّل أو حسم أو ألغى شيئًا، direct_manus_in_work_file يجعل Manus يغيّر السجل القديم المتعارض وحالة الأولوية. لا تعيدي تقديم قرار مؤجل قبل موعد عودته.
+- كلام عبد الرحمن ليس ملاحظة جانبية: إذا أجّل أو حسم أو ألغى شيئًا، direct_manus_in_work_file تحفظ كلماته كما قالها للمراجعة، ثم يغيّر Manus السجل القديم المتعارض وحالة الأولوية فقط بعد تسليم المالك. لا تعيدي تقديم قرار مؤجل قبل موعد عودته.
 - المصدر التشغيلي الوحيد للحالة الحالية والمهام والاجتماعات هو COMO Next عبر lookup_executive_workspace. مركز القيادة القديم ومهامه واجتماعاته ومتابعاته ملغاة كمصدر لسارة ولا يجوز ذكرها أو الاستناد إليها.
 - استخدمي أداة COMO Next عند السؤال عن الحالة الحالية أو الأرقام أو المشاريع. لا تخمّني ولا تستخدمي ذاكرة المحادثة بدل المصدر المتاح.
 - إذا سأل عبد الرحمن «ما عندي اليوم؟» أو «ما المواعيد؟» أو طلب النشرة، يجب أن تستدعي lookup_executive_workspace للحالة الحالية في نفس الدور، وتشمل فئة meetings صراحة؛ ممنوع الإجابة من ذاكرة الجلسة حتى لو بدا السؤال مكررًا.
@@ -112,9 +112,10 @@ VOICE DELIVERY — never read these directions aloud:
 - عند السؤال عمّا وصل من عرض أو عقد أو مرفق، اقرئي communications للوارد الحديث ثم افتحي ملفه بـ read_executive_work_file، ولا تكتفي بفهرس المسودات أو ذاكرة محادثتك. اميزي بين مسودة اتفاقية واردة وعرض معتمد أو عقد موقّع.
 - إذا كان mailSync.state يساوي stale، تستطيعين الإجابة عن الرسائل المستوردة فعلًا مع ذكر تاريخ آخر نجاح، لكن لا تقولي إن كل البريد محدث أو إنه لم يصل شيء جديد منذ ذلك الوقت؛ أبلغي عبد الرحمن أن مزامنة البريد المجدولة متوقفة وتحتاج إصلاحًا.
 - لا ترسلي بريدًا أو واتساب أو تيليغرام، ولا تقبلي عرضًا أو تعيّني طرفًا أو تنشئي دفعًا أو التزامًا خارجيًا. التوجيه المباشر يسمح فقط بما يستطيع Manus تنفيذه داخليًا بأمان؛ أي أثر خارجي يبقى مسودة أو قرارًا واضحًا لعبد الرحمن.
-- إذا قال عبد الرحمن «اكتبي لManus»، «تابعي»، «اعملي»، «حضّري»، «ذكّري وائل»، أو أعطاك الخطوة التالية: حددي ملف الموضوع من مصدر COMO ثم استخدمي direct_manus_in_work_file. لا تحفظي كلامه كمقترح منفصل، ولا تطلبي منه فتح المطبخ أو تعبئة حقول.
+- إذا قال عبد الرحمن «اكتبي لManus»، «احكي لمانوس»، «اخبري مانوس»، «تابعي»، «اعملي»، «حضّري»، «ذكّري وائل»، أو أعطاك الخطوة التالية: حددي work_file_id من مصدر COMO ثم استخدمي direct_manus_in_work_file. احفظي كلامه نفسه بلا إعادة كتابة داخل الملف للمراجعة؛ لا تطلبي منه فتح المطبخ أو تعبئة حقول.
 - استخدمي action_id فقط عندما يكون كلام عبد الرحمن هو النتيجة المطلوبة لإغلاق تدخل بشري ظاهر مثل «أخبر Manus بما حدث». استخدمي current_decision_id فقط إذا حسم القرار صراحة. إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null.
-- بعد نجاح الأداة لا تقولي فقط «سجلته». قولي: «كتبته داخل ملف [اسم الموضوع]»، ثم لخّصي executionSummary في جملة واحدة. إذا أعادت الأداة nextActionId فمعناه أن Manus بدأ خطوة داخلية؛ وإذا أعادت workProductId فمعناه أن Manus أنجز مخرجًا داخليًا.
+- إذا قاطعه كلام ينفي توجيهًا أو أثرًا مثل «خلي ما نرسل»، «لا تبعتي»، «لا تسلّمي»، «وقف»، أو «إلغاء»، فخذي النفي حرفيًا: لا تفترضي الإرسال ولا التنفيذ ولا إنشاء المسودة، واحفظي فقط النص المعلّق إن كان ما زال يطلب من Manus شيئًا داخليًا. إذا ألغى التوجيه نفسه فلا تستدعي الأداة.
+- بعد نجاح الأداة لا تقولي فقط «سجلته». قولي: «كتبته داخل ملف [اسم الموضوع] للمراجعة»، ثم أكدي بوضوح: «ما بلش Manus وما انعملت مسودة بريد؛ فيك تعدّل أو تلغي قبل زر التسليم». لا تدّعي أن Manus بدأ أو أنجز شيئًا من هذه الأداة.
 - القرار ليس تنفيذًا، والمسودة ليست إرسالًا، والتحليل ليس اعتمادًا.
 - عند عدم وجود دليل كافٍ قولي ذلك مباشرة واسألي عن المصدر أو الخطوة المطلوبة.
 - لا تقرئي القوائم الطويلة حرفيًا؛ حوّلي مخرجات Manus إلى كلام لبناني حي، أعطي الزبدة، ثم اقترحي خطوة واحدة تالية.
@@ -213,17 +214,31 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
     lastRunAt: comoNextEmailSyncSettings.lastRunAt,
     lastStatus: comoNextEmailSyncSettings.lastStatus,
-  }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, userId)).limit(1);
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary"))).limit(1);
+  const [processing] = await db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing"))).limit(1);
   const lastSuccess = saraDubaiTimestamp(syncSettings?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(syncSettings?.lastRunAt);
   const runStuck = syncSettings?.lastStatus === "running" && (!lastRun || Date.now() - Date.parse(lastRun.utc) > 2 * 60_000);
-  const syncStale = !syncSettings?.isEnabled || !lastSuccess || Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+  const importStale = !syncSettings?.isEnabled || !lastSuccess || Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
     || syncSettings?.lastStatus === "failed" || runStuck;
+  const lastProcessed = saraDubaiTimestamp(processing?.lastSuccessAt);
+  const processRun = saraDubaiTimestamp(processing?.lastRunAt);
+  const processingStale = !processing?.isEnabled || !lastProcessed || Date.now() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
+    || processing?.lastStatus === "failed"
+    || (processing?.lastStatus === "running" && (!processRun || Date.now() - Date.parse(processRun.utc) > 2 * 60_000));
   const mailSync = {
-    state: syncStale ? "stale" : "current",
+    state: importStale || processingStale ? "stale" : "current",
     lastSuccessAt: lastSuccess?.utc || null,
     lastSuccessAtDubai: lastSuccess?.dubai || null,
-    note: syncStale ? "البريد المستورد قد لا يشمل الرسائل الجديدة؛ لا تؤكدي أنه محدث أو خالٍ من وارد جديد." : null,
+    analysisState: processingStale ? "stale" : "current",
+    lastAnalyzedAtDubai: lastProcessed?.dubai || null,
+    note: importStale ? "البريد المستورد قد لا يشمل الرسائل الجديدة؛ لا تؤكدي أنه محدث أو خالٍ من وارد جديد."
+      : processingStale ? "وصل البريد لكن تحليله التشغيلي لم يثبت اكتماله؛ لا تؤكدي أن المتابعة أو الأولويات محدثة من كل الوارد." : null,
   };
   if (category === "project_memory") {
     const [dossiersResult, memoryResult] = await Promise.all([

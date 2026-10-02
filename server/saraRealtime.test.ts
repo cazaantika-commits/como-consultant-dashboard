@@ -57,12 +57,13 @@ describe("Sara Realtime architecture", () => {
     expect(session.audio.input.turn_detection).toMatchObject({ type: "semantic_vad", interrupt_response: true });
   });
 
-  it("lets Sara write Abdulrahman's words into the executive directive path without external actions", () => {
+  it("lets Sara stage Abdulrahman's words in the correct dossier without external actions", () => {
     expect(saraRealtimeTools.map(tool => tool.name)).toEqual(["lookup_executive_workspace", "read_executive_work_file", "direct_manus_in_work_file"]);
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
     expect(saraRealtimeTools.find(tool => tool.name === "read_executive_work_file")?.description).toContain("التقارير والتحليلات");
-    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("محرك Manus التنفيذي نفسه المستخدم في المطبخ");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("كمراجعة معلقة للمالك");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("لا تشغّل Manus");
     expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("لا ترسل بريدًا");
     expect(names).not.toContain("lookup_command_center");
   });
@@ -130,7 +131,8 @@ describe("Sara Realtime architecture", () => {
     expect(lookup).toContain("c.communication_status IN ('received','draft','approved_for_send')");
     expect(lookup).toContain("presentSaraDubaiTimes({ found: true");
     expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000");
-    expect(lookup).toContain('state: syncStale ? "stale" : "current"');
+    expect(lookup).toContain('state: importStale || processingStale ? "stale" : "current"');
+    expect(lookup).toContain('eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing")');
     expect(lookup).toContain('meetingPhase: meeting.status === "completed" ? "completed"');
     expect(lookup).toContain('Date.parse(startsAt.utc) <= Date.now() ? "needs_outcome" : "upcoming"');
     expect(reader).toContain("presentSaraDubaiTimes({ ...base, meetings");
@@ -194,12 +196,14 @@ describe("Sara Realtime architecture", () => {
     expect(pageSource).not.toContain('navigate("/command-center")');
   });
 
-  it("registers the authenticated Sara router and reuses the existing Command Center access token", () => {
+  it("registers the authenticated Sara router and stages review-only directives with the existing Command Center access token", () => {
     expect(rootRouterSource).toContain("saraRealtime: saraRealtimeRouter");
     expect(routerSource).toContain("await verifyToken(input.token)");
     expect(routerSource).toContain("externalActionsEnabled: false");
     expect(routerSource).toContain("manusDelegationConfigured: true");
-    expect(routerSource).toContain("executeExecutiveDirectiveCommand");
+    expect(routerSource).toContain("stageExecutiveDirectiveCommand");
+    expect(routerSource).toContain("executionStarted: false");
+    expect(routerSource).toContain("source: \"sara\"");
     expect(routerSource).not.toContain("createSaraIntakeProposalCommand");
     expect(routerSource).toContain("process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY");
   });

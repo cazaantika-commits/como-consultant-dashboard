@@ -13,6 +13,7 @@ import {
   projects,
 } from "../../drizzle/schema";
 import { getDb } from "../db";
+import { ENV } from "../_core/env";
 import { protectedProcedure, router } from "../_core/trpc";
 import {
   changeActionStatusCommand,
@@ -63,10 +64,23 @@ import {
 } from "../services/comoNextKitchen";
 import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
+import {
+  cancelStagedExecutiveDirectiveCommand,
+  listWorkFileStagedDirectives,
+  stageExecutiveDirectiveCommand,
+  submitStagedExecutiveDirectiveCommand,
+  updateStagedExecutiveDirectiveCommand,
+} from "../services/comoNextStagedDirectives";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "المكتب التنفيذي متوقف مؤقتًا" });
+  }
+}
+
+function assertAuthenticatedAppOwner(user: { openId: string }) {
+  if (!ENV.ownerOpenId || user.openId !== ENV.ownerOpenId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "تسليم التوجيه إلى Manus متاح لمالك التطبيق المسجل فقط" });
   }
 }
 
@@ -777,6 +791,52 @@ export const comoNextRouter = router({
         ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "owner_update", actionIds: [Number(result.nextActionId)], maxItems: 4 })
         : null;
       return { ...result, executiveControl };
+    }),
+
+  listStagedDirectives: protectedProcedure
+    .input(z.object({ workFileId: z.number().int().positive(), includeHistory: z.boolean().default(true) }))
+    .query(({ ctx, input }) => {
+      assertComoNextEnabled();
+      assertAuthenticatedAppOwner(ctx.user);
+      return listWorkFileStagedDirectives({ userId: ctx.user.id, ...input });
+    }),
+
+  stageExecutiveDirective: protectedProcedure
+    .input(z.object({
+      workFileId: z.number().int().positive(),
+      actionId: z.number().int().positive().optional().nullable(),
+      currentDecisionId: z.number().int().positive().optional().nullable(),
+      directiveText: z.string().trim().min(3).max(100_000),
+      stageKey: z.string().trim().min(8).max(128),
+    }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      assertAuthenticatedAppOwner(ctx.user);
+      return stageExecutiveDirectiveCommand({ userId: ctx.user.id, ...input, source: "manual" });
+    }),
+
+  updateStagedDirective: protectedProcedure
+    .input(z.object({ directiveId: z.number().int().positive(), directiveText: z.string().trim().min(3).max(100_000) }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      assertAuthenticatedAppOwner(ctx.user);
+      return updateStagedExecutiveDirectiveCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  cancelStagedDirective: protectedProcedure
+    .input(z.object({ directiveId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      assertAuthenticatedAppOwner(ctx.user);
+      return cancelStagedExecutiveDirectiveCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  submitStagedDirective: protectedProcedure
+    .input(z.object({ directiveId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) => {
+      assertComoNextEnabled();
+      assertAuthenticatedAppOwner(ctx.user);
+      return submitStagedExecutiveDirectiveCommand({ userId: ctx.user.id, ...input });
     }),
 
   reviewWorkFileUpdate: protectedProcedure

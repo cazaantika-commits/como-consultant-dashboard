@@ -15,8 +15,7 @@ import {
 } from "../services/saraRealtime";
 import { readExecutiveWorkFile } from "../services/saraWorkFileReader";
 import { resolveOwnerUserIdForSara } from "../services/comoNextIntake";
-import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
-import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
+import { stageExecutiveDirectiveCommand } from "../services/comoNextStagedDirectives";
 import {
   completeSaraBriefing,
   getSaraBriefingStatus,
@@ -107,19 +106,25 @@ export const saraRealtimeRouter = router({
         try { parsed = executiveDirectiveArguments.parse(JSON.parse(input.arguments || "{}")); }
         catch { throw new TRPCError({ code: "BAD_REQUEST", message: "لم تتمكن سارة من تحديد التوجيه وملف الموضوع بدقة" }); }
         const userId = await resolveOwnerUserIdForSara(member.memberId);
-        const result = await executeExecutiveDirectiveCommand({
+        const stageKey = `sara:${input.sessionId || "session"}:${input.eventId || `${parsed.work_file_id}:${parsed.directive_text}`}`.slice(0, 128);
+        const result = await stageExecutiveDirectiveCommand({
           userId,
           workFileId: parsed.work_file_id,
           actionId: parsed.action_id,
           currentDecisionId: parsed.current_decision_id,
-          sourceChannel: "internal",
           directiveText: parsed.directive_text,
-          executionSource: "sara",
+          source: "sara",
+          sourceMemberId: member.memberId,
+          stageKey,
         });
-        const executiveControl = result.nextActionId
-          ? await runExecutiveControlLoopCommand({ userId, trigger: "sara_directive", actionIds: [Number(result.nextActionId)], maxItems: 4 })
-          : null;
-        return { ...result, executiveControl };
+        return {
+          staged: true as const,
+          executionStarted: false as const,
+          directiveId: result.directive.id,
+          workFileId: parsed.work_file_id,
+          status: result.directive.status,
+          message: "حُفظ التوجيه داخل ملف الموضوع للمراجعة. لن يبدأ Manus ولن تُنشأ مسودة بريد قبل ضغط المالك «سلّم التوجيه إلى Manus»." as const,
+        };
       }
       if (input.toolName === "lookup_executive_workspace") {
         return lookupExecutiveWorkspace(normalizedMember, input.arguments);

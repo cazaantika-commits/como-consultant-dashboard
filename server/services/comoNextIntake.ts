@@ -45,6 +45,16 @@ function databaseUnavailable(): never {
 function clean(value: unknown, max: number) {
   return String(value || "").trim().slice(0, max);
 }
+export function normalizeIntakeProposalDraft(proposal: IntakeProposalDraft) {
+  return {
+    ...proposal,
+    kind: ["action", "decision", "communication_draft", "note"].includes(String(proposal.kind)) ? proposal.kind : null,
+    ownerType: proposal.kind === "note" ? null : ["human", "manus", "team"].includes(String(proposal.ownerType)) ? proposal.ownerType : null,
+    priority: ["normal", "important", "urgent"].includes(String(proposal.priority)) ? proposal.priority : "normal" as const,
+    dueAt: proposal.dueAt && !Number.isNaN(Date.parse(proposal.dueAt)) ? toSqlUtcTimestamp(proposal.dueAt) : null,
+    channel: ["email", "whatsapp", "letter", "phone_note", "internal"].includes(String(proposal.channel)) ? proposal.channel : null,
+  };
+}
 
 export function assertReviewOnlyIntake(input: { sourceKind: string; reviewStatus: string; targetId?: number | null }) {
   if (!['email', 'sara'].includes(input.sourceKind)) throw new Error("Unsupported intake source");
@@ -76,19 +86,22 @@ export async function createIntakeProposalsCommand(input: {
   const db = await getDb();
   if (!db) databaseUnavailable();
   await requireWorkFile(db, input);
-  const candidates = input.proposals.slice(0, 8).map((proposal, index) => ({
-    ordinal: index + 1,
-    kind: proposal.kind,
-    title: clean(proposal.title, 1000),
-    content: clean(proposal.content, 100_000) || null,
-    acceptanceCriteria: clean(proposal.acceptanceCriteria, 5_000) || null,
-    ownerType: proposal.ownerType || null,
-    priority: proposal.priority || "normal",
-    dueAt: proposal.dueAt ? toSqlUtcTimestamp(proposal.dueAt) : null,
-    channel: proposal.channel || null,
-    toText: clean(proposal.toText, 5_000) || null,
-    evidenceExcerpt: clean(proposal.evidenceExcerpt, 5_000),
-  })).filter(proposal => proposal.title && proposal.evidenceExcerpt);
+  const candidates = input.proposals.slice(0, 8).map((draft, index) => {
+    const proposal = normalizeIntakeProposalDraft(draft);
+    return {
+      ordinal: index + 1,
+      kind: proposal.kind,
+      title: clean(proposal.title, 1000),
+      content: clean(proposal.content, 100_000) || null,
+      acceptanceCriteria: clean(proposal.acceptanceCriteria, 5_000) || null,
+      ownerType: proposal.ownerType,
+      priority: proposal.priority,
+      dueAt: proposal.dueAt,
+      channel: proposal.channel,
+      toText: clean(proposal.toText, 5_000) || null,
+      evidenceExcerpt: clean(proposal.evidenceExcerpt, 5_000),
+    };
+  }).filter((proposal): proposal is typeof proposal & { kind: IntakeProposalKind } => Boolean(proposal.kind && proposal.title && proposal.evidenceExcerpt));
   if (!candidates.length) return { created: 0, duplicates: 0, ids: [] as number[] };
 
   return db.transaction(async tx => {

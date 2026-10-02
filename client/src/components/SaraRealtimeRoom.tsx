@@ -193,6 +193,16 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         sessionId: sessionIdRef.current,
         eventId: event.call_id,
       });
+      if (event.name === "direct_manus_in_work_file" && (result as any)?.staged) {
+        window.dispatchEvent(new CustomEvent("como-next:directive-staged", {
+          detail: { workFileId: (result as any).workFileId, directiveId: (result as any).directiveId },
+        }));
+        setTranscript(items => mergeTranscript(items, {
+          id: `directive-staged-${(result as any).directiveId}`,
+          role: "system",
+          text: "حُفظ التوجيه للمراجعة في ملف الموضوع؛ Manus لم يبدأ بعد.",
+        }));
+      }
       sendRealtimeEvent({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: event.call_id, output: JSON.stringify(result) },

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextCommunications,
@@ -384,6 +384,22 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
   if (!db) databaseUnavailable();
   const mailboxKey = mailboxKeyFor(batch.mailbox);
   const folderName = batch.folderName || "INBOX";
+  const candidateUids = [...new Set(batch.messages.map(message => message.uid))];
+  const candidateHashes = [...new Set(batch.messages.map(message => messageIdentitySha(message, batch.uidValidity)))];
+  const existingRows = candidateUids.length ? await db.select({
+    folderName: comoNextEmailMessages.folderName,
+    uidValidity: comoNextEmailMessages.uidValidity,
+    imapUid: comoNextEmailMessages.imapUid,
+    messageIdSha256: comoNextEmailMessages.messageIdSha256,
+  }).from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.mailboxKey, mailboxKey),
+    or(
+      and(eq(comoNextEmailMessages.folderName, folderName), eq(comoNextEmailMessages.uidValidity, batch.uidValidity), inArray(comoNextEmailMessages.imapUid, candidateUids)),
+      inArray(comoNextEmailMessages.messageIdSha256, candidateHashes),
+    ),
+  )) : [];
+  const knownUids = new Set(existingRows.filter(row => row.folderName === folderName && row.uidValidity === batch.uidValidity).map(row => Number(row.imapUid)));
+  const knownHashes = new Set(existingRows.map(row => row.messageIdSha256));
   let imported = 0;
   let duplicates = 0;
   let suggested = 0;
@@ -391,13 +407,11 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
   let autoLinked = 0;
   const importedIds: number[] = [];
 
-  for (const message of batch.messages) {
+  // Persist older UIDs first: if an import fails, the next cursor must not
+  // advance past an unimported message from the same mailbox batch.
+  for (const message of [...batch.messages].sort((a, b) => a.uid - b.uid)) {
     const identitySha = messageIdentitySha(message, batch.uidValidity);
-    const existing = await db.select({ id: comoNextEmailMessages.id }).from(comoNextEmailMessages).where(or(
-      and(eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.folderName, folderName), eq(comoNextEmailMessages.uidValidity, batch.uidValidity), eq(comoNextEmailMessages.imapUid, message.uid)),
-      and(eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.messageIdSha256, identitySha)),
-    )).limit(1);
-    if (existing.length) { duplicates += 1; continue; }
+    if (knownUids.has(message.uid) || knownHashes.has(identitySha)) { duplicates += 1; continue; }
 
     const suggestion = await buildSuggestion(db, userId, message);
     const body = message.textBody.trim().slice(0, 1_000_000);
@@ -426,6 +440,8 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
       suggestionReason: suggestion?.reason ?? null,
     });
     const emailId = Number(result[0].insertId);
+    knownUids.add(message.uid);
+    knownHashes.add(identitySha);
     importedIds.push(emailId);
     if (message.attachments.length) {
       await db.insert(comoNextEmailAttachments).values(message.attachments.map((attachment, index) => ({
@@ -460,9 +476,20 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
 }
 
 export async function syncReadonlyInboxCommand(input: { userId: number; hours: number; maxMessages: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const mailboxKey = mailboxKeyFor(getConfiguredMailboxAddress());
+  const cursorFor = async (folderName: string) => {
+    const [latest] = await db.select({ lastUid: comoNextEmailMessages.imapUid, uidValidity: comoNextEmailMessages.uidValidity })
+      .from(comoNextEmailMessages)
+      .where(and(eq(comoNextEmailMessages.userId, input.userId), eq(comoNextEmailMessages.mailboxKey, mailboxKey), eq(comoNextEmailMessages.folderName, folderName)))
+      .orderBy(desc(comoNextEmailMessages.imapUid)).limit(1);
+    return latest ? { lastUid: Number(latest.lastUid), uidValidity: latest.uidValidity } : undefined;
+  };
+  const [inboxCursor, sentCursor] = await Promise.all([cursorFor("INBOX"), cursorFor("Sent")]);
   const [inboxBatch, sentBatch] = await Promise.all([
-    fetchReadonlyInboxSince(input.hours, input.maxMessages),
-    fetchReadonlySentSince(input.hours, input.maxMessages),
+    fetchReadonlyInboxSince(input.hours, input.maxMessages, inboxCursor),
+    fetchReadonlySentSince(input.hours, input.maxMessages, sentCursor),
   ]);
   const inbox = await importReadonlyBatch(input.userId, inboxBatch);
   const sent = await importReadonlyBatch(input.userId, sentBatch);
@@ -480,6 +507,41 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
     serverFlagsChanged: false as const,
     externalSideEffects: false as const,
   };
+}
+
+/** Run on a separate heartbeat, never inside the IMAP callback. A failed
+ * analysis remains pending and its stable requestKey makes retries safe. */
+export async function processPendingReadonlyMailboxCommand(input: { userId: number; analysisLimit?: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const pending = await db.execute(sql`
+    SELECT email_row.id
+    FROM como_next_email_messages email_row
+    WHERE email_row.user_id = ${input.userId}
+      AND email_row.inbox_status <> 'dismissed'
+      AND NOT EXISTS (
+        SELECT 1 FROM como_next_email_analyses analysis_row
+        WHERE analysis_row.email_message_id = email_row.id AND analysis_row.analysis_status = 'draft'
+      )
+    ORDER BY email_row.received_at DESC, email_row.id DESC
+    LIMIT ${Math.max(1, Math.min(input.analysisLimit || 1, 2))}
+  `);
+  const ids = rowsOf<{ id: number }>(pending).map(row => Number(row.id));
+  let analyzed = 0;
+  let analysisFailures = 0;
+  for (const emailId of ids) {
+    try {
+      await analyzeEmailCommand({ userId: input.userId, emailId, requestKey: `mailbox-context-v1:${emailId}`, suppressReplyDraft: true, model: "gemini-3-flash-preview" });
+      analyzed += 1;
+    } catch (error) {
+      analysisFailures += 1;
+      const code = typeof error === "object" && error !== null && "code" in error ? String((error as { code: unknown }).code) : error instanceof Error ? error.name : "unknown";
+      console.error(`[COMO email processing] email ${emailId} remains pending (${code})`);
+    }
+  }
+  // Do not mark the batch successful when any candidate remains unprocessed.
+  if (analysisFailures) throw new Error(`email_analysis_failed:${analysisFailures}`);
+  return { analyzed, pendingCandidates: ids.length, analysisFailures, externalSideEffects: false as const };
 }
 
 export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: number; hours: number; maxMessages: number; analysisLimit?: number }) {
@@ -937,7 +999,7 @@ async function loadEmailAnalysisContext(db: any, email: typeof comoNextEmailMess
   };
 }
 
-export async function analyzeEmailCommand(input: { userId: number; emailId: number; requestKey: string }) {
+export async function analyzeEmailCommand(input: { userId: number; emailId: number; requestKey: string; suppressReplyDraft?: boolean; model?: string }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
@@ -945,14 +1007,14 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const negotiationNeedsOwnerAgreement = isContractNegotiationEmail(email.subject, email.bodyText);
   const [existing] = await db.select({ id: comoNextEmailAnalyses.id, replyDraftText: comoNextEmailAnalyses.replyDraftText }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
   if (existing) {
-    const replyDraft = !negotiationNeedsOwnerAgreement && email.folderName === "INBOX" && email.linkedWorkFileId && !email.replyDraftCommunicationId && existing.replyDraftText
+    const replyDraft = !input.suppressReplyDraft && !negotiationNeedsOwnerAgreement && email.folderName === "INBOX" && email.linkedWorkFileId && !email.replyDraftCommunicationId && existing.replyDraftText
       ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: existing.replyDraftText })
       : null;
     return { id: Number(existing.id), replayed: true as const, replyDraftId: replyDraft ? Number(replyDraft.id) : email.replyDraftCommunicationId ? Number(email.replyDraftCommunicationId) : null };
   }
   const context = await loadEmailAnalysisContext(db, email);
   const response = await invokeLLM({
-    model: EMAIL_ANALYSIS_MODEL,
+    model: input.model || EMAIL_ANALYSIS_MODEL,
     messages: [
       { role: "system", content: "أنت Manus داخل مكتب عبد الرحمن التنفيذي. حلل الرسالة داخل تسلسل ملف الموضوع كاملًا، واعتبر الدليل الأحدث هو الحقيقة التشغيلية. لا تنشئ إجراءً أو قرارًا أو التزامًا تشغيليًا، ولا ترسل أو تعتمد أي رد. أخرج JSON مطابقًا للمخطط. المقترحات review-only ولا تُنشأ إذا كانت الخطوة قائمة أو منتهية أو نسختها واقعة أحدث." },
       { role: "user", content: buildEmailAnalysisPrompt(email, context) },
@@ -1001,7 +1063,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
     : null;
-  const replyDraft = !negotiationNeedsOwnerAgreement && !scheduleAcknowledgement && email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
+  const replyDraft = !input.suppressReplyDraft && !negotiationNeedsOwnerAgreement && !scheduleAcknowledgement && email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
     ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: normalizeOwnerEmailSignature(String(parsed.replyDraftText)) })
     : null;
   return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };

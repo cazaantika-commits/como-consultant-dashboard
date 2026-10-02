@@ -599,15 +599,26 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
     lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
     lastRunAt: comoNextEmailSyncSettings.lastRunAt,
     lastStatus: comoNextEmailSyncSettings.lastStatus,
-  }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, state.userId)).limit(1);
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, state.userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary"))).limit(1);
+  const [processing] = await state.db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, state.userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing"))).limit(1);
   const lastSuccess = saraDubaiTimestamp(sync?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(sync?.lastRunAt);
-  const staleMail = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+  const staleImport = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
     || sync.lastStatus === "failed"
     || (sync.lastStatus === "running" && (!lastRun || now.getTime() - Date.parse(lastRun.utc) > 2 * 60_000));
-  const briefingText = staleMail
+  const lastProcessed = saraDubaiTimestamp(processing?.lastSuccessAt);
+  const processRun = saraDubaiTimestamp(processing?.lastRunAt);
+  const staleProcessing = !processing?.isEnabled || !lastProcessed || now.getTime() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
+    || processing?.lastStatus === "failed"
+    || (processing?.lastStatus === "running" && (!processRun || now.getTime() - Date.parse(processRun.utc) > 2 * 60_000));
+  const briefingText = staleImport
     ? `تنبيه موجز: البريد الذي يظهر لي هو ما وصل إلى COMO، لكن المزامنة المجدولة لم تؤكد تحديث كل الرسائل${lastSuccess ? ` منذ ${lastSuccess.dubai}` : ""}. لا أؤكد عدم وجود وارد أحدث.\n---\n${narration.text}`
-    : narration.text;
+    : staleProcessing ? `تنبيه موجز: استُورد البريد، لكن معالجة الرسائل الجديدة لم يثبت اكتمالها؛ قد تنقص المتابعات والأولويات.\n---\n${narration.text}` : narration.text;
   const contentSha256 = createHash("sha256").update(`${kind}\n${briefingText}`).digest("hex");
   await state.db.update(comoNextSaraBriefingDeliveries)
     .set({ deliveryStatus: "interrupted", completedAt: toSqlTimestamp(now) })

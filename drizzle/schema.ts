@@ -3007,6 +3007,40 @@ export const comoNextWorkFileUpdates = mysqlTable("como_next_work_file_updates",
   foreignKey({ name: "como_next_update_target_action_fk", columns: [table.projectId, table.targetActionId], foreignColumns: [comoNextActions.projectId, comoNextActions.id] }).onDelete("restrict"),
 ]);
 
+// Owner-reviewed directives preserve Sara/manual provenance and immutable submitted text.
+// A directive is staged inside one authorized dossier and only claimed once for Manus.
+export const comoNextStagedDirectives = mysqlTable("como_next_staged_directives", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  actionId: int("action_id"),
+  currentDecisionId: int("current_decision_id"),
+  source: mysqlEnum("source", ["sara", "manual"]).notNull(),
+  sourceMemberId: varchar("source_member_id", { length: 64 }),
+  stageKey: varchar("stage_key", { length: 128 }).notNull(),
+  directiveText: longtext("directive_text").notNull(),
+  status: mysqlEnum("status", ["pending", "submitting", "submitted", "cancelled", "failed"]).notNull().default("pending"),
+  submissionClaimedAt: timestamp("submission_claimed_at", { mode: "string" }),
+  submittedAt: timestamp("submitted_at", { mode: "string" }),
+  updateId: bigint("update_id", { mode: "number" }),
+  communicationDraftId: bigint("communication_draft_id", { mode: "number" }),
+  mailboxDraftRef: varchar("mailbox_draft_ref", { length: 500 }),
+  workProductId: bigint("work_product_id", { mode: "number" }),
+  executionSummary: longtext("execution_summary"),
+  resultJson: longtext("result_json"),
+  failureMessage: text("failure_message"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_staged_directive_user_key_uq").on(table.userId, table.stageKey),
+  index("como_next_staged_directive_file_status_idx").on(table.workFileId, table.status, table.updatedAt),
+  index("como_next_staged_directive_user_status_idx").on(table.userId, table.status, table.updatedAt),
+  foreignKey({ name: "como_next_staged_directive_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+  foreignKey({ name: "como_next_staged_directive_action_fk", columns: [table.projectId, table.actionId], foreignColumns: [comoNextActions.projectId, comoNextActions.id] }).onDelete("restrict"),
+  foreignKey({ name: "como_next_staged_directive_decision_fk", columns: [table.currentDecisionId], foreignColumns: [comoNextDecisions.id] }).onDelete("restrict"),
+]);
+
 // Follow-up Desk transfer staging. Raw source rows and file metadata land here
 // first; they are never treated as active COMO records until a separate,
 // reviewed promotion command is executed.
@@ -3550,6 +3584,47 @@ export const comoNextEmailAnalyses = mysqlTable("como_next_email_analyses", {
 }, (table) => [
   uniqueIndex("como_next_email_analysis_request_uq").on(table.requestKey),
   index("como_next_email_analysis_message_idx").on(table.emailMessageId, table.analysisStatus, table.createdAt),
+]);
+
+// Confirmed-Sent follow-up ledger. It is populated only by an explicit
+// read-only Sent-to-system-Draft adapter; this schema never schedules mail or
+// creates a mailbox Draft by itself.
+export const comoNextEmailFollowups = mysqlTable("como_next_email_followups", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  idempotencyKey: varchar("idempotency_key", { length: 64 }).notNull(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  workFileId: int("work_file_id").notNull().references(() => comoNextWorkFiles.id, { onDelete: "restrict" }),
+  sentMessageId: varchar("sent_message_id", { length: 1000 }).notNull(),
+  sentMessageRef: varchar("sent_message_ref", { length: 500 }).notNull(),
+  sentAt: timestamp("sent_at", { mode: "string" }).notNull(),
+  toText: text("to_text").notNull(),
+  ccText: text("cc_text"),
+  subject: varchar("subject", { length: 1000 }).notNull(),
+  ownerDirectiveRef: varchar("owner_directive_ref", { length: 500 }).notNull(),
+  ownerDirectiveExplicitlyApproved: tinyint("owner_directive_explicitly_approved").notNull().default(0),
+  systemDraftKey: varchar("system_draft_key", { length: 255 }).notNull(),
+  sentCorrelationJson: longtext("sent_correlation_json").notNull(),
+  expectedResolutionKinds: longtext("expected_resolution_kinds").notNull(),
+  followUpAt: timestamp("follow_up_at", { mode: "string" }).notNull(),
+  status: mysqlEnum("status", ["scheduled", "drafting", "draft_ready", "owner_review", "cancelled"]).notNull().default("scheduled"),
+  draftClaimToken: varchar("draft_claim_token", { length: 64 }),
+  draftClaimedAt: timestamp("draft_claimed_at", { mode: "string" }),
+  mailboxDraftRef: varchar("mailbox_draft_ref", { length: 500 }),
+  ownerReviewReason: text("owner_review_reason"),
+  lastError: text("last_error"),
+  resolutionKind: mysqlEnum("resolution_kind", ["reply", "analysis", "deliverable", "invoice_paid", "invoice_approved"]),
+  resolutionOccurredAt: timestamp("resolution_occurred_at", { mode: "string" }),
+  resolutionExplicitlyAdequate: tinyint("resolution_explicitly_adequate"),
+  resolutionEvidenceRef: varchar("resolution_evidence_ref", { length: 1000 }),
+  cancelledAt: timestamp("cancelled_at", { mode: "string" }),
+  cancellationReason: text("cancellation_reason"),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_followup_idempotency_uq").on(table.idempotencyKey),
+  index("como_next_followup_active_due_idx").on(table.status, table.followUpAt),
+  index("como_next_followup_file_sent_idx").on(table.workFileId, table.sentMessageRef),
+  index("como_next_followup_user_status_idx").on(table.userId, table.status, table.updatedAt),
 ]);
 
 

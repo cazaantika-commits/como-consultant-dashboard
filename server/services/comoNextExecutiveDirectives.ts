@@ -125,6 +125,10 @@ function compact(value: unknown, max = 4_000) {
 
 export function directiveRequestsCommunicationDraft(directiveText: string) {
   const normalized = directiveText.replace(/\s+/g, " ").trim().toLowerCase();
+  // Negatives are instructions, not soft caveats. This protects interrupted phrases
+  // such as "ذكّري وائل، خلي ما نرسل" from being turned into a mailbox draft.
+  const explicitNoSend = /(?:لا\s*(?:ترسل|ترسلي|نبعت|نبعث|تبعث|تبعت|نرسل|نبعتو)|ما\s*(?:نرسل|نبعت|نبعث|ترسل|ترسلي|تبعث|تبعت)|خلي\s*ما\s*(?:نرسل|نبعت|نبعث|ترسل|ترسلي|تبعث|تبعت)|وقف(?:ي)?\s*(?:الإرسال|ارسال|البريد|الرسالة)|don't\s+send|do\s+not\s+send|no\s+send)/i;
+  if (explicitNoSend.test(normalized)) return false;
   const actionVerb = /(?:أرسل|ارسل|ابعث|ابعت|راسل|رد\s|ذكّر|ذكر\s|تذكير|send|email|e-mail|reply|remind)/i;
   const communicationTarget = /(?:رسالة|بريد|إيميل|ايميل|وائل|ميا|سكرتير|شركة|مكتب|consultant|wael|mia|email|message)/i;
   return actionVerb.test(normalized) && communicationTarget.test(normalized);
@@ -197,6 +201,7 @@ function buildDirectivePrompt(input: {
 3) إذا احتاج العمل وثائق أو بيانات غير موجودة، أنشئ خطوة Manus واحدة محددة تجمع الناقص وتنتج مخرجًا واضحًا؛ لا تجعل المستخدم مسؤولاً عن عمل يستطيع Manus فعله.
 4) اذكر ملفات الموضوع المرتبطة التي يجب تعليق خطواتها المنفردة إلى أن يكتمل العمل الموحد، باستعمال المعرفات المتاحة فقط.
 5) لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا. إذا طلب عبد الرحمن إرسال/كتابة/تذكير شخص برسالة، جهّز communicationDraft كاملة؛ النظام سيحفظها فعليًا في Private Email Drafts ليُراجعها ويرسلها من بريده. ممنوع اعتبار نص داخلي يقول «أعددت مسودة» تنفيذًا.
+5-أ) إذا احتوى التوجيه على نفي صريح مثل «خلي ما نرسل» أو «لا تبعتي»، فالنفي مقدّم: لا تنشئ communicationDraft ولا تدّعي إرسالًا أو إعداد مسودة، واكتف بالعمل الداخلي المسموح إن بقي مطلوبًا.
 6) في communicationDraft استخدم عنوان البريد المثبت من السياق. وائل هو wael@zooma.ae، وإذا كان هو المستلم الأساسي اجعل CC إلى pa@zooma.ae (Mia). اذكر externalMessageRef الأنسب إذا كانت الرسالة متابعة لخيط سابق.
 7) لا تقل إن ملفًا مرفق أو سيُرفق؛ مسار توجيه Manus الحالي ينشئ نص المسودة ويحفظه في البريد ولا يضيف مرفقات. وقّع الاسم العربي «عبد الرحمن زقوت» أو الإنجليزي حصراً «Abdalrahman Zaqout».
 8) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
@@ -239,6 +244,7 @@ export async function executeExecutiveDirectiveCommand(input: {
   sourceChannel?: KitchenUpdateChannel;
   directiveText: string;
   executionSource?: "owner" | "sara" | "executive_control";
+  idempotencyKey?: string | null;
 }) {
   const context = await loadDirectiveContext(input.userId, input.workFileId);
   if (input.currentDecisionId) {
@@ -253,6 +259,7 @@ export async function executeExecutiveDirectiveCommand(input: {
     updateText: input.directiveText,
     actorType: input.executionSource === "executive_control" ? "manus" : "human",
     actorUserId: input.executionSource === "executive_control" ? null : input.userId,
+    idempotencyKey: input.idempotencyKey || null,
   });
 
   const response = await invokeLLM({
