@@ -64,4 +64,10 @@ describe("Sara executive briefings", () => {
     expect(briefingSource).not.toContain("يا زعيم");
     expect(briefingSource).not.toContain("يا كبير");
   });
+
+  it("flags stale email sync in the spoken briefing rather than claiming full coverage", () => {
+    expect(briefingSource).toContain("const staleMail =");
+    expect(briefingSource).toContain("لا أؤكد عدم وجود وارد أحدث");
+    expect(briefingSource).toContain("text: briefingText");
+  });
 });

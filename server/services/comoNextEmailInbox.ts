@@ -29,7 +29,7 @@ import {
 import { storagePut } from "../storage";
 import { appendEvent, createActionCommand, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
 import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
-import { reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
+import { currentInboundEmailText, reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
 import { createMeetingCommand } from "./comoNextMeetings";
 
@@ -63,6 +63,12 @@ const monthNumbers: Record<string, number> = {
 
 function asciiDigits(value: string) {
   return value.replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+}
+
+/** An incoming contract revision is evidence to review, not authorization to draft a reply. */
+export function isContractNegotiationEmail(subject: string, body: string) {
+  return /\b(?:agreement|contract|appointment)\b|عقد|اتفاقية/i.test(subject)
+    && /\b(?:revis(?:ed|ion)|draft|review|sign[ -]?off|clarif(?:y|ication))\b|مسودة|مراجعة|تعديل/i.test(currentInboundEmailText(body));
 }
 
 function canonicalMeetingSubject(subject: string) {
@@ -936,9 +942,10 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
+  const negotiationNeedsOwnerAgreement = isContractNegotiationEmail(email.subject, email.bodyText);
   const [existing] = await db.select({ id: comoNextEmailAnalyses.id, replyDraftText: comoNextEmailAnalyses.replyDraftText }).from(comoNextEmailAnalyses).where(eq(comoNextEmailAnalyses.requestKey, input.requestKey)).limit(1);
   if (existing) {
-    const replyDraft = email.folderName === "INBOX" && email.linkedWorkFileId && !email.replyDraftCommunicationId && existing.replyDraftText
+    const replyDraft = !negotiationNeedsOwnerAgreement && email.folderName === "INBOX" && email.linkedWorkFileId && !email.replyDraftCommunicationId && existing.replyDraftText
       ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: existing.replyDraftText })
       : null;
     return { id: Number(existing.id), replayed: true as const, replyDraftId: replyDraft ? Number(replyDraft.id) : email.replyDraftCommunicationId ? Number(email.replyDraftCommunicationId) : null };
@@ -994,7 +1001,7 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
     : null;
-  const replyDraft = !scheduleAcknowledgement && email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
+  const replyDraft = !negotiationNeedsOwnerAgreement && !scheduleAcknowledgement && email.folderName === "INBOX" && email.linkedWorkFileId && parsed.shouldReply && String(parsed.replyDraftText || "").trim()
     ? await createReplyDraftFromEmailCommand({ userId: input.userId, emailId: Number(email.id), body: normalizeOwnerEmailSignature(String(parsed.replyDraftText)) })
     : null;
   return { ...analysisResult, proposalCount: proposalResult.ids.length, proposalsCreated: proposalResult.created, reconciliation, replyDraftId: replyDraft ? Number(replyDraft.id) : null };

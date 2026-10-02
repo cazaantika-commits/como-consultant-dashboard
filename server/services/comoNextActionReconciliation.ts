@@ -89,6 +89,21 @@ function clean(value: unknown, max = 5_000) {
   return String(value || "").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
+/** Quoted history can describe a completed meeting while the current action concerns a later one. */
+export function currentInboundEmailText(body: string) {
+  const lines = body.replace(/\r\n?/g, "\n").split("\n");
+  const quotedAt = lines.findIndex(line => /^\s*(?:From:\s|Sent:\s|On .{6,150} wrote:|[-]{2,}\s*Original Message\s*[-]{2,}|>)/i.test(line));
+  return (quotedAt < 0 ? lines : lines.slice(0, quotedAt)).join("\n").trim();
+}
+
+export function resolutionHasCurrentEvidence(resolution: ReconciliationAction, emailBody: string, attachmentNames: string[]) {
+  const quote = clean(resolution.evidenceQuote).toLowerCase();
+  if (quote.length < 3) return false;
+  const freshText = clean(currentInboundEmailText(emailBody), 12_000).toLowerCase();
+  if (freshText.includes(quote)) return true;
+  return resolution.resolution === "verified" && attachmentNames.some(name => clean(name).toLowerCase().includes(quote));
+}
+
 export function normalizeReconciliationPlan(raw: unknown, activeActionIds: number[]): EvidenceReconciliationPlan {
   const source = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
   const allowed = new Set(activeActionIds);
@@ -146,7 +161,7 @@ export function buildEvidenceReconciliationPrompt(input: {
   const actions = input.activeActions.map(item => `- #${item.id} · ${item.actionStatus} · ${item.ownerType} · ${item.title}\n  الوصف: ${item.description || "—"}\n  معيار الإقفال: ${item.acceptanceCriteria}\n  أنشئ: ${item.createdAt}${item.dueAt ? ` · يستحق: ${item.dueAt}` : ""}${item.evidenceReference ? ` · دليل سابق: ${item.evidenceReference}` : ""}`).join("\n");
   const emails = input.recentEmails.map(item => `- ${item.receivedAt} · ${item.direction}: ${item.subject} — ${item.excerpt}`).join("\n");
   const outputs = input.currentOutputs.map(item => `- ${item.occurredAt || "دون تاريخ"}: ${item.title}${item.entryType ? ` · ${item.entryType}` : ""}`).join("\n");
-  return `ملف الموضوع: ${input.workFile.title}\nحالته: ${input.workFile.status}\nالسؤال الحاكم: ${input.workFile.governingQuestion}\nالنتيجة المطلوبة: ${input.workFile.desiredOutcome}\n\nالدليل الجديد المراد مصالحته:\n- رقم البريد: ${input.triggerEmail.id}\n- الاتجاه: ${input.triggerEmail.folderName === "INBOX" ? "وارد" : "صادر"}\n- التاريخ: ${input.triggerEmail.receivedAt}\n- من: ${input.triggerEmail.fromText}\n- الموضوع: ${input.triggerEmail.subject}\n- عدد المرفقات: ${input.triggerEmail.attachmentCount}\n- أسماء المرفقات: ${input.triggerEmail.attachmentNames.join("، ") || "لا توجد"}\n- نص البريد: ${input.triggerEmail.bodyText.slice(0, 12_000)}\n- تحليل البريد المحفوظ: ${input.triggerEmail.analysisSummary || "لا يوجد"}\n- الخطوة المقترحة المحفوظة: ${input.triggerEmail.suggestedNextStep || "لا توجد"}\n\nالإجراءات النشطة قبل الدليل:\n${actions || "لا توجد"}\n\nأحدث المراسلات في الملف:\n${emails || "لا توجد"}\n\nالمخرجات الحالية:\n${outputs || "لا توجد"}\n\nالمطلوب: طابق الدليل الجديد مع كل إجراء نشط. إن أثبت الدليل تحقق انتظار موضوعي، فحوّل الإجراء إلى verified. إن جعل الدليل الإجراء غير صالح أو استبدله بواقع جديد، فحوّله إلى cancelled. وإلا أبقه keep. لا تعتبر وعدًا أو عبارة عامة أو رسالة صادرة من عبد الرحمن دليلاً على تنفيذ الطرف الآخر. اعتماد صرف لا يثبت تنفيذ الدفع. إرسال طلب لا يثبت استلام المطلوب. لا تُغلق إجراءً إلا باقتباس صريح من الدليل الحالي.\n\nأسماء المرفقات المسجلة أعلاه تعني أن البريد ومرفقاته التُقطت وحُفظت داخل الملف؛ لا تقترح استيعابها أو ربطها أو أرشفتها مرة أخرى. بعد ذلك اقترح خطوة واحدة فقط إذا أصبحت هناك خطوة جديدة فعلًا. تحليل مستند أو عرض أو مرفق، واستخراج مقارنة أو تقرير، هو عمل Manus وليس عبد الرحمن. لا تطلب من عبد الرحمن مراجعة المادة الخام قبل أن يُنجز Manus التحليل. إذا كان الإجراء التالي نفسه قائمًا فعلاً ومبنيًا على هذا الدليل، اجعل nextAction=null. إذا كان إجراء بشري قديم مبنيًا على نسخة سابقة وأصبح التحليل الجديد شرطًا قبله، ألغِ القديم وأنشئ خطوة Manus أولًا. اكتب عنوان الخطوة ووصفها ومعيار قبولها بالعربية المهنية المختصرة، ولا تبدأ العنوان بكلمة Manus. لا تنشئ إرسالًا أو قبولًا أو قرارًا أو دفعًا. أخرج JSON فقط.`;
+  return `ملف الموضوع: ${input.workFile.title}\nحالته: ${input.workFile.status}\nالسؤال الحاكم: ${input.workFile.governingQuestion}\nالنتيجة المطلوبة: ${input.workFile.desiredOutcome}\n\nالدليل الجديد المراد مصالحته:\n- رقم البريد: ${input.triggerEmail.id}\n- الاتجاه: ${input.triggerEmail.folderName === "INBOX" ? "وارد" : "صادر"}\n- التاريخ: ${input.triggerEmail.receivedAt}\n- من: ${input.triggerEmail.fromText}\n- الموضوع: ${input.triggerEmail.subject}\n- عدد المرفقات: ${input.triggerEmail.attachmentCount}\n- أسماء المرفقات: ${input.triggerEmail.attachmentNames.join("، ") || "لا توجد"}\n- نص الرسالة الجديدة فقط (بدون المحادثة المقتبسة): ${currentInboundEmailText(input.triggerEmail.bodyText).slice(0, 12_000)}\n- تحليل البريد المحفوظ: ${input.triggerEmail.analysisSummary || "لا يوجد"}\n- الخطوة المقترحة المحفوظة: ${input.triggerEmail.suggestedNextStep || "لا توجد"}\n\nالإجراءات النشطة قبل الدليل:\n${actions || "لا توجد"}\n\nأحدث المراسلات في الملف (سياق فقط، ليس دليلاً على إنجاز هذه الرسالة):\n${emails || "لا توجد"}\n\nالمخرجات الحالية:\n${outputs || "لا توجد"}\n\nالمطلوب: طابق نص الرسالة الجديدة فقط مع كل إجراء نشط؛ المراسلات الأقدم والاقتباسات سياق وليست دليلاً حاسمًا. فرّق خصوصًا بين اجتماع سابق واجتماع الأسبوع القادم؛ لا تلغِ تحضير موعد لاحق بناء على ذكر عقد موعد أقدم. إن أثبت الدليل تحقق انتظار موضوعي، فحوّل الإجراء إلى verified. إن جعل الدليل الإجراء غير صالح أو استبدله بواقع جديد، فحوّله إلى cancelled. وإلا أبقه keep. لا تعتبر وعدًا أو عبارة عامة أو رسالة صادرة من عبد الرحمن دليلاً على تنفيذ الطرف الآخر. اعتماد صرف لا يثبت تنفيذ الدفع. إرسال طلب لا يثبت استلام المطلوب. لا تُغلق إجراءً إلا باقتباس حرفي صريح من نص الرسالة الجديدة.\n\nأسماء المرفقات المسجلة أعلاه تعني أن البريد ومرفقاته التُقطت وحُفظت داخل الملف؛ لا تقترح استيعابها أو ربطها أو أرشفتها مرة أخرى. بعد ذلك اقترح خطوة واحدة فقط إذا أصبحت هناك خطوة جديدة فعلًا. تحليل مستند أو عرض أو مرفق، واستخراج مقارنة أو تقرير، هو عمل Manus وليس عبد الرحمن. لا تطلب من عبد الرحمن مراجعة المادة الخام قبل أن يُنجز Manus التحليل. إذا كان الإجراء التالي نفسه قائمًا فعلاً ومبنيًا على هذا الدليل، اجعل nextAction=null. إذا كان إجراء بشري قديم مبنيًا على نسخة سابقة وأصبح التحليل الجديد شرطًا قبله، ألغِ القديم وأنشئ خطوة Manus أولًا. اكتب عنوان الخطوة ووصفها ومعيار قبولها بالعربية المهنية المختصرة، ولا تبدأ العنوان بكلمة Manus. لا تنشئ إرسالًا أو قبولًا أو قرارًا أو دفعًا. أخرج JSON فقط.`;
 }
 
 function databaseUnavailable(): never {
@@ -221,7 +236,9 @@ export async function reconcileWorkFileEvidenceCommand(input: { userId: number; 
 
   const evidenceReference = `بريد وارد #${triggerEmail.id} · ${triggerEmail.receivedAt} · ${triggerEmail.subject}`;
   const actionById = new Map(activeActions.map(action => [Number(action.id), action]));
-  const applicable = plan.actionResolutions.filter(item => item.resolution !== "keep" && item.evidenceQuote.length >= 3 && (
+  const applicable = plan.actionResolutions.filter(item => item.resolution !== "keep"
+    && !(item.resolution === "verified" && actionById.get(item.actionId)?.ownerType === "manus")
+    && resolutionHasCurrentEvidence(item, triggerEmail.bodyText, attachments.map(a => a.fileName)) && (
     item.resolution === "verified" ? item.confidence >= 90 : item.confidence >= 85
   ));
   const nextKey = `evidence-reconcile:${input.triggerEmailId}:next`;

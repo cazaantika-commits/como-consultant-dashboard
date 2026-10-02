@@ -1,100 +1,33 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
-import {
-  AgentEventsEnum,
-  LiveAvatarSession,
-  SessionEvent,
-  SessionState,
-} from "@heygen/liveavatar-web-sdk";
+import { useEffect, useRef, useState } from "react";
+import { LiveAvatarSession, SessionEvent, SessionState } from "@heygen/liveavatar-web-sdk";
 import { Radio } from "lucide-react";
-import { createLiveAvatarPcmStream, type LiveAvatarPcmStream } from "@shared/liveAvatarAudio";
-
-export type SaraLiveAvatarAudioController = {
-  appendPcmBase64: (pcmBase64: string) => boolean;
-  commit: () => boolean;
-  interrupt: () => boolean;
-};
 
 type Props = {
   portrait: string;
   sessionToken: string | null;
-  playAudio: boolean;
-  onStateChange?: (state: { connected: boolean; speaking: boolean; error: string | null }) => void;
-  onAudioRouteFailure?: () => void;
-  onPlaybackComplete?: () => void;
+  isSpeaking?: boolean;
 };
 
-export const SaraLiveAvatarView = forwardRef<SaraLiveAvatarAudioController, Props>(function SaraLiveAvatarView({ portrait, sessionToken, playAudio, onStateChange, onAudioRouteFailure, onPlaybackComplete }, ref) {
+/** Visual-only. LiveAvatar must never own or delay the audible Realtime stream. */
+export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const sessionRef = useRef<LiveAvatarSession | null>(null);
-  const pcmStreamRef = useRef<LiveAvatarPcmStream | null>(null);
   const [connected, setConnected] = useState(false);
   const [streamReady, setStreamReady] = useState(false);
   const [liveVideoPlaying, setLiveVideoPlaying] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const showLiveVideo = streamReady && liveVideoPlaying && !error;
-
-  useImperativeHandle(ref, () => ({
-    appendPcmBase64(pcmBase64) {
-      const stream = pcmStreamRef.current;
-      if (!stream || !streamReady) return false;
-      try {
-        const appended = stream.appendBase64(pcmBase64);
-        if (!appended) setError("تعذر تمرير صوت سارة إلى الصورة الحية");
-        return appended;
-      } catch (reason) {
-        setError(reason instanceof Error ? reason.message : "تعذر تحريك سارة مع الرد الصوتي");
-        return false;
-      }
-    },
-    commit() {
-      try { return pcmStreamRef.current?.commit() ?? false; } catch { return false; }
-    },
-    interrupt() {
-      try {
-        const interrupted = pcmStreamRef.current?.interrupt() ?? false;
-        setSpeaking(false);
-        return interrupted;
-      } catch {
-        return false;
-      }
-    },
-  }), [streamReady]);
-
-  useEffect(() => {
-    onStateChange?.({ connected: connected && streamReady && !error, speaking, error });
-  }, [connected, error, onStateChange, speaking, streamReady]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !playAudio;
-    video.volume = playAudio ? 1 : 0;
-    if (playAudio) void video.play().catch(() => onAudioRouteFailure?.());
-  }, [onAudioRouteFailure, playAudio]);
+  const showLiveVideo = connected && streamReady && liveVideoPlaying && !error;
 
   useEffect(() => {
     if (!sessionToken) {
       setConnected(false);
       setStreamReady(false);
       setLiveVideoPlaying(false);
-      setSpeaking(false);
       setError(null);
-      pcmStreamRef.current = null;
       return;
     }
     const session = new LiveAvatarSession(sessionToken, { voiceChat: false, autoKeepAlive: true });
-    sessionRef.current = session;
     setError(null);
-
-    const onSessionState = (state: SessionState) => {
-      if (state === SessionState.CONNECTED) {
-        const stream = createLiveAvatarPcmStream(session);
-        pcmStreamRef.current = stream;
-        if (!stream) setError("تعذر تجهيز مزامنة الصوت مع الصورة");
-      }
-      setConnected(state === SessionState.CONNECTED);
-    };
+    const onSessionState = (state: SessionState) => setConnected(state === SessionState.CONNECTED);
     const onStreamReady = () => {
       setStreamReady(true);
       if (videoRef.current) {
@@ -107,44 +40,22 @@ export const SaraLiveAvatarView = forwardRef<SaraLiveAvatarAudioController, Prop
       setConnected(false);
       setStreamReady(false);
       setLiveVideoPlaying(false);
-      setSpeaking(false);
-      pcmStreamRef.current = null;
     };
-    const onSpeakStarted = () => setSpeaking(true);
-    const onSpeakEnded = () => {
-      setSpeaking(false);
-      onPlaybackComplete?.();
-    };
-
     session.on(SessionEvent.SESSION_STATE_CHANGED, onSessionState);
     session.on(SessionEvent.SESSION_STREAM_READY, onStreamReady);
     session.on(SessionEvent.SESSION_DISCONNECTED, onDisconnected);
-    session.on(AgentEventsEnum.AVATAR_SPEAK_STARTED, onSpeakStarted);
-    session.on(AgentEventsEnum.AVATAR_SPEAK_ENDED, onSpeakEnded);
     void session.start().catch(reason => {
       setError(reason instanceof Error ? reason.message : "تعذر تشغيل الصورة الحية لسارة");
     });
-
     return () => {
-      pcmStreamRef.current?.interrupt();
-      pcmStreamRef.current = null;
       session.removeAllListeners();
       void session.stop().catch(() => undefined);
-      sessionRef.current = null;
-      setConnected(false);
-      setStreamReady(false);
-      setLiveVideoPlaying(false);
-      setSpeaking(false);
     };
-  }, [onPlaybackComplete, sessionToken]);
+  }, [sessionToken]);
 
   return (
     <div className="relative h-full min-h-[170px] overflow-hidden rounded-[20px] bg-[#071522] shadow-[0_24px_70px_rgba(2,12,24,.38)] sm:min-h-[260px] sm:rounded-[26px]">
-      <img
-        src={portrait}
-        alt="سارة"
-        className={`absolute inset-0 h-full w-full object-cover object-[center_25%] transition-opacity duration-200 ${showLiveVideo ? "opacity-0" : "opacity-100"}`}
-      />
+      <img src={portrait} alt="سارة" className={`absolute inset-0 h-full w-full object-cover object-[center_25%] transition-opacity duration-200 ${showLiveVideo ? "opacity-0" : "opacity-100"}`} />
       <video
         ref={videoRef}
         poster={portrait}
@@ -156,21 +67,13 @@ export const SaraLiveAvatarView = forwardRef<SaraLiveAvatarAudioController, Prop
       />
       <div className="absolute inset-0 bg-gradient-to-t from-[#05101d]/95 via-transparent to-[#05101d]/10" />
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5 text-white">
-        <div>
-          <p className="text-xl font-black">سارة</p>
-          <p className="mt-1 text-[11px] text-white/65">الواجهة المرئية لـ COMO</p>
-        </div>
+        <div><p className="text-xl font-black">سارة</p><p className="mt-1 text-[11px] text-white/65">الواجهة المرئية لـ COMO</p></div>
         <div className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-[11px] font-bold backdrop-blur-md">
-          <span className={`ml-2 inline-block h-2.5 w-2.5 rounded-full ${speaking ? "bg-amber-300 animate-pulse" : showLiveVideo ? "bg-emerald-400" : "bg-slate-400"}`} />
-          {speaking ? "تتحدث" : showLiveVideo ? "متصلة" : sessionToken ? "تتصل" : "جاهزة"}
+          <span className={`ml-2 inline-block h-2.5 w-2.5 rounded-full ${isSpeaking ? "bg-amber-300 animate-pulse" : showLiveVideo ? "bg-emerald-400" : "bg-slate-400"}`} />
+          {isSpeaking ? "تتحدث" : showLiveVideo ? "متصلة" : sessionToken ? "تتصل" : "جاهزة"}
         </div>
       </div>
-      {error && (
-        <div className="absolute inset-x-4 top-4 rounded-2xl border border-red-200/70 bg-white/95 p-3 text-xs leading-5 text-red-700 shadow-xl">
-          <Radio className="ml-1 inline h-3.5 w-3.5" />
-          بقي الصوت المباشر متاحًا، لكن تعذر تحريك الصورة الآن.
-        </div>
-      )}
+      {error && <div className="absolute inset-x-4 top-4 rounded-2xl border border-red-200/70 bg-white/95 p-3 text-xs leading-5 text-red-700 shadow-xl"><Radio className="ml-1 inline h-3.5 w-3.5" /> تعذرت الصورة الحية، والصوت المباشر لا يتأثر.</div>}
     </div>
   );
-});
+}

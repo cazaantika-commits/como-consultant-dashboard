@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
-import { comoNextSaraBriefingDeliveries } from "../../drizzle/schema";
+import { comoNextEmailSyncSettings, comoNextSaraBriefingDeliveries } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
+import { saraDubaiTimestamp } from "./saraDubaiTimes";
 
 export type SaraBriefingMode = "auto" | "full" | "today" | "changes";
 export type SaraBriefingKind = Exclude<SaraBriefingMode, "auto">;
@@ -593,7 +594,21 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
   const state = await loadBriefingState(input.memberId, now);
   const kind: SaraBriefingKind = input.mode === "auto" ? state.recommendedMode : input.mode;
   const narration = buildNarration(kind, state.window.period, state.snapshot, now);
-  const contentSha256 = createHash("sha256").update(`${kind}\n${narration.text}`).digest("hex");
+  const [sync] = await state.db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, state.userId)).limit(1);
+  const lastSuccess = saraDubaiTimestamp(sync?.lastSuccessAt);
+  const lastRun = saraDubaiTimestamp(sync?.lastRunAt);
+  const staleMail = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+    || sync.lastStatus === "failed"
+    || (sync.lastStatus === "running" && (!lastRun || now.getTime() - Date.parse(lastRun.utc) > 2 * 60_000));
+  const briefingText = staleMail
+    ? `تنبيه موجز: البريد الذي يظهر لي هو ما وصل إلى COMO، لكن المزامنة المجدولة لم تؤكد تحديث كل الرسائل${lastSuccess ? ` منذ ${lastSuccess.dubai}` : ""}. لا أؤكد عدم وجود وارد أحدث.\n---\n${narration.text}`
+    : narration.text;
+  const contentSha256 = createHash("sha256").update(`${kind}\n${briefingText}`).digest("hex");
   await state.db.update(comoNextSaraBriefingDeliveries)
     .set({ deliveryStatus: "interrupted", completedAt: toSqlTimestamp(now) })
     .where(and(
@@ -619,7 +634,7 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
     mode: kind,
     period: state.window.period,
     title: narration.title,
-    text: narration.text,
+    text: briefingText,
     todayCount: state.todayCount,
     changesCount: state.snapshot.changes.length,
     generatedAt: now.toISOString(),

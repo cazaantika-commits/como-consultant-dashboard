@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, extractConfirmedMeetingEvidence, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -14,6 +14,13 @@ const agentTools = readFileSync("server/agentTools.ts", "utf8");
 const serverStartup = readFileSync("server/_core/index.ts", "utf8");
 
 describe("COMO Next read-only email inbox", () => {
+  it("holds reply drafts to revised agreements until the owner agrees on the message", () => {
+    expect(isContractNegotiationEmail("RE: Agreement", "Kindly find attached the revised agreement, for review and sign off.\nFrom: prior sender")).toBe(true);
+    expect(isContractNegotiationEmail("Meeting Confirmation", "The meeting is confirmed for 10 AM.")).toBe(false);
+    expect(service).toContain("!negotiationNeedsOwnerAgreement && email.folderName");
+    expect(service).toContain("!negotiationNeedsOwnerAgreement && !scheduleAcknowledgement");
+  });
+
   it("uses additive tables and never mutates legacy schema in migration 0086", () => {
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS `como_next_email_messages`");
     expect(migration).toContain("CREATE TABLE IF NOT EXISTS `como_next_email_attachments`");

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { BellRing, ListChecks, Mic, MicOff, Newspaper, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
-import { SaraLiveAvatarView, type SaraLiveAvatarAudioController } from "./SaraLiveAvatarView";
+import { SaraLiveAvatarView } from "./SaraLiveAvatarView";
 import { ComoPrimaryNav } from "./ComoPrimaryNav";
 
 const SARA_PORTRAIT = saraPortrait;
@@ -27,46 +27,6 @@ type RealtimeEvent = {
   error?: { message?: string };
   response?: { status?: string; status_details?: { error?: { message?: string } } };
 };
-
-function float32ToPcmBase64(input: Float32Array) {
-  const bytes = new Uint8Array(input.length * 2);
-  const view = new DataView(bytes.buffer);
-  for (let index = 0; index < input.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, input[index]));
-    view.setInt16(index * 2, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
-  }
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  }
-  return globalThis.btoa(binary);
-}
-
-function resampleTo24k(input: Float32Array, sourceRate: number) {
-  const targetRate = 24_000;
-  if (sourceRate === targetRate) return input;
-  const outputLength = Math.max(1, Math.round(input.length * targetRate / sourceRate));
-  const output = new Float32Array(outputLength);
-  const ratio = sourceRate / targetRate;
-  if (sourceRate > targetRate) {
-    for (let index = 0; index < outputLength; index += 1) {
-      const start = Math.floor(index * ratio);
-      const end = Math.max(start + 1, Math.min(input.length, Math.floor((index + 1) * ratio)));
-      let sum = 0;
-      for (let cursor = start; cursor < end; cursor += 1) sum += input[cursor];
-      output[index] = sum / Math.max(1, end - start);
-    }
-    return output;
-  }
-  for (let index = 0; index < outputLength; index += 1) {
-    const position = index * ratio;
-    const left = Math.floor(position);
-    const right = Math.min(input.length - 1, left + 1);
-    const weight = position - left;
-    output[index] = input[left] * (1 - weight) + input[right] * weight;
-  }
-  return output;
-}
 
 function mergeTranscript(entries: TranscriptEntry[], next: TranscriptEntry) {
   const existing = entries.findIndex(item => item.id === next.id);
@@ -99,24 +59,16 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const [textInput, setTextInput] = useState("");
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [avatarToken, setAvatarToken] = useState<string | null>(null);
-  const [avatarOwnsPlayback, setAvatarOwnsPlayback] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
-  const avatarAudioControllerRef = useRef<SaraLiveAvatarAudioController | null>(null);
-  const avatarCommitTimerRef = useRef<number | null>(null);
   const outputItemIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const assistantDraftRef = useRef("");
   const lastMemberTextRef = useRef("");
-  const avatarTokenRef = useRef<string | null>(null);
-  const avatarConnectedRef = useRef(false);
-  const avatarResponseStreamingRef = useRef<boolean | null>(null);
   const autoStartedRef = useRef(false);
   const briefingStartedRef = useRef(false);
   const pendingBriefingDeliveryRef = useRef<number | null>(null);
@@ -127,17 +79,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     (userSpeechSeconds / 60) * 0.0192 + (assistantSpeechSeconds / 60) * 0.0768
   ), [assistantSpeechSeconds, userSpeechSeconds]);
 
-  const stopOutputCapture = useCallback(() => {
-    if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-    avatarCommitTimerRef.current = null;
-    try { audioProcessorRef.current?.disconnect(); } catch { /* ignore */ }
-    audioProcessorRef.current = null;
-    if (audioContextRef.current) void audioContextRef.current.close().catch(() => undefined);
-    audioContextRef.current = null;
-  }, []);
-
   const stopSession = useCallback(() => {
-    stopOutputCapture();
     dataChannelRef.current?.close();
     dataChannelRef.current = null;
     peerRef.current?.close();
@@ -161,12 +103,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     setUserSpeechSeconds(0);
     setAssistantSpeechSeconds(0);
     setAvatarToken(null);
-    avatarConnectedRef.current = false;
-    avatarResponseStreamingRef.current = null;
-    setAvatarOwnsPlayback(false);
-    avatarAudioControllerRef.current?.interrupt();
     setAudioBlocked(false);
-  }, [stopOutputCapture]);
+  }, []);
 
   useEffect(() => () => stopSession(), [stopSession]);
 
@@ -276,11 +214,6 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       case "input_audio_buffer.speech_started":
         setPhase("listening");
-        if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-        avatarCommitTimerRef.current = null;
-        avatarResponseStreamingRef.current = null;
-        setAvatarOwnsPlayback(false);
-        avatarAudioControllerRef.current?.interrupt();
         finishPendingBriefing(false);
         break;
       case "input_audio_buffer.speech_stopped":
@@ -296,10 +229,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       }
       case "response.created":
-        if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-        avatarCommitTimerRef.current = null;
-        avatarResponseStreamingRef.current = Boolean(avatarTokenRef.current && avatarConnectedRef.current);
-        if (avatarResponseStreamingRef.current) setAvatarOwnsPlayback(true);
+        setPhase("speaking");
         break;
       case "response.output_audio_transcript.delta": {
         const delta = event.delta || "";
@@ -327,101 +257,20 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       case "response.done":
         if (event.response?.status === "failed") {
-          if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-          avatarCommitTimerRef.current = null;
-          avatarResponseStreamingRef.current = null;
-          setAvatarOwnsPlayback(false);
-          avatarAudioControllerRef.current?.interrupt();
           finishPendingBriefing(false);
           setPhase("error");
           toast.error(event.response.status_details?.error?.message || "تعذر إكمال رد سارة");
         } else {
-          if (avatarResponseStreamingRef.current) {
-            if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-            avatarCommitTimerRef.current = window.setTimeout(() => {
-              if (!avatarAudioControllerRef.current?.commit()) setAvatarOwnsPlayback(false);
-              avatarResponseStreamingRef.current = null;
-              avatarCommitTimerRef.current = null;
-            }, 250);
-          } else {
-            avatarResponseStreamingRef.current = null;
-          }
           finishPendingBriefing(event.response?.status === "completed");
           setPhase("listening");
         }
         break;
       case "error":
-        if (avatarCommitTimerRef.current !== null) window.clearTimeout(avatarCommitTimerRef.current);
-        avatarCommitTimerRef.current = null;
-        avatarResponseStreamingRef.current = null;
-        setAvatarOwnsPlayback(false);
-        avatarAudioControllerRef.current?.interrupt();
         setPhase("error");
         toast.error(event.error?.message || "حدث خطأ في جلسة سارة");
         break;
     }
   }, [finishPendingBriefing, handleToolCall, persistTranscript]);
-
-  useEffect(() => { avatarTokenRef.current = avatarToken; }, [avatarToken]);
-
-  useEffect(() => {
-    const audio = remoteAudioRef.current;
-    if (!audio) return;
-    audio.muted = avatarOwnsPlayback;
-    audio.volume = avatarOwnsPlayback ? 0 : 1;
-    if (!avatarOwnsPlayback && live) {
-      void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
-    }
-  }, [avatarOwnsPlayback, live]);
-
-  const handleAvatarStateChange = useCallback((state: { connected: boolean; speaking: boolean; error: string | null }) => {
-    avatarConnectedRef.current = state.connected;
-    if (!state.connected) setAvatarOwnsPlayback(false);
-  }, []);
-
-  const handleAvatarAudioRouteFailure = useCallback(() => {
-    setAvatarOwnsPlayback(false);
-    const audio = remoteAudioRef.current;
-    if (!audio) return;
-    audio.muted = false;
-    audio.volume = 1;
-    void audio.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
-  }, []);
-
-  const handleAvatarPlaybackComplete = useCallback(() => {
-    if (avatarResponseStreamingRef.current) return;
-    setAvatarOwnsPlayback(false);
-  }, []);
-
-  const startOutputCapture = useCallback((stream: MediaStream) => {
-    stopOutputCapture();
-    try {
-      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const context = new AudioContextClass({ sampleRate: 24_000 });
-      const source = context.createMediaStreamSource(stream);
-      const processor = context.createScriptProcessor(4096, 1, 1);
-      const silence = context.createGain();
-      silence.gain.value = 0;
-      processor.onaudioprocess = event => {
-        if (!avatarResponseStreamingRef.current) return;
-        const pcm24k = resampleTo24k(event.inputBuffer.getChannelData(0), context.sampleRate);
-        const appended = avatarAudioControllerRef.current?.appendPcmBase64(float32ToPcmBase64(pcm24k));
-        if (!appended) {
-          avatarResponseStreamingRef.current = false;
-          setAvatarOwnsPlayback(false);
-        }
-      };
-      source.connect(processor);
-      processor.connect(silence);
-      silence.connect(context.destination);
-      audioContextRef.current = context;
-      audioProcessorRef.current = processor;
-      void context.resume().catch(() => undefined);
-    } catch {
-      setAvatarOwnsPlayback(false);
-    }
-  }, [stopOutputCapture]);
 
   const startSession = useCallback(async () => {
     if (live || createSession.isPending) return;
@@ -451,7 +300,6 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         remoteAudioRef.current.srcObject = remoteStream;
         remoteAudioRef.current.muted = false;
         void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
-        startOutputCapture(remoteStream);
       };
       peer.onconnectionstatechange = () => {
         if (["failed", "disconnected"].includes(peer.connectionState)) setPhase("error");
@@ -486,20 +334,20 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       setPhase("error");
       toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل سارة الصوتية");
     }
-  }, [createSession, handleRealtimeEvent, live, playBriefing, startOutputCapture, stopSession, token]);
+  }, [createSession, handleRealtimeEvent, live, playBriefing, stopSession, token]);
 
   const startAvatar = useCallback(async (quiet = false) => {
-    if (avatarTokenRef.current || createAvatarToken.isPending) return true;
+    if (avatarToken || createAvatarToken.isPending) return true;
     try {
       const result = await createAvatarToken.mutateAsync({ token, isSandbox: false });
       setAvatarToken(result.sessionToken);
-      if (!quiet) toast.success("سارة تتحرك الآن مع صوتها");
+      if (!quiet) toast.success("الصورة الحية تعمل بصمت؛ صوت سارة المباشر لم يتغير");
       return true;
     } catch (reason) {
       if (!quiet) toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل الصورة الحية لسارة");
       return false;
     }
-  }, [createAvatarToken, token]);
+  }, [avatarToken, createAvatarToken, token]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -508,12 +356,9 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     }
     if (!autoStart || !status.data || autoStartedRef.current) return;
     autoStartedRef.current = true;
-    void (async () => {
-      if (status.data.liveAvatarConfigured) await startAvatar(true);
-      if (status.data.realtimeConfigured) await startSession();
-      else setPhase("error");
-    })();
-  }, [autoStart, isOpen, startAvatar, startSession, status.data]);
+    if (status.data.realtimeConfigured) void startSession();
+    else setPhase("error");
+  }, [autoStart, isOpen, startSession, status.data]);
 
   const toggleMute = useCallback(() => {
     const track = localStreamRef.current?.getAudioTracks()[0];
@@ -549,10 +394,6 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const toggleAvatar = useCallback(async () => {
     if (avatarToken) {
       setAvatarToken(null);
-      avatarConnectedRef.current = false;
-      avatarResponseStreamingRef.current = null;
-      setAvatarOwnsPlayback(false);
-      avatarAudioControllerRef.current?.interrupt();
       toast.info("تم إيقاف الصورة الحية؛ الصوت ما زال يعمل");
       return;
     }
@@ -576,7 +417,6 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden bg-slate-950/70 p-0 backdrop-blur-sm sm:p-5"
       dir="rtl"
       onPointerDown={() => {
-        if (audioContextRef.current?.state === "suspended") void audioContextRef.current.resume().catch(() => undefined);
         if (!audioBlocked || !remoteAudioRef.current) return;
         void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => undefined);
       }}
@@ -586,19 +426,15 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
 
         <section className={`relative min-h-0 bg-[#071522] p-1.5 sm:p-4 ${streamlined ? "sm:pt-20" : ""}`}>
           <SaraLiveAvatarView
-            ref={avatarAudioControllerRef}
             portrait={SARA_PORTRAIT}
             sessionToken={avatarToken}
-            playAudio={avatarOwnsPlayback}
-            onStateChange={handleAvatarStateChange}
-            onAudioRouteFailure={handleAvatarAudioRouteFailure}
-            onPlaybackComplete={handleAvatarPlaybackComplete}
+            isSpeaking={phase === "speaking"}
           />
           {!streamlined && !avatarToken ? (
             <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
               <p className="text-sm font-bold sm:text-base">سارة أمامك بحركتها المحلية</p>
-              <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">الحركة الهادئة تعمل تلقائيًا. شغّل الصورة الحية فقط عندما تحتاج مزامنة الشفاه.</p>
-              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm"><Video className="ml-2 h-4 w-4" /> تشغيل الصورة الحية</Button>
+              <p className="mt-1 hidden text-xs leading-5 text-slate-300 sm:block">الصوت المباشر يعمل وحده. الصورة الحية اختيارية وصامتة؛ لا تؤثر على الاستماع أو الرد.</p>
+              <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} className="mt-2 h-8 bg-amber-400 text-xs text-slate-950 hover:bg-amber-300 sm:mt-3 sm:h-9 sm:text-sm"><Video className="ml-2 h-4 w-4" /> صورة حية اختيارية</Button>
             </div>
           ) : null}
         </section>
@@ -640,7 +476,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
             {!streamlined ? <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
               {!live ? <Button onClick={startSession} disabled={createSession.isPending || !status.data?.realtimeConfigured} className="h-12 rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-800"><Phone className="ml-2 h-5 w-5" /> ابدأ الحديث مع سارة</Button> : <><Button onClick={toggleMute} variant="outline" className="h-11 rounded-2xl bg-white">{!microphoneAvailable ? <MicOff className="ml-2 h-4 w-4 text-slate-400" /> : muted ? <MicOff className="ml-2 h-4 w-4 text-red-500" /> : <Mic className="ml-2 h-4 w-4 text-emerald-600" />}{!microphoneAvailable ? "كتابة فقط" : muted ? "فتح الميكروفون" : "كتم الميكروفون"}</Button><Button onClick={stopSession} variant="outline" className="h-11 rounded-2xl border-red-200 bg-red-50 text-red-700 hover:bg-red-100"><PhoneOff className="ml-2 h-4 w-4" /> إنهاء</Button></>}
               <Button onClick={toggleAvatar} disabled={createAvatarToken.isPending} variant="outline" className="h-11 rounded-2xl bg-white lg:hidden">{avatarToken ? <VideoOff className="ml-2 h-4 w-4" /> : <Video className="ml-2 h-4 w-4" />}{avatarToken ? "إيقاف الصورة" : "صورة حية"}</Button>
-            </div> : phase === "error" ? <Button onClick={() => { autoStartedRef.current = false; void startSession(); void startAvatar(true); }} className="mb-3 h-10 w-full rounded-xl bg-slate-900 text-white">إعادة الاتصال بسارة</Button> : null}
+            </div> : phase === "error" ? <Button onClick={() => { autoStartedRef.current = false; void startSession(); }} className="mb-3 h-10 w-full rounded-xl bg-slate-900 text-white">إعادة الاتصال بسارة</Button> : null}
             <div className="mb-2 grid grid-cols-3 gap-1.5 sm:mb-3 sm:gap-2">
               <Button
                 type="button"

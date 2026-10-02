@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { buildEvidenceReconciliationPrompt, normalizeReconciliationPlan } from "./services/comoNextActionReconciliation";
+import { buildEvidenceReconciliationPrompt, currentInboundEmailText, normalizeReconciliationPlan, resolutionHasCurrentEvidence } from "./services/comoNextActionReconciliation";
 
 const service = readFileSync("server/services/comoNextActionReconciliation.ts", "utf8");
 
@@ -55,7 +55,7 @@ describe("COMO Next linked-evidence action reconciliation", () => {
       currentOutputs: [],
     });
     expect(prompt).toContain("Please find attached two separate contracts");
-    expect(prompt).toContain("لا تُغلق إجراءً إلا باقتباس صريح");
+    expect(prompt).toContain("لا تُغلق إجراءً إلا باقتباس حرفي صريح من نص الرسالة الجديدة");
     expect(prompt).toContain("تحليل مستند أو عرض أو مرفق، واستخراج مقارنة أو تقرير، هو عمل Manus");
     expect(prompt).toContain("لا تطلب من عبد الرحمن مراجعة المادة الخام");
   });
@@ -63,8 +63,17 @@ describe("COMO Next linked-evidence action reconciliation", () => {
   it("applies only high-confidence linked inbound evidence and never sends externally", () => {
     expect(service).toContain('triggerEmail.folderName !== "INBOX"');
     expect(service).toContain('item.resolution === "verified" ? item.confidence >= 90 : item.confidence >= 85');
+    expect(service).toContain('resolutionHasCurrentEvidence(item, triggerEmail.bodyText');
+    expect(service).toContain('item.resolution === "verified" && actionById.get(item.actionId)?.ownerType === "manus"');
     expect(service).toContain('sourceSystem: "evidence_reconciliation"');
     expect(service).toContain('externalSideEffect: false');
     expect(service).not.toMatch(/sendMail\s*\(|sendReply\s*\(|recordCommunicationSentCommand/);
+  });
+
+  it("does not cancel preparation for next week's meeting from an old meeting quoted in a new agreement email", () => {
+    const email = 'Dear Abdalrahman\nKindly find attached the revised agreement.\nBest,\nTheodora\n\nFrom: Theodora\nSent: Wednesday, 30 September 2026\nFollowing the meeting today, I have drafted the agreement for your review and comments.';
+    expect(currentInboundEmailText(email)).not.toContain('Following the meeting today');
+    expect(resolutionHasCurrentEvidence({ actionId: 360004, resolution: 'cancelled', confidence: 95, reason: 'past meeting', evidenceQuote: 'Following the meeting today' }, email, ['Consultancy Agreement.pdf'])).toBe(false);
+    expect(resolutionHasCurrentEvidence({ actionId: 480001, resolution: 'verified', confidence: 92, reason: 'received', evidenceQuote: 'Kindly find attached the revised agreement.' }, email, ['Consultancy Agreement.pdf'])).toBe(true);
   });
 });
