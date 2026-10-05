@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, canProposeForWorkFile, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -111,6 +111,15 @@ describe("COMO Next read-only email inbox", () => {
     expect(analysisBlock).toContain("reconcileWorkFileEvidenceCommand");
     expect(analysisBlock).toContain('email.folderName === "INBOX" && email.linkedWorkFileId');
     expect(service).not.toMatch(/sendReply\s*\(|sendMail\s*\(/i);
+  });
+
+  it("summarizes late mail on closed files without generating new operational proposals", () => {
+    expect(canProposeForWorkFile("open")).toBe(true);
+    expect(canProposeForWorkFile("waiting")).toBe(true);
+    expect(canProposeForWorkFile("closed")).toBe(false);
+    expect(canProposeForWorkFile("cancelled")).toBe(false);
+    expect(canProposeForWorkFile(undefined)).toBe(false);
+    expect(service).toContain("if (canProposeForWorkFile(linkedFile.status))");
   });
 
   it("forces email analysis to reconcile a later sent approval before proposing a next step", () => {

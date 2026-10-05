@@ -544,6 +544,11 @@ export async function processPendingReadonlyMailboxCommand(input: { userId: numb
   return { analyzed, pendingCandidates: ids.length, analysisFailures, externalSideEffects: false as const };
 }
 
+/** A historical email can be summarized, but must not reopen a closed file through proposals. */
+export function canProposeForWorkFile(status: string | null | undefined) {
+  return !!status && !["closed", "cancelled"].includes(status);
+}
+
 export async function syncAndAnalyzeReadonlyMailboxCommand(input: { userId: number; hours: number; maxMessages: number; analysisLimit?: number }) {
   const result = await syncReadonlyInboxCommand(input);
   const meetingReconciliation = await reconcileConfirmedMeetingsFromEmailCommand({ userId: input.userId, limit: 100 });
@@ -1049,16 +1054,23 @@ export async function analyzeEmailCommand(input: { userId: number; emailId: numb
   });
   let proposalResult = { created: 0, duplicates: 0, ids: [] as number[] };
   if (email.linkedProjectId && email.linkedWorkFileId) {
-    proposalResult = await createIntakeProposalsCommand({
-      userId: input.userId,
-      projectId: Number(email.linkedProjectId),
-      workFileId: Number(email.linkedWorkFileId),
-      sourceKind: "email",
-      sourcePrefix: `email-analysis:${analysisResult.id}`,
-      sourceEmailId: Number(email.id),
-      sourceEmailAnalysisId: Number(analysisResult.id),
-      proposals: (Array.isArray(parsed.proposals) ? parsed.proposals : []) as IntakeProposalDraft[],
-    });
+    const [linkedFile] = await db.select({ status: comoNextWorkFiles.workFileStatus }).from(comoNextWorkFiles)
+      .where(and(eq(comoNextWorkFiles.id, Number(email.linkedWorkFileId)),
+        eq(comoNextWorkFiles.projectId, Number(email.linkedProjectId)),
+        eq(comoNextWorkFiles.userId, input.userId))).limit(1);
+    if (!linkedFile) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "ملف الرسالة المرتبط لم يعد متاحًا" });
+    if (canProposeForWorkFile(linkedFile.status)) {
+      proposalResult = await createIntakeProposalsCommand({
+        userId: input.userId,
+        projectId: Number(email.linkedProjectId),
+        workFileId: Number(email.linkedWorkFileId),
+        sourceKind: "email",
+        sourcePrefix: `email-analysis:${analysisResult.id}`,
+        sourceEmailId: Number(email.id),
+        sourceEmailAnalysisId: Number(analysisResult.id),
+        proposals: (Array.isArray(parsed.proposals) ? parsed.proposals : []) as IntakeProposalDraft[],
+      });
+    }
   }
   const reconciliation = email.folderName === "INBOX" && email.linkedWorkFileId
     ? await reconcileWorkFileEvidenceCommand({ userId: input.userId, workFileId: Number(email.linkedWorkFileId), triggerEmailId: Number(email.id) }).catch(error => ({ error: error instanceof Error ? error.message : String(error), changed: 0, nextActionId: null, externalSideEffect: false as const }))
