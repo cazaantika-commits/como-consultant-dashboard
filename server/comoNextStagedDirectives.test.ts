@@ -66,6 +66,14 @@ describe("COMO Next staged directives", () => {
     expect(kitchenUi).toContain("لا يبدأ Manus ولا تُنشأ مسودة بريد");
   });
 
+  it("presents Sara as the capture channel for the owner's request and delivers the text visible after editing", () => {
+    expect(kitchenUi).toContain("طلبك عبر سارة");
+    expect(kitchenUi).toContain("طلبك إلى Manus");
+    expect(kitchenUi).toContain("زر التسليم يحفظ أي تعديل ظاهر ثم يسلّمه في الخطوة نفسها");
+    expect(kitchenUi).toContain("سلّم النص الظاهر إلى Manus");
+    expect(kitchenUi).not.toContain('directive.source === "sara" ? "من سارة"');
+  });
+
   it("treats literal no-send negatives as overriding an otherwise mail-like instruction", () => {
     expect(directiveRequestsCommunicationDraft("ذكّري وائل، خلي ما نرسل البريد")).toBe(false);
     expect(directiveRequestsCommunicationDraft("لا تبعتي رسالة ل وائل")).toBe(false);
