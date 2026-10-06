@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   CircleAlert,
   FilePlus2,
+  FlaskConical,
   Landmark,
   LayoutDashboard,
   LockKeyhole,
@@ -141,7 +142,7 @@ export default function ProjectManagementPage() {
         <h1 className="text-xl font-black text-[#102b35] sm:hidden">المشاريع</h1>
         <button type="button" onClick={() => navigate("/")} className="hidden items-center gap-2 text-sm font-bold text-slate-700 sm:inline-flex"><ArrowLeft className="h-4 w-4" />المطبخ</button>
         <div className="sm:w-[390px]"><ComoPrimaryNav active="projects" /></div>
-        <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"><Badge variant="outline" className="min-w-0 justify-center rounded-full border-emerald-200 bg-emerald-50 px-2 text-[10px] text-emerald-700 sm:text-xs"><ShieldCheck className="ml-1 h-3.5 w-3.5 shrink-0" />مصدر واحد للمشروع</Badge><Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="min-w-0 rounded-xl bg-white px-2 text-[10px] sm:px-3 sm:text-xs"><FilePlus2 className="ml-1 h-3.5 w-3.5 shrink-0" />فتح مشروع جديد</Button></div>
+        <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center"><Badge variant="outline" className="min-w-0 justify-center rounded-full border-emerald-200 bg-emerald-50 px-2 text-[10px] text-emerald-700 sm:text-xs"><ShieldCheck className="ml-1 h-3.5 w-3.5 shrink-0" />مصدر واحد للمشروع</Badge><Button variant="outline" onClick={() => navigate("/como-next/project-opening")} className="min-w-0 rounded-xl bg-white px-2 text-[10px] sm:px-3 sm:text-xs"><FilePlus2 className="ml-1 h-3.5 w-3.5 shrink-0" />فتح مشروع جديد</Button><Button variant="outline" onClick={() => navigate("/test-project")} className="col-span-2 min-w-0 rounded-xl border-violet-200 bg-violet-50 px-2 text-[10px] font-black text-violet-800 hover:bg-violet-100 sm:col-auto sm:px-3 sm:text-xs"><FlaskConical className="ml-1 h-3.5 w-3.5 shrink-0" />مختبر المشاريع التجريبية</Button></div>
       </div>
     </header>
 

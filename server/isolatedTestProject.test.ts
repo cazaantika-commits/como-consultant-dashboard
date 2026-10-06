@@ -20,6 +20,7 @@ const testPage = readFileSync(`${root}/client/src/pages/TestProjectPage.tsx`, "u
 const bateekhaPage = readFileSync(`${root}/client/src/pages/BateekhaPage.tsx`, "utf8");
 const app = readFileSync(`${root}/client/src/App.tsx`, "utf8");
 const home = readFileSync(`${root}/client/src/pages/Home.tsx`, "utf8");
+const projectManagement = readFileSync(`${root}/client/src/pages/ProjectManagementPage.tsx`, "utf8");
 
 describe("isolated test project contract", () => {
   it("marks the record explicitly and adds the database column non-destructively", () => {
@@ -76,6 +77,10 @@ describe("isolated test project contract", () => {
     expect(app).toContain('<Route path="/test-project" component={TestProjectPage} />');
     expect(home).not.toContain('navigate("/test-project")');
     expect(home).not.toContain("مختبر المشاريع المعزول");
+    expect(projectManagement).toContain('navigate("/test-project")');
+    expect(projectManagement).toContain("مختبر المشاريع التجريبية");
+    expect(testPage).toContain('navigate("/project-management")');
+    expect(testPage).toContain("المشاريع الرسمية");
   });
 
   it("keeps every existing study card available in test mode plus the consultant-scope card", () => {
