@@ -75,10 +75,6 @@ export default function TestProjectPage() {
     }
   }, [activeProject?.id, navigate, requestedProjectId, requestedTab]);
 
-  const openProject = (projectId: number) => {
-    navigate(`/test-project?projectId=${projectId}`);
-  };
-
   const submitCreate = (event: FormEvent) => {
     event.preventDefault();
     const trimmedName = name.trim();
@@ -175,7 +171,7 @@ export default function TestProjectPage() {
                 <h3 className="mt-4 text-base font-black text-slate-950">{project.name}</h3>
                 <p className="mt-1 text-[11px] font-bold leading-5 text-violet-700">{scenarioLabel(project.financingScenario)}</p>
                 {project.plotNumber && <p className="mt-1 text-[11px] text-slate-500">القطعة: {project.plotNumber}</p>}
-                <button type="button" onClick={() => openProject(project.id)} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-black text-violet-800 transition hover:bg-violet-100"><FolderOpen className="h-4 w-4" />فتح المشروع وبطاقاته</button>
+                <a href={`/test-project?projectId=${project.id}`} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-xs font-black text-violet-800 transition hover:bg-violet-100"><FolderOpen className="h-4 w-4" />فتح المشروع وبطاقاته</a>
               </article>
             ))}
           </div>

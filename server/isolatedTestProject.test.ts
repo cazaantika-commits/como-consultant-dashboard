@@ -81,6 +81,8 @@ describe("isolated test project contract", () => {
     expect(projectManagement).toContain("مختبر المشاريع التجريبية");
     expect(testPage).toContain('navigate("/project-management")');
     expect(testPage).toContain("المشاريع الرسمية");
+    expect(testPage).toContain('href={`/test-project?projectId=${project.id}`}');
+    expect(testPage).not.toContain("const openProject");
   });
 
   it("keeps every existing study card available in test mode plus the consultant-scope card", () => {
