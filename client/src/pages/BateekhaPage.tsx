@@ -99,20 +99,30 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
+  const isTestMode = mode === "test";
+  // The global context intentionally clears non-official projects. Test studies
+  // therefore use their isolated route ID locally rather than the official picker.
+  const effectiveProjectId = isTestMode ? testProjectId ?? null : selectedProjectId;
   const requestedProjectId = useMemo(() => {
     if (mode === "test") return null;
     const value = Number(new URLSearchParams(window.location.search).get("projectId"));
     return Number.isInteger(value) && value > 0 ? value : null;
   }, [mode]);
-  const projectQuery = trpc.projects.getById.useQuery(selectedProjectId!, { enabled: !!selectedProjectId && !!user });
+  const projectQuery = trpc.projects.getById.useQuery(effectiveProjectId!, { enabled: !!effectiveProjectId && !!user });
   const financingScenario = (projectQuery.data as any)?.financingScenario;
   const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" || financingScenario === "joint_venture_land_for_units" ? financingScenario : undefined;
 
   useEffect(() => {
-    if (requestedProjectId && requestedProjectId !== selectedProjectId) {
+    if (!isTestMode && requestedProjectId && requestedProjectId !== selectedProjectId) {
       setSelectedProjectId(requestedProjectId);
     }
-  }, [requestedProjectId, selectedProjectId, setSelectedProjectId]);
+  }, [isTestMode, requestedProjectId, selectedProjectId, setSelectedProjectId]);
+
+  useEffect(() => {
+    if (isTestMode && effectiveProjectId && selectedProjectId !== effectiveProjectId) {
+      setSelectedProjectId(effectiveProjectId);
+    }
+  }, [effectiveProjectId, isTestMode, selectedProjectId, setSelectedProjectId]);
 
   useEffect(() => {
     setActiveTab((currentTab) => currentTab ? getFallbackFinancialStudiesTab(currentTab, projectType) : null);
@@ -139,27 +149,26 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   // Portfolio reports are company-wide reports. They stay visible after choosing a
   // project so the project picker never makes the three consolidated reports vanish.
   // Project-specific cards remain disabled until the project is selected.
-  const isTestMode = mode === "test";
   const basePath = isTestMode && testProjectId
     ? `/test-project?projectId=${testProjectId}`
     : isTestMode
       ? "/test-project"
-      : selectedProjectId
-        ? `/bateekha?projectId=${selectedProjectId}`
+      : effectiveProjectId
+        ? `/bateekha?projectId=${effectiveProjectId}`
         : "/bateekha";
   const visibleTabs = TABS.filter((tab) =>
     isFinancialStudiesTabVisible(tab.id, projectType) && (!isTestMode || tab.projectScoped)
   );
   const selectTab = (tab: (typeof TABS)[number]) => {
-    if (tab.projectScoped && !selectedProjectId) return;
+    if (tab.projectScoped && !effectiveProjectId) return;
     // Wouter tracks the pathname while these reports share `/bateekha` and only
     // change the query string. Update local state as the click happens rather
     // than waiting for a pathname change that may never occur.
     setActiveTab(tab.id);
     const tabPath = isTestMode && testProjectId
       ? `/test-project?projectId=${testProjectId}&tab=${tab.id}`
-      : selectedProjectId
-        ? `/bateekha?projectId=${selectedProjectId}&tab=${tab.id}`
+      : effectiveProjectId
+        ? `/bateekha?projectId=${effectiveProjectId}&tab=${tab.id}`
         : `/bateekha?tab=${tab.id}`;
     navigate(withReturnPath(tabPath, basePath));
   };
@@ -191,10 +200,10 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
               </div>
               {isTestMode ? <span className="inline-flex w-fit items-center rounded-full border border-violet-200 bg-white px-4 py-2 text-xs font-black text-violet-700">غير رسمي · لا يدخل في التقارير</span> : <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>}
             </div>
-            {selectedProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "joint_venture_land_for_units" ? "Joint Venture — أرض مقابل وحدات" : projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
+            {effectiveProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "joint_venture_land_for_units" ? "Joint Venture — أرض مقابل وحدات" : projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
           </section>
 
-          <div className="mb-4 flex items-center justify-between gap-4"><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-teal-500" /><h3 className="text-lg font-black text-slate-900">كل الدراسات</h3></div>{!selectedProjectId && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">اختر مشروعًا لفتح بطاقات المشروع</span>}</div>
+          <div className="mb-4 flex items-center justify-between gap-4"><div className="flex items-center gap-2"><span className="h-7 w-1 rounded-full bg-teal-500" /><h3 className="text-lg font-black text-slate-900">كل الدراسات</h3></div>{!effectiveProjectId && <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800">اختر مشروعًا لفتح بطاقات المشروع</span>}</div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {isTestMode && testCpaProjectId && (
               <button type="button" onClick={() => navigate(`/consultant-proposals?scopeProjectId=${testCpaProjectId}&returnTo=${encodeURIComponent(basePath)}`)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
@@ -206,7 +215,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
             {visibleTabs.map((tab, index) => {
               const Icon = tab.icon;
               const tone = TONES[index % TONES.length];
-              const disabled = tab.projectScoped && !selectedProjectId;
+              const disabled = tab.projectScoped && !effectiveProjectId;
               return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: tone.border, background: `linear-gradient(135deg, ${tone.wash} 0%, #ffffff 74%)` }}>
                 <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tone.accent }} />
                 <span className="text-[15px] font-black text-slate-900">{tab.label}</span>
@@ -217,7 +226,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
         </main>
       ) : (
         <div className="w-full">
-          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={returnFromTab} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{selectedProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
+          <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={returnFromTab} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{effectiveProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
           <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} /></Suspense>
         </div>
       )}

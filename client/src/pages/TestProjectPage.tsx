@@ -42,14 +42,12 @@ export default function TestProjectPage() {
       setScenario("joint_venture_land_for_units");
       setLandOwnerSharePct("35");
       setShowCreate(false);
-      setSelectedProjectId(project.id);
       navigate(`/test-project?projectId=${project.id}`);
     },
   });
   const createNadAlShebaPlot2TestProject = trpc.projects.createNadAlShebaPlot2TestProject.useMutation({
     onSuccess: async (project) => {
       await utils.projects.listTestProjects.invalidate();
-      setSelectedProjectId(project.id);
       navigate(`/test-project?projectId=${project.id}`);
     },
   });
@@ -70,12 +68,6 @@ export default function TestProjectPage() {
   }, [ensureTestProject, testProjects.length, testProjectsQuery.isLoading, user]);
 
   useEffect(() => {
-    if (activeProject?.id) {
-      setSelectedProjectId(activeProject.id);
-    }
-  }, [activeProject?.id, setSelectedProjectId]);
-
-  useEffect(() => {
     if (!requestedProjectId && requestedTab && activeProject?.id) {
       const params = new URLSearchParams(window.location.search);
       params.set("projectId", String(activeProject.id));
@@ -84,7 +76,6 @@ export default function TestProjectPage() {
   }, [activeProject?.id, navigate, requestedProjectId, requestedTab]);
 
   const openProject = (projectId: number) => {
-    setSelectedProjectId(projectId);
     navigate(`/test-project?projectId=${projectId}`);
   };
 

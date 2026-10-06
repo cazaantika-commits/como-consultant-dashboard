@@ -53,6 +53,9 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
   // identifiers (CPA, cash-flow, studies, etc.) must remain inside their feature.
   useEffect(() => {
     if (!user || projectsQuery.isLoading || selectedProjectId === null) return;
+    // The isolated laboratory supplies its local ID to shared project cards only
+    // while the user is inside the test route. It remains excluded from official lists.
+    if (window.location.pathname === "/test-project") return;
     const isOfficialProject = projects.some(project => Number(project.id) === selectedProjectId);
     if (!isOfficialProject) {
       setSelectedProjectIdState(null);
