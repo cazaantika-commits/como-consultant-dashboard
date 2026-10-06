@@ -153,7 +153,7 @@ export const feasibilityRouter = router({
       const contingencies = constructionCost * ((study.contingenciesPct || 2) / 100);
       const reraUnits = (study.numberOfUnits || 0) * (study.reraUnitFee || 850);
       const fixedFees = (study.reraOffplanFee || 0) + (study.nocFee || 0) + (study.escrowFee || 0) + (study.bankCharges || 0) + (study.surveyorFees || 0) + (study.reraAuditFees || 0) + (study.reraInspectionFees || 0);
-      const devFee = totalRevenue * ((study.developerFeePct || 5) / 100);
+      const devFee = totalRevenue * ((study.developerFeePct ?? 5) / 100);
       const agentSale = totalRevenue * ((study.agentCommissionSalePct || 5) / 100);
       const marketing = totalRevenue * ((study.marketingPct || 2) / 100);
       const totalCosts = (study.landPrice || 0) + landReg + agentLand + constructionCost + designFee + supervisionFee + separationFee + contingencies + reraUnits + fixedFees + (study.soilInvestigation || 0) + (study.topographySurvey || 0) + (study.authoritiesFee || 0) + (study.communityFee || 0) + devFee + agentSale + marketing;
@@ -573,7 +573,7 @@ ${mo ? `
       const contingencies = constructionCost * ((study.contingenciesPct || 2) / 100);
       const reraUnits = (study.numberOfUnits || 0) * (study.reraUnitFee || 850);
       const fixedFees = (study.reraOffplanFee || 0) + (study.nocFee || 0) + (study.escrowFee || 0) + (study.bankCharges || 0) + (study.surveyorFees || 0) + (study.reraAuditFees || 0) + (study.reraInspectionFees || 0);
-      const devFee = totalRevenue * ((study.developerFeePct || 5) / 100);
+      const devFee = totalRevenue * ((study.developerFeePct ?? 5) / 100);
       const agentSale = totalRevenue * ((study.agentCommissionSalePct || 5) / 100);
       const marketing = totalRevenue * ((study.marketingPct || 2) / 100);
       const totalCosts = (study.landPrice || 0) + landReg + agentLand + constructionCost + designFee + supervisionFee + separationFee + contingencies + reraUnits + fixedFees + (study.soilInvestigation || 0) + (study.topographySurvey || 0) + (study.authoritiesFee || 0) + (study.communityFee || 0) + devFee + agentSale + marketing;

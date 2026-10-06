@@ -93,7 +93,7 @@ function projectToGeneralFormData(p: any): Record<string, string> {
     data.landOwnerLicenseRegistrationCost = terms.landOwnerLicenseRegistrationCost > 0 ? String(terms.landOwnerLicenseRegistrationCost) : "";
     data.landOwnerUnitsRegistrationFeePct = String(terms.landOwnerUnitsRegistrationFeePct);
   }
-  if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
+  if (data.financingScenario === "build_for_sale" && (p.developerFeePct === null || p.developerFeePct === undefined || p.developerFeePct === "")) data.developerFeePct = "3";
   if (data.financingScenario === "joint_venture_land_for_units") data.developerFeePct = "0";
   if (data.financingScenario === "build_for_rent") {
     data.buildForRentDeveloperFeeDesignRate = String(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
@@ -250,14 +250,14 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
         const displayLabel = isBuildForRent && (field as any).buildForRentOnly
           ? field.label
           : isBuildForSale && field.key === "developerFeePct"
-          ? "أتعاب المطور (1% تصميم + 2% تنفيذ)"
+          ? "أتعاب المطور من الإيرادات"
           : field.label;
         const displayValue = field.key === "reraAuditReportFee"
           ? String(reraQuarterlyFees.auditorTotal)
           : field.key === "reraInspectionReportFee"
             ? String(reraQuarterlyFees.inspectionTotal)
             : formData[field.key] || "";
-        const isPercentage = field.key === "saleableResidentialPct" || field.key === "saleableRetailPct" || field.key === "saleableOfficesPct";
+        const isPercentage = field.key === "saleableResidentialPct" || field.key === "saleableRetailPct" || field.key === "saleableOfficesPct" || field.key === "developerFeePct";
         const visibleValue = !isEditing && field.type === "number"
           ? (isPercentage ? formatRateOrPercent(displayValue, "") : formatFullNumber(displayValue, ""))
           : displayValue;
@@ -319,7 +319,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
 
       {isBuildForSale && (
         <div className="mb-3 rounded-xl border border-teal-300 border-r-4 border-r-teal-500 bg-teal-50/80 px-4 py-2 text-[12px] text-teal-900">
-          <span className="font-semibold">قواعد البناء للبيع:</span> لا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. أتعاب المطور 1% خلال التصميم و2% خلال التنفيذ، بينما التسويق والمبيعات بعد الإنجاز يُداران من صفحة المبيعات.
+          <span className="font-semibold">قواعد البناء للبيع:</span> لا يوجد حساب ضمان أو رسوم بنكية أو تقارير ريرا للأوف بلان. نسبة أتعاب المطور اختيارية وقابلة للتعديل؛ 0% يلغي الأتعاب من الحسابات. التسويق والمبيعات بعد الإنجاز يُداران من صفحة المبيعات.
         </div>
       )}
       {isBuildForRent && (

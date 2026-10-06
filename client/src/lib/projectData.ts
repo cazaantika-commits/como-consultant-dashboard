@@ -227,7 +227,7 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     : 2;
   const developerPct = isBuildForRent
     ? buildForRentDeveloperFeeDesignPct + buildForRentDeveloperFeeSupervisionPct
-    : isJointVenture ? 0 : isIndependentNoOffPlan ? 3 : (parseFloat(dbProject.developerFeePct || '0') || 5);
+    : isJointVenture ? 0 : Number((dbProject.developerFeePct === "" ? undefined : dbProject.developerFeePct) ?? (isBuildForSale ? 3 : 5));
   const sortingPerSqft = parseFloat(dbProject.separationFeePerSqft || '0') || (isJointVenture ? 0 : 40);
   const landBrokerPct = parseFloat(dbProject.agentCommissionLandPct || '0') || (isJointVenture ? 0 : 1);
   const escrowDepositRate = Math.max(0, Math.min(1, Number(savedRates.escrowDepositPct ?? 20) / 100));
@@ -249,11 +249,11 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     sortingFeePerSqft: sortingPerSqft,
     reraUnitFee: Number(savedRates.reraUnitRegistrationFee ?? 520),
     developerFeeRate: developerPct / 100,
-    developerFeeDesign: isBuildForRent ? buildForRentDeveloperFeeDesignPct / 100 : 0.01,
+    developerFeeDesign: isBuildForRent ? buildForRentDeveloperFeeDesignPct / 100 : isBuildForSale ? developerPct / 300 : 0.01,
     developerFeeOffplan: isIndependentNoOffPlan ? 0 : 0.01,
     developerFeeSupervision: isBuildForRent
       ? buildForRentDeveloperFeeSupervisionPct / 100
-      : isIndependentNoOffPlan ? 0.02 : (developerPct / 100) - 0.02,
+      : isBuildForSale ? (developerPct * 2) / 300 : isIndependentNoOffPlan ? 0.02 : (developerPct / 100) - 0.02,
     marketingRate: marketingPct / 100,
     marketingOffplanShare: 0.25,
     marketingConstructionShare: 0.75,

@@ -89,7 +89,7 @@ export function exportFeasibilityReport(data: FeasibilityReportData): void {
   if (data.landPrice && data.landPrice > 0) infoRows.push(`<td class="info-label">سعر الأرض</td><td class="info-val">${fmt(data.landPrice)} AED</td>`);
   if (data.constructionPricePerSqft && data.constructionPricePerSqft > 0) infoRows.push(`<td class="info-label">تكلفة البناء / قدم²</td><td class="info-val">${fmt(data.constructionPricePerSqft)} AED</td>`);
   if (totalDuration > 0) infoRows.push(`<td class="info-label">المدة الزمنية</td><td class="info-val">${data.preConMonths || 0} + ${data.constructionMonths || 0} + ${data.handoverMonths || 0} = ${totalDuration} شهر</td>`);
-  if (data.developerFeePct) infoRows.push(`<td class="info-label">أتعاب المطور</td><td class="info-val">${data.developerFeePct}%</td>`);
+  if (data.developerFeePct != null) infoRows.push(`<td class="info-label">أتعاب المطور</td><td class="info-val">${data.developerFeePct}%</td>`);
   if (data.salesCommissionPct) infoRows.push(`<td class="info-label">عمولة المبيعات</td><td class="info-val">${data.salesCommissionPct}%</td>`);
   if (data.marketingPct) infoRows.push(`<td class="info-label">التسويق</td><td class="info-val">${data.marketingPct}%</td>`);
   if (data.designFeePct) infoRows.push(`<td class="info-label">رسوم التصميم</td><td class="info-val">${data.designFeePct}%</td>`);

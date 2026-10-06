@@ -57,7 +57,7 @@ export function calculateProjectCosts(
   const separationFeePerM2 = parseFloat(p.separationFeePerSqft ?? (isJointVenture ? "0" : "40"));
   const salesCommissionPct = parseFloat(p.salesCommissionPct ?? (isJointVenture ? "0" : "5"));
   const marketingPct = parseFloat(p.marketingPct ?? (isJointVenture ? "0" : "2"));
-  const developerFeePct = parseFloat(p.developerFeePct ?? (isJointVenture ? "0" : "5"));
+  const developerFeePct = parseFloat(p.developerFeePct ?? (isJointVenture ? "0" : isBuildForSale ? "3" : "5"));
 
   const bua = manualBuaSqft;
   const plotAreaSqft = parseFloat(p.plotAreaSqft || "0");
@@ -140,7 +140,7 @@ export function calculateProjectCosts(
     const configuredUnitRate = Number(savedRates.reraUnitRegistrationFee);
     if (Number.isFinite(configuredUnitRate)) reraUnitRegistrationFee = configuredUnitRate;
   } catch { /* use the approved 1% default */ }
-  const effectiveDeveloperFeePct = isJointVenture ? 0 : isIndependentNoOffPlan ? 3 : financingScenario === "no_offplan"
+  const effectiveDeveloperFeePct = isJointVenture ? 0 : isBuildForSale ? developerFeePct : financingScenario === "no_offplan"
     ? Math.min(developerFeePct, 3) : developerFeePct;
   const effectiveMarketingPct = isBuildForRent ? 0 : isBuildForSale ? buildForSaleMarketingRate : marketingPct;
   const developerFee = isJointVenture ? 0 : isBuildForRent

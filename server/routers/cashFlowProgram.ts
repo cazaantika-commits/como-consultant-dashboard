@@ -56,6 +56,13 @@ interface ScenarioAdjustments {
   buyerPlanHandoverPct?: number;
 }
 
+// An explicitly entered 0% is a valid setting; only missing inputs use defaults.
+function percentOrDefault(value: unknown, fallback: number): number {
+  if (value === null || value === undefined || value === "") return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function buildTimeline(
   designMonths: number,
   reraMonths: number,
@@ -1001,9 +1008,9 @@ export const cashFlowProgramRouter = router({
       const gfaResSqft = pf(proj.gfaResidentialSqft);
       const gfaRetSqft = pf(proj.gfaRetailSqft);
       const gfaOffSqft = pf(proj.gfaOfficesSqft);
-      const saleableResPct = pf(proj.saleableResidentialPct) || 95;
-      const saleableRetPct = pf(proj.saleableRetailPct) || 97;
-      const saleableOffPct = pf(proj.saleableOfficesPct) || 95;
+      const saleableResPct = percentOrDefault(proj.saleableResidentialPct, 95);
+      const saleableRetPct = percentOrDefault(proj.saleableRetailPct, 97);
+      const saleableOffPct = percentOrDefault(proj.saleableOfficesPct, 95);
       const saleableRes = gfaResSqft * (saleableResPct / 100);
       const saleableRet = gfaRetSqft * (saleableRetPct / 100);
       const saleableOff = gfaOffSqft * (saleableOffPct / 100);
@@ -1071,7 +1078,7 @@ export const cashFlowProgramRouter = router({
       const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = ccf ? pf(ccf.agentCommissionSalePct) || 5 : pf(proj.salesCommissionPct) || 5;
       const marketingPct = ccf ? pf(ccf.marketingPct) || 2 : pf(proj.marketingPct) || 2;
-      const developerFeePct = ccf ? pf(ccf.developerFeePct) || 5 : pf(proj.developerFeePct) || 5;
+      const developerFeePct = percentOrDefault(ccf?.developerFeePct ?? proj.developerFeePct, proj.financingScenario === "build_for_sale" ? 3 : 5);
       const contingenciesPct = ccf ? pf(ccf.contingenciesPct) || 2 : 2;
 
       // Regulatory fees - prefer costsCashFlow overrides, then project data
@@ -1558,7 +1565,7 @@ export const cashFlowProgramRouter = router({
       let totalRevenue = 0;
       if (cpData && moData) {
         const gfaRes = pf(proj.gfaResidentialSqft), gfaRet = pf(proj.gfaRetailSqft), gfaOff = pf(proj.gfaOfficesSqft);
-        const sResP = pf(proj.saleableResidentialPct) || 95, sRetP = pf(proj.saleableRetailPct) || 97, sOffP = pf(proj.saleableOfficesPct) || 95;
+        const sResP = percentOrDefault(proj.saleableResidentialPct, 95), sRetP = percentOrDefault(proj.saleableRetailPct, 97), sOffP = percentOrDefault(proj.saleableOfficesPct, 95);
         const sRes = gfaRes * (sResP / 100), sRet = gfaRet * (sRetP / 100), sOff = gfaOff * (sOffP / 100);
         const pr = { s: cpData.baseStudioPrice||0, o: cpData.base1brPrice||0, t: cpData.base2brPrice||0, th: cpData.base3brPrice||0, rs: cpData.baseRetailSmallPrice||0, rm: cpData.baseRetailMediumPrice||0, rl: cpData.baseRetailLargePrice||0, os: cpData.baseOfficeSmallPrice||0, om: cpData.baseOfficeMediumPrice||0, ol: cpData.baseOfficeLargePrice||0 };
         const ga = (k: string, v: any) => { const n = v||0; if(n>0) return n; const m = DEFAULT_AVG_AREAS[k]; return m ? m.defaultArea : 0; };
@@ -1598,7 +1605,7 @@ export const cashFlowProgramRouter = router({
         });
       }
       // Developer fee
-      const devFeePct = ccf ? pf(ccf.developerFeePct) || 5 : pf(proj.developerFeePct) || 5;
+      const devFeePct = percentOrDefault(ccf?.developerFeePct ?? proj.developerFeePct, proj.financingScenario === "build_for_sale" ? 3 : 5);
       const developerFee = totalRevenue * (devFeePct / 100);
       if (developerFee > 0) {
         costItems.push({
@@ -1950,9 +1957,9 @@ export const cashFlowProgramRouter = router({
       const gfaResSqft = pf(proj.gfaResidentialSqft);
       const gfaRetSqft = pf(proj.gfaRetailSqft);
       const gfaOffSqft = pf(proj.gfaOfficesSqft);
-      const saleableResPct2 = pf(proj.saleableResidentialPct) || 95;
-      const saleableRetPct2 = pf(proj.saleableRetailPct) || 97;
-      const saleableOffPct2 = pf(proj.saleableOfficesPct) || 95;
+      const saleableResPct2 = percentOrDefault(proj.saleableResidentialPct, 95);
+      const saleableRetPct2 = percentOrDefault(proj.saleableRetailPct, 97);
+      const saleableOffPct2 = percentOrDefault(proj.saleableOfficesPct, 95);
       const saleableRes = gfaResSqft * (saleableResPct2 / 100);
       const saleableRet = gfaRetSqft * (saleableRetPct2 / 100);
       const saleableOff = gfaOffSqft * (saleableOffPct2 / 100);
@@ -2002,7 +2009,7 @@ export const cashFlowProgramRouter = router({
       const totalGfaSqftC = gfaResSqft + gfaRetSqft + gfaOffSqft;
       const salesCommissionPct = pf(proj.salesCommissionPct) || 5;
       const marketingPct = pf(proj.marketingPct) || 2;
-      const developerFeePct = pf(proj.developerFeePct) || 5;
+      const developerFeePct = percentOrDefault(proj.developerFeePct, proj.financingScenario === "build_for_sale" ? 3 : 5);
 
       // Build name→amount mapping for updates
       // Include aliases for old names that may exist in the database
@@ -2402,7 +2409,7 @@ export const cashFlowProgramRouter = router({
         let totalRevenue = 0;
         if (cpData && moData) {
           const gfaRes = pf(proj.gfaResidentialSqft), gfaRet = pf(proj.gfaRetailSqft), gfaOff = pf(proj.gfaOfficesSqft);
-          const sResP2 = pf(proj.saleableResidentialPct) || 95, sRetP2 = pf(proj.saleableRetailPct) || 97, sOffP2 = pf(proj.saleableOfficesPct) || 95;
+          const sResP2 = percentOrDefault(proj.saleableResidentialPct, 95), sRetP2 = percentOrDefault(proj.saleableRetailPct, 97), sOffP2 = percentOrDefault(proj.saleableOfficesPct, 95);
           const sRes = gfaRes * (sResP2 / 100), sRet = gfaRet * (sRetP2 / 100), sOff = gfaOff * (sOffP2 / 100);
           const getAvg = (k: string, v: any) => { const n = v||0; if(n>0) return n; const m = DEFAULT_AVG_AREAS[k]; return m ? m.defaultArea : 0; };
           const prices = { studio: cpData.baseStudioPrice||0, oneBr: cpData.base1brPrice||0, twoBr: cpData.base2brPrice||0, threeBr: cpData.base3brPrice||0, retSmall: cpData.baseRetailSmallPrice||0, retMed: cpData.baseRetailMediumPrice||0, retLrg: cpData.baseRetailLargePrice||0, offSmall: cpData.baseOfficeSmallPrice||0, offMed: cpData.baseOfficeMediumPrice||0, offLrg: cpData.baseOfficeLargePrice||0 };
@@ -2523,7 +2530,7 @@ export const cashFlowProgramRouter = router({
           });
         }
         // Developer fee
-        const devFeePct = ccf ? pf(ccf.developerFeePct) || 5 : pf(proj.developerFeePct) || 5;
+        const devFeePct = percentOrDefault(ccf?.developerFeePct ?? proj.developerFeePct, proj.financingScenario === "build_for_sale" ? 3 : 5);
         const developerFee = totalRevenue * (devFeePct / 100);
         if (developerFee > 0) {
           costItemsToInsert.push({

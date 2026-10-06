@@ -347,7 +347,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                   {!isBuildForSale && !isBuildForRent && <Row label="تقارير فحص ريرا" value={fmt(costs?.reraInspectionReportFee || 0)} pct={totalCosts > 0 ? ((costs?.reraInspectionReportFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* المبيعات */}
                   <div className="text-[9px] font-bold text-gray-500 pt-1.5 pb-0.5 border-b border-gray-100">{isBuildForRent ? "أتعاب التطوير" : "المبيعات والتسويق"}</div>
-                  {!isJointVenture && <Row label="أتعاب المطور" value={fmt(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
+                  {!isJointVenture && <Row label="أتعاب المطور" value={fmtM(costs?.developerFee || 0)} pct={totalCosts > 0 ? ((costs?.developerFee || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForRent && <Row label={isJointVenture ? "أتعاب الوساطة العقارية لبيع حصة وائل" : "عمولة المبيعات"} value={fmt(costs?.salesCommission || 0)} pct={totalCosts > 0 ? ((costs?.salesCommission || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {!isBuildForRent && <Row label={isJointVenture ? "تسويق حصة وائل" : "التسويق"} value={fmt(costs?.marketingCost || 0)} pct={totalCosts > 0 ? ((costs?.marketingCost || 0) / totalCosts * 100) : 0} color="text-gray-700" />}
                   {/* الإجمالي */}
@@ -458,7 +458,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
                     value={isBuildForRent
                       ? `${buildForRentDeveloperFees.totalRate.toFixed(2)}% من تكلفة الإنشاء (${buildForRentDeveloperFees.designRate}% + ${buildForRentDeveloperFees.supervisionRate}%)`
                       : isBuildForSale ? "3% من الإيرادات (1% + 2%)"
-                      : project.developerFeePct ? `${project.developerFeePct}%` : "—"}
+                      : project.developerFeePct != null ? `${project.developerFeePct}%` : "—"}
                   />}
                   <DetailRow label={isJointVenture ? "أتعاب الوساطة العقارية" : "عمولة المبيعات"} value={project.salesCommissionPct ? `${project.salesCommissionPct}%` : "—"} />
                   <DetailRow label="أتعاب التصميم" value={project.designFeePct ? `${project.designFeePct}%` : "—"} />

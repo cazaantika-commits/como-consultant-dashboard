@@ -234,14 +234,14 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // O1/O2 (أوف بلان): 5% → تصاميم 1% + أوف بلان 1% + إشراف 3% = 5%
     // O3 (بدون أوف بلان): 3% → تصاميم 1% + إشراف 2% = 3% (مهام المطور أقل)
     {
-      itemKey: "developer_fee_design", nameAr: "أتعاب المطور — التصاميم (1%)", category: "developer_fee", section: "design", sortOrder: 13,
+      itemKey: "developer_fee_design", nameAr: "أتعاب المطور — التصاميم", category: "developer_fee", section: "design", sortOrder: 13,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["design"],
       scenarios: allScenarios, amountKey: "developerFee",
       splitRatio: [{ phase: "design", ratio: 0.2 }],  // O1/O2: 20% of 5% = 1% | O3: 20% of 5% = 1%
     },
     {
-      itemKey: "developer_fee_offplan", nameAr: "أتعاب المطور — أوف بلان (1%)", category: "developer_fee", section: "offplan", sortOrder: 14,
+      itemKey: "developer_fee_offplan", nameAr: "أتعاب المطور — أوف بلان", category: "developer_fee", section: "offplan", sortOrder: 14,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["offplan"],
       scenarios: offplanScenarios, amountKey: "developerFee",
@@ -365,7 +365,7 @@ function getDefaultItemDefs(scenario: Scenario): DefaultItemDef[] {
     // ═══ الإشراف والمساح (من الإسكرو) ═══
     // أتعاب المطور — الإشراف: O1/O2 = 3% | O3 = 2% (من حساب الضمان)
     {
-      itemKey: "developer_fee_construction", nameAr: `أتعاب المطور — الإشراف (${isOffplan ? "3" : "2"}%)`, category: "developer_fee", section: "escrow", sortOrder: 58,
+      itemKey: "developer_fee_construction", nameAr: "أتعاب المطور — الإشراف", category: "developer_fee", section: "escrow", sortOrder: 58,
       fundingSource: "investor", distributionMethod: "equal_spread",
       distributeAcrossPhases: ["construction"],
       scenarios: allScenarios, amountKey: "developerFee",
@@ -2800,10 +2800,10 @@ function computeItemAmountByKey(
 ): number {
   // Items with split ratios — each sub-item gets its own fraction of the total
   // For offplan scenarios (O1, O2): developer fee = 5% → design 20% + offplan 20% + construction 60%
-  // For no_offplan scenario (O3): developer fee = 3% → design 1% + construction (supervision) 2%
+  // For no_offplan scenario (O3): cap at 3% and split the user-selected fee 1/3 + 2/3.
   const isOffplan = scenario === "offplan_escrow" || scenario === "offplan_construction";
-  // In O3, developer tasks are fewer → total fee is 3% instead of 5%
-  const devFeeO3 = costs.totalRevenue * 0.03;
+  // A zero fee in the project card must remain zero in every phase.
+  const devFeeO3 = Math.min(costs.developerFee, costs.totalRevenue * 0.03);
   const splitMap: Record<string, number> = {
     // Developer fee split
     developer_fee_design: isOffplan ? costs.developerFee * 0.20 : devFeeO3 * (1/3),     // O1/O2: 1% | O3: 1%

@@ -170,7 +170,7 @@ async function getProjectFactSheet(db: any, projectId: number, userId: number) {
   const costData = ccf ? {
     landPrice: ccf.landPrice || 0,
     constructionCostPerSqft: ccf.constructionCostPerSqft || 0,
-    developerFeePct: parseFloat(String(ccf.developerFeePct || '5')),
+    developerFeePct: parseFloat(String(ccf.developerFeePct ?? '5')),
     marketingPct: parseFloat(String(ccf.marketingPct || '2')),
     agentCommissionSalePct: parseFloat(String(ccf.agentCommissionSalePct || '5')),
     contingenciesPct: parseFloat(String(ccf.contingenciesPct || '2')),

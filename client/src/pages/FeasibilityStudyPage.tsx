@@ -483,7 +483,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
     const revenueOff = saleableOff * (f.officesSalePrice || 0);
     const totalRevenue = revenueRes + revenueRet + revenueOff;
 
-    const developerFee = totalRevenue * ((f.developerFeePct || 5) / 100);
+    const developerFee = totalRevenue * ((f.developerFeePct ?? 5) / 100);
     const agentCommissionSale = totalRevenue * ((f.agentCommissionSalePct || 5) / 100);
     const marketing = totalRevenue * ((f.marketingPct || 2) / 100);
 
@@ -745,7 +745,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                               preConMonths: parseInt(selectedProject?.preConstructionMonths || '0'),
                               constructionMonths: parseInt(selectedProject?.constructionMonths || '0'),
                               handoverMonths: parseInt(selectedProject?.postConstructionMonths || '0'),
-                              developerFeePct: parseFloat(selectedProject?.developerFeePct || '5'),
+                              developerFeePct: parseFloat(selectedProject?.developerFeePct ?? '5'),
                               salesCommissionPct: parseFloat(selectedProject?.salesCommissionPct || '5'),
                               marketingPct: parseFloat(selectedProject?.marketingPct || '2'),
                               designFeePct: parseFloat(selectedProject?.designFeePct || '0'),

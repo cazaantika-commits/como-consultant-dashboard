@@ -374,7 +374,7 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         separationFeePerSqft: p.separationFeePerSqft ? String(p.separationFeePerSqft) : "40",
         salesCommissionPct: p.salesCommissionPct ? String(p.salesCommissionPct) : "5",
         marketingPct: p.marketingPct ? String(p.marketingPct) : "2",
-        developerFeePct: p.developerFeePct ? String(p.developerFeePct) : "5",
+        developerFeePct: String(p.developerFeePct ?? "5"),
         preConMonths: p.preConMonths ? String(p.preConMonths) : "6",
         constructionMonths: p.constructionMonths ? String(p.constructionMonths) : "18",
         startDate: (p as any).startDate || "",

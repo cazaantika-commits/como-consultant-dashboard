@@ -418,7 +418,7 @@ export function getInvestorExpenses(costs: ProjectCosts, scenario: FinancingScen
     { id: "survey", name: "المسح الطبوغرافي", total: c.topographicSurveyFee, behavior: "FIXED_RELATIVE", phase: "design", relativeMonth: 1, table: "investor" },
     // أتعاب المطور: 30% تصاميم، 10% أوف بلان، 60% إنشاء
     {
-      id: "developer_fee", name: "أتعاب المطور (5%)", total: c.developerFee, behavior: "DISTRIBUTED", phase: "design",
+      id: "developer_fee", name: "أتعاب المطور", total: c.developerFee, behavior: "DISTRIBUTED", phase: "design",
       splitRatio: [
         { phase: "design", ratio: 0.3 },
         { phase: "offplan", ratio: 0.1 },
