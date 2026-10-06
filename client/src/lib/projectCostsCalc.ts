@@ -66,6 +66,8 @@ export function calculateProjectCosts(
   const gfaResSqft = parseFloat(p.gfaResidentialSqft || "0");
   const gfaRetSqft = parseFloat(p.gfaRetailSqft || "0");
   const gfaOffSqft = parseFloat(p.gfaOfficesSqft || "0");
+  const classifiedGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
+  const totalGfaSqft = parseFloat(p.gfaSqft || "0") || classifiedGfaSqft;
   const saleableResPct = parseFloat(p.saleableResidentialPct ?? (isJointVenture ? "0" : "95")) / 100;
   const saleableRetPct = parseFloat(p.saleableRetailPct ?? (isJointVenture ? "0" : "97")) / 100;
   const saleableOffPct = parseFloat(p.saleableOfficesPct ?? (isJointVenture ? "0" : "95")) / 100;
@@ -122,7 +124,6 @@ export function calculateProjectCosts(
   const constructionCost = bua * estimatedConstructionPricePerSqft;
   const designFee = designFeeFixed > 0 ? designFeeFixed : constructionCost * (designFeePct / 100);
   const supervisionFee = supervisionFeeFixed > 0 ? supervisionFeeFixed : constructionCost * (supervisionFeePct / 100);
-  const totalGfaSqft = gfaResSqft + gfaRetSqft + gfaOffSqft;
   const separationFee = isBuildForRent ? 0 : totalGfaSqft * separationFeePerM2;
   const surveyorFees = parseFloat(p.surveyorFees || "0");
   const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || (isJointVenture ? 0 : 12000);

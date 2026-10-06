@@ -341,8 +341,11 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.gfaTotal)} <span className="text-[11px] text-gray-400">قدم²</span></div>
         </div>
         <div className="fs-card fs-card-cyan rounded-xl p-3 text-center">
-          <div className="text-[10px] text-teal-600 mb-0.5">القابل للبيع</div>
+          <div className="text-[10px] text-teal-600 mb-0.5">القابل للبيع / GFA</div>
           <div className="text-base font-bold text-teal-700" dir="ltr">{fmt(computed.sellableResidential + computed.sellableRetail + computed.sellableOffice)} <span className="text-[11px] text-gray-400">قدم²</span></div>
+          <div className="mt-0.5 text-[10px] font-semibold text-teal-700" dir="ltr">
+            {computed.gfaTotal > 0 ? `${((computed.sellableResidential + computed.sellableRetail + computed.sellableOffice) / computed.gfaTotal * 100).toFixed(2)}%` : "—"}
+          </div>
         </div>
         <div className="fs-card fs-card-rose rounded-xl p-3 text-center">
           <div className="text-[10px] text-red-600 mb-0.5">تكلفة الإنشاء</div>

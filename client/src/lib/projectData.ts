@@ -26,6 +26,7 @@ export interface ProjectInputs {
   designDuration: number; // مدة التصاميم (شهور)
   constructionDuration: number; // مدة الإنشاء (شهر)
   startDate: string;
+  gfaTotal: number; // الإجمالي المعتمد من بطاقة المشروع (قدم²)
   gfaResidential: number;
   gfaRetail: number;
   gfaOffice: number;
@@ -95,6 +96,7 @@ export const PROJECT_INPUTS: ProjectInputs = {
   designDuration: 8,
   constructionDuration: 30,
   startDate: "2026-08",
+  gfaTotal: 468154.22,
   gfaResidential: 93631,
   gfaRetail: 74904.84,
   gfaOffice: 299618.38,
@@ -179,6 +181,7 @@ export function dbProjectToInputs(dbProject: any): ProjectInputs {
     designDuration: designTiming.designMonths,
     constructionDuration: dbProject.constructionMonths || (isJointVenture ? 0 : 18),
     startDate: dbProject.startDate || (isJointVenture ? '' : '2026-08'),
+    gfaTotal,
     gfaResidential: gfaRes,
     gfaRetail: gfaRet,
     gfaOffice: gfaOff,
@@ -303,7 +306,10 @@ export const PRICING_DEFAULTS: UnitType[] = [
 
 // فورمولات المشروع الأساسية
 export function calculateProjectFormulas(inputs: ProjectInputs = PROJECT_INPUTS, rates: ProjectRates = RATES) {
-  const gfaTotal = inputs.gfaResidential + inputs.gfaRetail + inputs.gfaOffice;
+  const classifiedGfaTotal = inputs.gfaResidential + inputs.gfaRetail + inputs.gfaOffice;
+  // The fact-sheet GFA is the authoritative gross measure when it is documented.
+  // Use the use-by-type sum only when a project does not yet carry that source value.
+  const gfaTotal = inputs.gfaTotal > 0 ? inputs.gfaTotal : classifiedGfaTotal;
   const sellableResidential = inputs.gfaResidential * inputs.efficiencyResidential;
   const sellableRetail = inputs.gfaRetail * inputs.efficiencyRetail;
   const sellableOffice = inputs.gfaOffice * inputs.efficiencyOffice;

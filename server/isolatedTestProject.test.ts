@@ -85,6 +85,13 @@ describe("isolated test project contract", () => {
     expect(testPage).not.toContain("const openProject");
   });
 
+  it("opens a direct test-project link through its isolated record rather than waiting for the laboratory list", () => {
+    expect(testPage).toContain("requestedTestProjectQuery");
+    expect(testPage).toContain("trpc.projects.getTestProjectById.useQuery");
+    expect(testPage).toContain("enabled: !!user && requestedProjectId > 0");
+    expect(testPage).toContain("requestedProjectId <= 0 && (authLoading || testProjectsQuery.isLoading");
+  });
+
   it("keeps every existing study card available in test mode plus the consultant-scope card", () => {
     for (const section of [
       "general",

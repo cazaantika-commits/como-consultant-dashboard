@@ -17,7 +17,7 @@ const SCENARIOS = [
 const scenarioLabel = (scenario: string) => SCENARIOS.find((item) => item.value === scenario)?.label || scenario;
 
 export default function TestProjectPage() {
-  const { user } = useAuth({ redirectOnUnauthenticated: true });
+  const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const { setSelectedProjectId } = useProjectContext();
   const [, navigate] = useLocation();
   const requestedCreation = useRef(false);
@@ -26,10 +26,17 @@ export default function TestProjectPage() {
   const [name, setName] = useState("");
   const [scenario, setScenario] = useState<(typeof SCENARIOS)[number]["value"]>("joint_venture_land_for_units");
   const [landOwnerSharePct, setLandOwnerSharePct] = useState("35");
+  const search = new URLSearchParams(window.location.search);
+  const requestedProjectId = Number(search.get("projectId") || 0);
+  const requestedTab = search.get("tab");
   const testProjectsQuery = trpc.projects.listTestProjects.useQuery(undefined, {
-    enabled: !!user,
+    enabled: !!user && requestedProjectId <= 0,
     staleTime: 30_000,
   });
+  const requestedTestProjectQuery = trpc.projects.getTestProjectById.useQuery(
+    { id: requestedProjectId },
+    { enabled: !!user && requestedProjectId > 0, staleTime: 30_000 },
+  );
   const ensureTestProject = trpc.projects.ensureTestProject.useMutation({
     onSuccess: async () => {
       await utils.projects.listTestProjects.invalidate();
@@ -52,20 +59,17 @@ export default function TestProjectPage() {
     },
   });
 
-  const search = new URLSearchParams(window.location.search);
-  const requestedProjectId = Number(search.get("projectId") || 0);
-  const requestedTab = search.get("tab");
   const testProjects = testProjectsQuery.data || [];
   const activeProject = useMemo(() => {
-    if (requestedProjectId > 0) return testProjects.find((project) => project.id === requestedProjectId) || null;
+    if (requestedProjectId > 0) return requestedTestProjectQuery.data || null;
     return requestedTab ? testProjects[0] || null : null;
-  }, [requestedProjectId, requestedTab, testProjects]);
+  }, [requestedProjectId, requestedTab, requestedTestProjectQuery.data, testProjects]);
 
   useEffect(() => {
-    if (!user || testProjectsQuery.isLoading || testProjects.length > 0 || requestedCreation.current) return;
+    if (!user || requestedProjectId > 0 || testProjectsQuery.isLoading || testProjects.length > 0 || requestedCreation.current) return;
     requestedCreation.current = true;
     ensureTestProject.mutate();
-  }, [ensureTestProject, testProjects.length, testProjectsQuery.isLoading, user]);
+  }, [ensureTestProject, requestedProjectId, testProjects.length, testProjectsQuery.isLoading, user]);
 
   useEffect(() => {
     if (!requestedProjectId && requestedTab && activeProject?.id) {
@@ -88,7 +92,10 @@ export default function TestProjectPage() {
     });
   };
 
-  if (testProjectsQuery.isLoading || ensureTestProject.isPending || testProjects.length === 0) {
+  const isOpeningRequestedProject = requestedProjectId > 0 && (authLoading || requestedTestProjectQuery.isLoading);
+  const isPreparingLaboratory = requestedProjectId <= 0 && (authLoading || testProjectsQuery.isLoading || ensureTestProject.isPending || testProjects.length === 0);
+
+  if (isOpeningRequestedProject || isPreparingLaboratory) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50" dir="rtl">
         <div className="rounded-2xl border border-violet-200 bg-white px-8 py-7 text-center shadow-sm">
