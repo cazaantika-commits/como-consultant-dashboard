@@ -83,9 +83,9 @@ export default function ProjectCardOffplanPage() {
         gfaResidentialSqft: p.gfaResidentialSqft || "",
         gfaRetailSqft: p.gfaRetailSqft || "",
         gfaOfficesSqft: p.gfaOfficesSqft || "",
-        saleableResidentialPct: p.saleableResidentialPct ? String(p.saleableResidentialPct) : "95",
-        saleableRetailPct: p.saleableRetailPct ? String(p.saleableRetailPct) : "97",
-        saleableOfficesPct: p.saleableOfficesPct ? String(p.saleableOfficesPct) : "95",
+        saleableResidentialPct: String(p.saleableResidentialPct ?? "95"),
+        saleableRetailPct: String(p.saleableRetailPct ?? "97"),
+        saleableOfficesPct: String(p.saleableOfficesPct ?? "95"),
         landPrice: p.landPrice || "",
         agentCommissionLandPct: p.agentCommissionLandPct ? String(p.agentCommissionLandPct) : "1",
         designFeePct: p.designFeePct ? String(p.designFeePct) : "1.8",
@@ -142,7 +142,7 @@ export default function ProjectCardOffplanPage() {
       gfaResidentialSqft: formData.gfaResidentialSqft || "0",
       gfaRetailSqft: formData.gfaRetailSqft || "0",
       gfaOfficesSqft: formData.gfaOfficesSqft || "0",
-      gfaSqft: "",
+      gfaSqft: (projectQuery.data as any)?.gfaSqft ?? "",
       landPrice: formData.landPrice || "0",
       agentCommissionLandPct: formData.agentCommissionLandPct || "1",
       designFeePct: formData.designFeePct || "1.8",
@@ -151,9 +151,9 @@ export default function ProjectCardOffplanPage() {
       salesCommissionPct: formData.salesCommissionPct || "5",
       marketingPct: formData.marketingPct || "2",
       developerFeePct: formData.developerFeePct || "5",
-      saleableResidentialPct: formData.saleableResidentialPct || "95",
-      saleableRetailPct: formData.saleableRetailPct || "97",
-      saleableOfficesPct: formData.saleableOfficesPct || "95",
+      saleableResidentialPct: formData.saleableResidentialPct ?? "95",
+      saleableRetailPct: formData.saleableRetailPct ?? "97",
+      saleableOfficesPct: formData.saleableOfficesPct ?? "95",
       soilTestFee: formData.soilTestFee || "45000",
       topographicSurveyFee: formData.topographicSurveyFee || "12000",
       surveyorFees: formData.surveyorFees || "35000",
@@ -374,9 +374,9 @@ export default function ProjectCardOffplanPage() {
                   <FormulaRow label="GFA إجمالي" value={fmtFull(calc.gfaTotal)} formula="سكني + تجزئة + مكاتب" />
 
                   <tr className="bg-slate-700/20"><td colSpan={4} className="py-2 px-3 text-slate-300 font-semibold text-xs">النسب القابلة للبيع</td></tr>
-                  <EditableRow label="نسبة القابل للبيع — سكني (%)" fieldKey="saleableResidentialPct" value={formData.saleableResidentialPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableResidentialPct || "95"}%`} />
-                  <EditableRow label="نسبة القابل للبيع — تجزئة (%)" fieldKey="saleableRetailPct" value={formData.saleableRetailPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableRetailPct || "97"}%`} />
-                  <EditableRow label="نسبة القابل للبيع — مكاتب (%)" fieldKey="saleableOfficesPct" value={formData.saleableOfficesPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableOfficesPct || "95"}%`} />
+                  <EditableRow label="نسبة القابل للبيع — سكني (%)" fieldKey="saleableResidentialPct" value={formData.saleableResidentialPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableResidentialPct ?? "95"}%`} />
+                  <EditableRow label="نسبة القابل للبيع — تجزئة (%)" fieldKey="saleableRetailPct" value={formData.saleableRetailPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableRetailPct ?? "97"}%`} />
+                  <EditableRow label="نسبة القابل للبيع — مكاتب (%)" fieldKey="saleableOfficesPct" value={formData.saleableOfficesPct} editing={isEditing} onChange={updateField} displayValue={`${formData.saleableOfficesPct ?? "95"}%`} />
                   <FormulaRow label="المساحة القابلة — سكني" value={fmtFull(calc.sellableResidential)} formula="GFA سكني × النسبة" />
                   <FormulaRow label="المساحة القابلة — تجزئة" value={fmtFull(calc.sellableRetail)} formula="GFA تجزئة × النسبة" />
                   <FormulaRow label="المساحة القابلة — مكاتب" value={fmtFull(calc.sellableOffice)} formula="GFA مكاتب × النسبة" />

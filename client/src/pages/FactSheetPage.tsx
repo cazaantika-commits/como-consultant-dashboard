@@ -378,9 +378,9 @@ export default function FactSheetPage({ embedded = false, initialProjectId, onBa
         preConMonths: p.preConMonths ? String(p.preConMonths) : "6",
         constructionMonths: p.constructionMonths ? String(p.constructionMonths) : "18",
         startDate: (p as any).startDate || "",
-        saleableResidentialPct: p.saleableResidentialPct ? String(p.saleableResidentialPct) : "95",
-        saleableRetailPct: p.saleableRetailPct ? String(p.saleableRetailPct) : "97",
-        saleableOfficesPct: p.saleableOfficesPct ? String(p.saleableOfficesPct) : "95",
+        saleableResidentialPct: String(p.saleableResidentialPct ?? "95"),
+        saleableRetailPct: String(p.saleableRetailPct ?? "97"),
+        saleableOfficesPct: String(p.saleableOfficesPct ?? "95"),
         financingScenario: (p as any).financingScenario || "offplan_escrow",
         notes: p.notes || "",
       });

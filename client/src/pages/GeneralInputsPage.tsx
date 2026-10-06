@@ -12,7 +12,7 @@ import { default as X } from "lucide-react/dist/esm/icons/x.js";
 import { dbProjectToInputs, dbProjectToRates, calculateProjectFormulas } from "@/lib/projectData";
 import { getProjectDesignTiming, getProjectReraQuarterlyFeeSettings } from "@/lib/projectTiming";
 import { isFinancialStudiesGeneralInputVisible } from "@/lib/financialStudiesNavigation";
-import { formatFullNumber, unformatNumberInput } from "@/lib/numberFormat";
+import { formatFullNumber, formatRateOrPercent, unformatNumberInput } from "@/lib/numberFormat";
 import {
   getJointVentureTerms,
   isJointVentureLandForUnits,
@@ -30,9 +30,9 @@ const ALL_FIELDS = [
   { key: "gfaResidentialSqft", label: "GFA سكني", unit: "قدم²", type: "number" },
   { key: "gfaRetailSqft", label: "GFA تجزئة", unit: "قدم²", type: "number" },
   { key: "gfaOfficesSqft", label: "GFA مكاتب", unit: "قدم²", type: "number" },
-  { key: "saleableResidentialPct", label: "نسبة بيع سكني", unit: "%", type: "number", defaultValue: "95" },
-  { key: "saleableRetailPct", label: "نسبة بيع تجزئة", unit: "%", type: "number", defaultValue: "97" },
-  { key: "saleableOfficesPct", label: "نسبة بيع مكاتب", unit: "%", type: "number", defaultValue: "95" },
+  { key: "saleableResidentialPct", label: "القابل للبيع من GFA السكني", unit: "%", type: "number", defaultValue: "95" },
+  { key: "saleableRetailPct", label: "القابل للبيع من GFA التجزئة", unit: "%", type: "number", defaultValue: "97" },
+  { key: "saleableOfficesPct", label: "القابل للبيع من GFA المكاتب", unit: "%", type: "number", defaultValue: "95" },
   { key: "landOwnerProjectSharePct", label: "حصة مالك الأرض من المساحة القابلة للبيع", unit: "%", type: "number", defaultValue: "35", jointVentureOnly: true, hint: "تُحفظ لكل مشروع مستقل وتُطبق على المساحة السكنية والتجارية القابلة للبيع؛ حصة وائل = 100% ناقص هذه النسبة" },
   { key: "developmentLicenseCost", label: "رخصة التطوير العقاري للاتفاق", unit: "درهم", type: "number", jointVentureOnly: true },
   { key: "waelLicenseRegistrationCost", label: "تسجيل وائل في رخصة التطوير", unit: "درهم", type: "number", jointVentureOnly: true },
@@ -73,6 +73,35 @@ function fmt(n: number): string {
   return Math.round(n).toLocaleString("en-US");
 }
 
+function projectToGeneralFormData(p: any): Record<string, string> {
+  const data: Record<string, string> = {};
+  let savedRates: Record<string, unknown> = {};
+  try {
+    savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
+  } catch { /* use approved defaults */ }
+  ALL_FIELDS.forEach(f => {
+    const val = p[f.key];
+    if (val != null && val !== "") data[f.key] = String(val);
+    else if (f.defaultValue && !isJointVentureLandForUnits(p.financingScenario)) data[f.key] = f.defaultValue;
+  });
+  data.financingScenario = p.financingScenario || "offplan_escrow";
+  if (isJointVentureLandForUnits(data.financingScenario)) {
+    const terms = getJointVentureTerms(p);
+    data.landOwnerProjectSharePct = String(terms.landOwnerResidentialSharePct);
+    data.developmentLicenseCost = terms.developmentLicenseCost > 0 ? String(terms.developmentLicenseCost) : "";
+    data.waelLicenseRegistrationCost = terms.waelLicenseRegistrationCost > 0 ? String(terms.waelLicenseRegistrationCost) : "";
+    data.landOwnerLicenseRegistrationCost = terms.landOwnerLicenseRegistrationCost > 0 ? String(terms.landOwnerLicenseRegistrationCost) : "";
+    data.landOwnerUnitsRegistrationFeePct = String(terms.landOwnerUnitsRegistrationFeePct);
+  }
+  if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
+  if (data.financingScenario === "joint_venture_land_for_units") data.developerFeePct = "0";
+  if (data.financingScenario === "build_for_rent") {
+    data.buildForRentDeveloperFeeDesignRate = String(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
+    data.buildForRentDeveloperFeeSupervisionRate = String(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
+  }
+  return data;
+}
+
 export default function GeneralInputsPage({ embedded, hideDocumentFields = false, hideProjectSelector = false }: { embedded?: boolean; hideDocumentFields?: boolean; hideProjectSelector?: boolean } = {}) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -86,33 +115,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
 
   useEffect(() => {
     if (projectQuery.data) {
-      const p = projectQuery.data as any;
-      const data: Record<string, string> = {};
-      let savedRates: Record<string, unknown> = {};
-      try {
-        savedRates = JSON.parse(p.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
-      } catch { /* use approved defaults */ }
-      ALL_FIELDS.forEach(f => {
-        const val = p[f.key];
-        if (val != null && val !== "") data[f.key] = String(val);
-        else if (f.defaultValue && !isJointVentureLandForUnits(p.financingScenario)) data[f.key] = f.defaultValue;
-      });
-      data.financingScenario = p.financingScenario || "offplan_escrow";
-      if (isJointVentureLandForUnits(data.financingScenario)) {
-        const terms = getJointVentureTerms(p);
-        data.landOwnerProjectSharePct = String(terms.landOwnerResidentialSharePct);
-        data.developmentLicenseCost = terms.developmentLicenseCost > 0 ? String(terms.developmentLicenseCost) : "";
-        data.waelLicenseRegistrationCost = terms.waelLicenseRegistrationCost > 0 ? String(terms.waelLicenseRegistrationCost) : "";
-        data.landOwnerLicenseRegistrationCost = terms.landOwnerLicenseRegistrationCost > 0 ? String(terms.landOwnerLicenseRegistrationCost) : "";
-        data.landOwnerUnitsRegistrationFeePct = String(terms.landOwnerUnitsRegistrationFeePct);
-      }
-      if (data.financingScenario === "build_for_sale" || data.financingScenario === "build_for_rent") data.developerFeePct = "3";
-      if (data.financingScenario === "joint_venture_land_for_units") data.developerFeePct = "0";
-      if (data.financingScenario === "build_for_rent") {
-        data.buildForRentDeveloperFeeDesignRate = String(savedRates.buildForRentDeveloperFeeDesignRate ?? 1.5);
-        data.buildForRentDeveloperFeeSupervisionRate = String(savedRates.buildForRentDeveloperFeeSupervisionRate ?? 2.5);
-      }
-      setFormData(data);
+      setFormData(projectToGeneralFormData(projectQuery.data));
       setHasChanges(false);
     }
   }, [projectQuery.data]);
@@ -171,9 +174,13 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
   }, [selectedProjectId, formData, updateProject, toast, projectQuery]);
 
   const computed = useMemo(() => {
-    const mockDb: any = {};
+    const mockDb: any = { gfaSqft: (projectQuery.data as any)?.gfaSqft ?? "" };
     const isJointVenture = isJointVentureLandForUnits(formData.financingScenario);
-    ALL_FIELDS.forEach(f => { mockDb[f.key] = formData[f.key] || (isJointVenture ? "" : f.defaultValue || ""); });
+    ALL_FIELDS.forEach(f => {
+      mockDb[f.key] = formData[f.key] !== undefined && formData[f.key] !== ""
+        ? formData[f.key]
+        : isJointVenture ? "" : f.defaultValue || "";
+    });
     mockDb.constructionScheduleJson = (projectQuery.data as any)?.constructionScheduleJson;
     if (isJointVenture) {
       mockDb.constructionScheduleJson = saveJointVentureTerms(mockDb.constructionScheduleJson, {
@@ -250,8 +257,9 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
           : field.key === "reraInspectionReportFee"
             ? String(reraQuarterlyFees.inspectionTotal)
             : formData[field.key] || "";
+        const isPercentage = field.key === "saleableResidentialPct" || field.key === "saleableRetailPct" || field.key === "saleableOfficesPct";
         const visibleValue = !isEditing && field.type === "number"
-          ? formatFullNumber(displayValue, "")
+          ? (isPercentage ? formatRateOrPercent(displayValue, "") : formatFullNumber(displayValue, ""))
           : displayValue;
         return (
           <div key={field.key} className={`flex items-center gap-2 h-[28px] border-b border-slate-300 ${isComputed ? "bg-amber-50/80" : ""}`}>
@@ -299,7 +307,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
           </Button>
         ) : (
           <>
-            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); projectQuery.refetch(); }} className="h-7 text-[12px] px-3 gap-1">
+            <Button variant="ghost" size="sm" onClick={() => { setIsEditing(false); setHasChanges(false); if (projectQuery.data) setFormData(projectToGeneralFormData(projectQuery.data)); }} className="h-7 text-[12px] px-3 gap-1">
               <X className="w-3.5 h-3.5" /> إلغاء
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!hasChanges || updateProject.isPending} className="h-7 text-[12px] px-3 gap-1 bg-teal-600 hover:bg-teal-700 text-white">
@@ -335,6 +343,7 @@ export default function GeneralInputsPage({ embedded, hideDocumentFields = false
       </div>
 
       {/* Computed summary cards - Portfolio style */}
+      <p className="mt-3 text-[11px] text-slate-600">عدّل نسبة القابل للبيع لكل استخدام أعلاه ثم احفظها؛ المساحة القابلة للبيع = مساحة GFA لكل استخدام × النسبة التي أدخلتها. النسبة الإجمالية أدناه ناتج حسابي وليست نسبة مفروضة.</p>
       <div className="mt-3 grid grid-cols-3 gap-3">
         <div className="fs-card fs-card-teal rounded-xl p-3 text-center">
           <div className="text-[10px] text-teal-600 mb-0.5">GFA الإجمالي</div>
