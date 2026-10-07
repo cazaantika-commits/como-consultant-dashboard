@@ -835,6 +835,7 @@ export async function saveComoMailboxDraft(input: {
   cc?: string;
   inReplyTo?: string;
   draftKey: string;
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
 }): Promise<{ folder: string; uid: number | null; created: boolean }> {
   if (!EMAIL_PASSWORD) throw new Error("EMAIL_PASSWORD not configured");
   const to = input.to.trim();
@@ -844,6 +845,10 @@ export async function saveComoMailboxDraft(input: {
   const draftKey = input.draftKey.trim();
   if (!to || !to.includes("@") || !subject || !body || !draftKey) {
     throw new Error("Draft recipient, subject, body, and key are required");
+  }
+  if ((input.attachments?.length || 0) > 5
+    || input.attachments?.some(file => !file.filename.trim() || file.content.length > 15 * 1024 * 1024)) {
+    throw new Error("Draft attachments exceed the allowed count or size");
   }
 
   const streamTransport = nodemailer.createTransport({
@@ -858,6 +863,7 @@ export async function saveComoMailboxDraft(input: {
     subject,
     text: body,
     html: `<div dir="auto" style="white-space:normal;line-height:1.7">${plainTextToSafeHtml(body)}</div>`,
+    ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     ...(input.inReplyTo ? { inReplyTo: input.inReplyTo, references: input.inReplyTo } : {}),
     headers: { "X-COMO-Draft-Key": draftKey },
   });

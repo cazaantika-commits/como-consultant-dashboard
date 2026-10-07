@@ -435,6 +435,7 @@ export async function createCommunicationDraftCommand(input: {
   ccText?: string | null;
   sourceEmailId?: number | null;
   idempotencyKey?: string;
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -506,6 +507,7 @@ export async function createCommunicationDraftCommand(input: {
     body: input.body,
     inReplyTo,
     draftKey: input.idempotencyKey || `como-next-communication-${draftRecord.id}`,
+    attachments: input.attachments,
   });
   const savedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
   await db.transaction(async tx => {
@@ -516,7 +518,9 @@ export async function createCommunicationDraftCommand(input: {
       evidenceReference: mailboxDraft.uid
         ? `Private Email ${mailboxDraft.folder} · UID ${mailboxDraft.uid}`
         : `Private Email ${mailboxDraft.folder}`,
-      reviewNote: "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
+      reviewNote: input.attachments?.length
+        ? `المسودة محفوظة في بريد عبدالرحمن مع ${input.attachments.length} مرفق؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.`
+        : "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
       occurredAt: savedAt,
     }).where(eq(comoNextCommunications.id, draftRecord.id));
     await appendEvent(tx, {
@@ -531,6 +535,7 @@ export async function createCommunicationDraftCommand(input: {
         communicationId: draftRecord.id,
         folder: mailboxDraft.folder,
         uid: mailboxDraft.uid,
+        attachmentNames: input.attachments?.map(file => file.filename) || [],
         sent: false,
       },
       idempotencyKey: `mailbox-draft:event:${draftRecord.id}`,

@@ -34,6 +34,15 @@ describe("COMO Next mailbox drafts", () => {
     expect(mailboxDraftFunction()).not.toContain("smtpTransport");
   });
 
+  it("embeds a verified document in the MIME draft instead of just mentioning an attachment", () => {
+    expect(mailboxDraftFunction()).toContain("attachments?: Array<{ filename: string; content: Buffer; contentType: string }>");
+    expect(mailboxDraftFunction()).toContain("attachments: input.attachments");
+    expect(commands).toContain("attachments: input.attachments");
+    expect(commands).toContain("attachmentNames: input.attachments?.map");
+    expect(mailboxDraftFunction()).toContain("streamTransport: true");
+    expect(mailboxDraftFunction()).toContain("imap.append(raw");
+  });
+
   it("preserves reply-thread headers and never schedules outbound email", () => {
     expect(mailboxDraftFunction()).toContain("inReplyTo: input.inReplyTo, references: input.inReplyTo");
     expect(mailboxDraftFunction()).toContain("imap.append");
