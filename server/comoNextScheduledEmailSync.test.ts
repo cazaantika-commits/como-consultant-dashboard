@@ -45,6 +45,8 @@ describe("COMO read-only scheduled mail phases", () => {
 
   it("executes eligible Manus work on a separate signed heartbeat, without applying stale owner-gated proposals", () => {
     const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
+    expect(executive).toContain('await reconcileConditionalSentWatches');
+    expect(executive.indexOf('await reconcileConditionalSentWatches')).toBeLessThan(executive.indexOf('runExecutiveControlLoopCommand'));
     expect(executive).toContain('runExecutiveControlLoopCommand');
     expect(executive).toContain('maxItems: 1');
     expect(executive).not.toContain('scanPending: true');

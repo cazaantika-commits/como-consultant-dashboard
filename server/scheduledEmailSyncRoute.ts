@@ -5,6 +5,7 @@ import { sdk } from "./_core/sdk";
 import { getDb } from "./db";
 import { processPendingReadonlyMailboxCommand, reconcileConfirmedMeetingsFromEmailCommand, syncReadonlyInboxCommand } from "./services/comoNextEmailInbox";
 import { runExecutiveControlLoopCommand } from "./services/comoNextExecutiveControl";
+import { reconcileConditionalSentWatches } from "./services/comoNextConditionalSentWatches";
 
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
@@ -57,6 +58,7 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // Keep the IMAP import and one-LLM analysis callbacks below their own
           // timeouts. This separate phase owns actual, evidence-bound Manus work.
           // Never auto-apply historical/owner-gated proposals from this heartbeat.
+          const conditionalWatches = await reconcileConditionalSentWatches({ userId: settings.userId, limit: 3 });
           const candidates = await db.select({ id: comoNextActions.id, title: comoNextActions.title,
             description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria }).from(comoNextActions)
             .innerJoin(comoNextWorkFiles, eq(comoNextActions.workFileId, comoNextWorkFiles.id))
@@ -82,7 +84,7 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
             lastDuplicates: 0, lastError: null,
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
           res.status(200).json({ ok: true, phase: "executive", selectedActionId: eligible ? Number(eligible.id) : null,
-            executedActionIds: result?.executedActionIds || [], externalSideEffects: false });
+            executedActionIds: result?.executedActionIds || [], conditionalWatches, externalSideEffects: false });
           return;
         }
         // Separate, retryable callback; analyses are keyed by message ID and
