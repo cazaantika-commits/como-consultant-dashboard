@@ -202,7 +202,7 @@ function buildDirectivePrompt(input: {
 4) اذكر ملفات الموضوع المرتبطة التي يجب تعليق خطواتها المنفردة إلى أن يكتمل العمل الموحد، باستعمال المعرفات المتاحة فقط.
 5) لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا. إذا طلب عبد الرحمن إرسال/كتابة/تذكير شخص برسالة، جهّز communicationDraft كاملة؛ النظام سيحفظها فعليًا في Private Email Drafts ليُراجعها ويرسلها من بريده. ممنوع اعتبار نص داخلي يقول «أعددت مسودة» تنفيذًا.
 5-أ) إذا احتوى التوجيه على نفي صريح مثل «خلي ما نرسل» أو «لا تبعتي»، فالنفي مقدّم: لا تنشئ communicationDraft ولا تدّعي إرسالًا أو إعداد مسودة، واكتف بالعمل الداخلي المسموح إن بقي مطلوبًا.
-6) في communicationDraft استخدم عنوان البريد المثبت من السياق. وائل هو wael@zooma.ae، وإذا كان هو المستلم الأساسي اجعل CC إلى pa@zooma.ae (Mia). اذكر externalMessageRef الأنسب إذا كانت الرسالة متابعة لخيط سابق.
+6) في communicationDraft استخدم عنوان البريد المثبت من السياق. وائل هو wael@zooma.ae؛ لا تضف ميا تلقائيًا لمجرد مخاطبة وائل. تُذكر ميا في CC فقط إذا ثبت أن الرسالة تخص موعدًا لوائل، أو ورد توجيه صريح بشأنها. اذكر externalMessageRef الأنسب إذا كانت الرسالة متابعة لخيط سابق.
 7) لا تقل إن ملفًا مرفق أو سيُرفق؛ مسار توجيه Manus الحالي ينشئ نص المسودة ويحفظه في البريد ولا يضيف مرفقات. وقّع الاسم العربي «عبد الرحمن زقوت» أو الإنجليزي حصراً «Abdalrahman Zaqout».
 8) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
 9) اكتب بالعربية المهنية الواضحة. اجعل المخرج قابلاً للقراءة لا JSON خامًا.
@@ -314,9 +314,7 @@ export async function executeExecutiveDirectiveCommand(input: {
         .limit(1);
       sourceEmailId = sourceEmail ? Number(sourceEmail.id) : null;
     }
-    const ccText = /(?:^|[<\s,;])wael@zooma\.ae(?:$|[>\s,;])/i.test(toText)
-      ? "pa@zooma.ae"
-      : String(draft.ccText || "").trim() || null;
+    const ccText = String(draft.ccText || "").trim() || null;
     const createdDraft = await createCommunicationDraftCommand({
       userId: input.userId,
       workFileId: input.workFileId,

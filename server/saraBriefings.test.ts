@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  buildNarration,
   collapseSaraAttentionByTopic,
   chooseSaraAutoMode,
   getSaraDubaiWindow,
@@ -57,6 +58,29 @@ describe("Sara executive briefings", () => {
     expect(grouped).toHaveLength(2);
     expect(grouped[0].title).toContain("كولييرز: 2 نقاط تحتاج حركة");
     expect(grouped[1].title).toBe("تحضير الاجتماع");
+  });
+
+  it("moves a past confirmed meeting out of upcoming appointments without pretending it happened", () => {
+    const now = new Date("2026-10-07T12:00:00Z"); // 16:00 Dubai
+    const empty = { workFiles: [], actions: [], decisions: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [] };
+    const morning = { ...baseItem, kind: "meeting" as const, id: 9, title: "اجتماع الساعة التاسعة", status: "confirmed", dueAt: "2026-10-07 05:00:00" };
+    const evening = { ...baseItem, kind: "meeting" as const, id: 10, title: "اجتماع الساعة السابعة", status: "confirmed", dueAt: "2026-10-07 15:00:00" };
+    const briefing = buildNarration("full", "day", { ...empty, meetings: [morning, evening] }, now);
+    expect(briefing.text).toContain("نتيجة اجتماع الساعة التاسعة: تحقق هل انعقد الاجتماع أو تغير موعده");
+    expect(briefing.text).toContain("المواعيد القريبة، 1 بالمجموع:");
+    expect(briefing.text).toContain("اجتماع الساعة السابعة");
+    const appointments = briefing.text.split("المواعيد القريبة، 1 بالمجموع:")[1]?.split("\n---\n")[0] || "";
+    expect(appointments).not.toContain("اجتماع الساعة التاسعة");
+  });
+
+  it("does not present yesterday's unconfirmed meeting as an upcoming meeting", () => {
+    const now = new Date("2026-10-07T12:00:00Z");
+    const snapshot = { workFiles: [], actions: [], decisions: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [], meetings: [
+      { ...baseItem, kind: "meeting" as const, id: 11, title: "اجتماع أمس", status: "planned", dueAt: "2026-10-06 06:00:00" },
+    ] };
+    const briefing = buildNarration("full", "day", snapshot, now);
+    expect(briefing.text).toContain("تأكد من اجتماع أمس: الموعد السابق مضى؛ تحقق هل تأكد أو تغير");
+    expect(briefing.text).not.toContain("المواعيد القريبة، 1 بالمجموع:");
   });
 
   it("uses only active COMO Next files and avoids exaggerated pet names", () => {

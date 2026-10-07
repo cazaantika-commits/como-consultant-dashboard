@@ -154,11 +154,15 @@ function formatDue(value: string | null, now: Date, dayEnd: Date) {
 
 function spokenItem(item: BriefingItem, now: Date, dayEnd: Date) {
   const project = item.project ? `بـ${item.project}` : "";
+  if (item.status === "needs_meeting_outcome" || item.status === "needs_meeting_confirmation") {
+    return `${item.title}${project ? ` ${project}` : ""}`;
+  }
   return `${item.title}${project ? ` ${project}` : ""}${formatDue(item.dueAt, now, dayEnd)}`;
 }
 
 function isTodayAttention(item: BriefingItem, now: Date, dayEnd: Date) {
   const due = parseDate(item.dueAt);
+  if (item.status === "needs_meeting_outcome" || item.status === "needs_meeting_confirmation") return true;
   if (item.status === "completed_pending_verification") return true;
   if (due) return due.getTime() <= dayEnd.getTime();
   return item.priority === "urgent";
@@ -234,19 +238,37 @@ function projectPicture(workFiles: WorkFileSummary[]) {
   });
 }
 
-function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snapshot: BriefingSnapshot, now: Date) {
+export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snapshot: BriefingSnapshot, now: Date) {
   const { end, nextThreeDays } = getSaraDubaiWindow(now);
+  const pastMeetings: BriefingItem[] = snapshot.meetings
+    .filter(item => {
+      const starts = parseDate(item.dueAt);
+      return Boolean(starts && starts.getTime() < now.getTime());
+    })
+    .map(item => ({
+      ...item,
+      kind: "action",
+      status: item.status === "confirmed" ? "needs_meeting_outcome" : "needs_meeting_confirmation",
+      title: item.status === "confirmed"
+        ? `نتيجة ${item.title}: تحقق هل انعقد الاجتماع أو تغير موعده، وسجل ما حدث`
+        : `تأكد من ${item.title}: الموعد السابق مضى؛ تحقق هل تأكد أو تغير`,
+    }));
+  const futureMeetings = snapshot.meetings.filter(item => {
+    const starts = parseDate(item.dueAt);
+    return Boolean(starts && starts.getTime() >= now.getTime());
+  });
   const allAttention = dedupeAttention([
     ...snapshot.actions,
     ...snapshot.decisions,
-    ...snapshot.meetings,
+    ...pastMeetings,
+    ...futureMeetings,
     ...snapshot.proposals,
     ...snapshot.communications,
     ...snapshot.emails,
   ]).sort((a, b) => compareRank(a, b, now, end));
   const today = collapseSaraAttentionByTopic(allAttention.filter(item => isTodayAttention(item, now, end)), now, end);
   const todayOperational = today.filter(item => item.kind !== "meeting");
-  const upcomingMeetings = snapshot.meetings
+  const upcomingMeetings = futureMeetings
     .filter(item => {
       const due = parseDate(item.dueAt);
       return Boolean(due && due.getTime() <= nextThreeDays.getTime());

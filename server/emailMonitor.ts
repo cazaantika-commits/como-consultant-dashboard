@@ -809,11 +809,13 @@ function recipientAddress(value: string) {
     || value.trim().toLowerCase();
 }
 
-export function applyComoCcPolicy(input: { to: string; cc?: string }) {
+export function applyComoCcPolicy(input: { to: string; cc?: string; waelAppointment?: boolean }) {
   const toAddresses = new Set(input.to.split(/[;,]/).map(recipientAddress).filter(Boolean));
   const ccRecipients = (input.cc || "").split(/[;,]/).map(item => item.trim()).filter(Boolean);
-  const required = toAddresses.has(WAEL_EMAIL) ? MIA_EMAIL : WAEL_EMAIL;
-  const merged = [...ccRecipients, required];
+  // Wael is copied on other correspondence. Mia is NOT his default CC; only
+  // add her when the originating workflow has verified this is his appointment.
+  const required = toAddresses.has(WAEL_EMAIL) ? null : WAEL_EMAIL;
+  const merged = [...ccRecipients, ...(required ? [required] : []), ...(input.waelAppointment ? [MIA_EMAIL] : [])];
   const seen = new Set<string>();
   return merged.filter(recipient => {
     const address = recipientAddress(recipient);
@@ -833,6 +835,7 @@ export async function saveComoMailboxDraft(input: {
   subject: string;
   body: string;
   cc?: string;
+  waelAppointment?: boolean;
   inReplyTo?: string;
   draftKey: string;
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
@@ -841,7 +844,7 @@ export async function saveComoMailboxDraft(input: {
   const to = input.to.trim();
   const subject = input.subject.replace(/[\r\n]+/g, " ").trim();
   const body = input.body.trim();
-  const cc = applyComoCcPolicy({ to, cc: input.cc });
+  const cc = applyComoCcPolicy({ to, cc: input.cc, waelAppointment: input.waelAppointment });
   const draftKey = input.draftKey.trim();
   if (!to || !to.includes("@") || !subject || !body || !draftKey) {
     throw new Error("Draft recipient, subject, body, and key are required");

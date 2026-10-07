@@ -51,10 +51,12 @@ describe("COMO Next mailbox drafts", () => {
     expect(commands).toContain("inReplyTo = sourceEmail?.messageId");
   });
 
-  it("always copies Wael, or Mia when Wael is the primary recipient", () => {
+  it("copies Wael on other mail but only automatically copies Mia for Wael's appointment", () => {
     expect(applyComoCcPolicy({ to: "consultant@example.com" })).toBe("wael@zooma.ae");
     expect(applyComoCcPolicy({ to: "consultant@example.com", cc: "team@example.com, Wael <wael@zooma.ae>" })).toBe("team@example.com, Wael <wael@zooma.ae>");
-    expect(applyComoCcPolicy({ to: "Wael <wael@zooma.ae>" })).toBe("pa@zooma.ae");
+    expect(applyComoCcPolicy({ to: "Wael <wael@zooma.ae>" })).toBe("");
+    expect(applyComoCcPolicy({ to: "Wael <wael@zooma.ae>", waelAppointment: true })).toBe("pa@zooma.ae");
+    expect(applyComoCcPolicy({ to: "consultant@example.com", waelAppointment: true })).toBe("wael@zooma.ae, pa@zooma.ae");
     expect(applyComoCcPolicy({ to: "wael@zooma.ae", cc: "pa@zooma.ae" })).toBe("pa@zooma.ae");
   });
 
