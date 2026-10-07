@@ -1,9 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextCommunications,
+  comoNextDecisions,
   comoNextDocuments,
   comoNextEmailAnalyses,
   comoNextEmailAttachments,
@@ -28,7 +29,7 @@ import {
 } from "../emailMonitor";
 import { storagePut } from "../storage";
 import { appendEvent, createActionCommand, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
-import { createIntakeProposalsCommand, type IntakeProposalDraft } from "./comoNextIntake";
+import { createIntakeProposalsCommand, reviewIntakeProposalCommand, type IntakeProposalDraft } from "./comoNextIntake";
 import { currentInboundEmailText, reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
 import { createMeetingCommand } from "./comoNextMeetings";
@@ -509,6 +510,93 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
   };
 }
 
+/** A suggestion alone is not authority to link private attachments. A uniquely
+ * established inbound sender AND a distinctive match to that same file are. */
+export function trustedSenderFileMatch(input: {
+  folderName: string;
+  inboxStatus: string;
+  suggestedProjectId: number | null;
+  suggestedWorkFileId: number | null;
+  suggestionReason: string | null;
+  previousLinkedFiles: Array<{ projectId: number | null; workFileId: number | null }>;
+}) {
+  if (input.folderName !== "INBOX" || input.inboxStatus !== "suggested"
+    || !input.suggestedProjectId || !input.suggestedWorkFileId
+    || !input.suggestionReason?.includes("معرّف مميز لملف العمل ظاهر")) return false;
+  return input.previousLinkedFiles.length > 0 && input.previousLinkedFiles.every(row =>
+    row.projectId === input.suggestedProjectId && row.workFileId === input.suggestedWorkFileId);
+}
+
+async function linkFromTrustedSenderBeforeAnalysis(userId: number, emailId: number) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [email] = await db.select().from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.id, emailId), eq(comoNextEmailMessages.userId, userId),
+  )).limit(1);
+  if (!email || email.folderName !== "INBOX" || email.inboxStatus !== "suggested"
+    || !email.suggestedProjectId || !email.suggestedWorkFileId) return false;
+  const previousLinkedFiles = await db.select({
+    projectId: comoNextEmailMessages.linkedProjectId,
+    workFileId: comoNextEmailMessages.linkedWorkFileId,
+  }).from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.userId, userId), eq(comoNextEmailMessages.folderName, "INBOX"),
+    eq(comoNextEmailMessages.fromEmail, email.fromEmail),
+    isNotNull(comoNextEmailMessages.linkedWorkFileId),
+    lt(comoNextEmailMessages.receivedAt, email.receivedAt),
+  )).limit(50);
+  if (!trustedSenderFileMatch({
+    folderName: email.folderName, inboxStatus: email.inboxStatus,
+    suggestedProjectId: email.suggestedProjectId,
+    suggestedWorkFileId: email.suggestedWorkFileId,
+    suggestionReason: email.suggestionReason,
+    previousLinkedFiles,
+  })) return false;
+  await linkEmailToWorkFileCommand({ userId, emailId, projectId: email.suggestedProjectId,
+    workFileId: email.suggestedWorkFileId, projectPartyId: email.suggestedProjectPartyId,
+    suppressReplyDraft: true });
+  return true;
+}
+
+/** Progress only a fresh, file-linked *internal Manus* action. Owner decisions,
+ * deferred files, replies, drafts, payments and appointments never pass here. */
+async function applyCurrentInternalProposal(userId: number, emailId: number) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const [email] = await db.select().from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.id, emailId), eq(comoNextEmailMessages.userId, userId),
+  )).limit(1);
+  if (!email || email.folderName !== "INBOX" || !email.linkedWorkFileId
+    || Date.now() - parseStoredUtc(email.receivedAt).getTime() > 48 * 60 * 60_000) return null;
+  const [file] = await db.select({ status: comoNextWorkFiles.workFileStatus }).from(comoNextWorkFiles)
+    .where(and(eq(comoNextWorkFiles.id, email.linkedWorkFileId), eq(comoNextWorkFiles.userId, userId))).limit(1);
+  if (!file || file.status !== "open") return null;
+  const [ownerGate] = await db.select({ id: comoNextDecisions.id }).from(comoNextDecisions).where(and(
+    eq(comoNextDecisions.workFileId, email.linkedWorkFileId),
+    or(eq(comoNextDecisions.decisionStatus, "required"),
+      and(eq(comoNextDecisions.decisionStatus, "deferred"), sql`${comoNextDecisions.dueAt} > UTC_TIMESTAMP()`)),
+  )).limit(1);
+  if (ownerGate) return null;
+  const [alreadyOwned] = await db.select({ id: comoNextActions.id }).from(comoNextActions).where(and(
+    eq(comoNextActions.workFileId, email.linkedWorkFileId), eq(comoNextActions.ownerType, "manus"),
+    inArray(comoNextActions.actionStatus, ["open", "in_progress", "waiting_external", "completed_pending_verification"]),
+  )).limit(1);
+  if (alreadyOwned) return null;
+  const proposals = await db.select().from(comoNextIntakeProposals).where(and(
+    eq(comoNextIntakeProposals.userId, userId), eq(comoNextIntakeProposals.sourceEmailId, emailId),
+    eq(comoNextIntakeProposals.reviewStatus, "pending"), eq(comoNextIntakeProposals.proposalKind, "action"),
+    eq(comoNextIntakeProposals.ownerType, "manus"),
+  )).orderBy(desc(comoNextIntakeProposals.id)).limit(2);
+  // A single unambiguous next step only; multi-proposal analyses remain reviewable.
+  if (proposals.length !== 1) return null;
+  const proposal = proposals[0];
+  if (proposal.channel && proposal.channel !== "internal") return null;
+  if (/(?:إرسال|أرسل|ارسل|رسالة|مراسلة|بريد|مسودة|دفع|سداد|توقيع|تعيين|send|reply|draft|email|pay|sign|appoint)/i
+    .test(`${proposal.title} ${proposal.content || ""} ${proposal.acceptanceCriteria || ""}`)) return null;
+  const result = await reviewIntakeProposalCommand({ userId, proposalId: Number(proposal.id),
+    decision: "apply", reviewNote: `AUTO_MANUS: عمل تحليلي داخلي فقط من البريد المربوط #${emailId}؛ لا التزام خارجي.` });
+  return result.targetId ? Number(result.targetId) : null;
+}
+
 /** Run on a separate heartbeat, never inside the IMAP callback. A failed
  * analysis remains pending and its stable requestKey makes retries safe. */
 export async function processPendingReadonlyMailboxCommand(input: { userId: number; analysisLimit?: number }) {
@@ -529,8 +617,10 @@ export async function processPendingReadonlyMailboxCommand(input: { userId: numb
   const ids = rowsOf<{ id: number }>(pending).map(row => Number(row.id));
   let analyzed = 0;
   let analysisFailures = 0;
+  let trustedLinked = 0;
   for (const emailId of ids) {
     try {
+      if (await linkFromTrustedSenderBeforeAnalysis(input.userId, emailId)) trustedLinked += 1;
       await analyzeEmailCommand({ userId: input.userId, emailId, requestKey: `mailbox-context-v1:${emailId}`, suppressReplyDraft: true, model: "gemini-3-flash-preview" });
       analyzed += 1;
     } catch (error) {
@@ -541,7 +631,23 @@ export async function processPendingReadonlyMailboxCommand(input: { userId: numb
   }
   // Do not mark the batch successful when any candidate remains unprocessed.
   if (analysisFailures) throw new Error(`email_analysis_failed:${analysisFailures}`);
-  return { analyzed, pendingCandidates: ids.length, analysisFailures, externalSideEffects: false as const };
+  // Retryable independently of the LLM analysis: a transient proposal-write
+  // failure must not disappear because the draft analysis is already durable.
+  const recentLinked = await db.select({ id: comoNextEmailMessages.id }).from(comoNextEmailMessages)
+    .innerJoin(comoNextIntakeProposals, eq(comoNextIntakeProposals.sourceEmailId, comoNextEmailMessages.id)).where(and(
+    eq(comoNextEmailMessages.userId, input.userId), eq(comoNextEmailMessages.folderName, "INBOX"),
+    isNotNull(comoNextEmailMessages.linkedWorkFileId),
+    eq(comoNextIntakeProposals.reviewStatus, "pending"),
+    eq(comoNextIntakeProposals.proposalKind, "action"),
+    eq(comoNextIntakeProposals.ownerType, "manus"),
+    sql`${comoNextEmailMessages.receivedAt} >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 48 HOUR)`,
+  )).orderBy(desc(comoNextEmailMessages.receivedAt), desc(comoNextEmailMessages.id)).limit(3);
+  const internalActionIds: number[] = [];
+  for (const emailId of new Set(recentLinked.map(row => Number(row.id)))) {
+    const nextActionId = await applyCurrentInternalProposal(input.userId, emailId);
+    if (nextActionId) internalActionIds.push(nextActionId);
+  }
+  return { analyzed, pendingCandidates: ids.length, analysisFailures, trustedLinked, internalActionIds, externalSideEffects: false as const };
 }
 
 /** A historical email can be summarized, but must not reopen a closed file through proposals. */

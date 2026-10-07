@@ -131,8 +131,9 @@ describe("Sara Realtime architecture", () => {
     expect(lookup).toContain("c.communication_status IN ('received','draft','approved_for_send')");
     expect(lookup).toContain("presentSaraDubaiTimes({ found: true");
     expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000");
-    expect(lookup).toContain('state: importStale || processingStale ? "stale" : "current"');
+    expect(lookup).toContain('state: importStale || processingStale || executiveStale ? "stale" : "current"');
     expect(lookup).toContain('eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing")');
+    expect(lookup).toContain('eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-executive")');
     expect(lookup).toContain('meetingPhase: meeting.status === "completed" ? "completed"');
     expect(lookup).toContain('Date.parse(startsAt.utc) <= Date.now() ? "needs_outcome" : "upcoming"');
     expect(reader).toContain("presentSaraDubaiTimes({ ...base, meetings");

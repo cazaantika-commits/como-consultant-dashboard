@@ -22,9 +22,10 @@ describe("COMO read-only scheduled mail phases", () => {
   });
 
   it("acknowledges the persisted IMAP import before any analysis or LLM work", () => {
-    const importBlock = route.slice(route.indexOf('if (mailboxKey === "owner-primary")'), route.indexOf('// Separate, retryable callback'));
+    const importBlock = route.slice(route.indexOf('if (mailboxKey === "owner-primary")'), route.indexOf('if (mailboxKey === "owner-primary-executive")'));
     expect(route).toContain('app.post("/api/scheduled/como-next-email-sync"');
     expect(route).toContain('app.post("/api/scheduled/como-next-email-process"');
+    expect(route).toContain('app.post("/api/scheduled/como-next-executive"');
     expect(importBlock).toContain('await syncReadonlyInboxCommand');
     expect(importBlock).toContain('res.status(200).json');
     expect(importBlock).not.toMatch(/await (analyzeEmailCommand|syncAndAnalyzeReadonlyMailboxCommand|runExecutiveControlLoopCommand|processPendingReadonlyMailboxCommand)/);
@@ -40,6 +41,16 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(processor).toContain('if (analysisFailures) throw');
     expect(route).toContain('settings.mailboxKey !== mailboxKey');
     expect(route).toContain('lastStatus: "failed"');
+  });
+
+  it("executes eligible Manus work on a separate signed heartbeat, without applying stale owner-gated proposals", () => {
+    const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
+    expect(executive).toContain('runExecutiveControlLoopCommand');
+    expect(executive).toContain('maxItems: 1');
+    expect(executive).not.toContain('scanPending: true');
+    expect(executive).toContain('notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled", "waiting"])');
+    expect(executive).toContain('if (result?.failures.length) throw');
+    expect(route).toContain('settings.mailboxKey !== mailboxKey');
   });
 
   it("normalizes untrusted model proposal fields without granting a new owner or due date", () => {

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, canProposeForWorkFile, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, canProposeForWorkFile, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate, trustedSenderFileMatch } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -101,6 +101,21 @@ describe("COMO Next read-only email inbox", () => {
     expect(service).toContain("suggestion.confidenceScore >= 130");
     expect(service).toContain("await linkEmailToWorkFileCommand");
     expect(service).toContain("Keep the message as a reviewable suggestion");
+  });
+
+  it("links a distinctive new inbound only when a previously linked sender belongs uniquely to that same file", () => {
+    const candidate = {
+      folderName: "INBOX", inboxStatus: "suggested", suggestedProjectId: 6,
+      suggestedWorkFileId: 390001, suggestionReason: "موضوع الرسالة يطابق ملف العمل؛ معرّف مميز لملف العمل ظاهر: artec",
+      previousLinkedFiles: [{ projectId: 6, workFileId: 390001 }],
+    };
+    expect(trustedSenderFileMatch(candidate)).toBe(true);
+    expect(trustedSenderFileMatch({ ...candidate, previousLinkedFiles: [] })).toBe(false);
+    expect(trustedSenderFileMatch({ ...candidate, previousLinkedFiles: [...candidate.previousLinkedFiles, { projectId: 1, workFileId: 60014 }] })).toBe(false);
+    expect(trustedSenderFileMatch({ ...candidate, suggestionReason: "موضوع الرسالة يطابق ملف العمل" })).toBe(false);
+    expect(trustedSenderFileMatch({ ...candidate, folderName: "Sent" })).toBe(false);
+    expect(trustedSenderFileMatch({ ...candidate, inboxStatus: "linked" })).toBe(false);
+    expect(service).toContain("suppressReplyDraft: true");
   });
 
   it("keeps narrative proposals as drafts but reconciles linked inbound evidence through the guarded service", () => {

@@ -24,11 +24,12 @@ const schedule = readFileSync("server/scheduledEmailSyncRoute.ts", "utf8");
     expect(control).not.toMatch(/sendMail|sendReply|smtp|payment|calendar/i);
   });
 
-  it("uses one bounded loop for owner updates, Sara, email, and meeting evidence", () => {
+  it("uses one bounded loop for owner-approved Sara directives, email, and meeting evidence", () => {
     expect(comoRouter).toContain('trigger: "owner_update"');
     expect(comoRouter).toContain('trigger: "meeting_source"');
     expect(comoRouter).toContain('trigger: "proposal_review"');
-    expect(saraRouter).toContain('trigger: "sara_directive"');
+    expect(saraRouter).toContain('stageExecutiveDirectiveCommand');
+    expect(saraRouter).toContain('executionStarted: false');
     expect(email).toContain('trigger: "email_sync"');
     expect(emailRouter).toContain('trigger: "email_sync"');
     expect(control).toContain("operationCount >= maxItems");
@@ -81,7 +82,8 @@ const schedule = readFileSync("server/scheduledEmailSyncRoute.ts", "utf8");
   });
 
   it("exposes the executive-control audit in scheduled sync without external side effects", () => {
-    expect(schedule).toContain("executiveControl: result.executiveControl");
+    expect(schedule).toContain('app.post("/api/scheduled/como-next-executive"');
+    expect(schedule).toContain('executedActionIds: result?.executedActionIds || []');
     expect(schedule).toContain("externalSideEffects: false");
     expect(schedule).not.toContain("sendReply");
   });

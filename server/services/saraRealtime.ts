@@ -221,6 +221,12 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     lastRunAt: comoNextEmailSyncSettings.lastRunAt,
     lastStatus: comoNextEmailSyncSettings.lastStatus,
   }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing"))).limit(1);
+  const [executive] = await db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-executive"))).limit(1);
   const lastSuccess = saraDubaiTimestamp(syncSettings?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(syncSettings?.lastRunAt);
   const runStuck = syncSettings?.lastStatus === "running" && (!lastRun || Date.now() - Date.parse(lastRun.utc) > 2 * 60_000);
@@ -231,14 +237,22 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
   const processingStale = !processing?.isEnabled || !lastProcessed || Date.now() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
     || processing?.lastStatus === "failed"
     || (processing?.lastStatus === "running" && (!processRun || Date.now() - Date.parse(processRun.utc) > 2 * 60_000));
+  const lastExecutive = saraDubaiTimestamp(executive?.lastSuccessAt);
+  const executiveRun = saraDubaiTimestamp(executive?.lastRunAt);
+  const executiveStale = !executive?.isEnabled || !lastExecutive || Date.now() - Date.parse(lastExecutive.utc) > 15 * 60 * 60_000
+    || executive?.lastStatus === "failed"
+    || (executive?.lastStatus === "running" && (!executiveRun || Date.now() - Date.parse(executiveRun.utc) > 2 * 60_000));
   const mailSync = {
-    state: importStale || processingStale ? "stale" : "current",
+    state: importStale || processingStale || executiveStale ? "stale" : "current",
     lastSuccessAt: lastSuccess?.utc || null,
     lastSuccessAtDubai: lastSuccess?.dubai || null,
     analysisState: processingStale ? "stale" : "current",
     lastAnalyzedAtDubai: lastProcessed?.dubai || null,
+    executiveState: executiveStale ? "stale" : "current",
+    lastExecutiveAtDubai: lastExecutive?.dubai || null,
     note: importStale ? "البريد المستورد قد لا يشمل الرسائل الجديدة؛ لا تؤكدي أنه محدث أو خالٍ من وارد جديد."
-      : processingStale ? "وصل البريد لكن تحليله التشغيلي لم يثبت اكتماله؛ لا تؤكدي أن المتابعة أو الأولويات محدثة من كل الوارد." : null,
+      : processingStale ? "وصل البريد لكن تحليله التشغيلي لم يثبت اكتماله؛ لا تؤكدي أن المتابعة أو الأولويات محدثة من كل الوارد."
+      : executiveStale ? "وصل البريد وحُلّل، لكن تنفيذ أعمال Manus الداخلية المجدولة لم يثبت اكتماله؛ لا تؤكدي إغلاق المتابعات." : null,
   };
   if (category === "project_memory") {
     const [dossiersResult, memoryResult] = await Promise.all([

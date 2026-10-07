@@ -606,6 +606,12 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
     lastRunAt: comoNextEmailSyncSettings.lastRunAt,
     lastStatus: comoNextEmailSyncSettings.lastStatus,
   }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, state.userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing"))).limit(1);
+  const [executive] = await state.db.select({
+    isEnabled: comoNextEmailSyncSettings.isEnabled,
+    lastSuccessAt: comoNextEmailSyncSettings.lastSuccessAt,
+    lastRunAt: comoNextEmailSyncSettings.lastRunAt,
+    lastStatus: comoNextEmailSyncSettings.lastStatus,
+  }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, state.userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-executive"))).limit(1);
   const lastSuccess = saraDubaiTimestamp(sync?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(sync?.lastRunAt);
   const staleImport = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
@@ -616,9 +622,15 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
   const staleProcessing = !processing?.isEnabled || !lastProcessed || now.getTime() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
     || processing?.lastStatus === "failed"
     || (processing?.lastStatus === "running" && (!processRun || now.getTime() - Date.parse(processRun.utc) > 2 * 60_000));
+  const lastExecutive = saraDubaiTimestamp(executive?.lastSuccessAt);
+  const executiveRun = saraDubaiTimestamp(executive?.lastRunAt);
+  const staleExecutive = !executive?.isEnabled || !lastExecutive || now.getTime() - Date.parse(lastExecutive.utc) > 15 * 60 * 60_000
+    || executive?.lastStatus === "failed"
+    || (executive?.lastStatus === "running" && (!executiveRun || now.getTime() - Date.parse(executiveRun.utc) > 2 * 60_000));
   const briefingText = staleImport
     ? `تنبيه موجز: البريد الذي يظهر لي هو ما وصل إلى COMO، لكن المزامنة المجدولة لم تؤكد تحديث كل الرسائل${lastSuccess ? ` منذ ${lastSuccess.dubai}` : ""}. لا أؤكد عدم وجود وارد أحدث.\n---\n${narration.text}`
-    : staleProcessing ? `تنبيه موجز: استُورد البريد، لكن معالجة الرسائل الجديدة لم يثبت اكتمالها؛ قد تنقص المتابعات والأولويات.\n---\n${narration.text}` : narration.text;
+    : staleProcessing ? `تنبيه موجز: استُورد البريد، لكن معالجة الرسائل الجديدة لم يثبت اكتمالها؛ قد تنقص المتابعات والأولويات.\n---\n${narration.text}`
+    : staleExecutive ? `تنبيه موجز: استُورد البريد وحُلّل، لكن تنفيذ متابعة Manus الداخلية لم يثبت اكتماله؛ لا أعرض التحليل كأنه تنفيذ منجز.\n---\n${narration.text}` : narration.text;
   const contentSha256 = createHash("sha256").update(`${kind}\n${briefingText}`).digest("hex");
   await state.db.update(comoNextSaraBriefingDeliveries)
     .set({ deliveryStatus: "interrupted", completedAt: toSqlTimestamp(now) })
