@@ -228,10 +228,10 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">المراسلات البريدية</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>قراءة الوارد والمرسل وفهم الجديد ضمن السياق: 06:00 · 11:00 · 17:00 بتوقيت دبي{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
-        { key: "attention", label: "تحتاج مراجعة", value: counts.attention, icon: MailQuestion, tone: "text-amber-800 bg-amber-50" },
-        { key: "sent", label: "صادر موثق", value: counts.sent, icon: Send, tone: "text-sky-800 bg-sky-50" },
-        { key: "linked", label: "داخل ملفات العمل", value: counts.linked, icon: MailCheck, tone: "text-emerald-800 bg-emerald-50" },
-        { key: "dismissed", label: "مغلقة/مستبعدة", value: counts.dismissed, icon: Archive, tone: "text-slate-600 bg-slate-100" },
+        { key: "attention", label: "تحتاج مراجعة", value: counts.attention },
+        { key: "sent", label: "صادر موثق", value: counts.sent },
+        { key: "linked", label: "داخل ملفات العمل", value: counts.linked },
+        { key: "dismissed", label: "مغلقة/مستبعدة", value: counts.dismissed },
       ].map(item => <button key={item.key} type="button" onClick={() => setFilter(item.key as InboxFilter)} className={`min-h-14 rounded-xl border px-2 py-2 text-center transition ${filter === item.key ? "border-[#7eaeb5] bg-white shadow-sm" : "border-slate-200 bg-white/70"}`}><span className="block text-[10px] font-bold text-slate-500">{item.label}</span><bdi className="mt-1 block text-lg font-black text-slate-900">{item.value}</bdi></button>)}</div>
 
       {listQuery.isLoading ? <div className="flex min-h-48 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : filtered.length ? <div className="space-y-2">{filtered.map((item: any) => <MailCard key={item.id} item={item} onOpen={setSelectedId} />)}</div> : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد رسائل في هذا القسم</div>}
