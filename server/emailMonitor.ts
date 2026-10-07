@@ -474,6 +474,11 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
     });
 
     let result: EmailMessage | null = null;
+    let pendingParses = 0;
+    let fetchEnded = false;
+    const closeWhenParsed = () => {
+      if (fetchEnded && pendingParses === 0) imap.end();
+    };
 
     imap.once("ready", () => {
       imap.openBox(folderName, true, (err, box) => {
@@ -487,6 +492,7 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
         const fetch = imap.fetch([targetUID], { bodies: "", struct: true });
 
         fetch.on("message", (msg) => {
+          pendingParses += 1;
           let uid = 0;
           const chunks: Buffer[] = [];
           let flags: string[] = [];
@@ -519,12 +525,17 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
               };
             } catch (parseErr) {
               console.error("[EmailMonitor] Parse error for UID " + targetUID + ":", parseErr);
+            } finally {
+              pendingParses -= 1;
+              closeWhenParsed();
             }
           });
         });
 
         fetch.once("error", (err) => { console.error("[EmailMonitor] Fetch error:", err); imap.end(); });
-        fetch.once("end", () => { imap.end(); });
+        // MIME parsing (especially large attachments) can outlive the fetch
+        // stream. Closing here used to resolve the promise with null first.
+        fetch.once("end", () => { fetchEnded = true; closeWhenParsed(); });
       });
     });
 
