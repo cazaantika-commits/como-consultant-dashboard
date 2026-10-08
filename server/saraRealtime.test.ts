@@ -11,6 +11,7 @@ import {
 } from "./services/saraRealtime";
 import { readExecutiveWorkFile } from "./services/saraWorkFileReader";
 import { presentSaraDubaiTimes, saraDubaiTimestamp } from "./services/saraDubaiTimes";
+import { COMO_MAIL_STAGE_STALE_MS } from "./services/saraMailFreshness";
 
 const abdulrahman = { memberId: "abdulrahman", nameAr: "عبدالرحمن", role: "admin" };
 const wael = { memberId: "wael", nameAr: "وائل", role: "executive" };
@@ -85,6 +86,16 @@ describe("Sara Realtime architecture", () => {
     expect(fetchMock).toHaveBeenCalledWith("https://api.openai.com/v1/realtime/client_secrets", expect.any(Object));
   });
 
+  it("does not expose the provider's credential-bearing error text to the browser", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "Incorrect API key provided: sk-proj-PRIVATE-KEY" },
+    }), { status: 401 })) as typeof fetch;
+    await expect(createSaraRealtimeClientSecret("server-secret", abdulrahman))
+      .rejects.toThrow("تعذر تجهيز جلسة سارة الصوتية (HTTP 401). تحقق من ربط خدمة الصوت.");
+    await expect(createSaraRealtimeClientSecret("server-secret", abdulrahman))
+      .rejects.not.toThrow(/sk-proj|PRIVATE-KEY/);
+  });
+
   it("keeps COMO Next private to Abdulrahman in the voice tool", async () => {
     await expect(lookupExecutiveWorkspace(wael, JSON.stringify({ category: "overview" }))).resolves.toEqual({
       found: false,
@@ -130,7 +141,9 @@ describe("Sara Realtime architecture", () => {
     const reader = readFileSync("server/services/saraWorkFileReader.ts", "utf8");
     expect(lookup).toContain("c.communication_status IN ('received','draft','approved_for_send')");
     expect(lookup).toContain("presentSaraDubaiTimes({ found: true");
-    expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000");
+    expect(COMO_MAIL_STAGE_STALE_MS).toBe(90 * 60_000);
+    expect(lookup).toContain("Date.now() - Date.parse(lastSuccess.utc) > COMO_MAIL_STAGE_STALE_MS");
+    expect(readFileSync("server/services/saraBriefings.ts", "utf8")).toContain("now.getTime() - Date.parse(lastSuccess.utc) > COMO_MAIL_STAGE_STALE_MS");
     expect(lookup).toContain('state: importStale || processingStale || executiveStale ? "stale" : "current"');
     expect(lookup).toContain('eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-processing")');
     expect(lookup).toContain('eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-executive")');
@@ -157,13 +170,14 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).not.toContain("relative hidden min-h-0");
     expect(roomSource).toContain('peer.addTransceiver("audio", { direction: "recvonly" })');
     expect(roomSource).toContain("فتحت سارة وضع الكتابة مع بقاء الرد الصوتي");
-    expect(roomSource).toContain("المس الشاشة مرة واحدة لسماع سارة");
+    expect(roomSource).toContain("المس لتشغيل صوت سارة");
     expect(roomSource).toContain('case "response.created"');
     expect(roomSource).not.toContain("float32ToPcmBase64");
     expect(roomSource).not.toContain("createScriptProcessor");
     expect(roomSource).not.toContain("avatarAudioControllerRef");
     expect(roomSource).not.toContain("avatarOwnsPlayback");
-    expect(roomSource).toContain("remoteAudioRef.current.muted = false;");
+    expect(roomSource).toContain("new SaraWebRtcAudioTransport");
+    expect(roomSource).toContain("new SaraWebRtcDisconnectGuard");
     expect(roomSource).toContain("if (status.data.realtimeConfigured) void startSession()");
     expect(roomSource).not.toContain("setAvatarAudioDelta");
     expect(avatarSource).toContain("videoRef.current.muted = true");

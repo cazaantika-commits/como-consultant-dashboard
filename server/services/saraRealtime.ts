@@ -6,6 +6,7 @@ import { getDb } from "../db";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
 import { selectSaraLatestMeetingSchedule } from "./saraBriefings";
 import { presentSaraDubaiTimes, saraDubaiTimestamp } from "./saraDubaiTimes";
+import { COMO_MAIL_STAGE_STALE_MS } from "./saraMailFreshness";
 
 export const SARA_REALTIME_MODEL = "gpt-realtime-2.1";
 export const SARA_REALTIME_VOICE = "marin";
@@ -177,8 +178,9 @@ export async function createSaraRealtimeClientSecret(apiKey: string, member: Sar
     error?: { message?: string; code?: string };
   } | null;
   if (!response.ok || !payload?.value) {
-    const detail = payload?.error?.message || payload?.error?.code || `HTTP ${response.status}`;
-    throw new TRPCError({ code: "BAD_GATEWAY", message: `تعذر تجهيز جلسة سارة الصوتية: ${detail}` });
+    // Provider messages may embed a masked credential; never echo them to a
+    // browser or persist them in the executive workspace.
+    throw new TRPCError({ code: "BAD_GATEWAY", message: `تعذر تجهيز جلسة سارة الصوتية (HTTP ${response.status}). تحقق من ربط خدمة الصوت.` });
   }
   return {
     clientSecret: payload.value,
@@ -232,16 +234,16 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
   const lastSuccess = saraDubaiTimestamp(syncSettings?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(syncSettings?.lastRunAt);
   const runStuck = syncSettings?.lastStatus === "running" && (!lastRun || Date.now() - Date.parse(lastRun.utc) > 2 * 60_000);
-  const importStale = !syncSettings?.isEnabled || !lastSuccess || Date.now() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+  const importStale = !syncSettings?.isEnabled || !lastSuccess || Date.now() - Date.parse(lastSuccess.utc) > COMO_MAIL_STAGE_STALE_MS
     || syncSettings?.lastStatus === "failed" || runStuck;
   const lastProcessed = saraDubaiTimestamp(processing?.lastSuccessAt);
   const processRun = saraDubaiTimestamp(processing?.lastRunAt);
-  const processingStale = !processing?.isEnabled || !lastProcessed || Date.now() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
+  const processingStale = !processing?.isEnabled || !lastProcessed || Date.now() - Date.parse(lastProcessed.utc) > COMO_MAIL_STAGE_STALE_MS
     || processing?.lastStatus === "failed"
     || (processing?.lastStatus === "running" && (!processRun || Date.now() - Date.parse(processRun.utc) > 2 * 60_000));
   const lastExecutive = saraDubaiTimestamp(executive?.lastSuccessAt);
   const executiveRun = saraDubaiTimestamp(executive?.lastRunAt);
-  const executiveStale = !executive?.isEnabled || !lastExecutive || Date.now() - Date.parse(lastExecutive.utc) > 15 * 60 * 60_000
+  const executiveStale = !executive?.isEnabled || !lastExecutive || Date.now() - Date.parse(lastExecutive.utc) > COMO_MAIL_STAGE_STALE_MS
     || executive?.lastStatus === "failed"
     || (executive?.lastStatus === "running" && (!executiveRun || Date.now() - Date.parse(executiveRun.utc) > 2 * 60_000));
   const mailSync = {

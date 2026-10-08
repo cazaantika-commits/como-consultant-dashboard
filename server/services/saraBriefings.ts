@@ -5,6 +5,7 @@ import { comoNextEmailSyncSettings, comoNextSaraBriefingDeliveries } from "../..
 import { getDb } from "../db";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
 import { saraDubaiTimestamp } from "./saraDubaiTimes";
+import { COMO_MAIL_STAGE_STALE_MS } from "./saraMailFreshness";
 
 export type SaraBriefingMode = "auto" | "full" | "today" | "changes";
 export type SaraBriefingKind = Exclude<SaraBriefingMode, "auto">;
@@ -696,17 +697,17 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
   }).from(comoNextEmailSyncSettings).where(and(eq(comoNextEmailSyncSettings.userId, state.userId), eq(comoNextEmailSyncSettings.mailboxKey, "owner-primary-executive"))).limit(1);
   const lastSuccess = saraDubaiTimestamp(sync?.lastSuccessAt);
   const lastRun = saraDubaiTimestamp(sync?.lastRunAt);
-  const staleImport = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > 15 * 60 * 60_000
+  const staleImport = !sync?.isEnabled || !lastSuccess || now.getTime() - Date.parse(lastSuccess.utc) > COMO_MAIL_STAGE_STALE_MS
     || sync.lastStatus === "failed"
     || (sync.lastStatus === "running" && (!lastRun || now.getTime() - Date.parse(lastRun.utc) > 2 * 60_000));
   const lastProcessed = saraDubaiTimestamp(processing?.lastSuccessAt);
   const processRun = saraDubaiTimestamp(processing?.lastRunAt);
-  const staleProcessing = !processing?.isEnabled || !lastProcessed || now.getTime() - Date.parse(lastProcessed.utc) > 15 * 60 * 60_000
+  const staleProcessing = !processing?.isEnabled || !lastProcessed || now.getTime() - Date.parse(lastProcessed.utc) > COMO_MAIL_STAGE_STALE_MS
     || processing?.lastStatus === "failed"
     || (processing?.lastStatus === "running" && (!processRun || now.getTime() - Date.parse(processRun.utc) > 2 * 60_000));
   const lastExecutive = saraDubaiTimestamp(executive?.lastSuccessAt);
   const executiveRun = saraDubaiTimestamp(executive?.lastRunAt);
-  const staleExecutive = !executive?.isEnabled || !lastExecutive || now.getTime() - Date.parse(lastExecutive.utc) > 15 * 60 * 60_000
+  const staleExecutive = !executive?.isEnabled || !lastExecutive || now.getTime() - Date.parse(lastExecutive.utc) > COMO_MAIL_STAGE_STALE_MS
     || executive?.lastStatus === "failed"
     || (executive?.lastStatus === "running" && (!executiveRun || now.getTime() - Date.parse(executiveRun.utc) > 2 * 60_000));
   const briefingText = staleImport

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { BellRing, ListChecks, Mic, MicOff, Newspaper, Phone, PhoneOff, Send, Sparkles, Video, VideoOff, X } from "lucide-react";
 import { SaraLiveAvatarView } from "./SaraLiveAvatarView";
 import { ComoPrimaryNav } from "./ComoPrimaryNav";
+import { SaraWebRtcAudioTransport, SaraWebRtcDisconnectGuard } from "@/lib/saraWebRtcAudio";
 
 const SARA_PORTRAIT = saraPortrait;
 
@@ -60,11 +61,17 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [avatarToken, setAvatarToken] = useState<string | null>(null);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [visualSpeechActive, setVisualSpeechActive] = useState(false);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
+  const audioTransportRef = useRef<SaraWebRtcAudioTransport | null>(null);
+  const disconnectGuardRef = useRef<SaraWebRtcDisconnectGuard | null>(null);
+  const remoteAudioAttemptRef = useRef(0);
+  const visualSpeechTimerRef = useRef<number | null>(null);
   const outputItemIdRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const assistantDraftRef = useRef("");
@@ -74,22 +81,70 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const pendingBriefingDeliveryRef = useRef<number | null>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
 
+  if (!audioTransportRef.current) {
+    audioTransportRef.current = new SaraWebRtcAudioTransport(diagnostic => {
+      // No token, transcript, stream ID, or provider payload is logged here.
+      console.info("[Sara audio]", diagnostic);
+    });
+  }
+
   const live = phase !== "idle" && phase !== "error";
   const estimatedUsd = useMemo(() => (
     (userSpeechSeconds / 60) * 0.0192 + (assistantSpeechSeconds / 60) * 0.0768
   ), [assistantSpeechSeconds, userSpeechSeconds]);
 
+  const stopVisualSpeech = useCallback(() => {
+    if (visualSpeechTimerRef.current !== null) window.clearTimeout(visualSpeechTimerRef.current);
+    visualSpeechTimerRef.current = null;
+    setVisualSpeechActive(false);
+  }, []);
+
+  const markVisualSpeech = useCallback(() => {
+    if (visualSpeechTimerRef.current !== null) window.clearTimeout(visualSpeechTimerRef.current);
+    visualSpeechTimerRef.current = null;
+    setVisualSpeechActive(true);
+  }, []);
+
+  const settleVisualSpeech = useCallback(() => {
+    if (visualSpeechTimerRef.current !== null) window.clearTimeout(visualSpeechTimerRef.current);
+    // A small visual tail avoids a hard cut while remaining deliberately
+    // independent from WebRTC audio timing and playback.
+    visualSpeechTimerRef.current = window.setTimeout(() => {
+      visualSpeechTimerRef.current = null;
+      setVisualSpeechActive(false);
+    }, 450);
+  }, []);
+
+  const attachRemoteAudio = useCallback(async (stream: MediaStream) => {
+    const audio = remoteAudioRef.current;
+    if (!audio || !audioTransportRef.current) return;
+    const attempt = ++remoteAudioAttemptRef.current;
+    const result = await audioTransportRef.current.attach(audio, stream);
+    if (attempt !== remoteAudioAttemptRef.current) return;
+    setAudioBlocked(result !== "playing");
+  }, []);
+
+  const retryRemoteAudio = useCallback(async () => {
+    const audio = remoteAudioRef.current;
+    if (!audio || !audioTransportRef.current) return;
+    const attempt = ++remoteAudioAttemptRef.current;
+    const result = await audioTransportRef.current.resume(audio);
+    if (attempt !== remoteAudioAttemptRef.current) return;
+    setAudioBlocked(result !== "playing");
+  }, []);
+
   const stopSession = useCallback(() => {
+    remoteAudioAttemptRef.current += 1;
+    disconnectGuardRef.current?.dispose();
+    disconnectGuardRef.current = null;
+    stopVisualSpeech();
     dataChannelRef.current?.close();
     dataChannelRef.current = null;
     peerRef.current?.close();
     peerRef.current = null;
     localStreamRef.current?.getTracks().forEach(track => track.stop());
     localStreamRef.current = null;
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-      remoteAudioRef.current.pause();
-    }
+    if (remoteAudioRef.current) audioTransportRef.current?.detach(remoteAudioRef.current);
     sessionIdRef.current = null;
     outputItemIdRef.current = null;
     assistantDraftRef.current = "";
@@ -104,7 +159,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     setAssistantSpeechSeconds(0);
     setAvatarToken(null);
     setAudioBlocked(false);
-  }, []);
+    setReconnecting(false);
+  }, [stopVisualSpeech]);
 
   useEffect(() => () => stopSession(), [stopSession]);
 
@@ -224,6 +280,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       case "input_audio_buffer.speech_started":
         setPhase("listening");
+        stopVisualSpeech();
         finishPendingBriefing(false);
         break;
       case "input_audio_buffer.speech_stopped":
@@ -240,11 +297,13 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       }
       case "response.created":
         setPhase("speaking");
+        markVisualSpeech();
         break;
       case "response.output_audio_transcript.delta": {
         const delta = event.delta || "";
         if (!delta) break;
         setPhase("speaking");
+        markVisualSpeech();
         outputItemIdRef.current = event.item_id || outputItemIdRef.current || `sara-${Date.now()}`;
         assistantDraftRef.current += delta;
         setTranscript(items => mergeTranscript(items, { id: outputItemIdRef.current!, role: "sara", text: assistantDraftRef.current }));
@@ -259,6 +318,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         }
         assistantDraftRef.current = "";
         outputItemIdRef.current = null;
+        settleVisualSpeech();
         break;
       }
       case "response.function_call_arguments.done":
@@ -267,20 +327,23 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         break;
       case "response.done":
         if (event.response?.status === "failed") {
+          stopVisualSpeech();
           finishPendingBriefing(false);
           setPhase("error");
           toast.error(event.response.status_details?.error?.message || "تعذر إكمال رد سارة");
         } else {
+          settleVisualSpeech();
           finishPendingBriefing(event.response?.status === "completed");
           setPhase("listening");
         }
         break;
       case "error":
+        stopVisualSpeech();
         setPhase("error");
         toast.error(event.error?.message || "حدث خطأ في جلسة سارة");
         break;
     }
-  }, [finishPendingBriefing, handleToolCall, persistTranscript]);
+  }, [finishPendingBriefing, handleToolCall, markVisualSpeech, persistTranscript, settleVisualSpeech, stopVisualSpeech]);
 
   const startSession = useCallback(async () => {
     if (live || createSession.isPending) return;
@@ -291,6 +354,23 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       sessionIdRef.current = session.sessionId;
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
+      disconnectGuardRef.current?.dispose();
+      disconnectGuardRef.current = new SaraWebRtcDisconnectGuard({
+        onGraceStarted: () => {
+          setReconnecting(true);
+          console.info("[Sara audio]", { event: "webrtc_disconnect_grace_started" });
+        },
+        onRecovered: () => {
+          setReconnecting(false);
+          console.info("[Sara audio]", { event: "webrtc_connection_recovered" });
+        },
+        onExpired: reason => {
+          setReconnecting(false);
+          stopVisualSpeech();
+          setPhase("error");
+          console.warn("[Sara audio]", { event: "webrtc_connection_ended", reason });
+        },
+      });
       try {
         const microphone = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
         localStreamRef.current = microphone;
@@ -306,13 +386,11 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
 
       peer.ontrack = ({ streams }) => {
         const remoteStream = streams[0];
-        if (!remoteStream || !remoteAudioRef.current) return;
-        remoteAudioRef.current.srcObject = remoteStream;
-        remoteAudioRef.current.muted = false;
-        void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => setAudioBlocked(true));
+        if (!remoteStream) return;
+        void attachRemoteAudio(remoteStream);
       };
       peer.onconnectionstatechange = () => {
-        if (["failed", "disconnected"].includes(peer.connectionState)) setPhase("error");
+        disconnectGuardRef.current?.handle(peer.connectionState);
       };
 
       const channel = peer.createDataChannel("oai-events");
@@ -328,7 +406,12 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
           void playBriefing("auto");
         }
       };
-      channel.onclose = () => setPhase("idle");
+      channel.onclose = () => {
+        // `disconnected` may recover; the connection guard owns that medium
+        // grace period rather than tearing down the UI or audio element here.
+        if (["closed", "disconnected"].includes(peer.connectionState)) return;
+        setPhase("idle");
+      };
 
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
@@ -344,7 +427,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       setPhase("error");
       toast.error(reason instanceof Error ? reason.message : "تعذر تشغيل سارة الصوتية");
     }
-  }, [createSession, handleRealtimeEvent, live, playBriefing, stopSession, token]);
+  }, [attachRemoteAudio, createSession, handleRealtimeEvent, live, playBriefing, stopSession, stopVisualSpeech, token]);
 
   const startAvatar = useCallback(async (quiet = false) => {
     if (avatarToken || createAvatarToken.isPending) return true;
@@ -428,7 +511,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
       dir="rtl"
       onPointerDown={() => {
         if (!audioBlocked || !remoteAudioRef.current) return;
-        void remoteAudioRef.current.play().then(() => setAudioBlocked(false)).catch(() => undefined);
+        void retryRemoteAudio();
       }}
     >
       <div className="relative grid h-[100dvh] w-full max-w-6xl grid-rows-[42%_58%] overflow-hidden border border-white/15 bg-[#071522] shadow-[0_40px_120px_rgba(0,0,0,.55)] sm:h-[94dvh] sm:rounded-[30px] lg:grid-cols-[0.9fr_1.1fr] lg:grid-rows-1">
@@ -438,7 +521,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
           <SaraLiveAvatarView
             portrait={SARA_PORTRAIT}
             sessionToken={avatarToken}
-            isSpeaking={phase === "speaking"}
+            isSpeaking={visualSpeechActive}
           />
           {!streamlined && !avatarToken ? (
             <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
@@ -533,7 +616,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
           </footer>
           <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
         </section>
-        {streamlined && audioBlocked ? <div className="absolute inset-x-4 bottom-24 z-[130] mx-auto max-w-sm rounded-full bg-slate-950/92 px-4 py-2 text-center text-xs font-bold text-white shadow-xl sm:bottom-5">المس الشاشة مرة واحدة لسماع سارة</div> : null}
+        {reconnecting ? <div className="absolute inset-x-4 top-20 z-[130] mx-auto max-w-sm rounded-full bg-slate-950/92 px-4 py-2 text-center text-xs font-bold text-white shadow-xl">يُستعاد اتصال الصوت…</div> : null}
+        {audioBlocked ? <button type="button" onPointerDown={event => event.stopPropagation()} onClick={() => { void retryRemoteAudio(); }} className="absolute inset-x-4 bottom-24 z-[130] mx-auto max-w-sm rounded-full bg-slate-950/92 px-4 py-2 text-center text-xs font-bold text-white shadow-xl sm:bottom-5">المس لتشغيل صوت سارة</button> : null}
       </div>
     </div>
   );

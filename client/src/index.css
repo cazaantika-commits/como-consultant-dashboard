@@ -1005,6 +1005,43 @@
   transform: translateY(-1px);
 }
 
+/* Sara: an intentionally approximate visual speech cue. It follows response
+   state only; it does not analyse, delay, or route WebRTC audio. */
+.sara-approx-mouth {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 44%;
+  width: clamp(1.65rem, 6.2vw, 2.55rem);
+  height: clamp(0.26rem, 1vw, 0.42rem);
+  border: 1px solid rgb(82 33 32 / 24%);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgb(99 39 38 / 45%), rgb(45 12 14 / 56%));
+  box-shadow: 0 1px 1px rgb(255 231 224 / 22%) inset, 0 0 0 1px rgb(255 255 255 / 10%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scaleY(0.72);
+  transition: opacity 120ms ease-out;
+}
+.sara-approx-mouth--speaking {
+  opacity: 0.72;
+  animation: sara-approx-mouth 360ms cubic-bezier(0.23, 1, 0.32, 1) infinite alternate;
+}
+.sara-approx-mouth--over-live-video {
+  top: 42%;
+  mix-blend-mode: multiply;
+}
+@keyframes sara-approx-mouth {
+  from { transform: translate(-50%, -50%) scaleY(0.65) scaleX(0.92); }
+  to { transform: translate(-50%, -50%) scaleY(1.8) scaleX(1.05); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sara-approx-mouth--speaking {
+    animation: none;
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scaleY(1.05);
+  }
+}
 /* Financial tables: retain the month map while the reader scrolls through rows. */
 .investor-cashflow-table-wrap {
   isolation: isolate;

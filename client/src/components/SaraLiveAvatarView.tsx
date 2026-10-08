@@ -8,7 +8,11 @@ type Props = {
   isSpeaking?: boolean;
 };
 
-/** Visual-only. LiveAvatar must never own or delay the audible Realtime stream. */
+/**
+ * Visual-only. WebRTC remains the single audible source; this component never
+ * receives, forwards, chunks, or waits for its audio. `isSpeaking` drives only
+ * an intentionally approximate mouth-motion cue, not lip-sync.
+ */
 export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [connected, setConnected] = useState(false);
@@ -31,9 +35,12 @@ export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false 
     const onStreamReady = () => {
       setStreamReady(true);
       if (videoRef.current) {
-        session.attach(videoRef.current);
+        // Set these before attaching the SDK's media tracks. The video is
+        // visual-only even if the SDK session happens to expose remote audio.
+        videoRef.current.defaultMuted = true;
         videoRef.current.muted = true;
         videoRef.current.volume = 0;
+        session.attach(videoRef.current);
       }
     };
     const onDisconnected = () => {
@@ -65,12 +72,17 @@ export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false 
         onPlaying={() => setLiveVideoPlaying(true)}
         className={`absolute inset-0 h-full w-full object-cover object-[center_25%] transition-opacity duration-200 ${showLiveVideo ? "opacity-100" : "opacity-0"}`}
       />
+      {/* A state-led visual cue, deliberately not an audio analysis or sync promise. */}
+      <span
+        aria-hidden="true"
+        className={`sara-approx-mouth ${isSpeaking ? "sara-approx-mouth--speaking" : ""} ${showLiveVideo ? "sara-approx-mouth--over-live-video" : ""}`}
+      />
       <div className="absolute inset-0 bg-gradient-to-t from-[#05101d]/95 via-transparent to-[#05101d]/10" />
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5 text-white">
         <div><p className="text-xl font-black">سارة</p><p className="mt-1 text-[11px] text-white/65">الواجهة المرئية لـ COMO</p></div>
         <div className="rounded-full border border-white/15 bg-black/30 px-3 py-2 text-[11px] font-bold backdrop-blur-md">
           <span className={`ml-2 inline-block h-2.5 w-2.5 rounded-full ${isSpeaking ? "bg-amber-300 animate-pulse" : showLiveVideo ? "bg-emerald-400" : "bg-slate-400"}`} />
-          {isSpeaking ? "تتحدث" : showLiveVideo ? "متصلة" : sessionToken ? "تتصل" : "جاهزة"}
+          {isSpeaking ? "تتحدث · حركة تقريبية" : showLiveVideo ? "متصلة" : sessionToken ? "تتصل" : "جاهزة"}
         </div>
       </div>
       {error && <div className="absolute inset-x-4 top-4 rounded-2xl border border-red-200/70 bg-white/95 p-3 text-xs leading-5 text-red-700 shadow-xl"><Radio className="ml-1 inline h-3.5 w-3.5" /> تعذرت الصورة الحية، والصوت المباشر لا يتأثر.</div>}
