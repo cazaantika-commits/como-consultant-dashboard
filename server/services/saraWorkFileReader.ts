@@ -17,6 +17,7 @@ type LinkedDocument = {
   memoryId: number;
   memoryType: string;
   memoryTitle: string;
+  memoryBody: string | null;
   isCurrent: number;
   title: string;
   fileName: string;
@@ -105,14 +106,41 @@ async function extractDocumentText(document: LinkedDocument) {
   return normalized;
 }
 
-function documentScore(document: LinkedDocument, question: string | null) {
-  const haystack = `${document.memoryTitle} ${document.title} ${document.fileName}`.toLowerCase();
-  const termScore = words(question || "").reduce((sum, term) => sum + (haystack.includes(term) ? 5 : 0), 0);
-  const workProductScore = document.memoryType === "work_product" ? 20 : 0;
+export function documentScore(document: LinkedDocument, question: string | null, focus: SaraWorkFileFocus = "analysis") {
+  const haystack = `${document.memoryTitle} ${document.title} ${document.fileName} ${clean(document.memoryBody, 800)}`.toLowerCase();
+  // The beginning of a source email contains its own message. Later quoted threads and
+  // work-product comparisons must not be mistaken for this attachment's signature.
+  const directEvidence = `${document.memoryTitle} ${document.title} ${document.fileName} ${clean(document.memoryBody, 350)}`.toLowerCase();
+  const q = (question || "").toLowerCase();
+  const termScore = words(q).reduce((sum, term) => sum + (haystack.includes(term) ? 5 : 0), 0);
+  // Search both languages: the owner's question is often Arabic while the source letter is English.
+  const asksAboutSignature = /وقّع|وقع|موقّع|موقع|توقيع|signed|signature/.test(q);
+  const unsigned = /\bunsigned\b|\bnot signed\b|غير\s+موق[ّع]*|غير\s+موقع|لم\s+يوق[ّع]*/.test(directEvidence);
+  const sourceSigned = asksAboutSignature && document.memoryType === "material" && !unsigned
+    // "for signature" / "للتوقيع" requests an action; neither proves execution.
+    && /\bsigned\b|موقّع|موقع(?=\s|$)|تم\s+التوقيع/.test(directEvidence);
+  const subjectScore = (/تعيين|appointment|\bloa\b/.test(q) && /تعيين|appointment|\bloa\b/.test(haystack) ? 20 : 0)
+    + (/عقد|اتفاقية|agreement|contract/.test(q) && /عقد|اتفاقية|agreement|contract/.test(haystack) ? 16 : 0)
+    + (sourceSigned ? 65 : 0)
+    - (asksAboutSignature && unsigned ? 25 : 0);
+  const workProductScore = focus === "analysis" && !asksAboutSignature && document.memoryType === "work_product" ? 20 : 0;
   const currentScore = Number(document.isCurrent) === 1 ? 10 : 0;
-  const analysisScore = /تحليل|analysis|comparison|مقارنة|review|مراجعة/i.test(haystack) ? 8 : 0;
+  const analysisScore = focus === "analysis" && !asksAboutSignature && /تحليل|analysis|comparison|مقارنة|review|مراجعة/i.test(haystack) ? 8 : 0;
   const readableScore = /pdf|wordprocessingml|text\//i.test(document.mimeType) ? 3 : 0;
-  return termScore + workProductScore + currentScore + analysisScore + readableScore;
+  return termScore + subjectScore + workProductScore + currentScore + analysisScore + readableScore;
+}
+
+export function buildSaraRecentDocumentaryEvidence(memory: Array<{ id: number; memoryType: string; isCurrent: boolean; title: string; body: string; occurredAt?: string | null }>, documents: LinkedDocument[]) {
+  return memory.filter(item => item.isCurrent && (item.memoryType === "material" || item.memoryType === "note"))
+    .slice(0, 15)
+    .map(item => ({
+      memoryId: item.id,
+      title: item.title,
+      occurredAt: item.occurredAt ?? null,
+      excerpt: clean(item.body, 1_300),
+      documents: documents.filter(document => document.memoryId === item.id)
+        .map(document => ({ documentId: document.documentId, fileName: document.fileName, title: document.title })),
+    }));
 }
 
 export async function readExecutiveWorkFile(member: SaraReaderMember, rawArguments: string) {
@@ -148,7 +176,7 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     db.execute(sql`SELECT id,title,question,context_summary AS contextSummary,recommendation,decision_status AS status,decision_authority AS authority,decision_text AS decisionText,evidence_reference AS evidenceReference,due_at AS dueAt,decided_at AS decidedAt,updated_at AS updatedAt FROM como_next_decisions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 25`),
     db.execute(sql`SELECT id,source_channel AS sourceChannel,update_text AS updateText,occurred_at AS occurredAt,analysis_status AS analysisStatus,analysis_summary AS analysisSummary,target_action_id AS targetActionId FROM como_next_work_file_updates WHERE work_file_id=${workFileId} ORDER BY occurred_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,memory_type AS memoryType,entry_type AS entryType,title,body,source_status AS sourceStatus,is_current AS isCurrent,occurred_at AS occurredAt,updated_at AS updatedAt FROM como_next_work_memory WHERE work_file_id=${workFileId} ORDER BY is_current DESC,occurred_at DESC,id DESC LIMIT 60`),
-    db.execute(sql`SELECT link.memory_id AS memoryId,memory.memory_type AS memoryType,memory.title AS memoryTitle,memory.is_current AS isCurrent,doc.id AS documentId,doc.title,doc.file_name AS fileName,doc.mime_type AS mimeType,doc.byte_size AS byteSize,doc.sha256,doc.storage_key AS storageKey FROM como_next_work_memory_documents link JOIN como_next_work_memory memory ON memory.id=link.memory_id JOIN como_next_documents doc ON doc.id=link.document_id WHERE link.work_file_id=${workFileId} ORDER BY memory.is_current DESC,memory.id DESC,doc.id DESC LIMIT 80`),
+    db.execute(sql`SELECT link.memory_id AS memoryId,memory.memory_type AS memoryType,memory.title AS memoryTitle,LEFT(memory.body,800) AS memoryBody,memory.is_current AS isCurrent,doc.id AS documentId,doc.title,doc.file_name AS fileName,doc.mime_type AS mimeType,doc.byte_size AS byteSize,doc.sha256,doc.storage_key AS storageKey FROM como_next_work_memory_documents link JOIN como_next_work_memory memory ON memory.id=link.memory_id JOIN como_next_documents doc ON doc.id=link.document_id WHERE link.work_file_id=${workFileId} ORDER BY memory.is_current DESC,memory.id DESC,doc.id DESC LIMIT 80`),
     db.execute(sql`SELECT m.id,m.title,m.objective,m.meeting_status AS status,m.starts_at AS startsAt,m.ends_at AS endsAt,m.timezone,m.location,m.outcome_summary AS outcomeSummary,m.updated_at AS updatedAt FROM como_next_meetings m WHERE m.work_file_id=${workFileId} ORDER BY m.starts_at DESC,m.id DESC LIMIT 20`),
     db.execute(sql`SELECT id,channel,direction,communication_status AS status,approval_status AS approvalStatus,subject,body,from_text AS fromText,to_text AS toText,cc_text AS ccText,evidence_reference AS evidenceReference,occurred_at AS occurredAt FROM como_next_communications WHERE work_file_id=${workFileId} ORDER BY occurred_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,sequence_no AS sequenceNo,actor_type AS actorType,event_type AS eventType,summary,occurred_at AS occurredAt FROM como_next_work_file_events WHERE work_file_id=${workFileId} ORDER BY sequence_no DESC LIMIT 40`),
@@ -181,8 +209,8 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
   const readableDocuments = linkedDocuments.filter(item => /pdf|wordprocessingml|text\//i.test(item.mimeType));
   const selectedDocument = requestedDocumentId
     ? readableDocuments.find(item => item.documentId === requestedDocumentId) || null
-    : focus === "analysis"
-      ? [...readableDocuments].sort((a, b) => documentScore(b, question) - documentScore(a, question))[0] || null
+    : (focus === "analysis" || Boolean(question))
+      ? [...readableDocuments].sort((a, b) => documentScore(b, question, focus) - documentScore(a, question, focus))[0] || null
       : null;
   let documentExcerpt: Record<string, unknown> | null = null;
   if (selectedDocument) {
@@ -214,6 +242,9 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     generatedAt: new Date().toISOString(),
     question,
     workFile,
+    // Place fresh source evidence before historical summaries. A recent signed attachment
+    // must never be silently displaced by an earlier unsigned template or analysis.
+    recentDocumentaryEvidence: buildSaraRecentDocumentaryEvidence(memory, linkedDocuments),
     currentState: {
       actions: rows<any>(actionsResult),
       decisions: rows<any>(decisionsResult),
@@ -221,10 +252,10 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     },
   };
   const documentIndex = linkedDocuments.map(item => ({ documentId: item.documentId, memoryId: item.memoryId, memoryTitle: item.memoryTitle, title: item.title, fileName: item.fileName, mimeType: item.mimeType, byteSize: item.byteSize, isCurrent: item.isCurrent === 1 }));
-  if (focus === "overview") return presentSaraDubaiTimes({ ...base, currentMemory: memory.filter(item => item.isCurrent).slice(0, 15), meetings, documents: documentIndex.slice(0, 30) });
+  if (focus === "overview") return presentSaraDubaiTimes({ ...base, currentMemory: memory.filter(item => item.isCurrent).slice(0, 15), meetings, documents: documentIndex.slice(0, 30), documentExcerpt });
   if (focus === "analysis") return presentSaraDubaiTimes({ ...base, currentWorkProducts: memory.filter(item => item.isCurrent && item.memoryType === "work_product"), documents: documentIndex, documentExcerpt });
   if (focus === "meetings") return presentSaraDubaiTimes({ ...base, meetings, participants, agenda, sources, analyses, minutes });
-  if (focus === "communications") return presentSaraDubaiTimes({ ...base, communications: rows<any>(communicationsResult), documents: documentIndex });
+  if (focus === "communications") return presentSaraDubaiTimes({ ...base, communications: rows<any>(communicationsResult), documents: documentIndex, documentExcerpt });
   if (focus === "history") return presentSaraDubaiTimes({ ...base, memory, events: rows<any>(eventsResult) });
   return presentSaraDubaiTimes({ ...base, memory, documents: documentIndex, documentExcerpt, meetings, participants, agenda, sources, analyses, minutes, communications: rows<any>(communicationsResult), events: rows<any>(eventsResult) });
 }
