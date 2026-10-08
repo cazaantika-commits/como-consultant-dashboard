@@ -11,6 +11,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
+    "db:migrate:direct-ack": "tsx scripts/applyComoDirectAckMigration.ts",
     "migration:como-followup": "tsx scripts/comoFollowupImporter.ts",
     "migration:como-followup:stage": "tsx scripts/comoFollowupStage.ts",
     "migration:como-followup:promote": "tsx scripts/comoFollowupPromote.ts",

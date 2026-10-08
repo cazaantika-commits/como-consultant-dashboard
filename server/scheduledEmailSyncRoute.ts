@@ -4,6 +4,7 @@ import { comoNextActions, comoNextEmailSyncSettings, comoNextWorkFiles } from ".
 import { sdk } from "./_core/sdk";
 import { getDb } from "./db";
 import { processPendingReadonlyMailboxCommand, reconcileConfirmedMeetingsFromEmailCommand, syncReadonlyInboxCommand } from "./services/comoNextEmailInbox";
+import { processPendingDirectContextualAcknowledgementDeliveries } from "./services/comoDirectContextualAcknowledgmentDelivery";
 import { runExecutiveControlLoopCommand } from "./services/comoNextExecutiveControl";
 import { reconcileConditionalSentWatches } from "./services/comoNextConditionalSentWatches";
 import { seedConditionalSentWatches } from "./services/comoNextConditionalSentWatchSeeder";
@@ -95,6 +96,11 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
         // unprocessed rows remain in the DB if a worker is interrupted.
         const meetingReconciliation = await reconcileConfirmedMeetingsFromEmailCommand({ userId: settings.userId, limit: 25 });
         const result = await processPendingReadonlyMailboxCommand({ userId: settings.userId, analysisLimit: 1 });
+        // Independent, disabled-by-default live-courtesy path. It receives only
+        // newly imported, persisted INBOX records after the regular read-only
+        // analysis phase; it never changes the import callback or legacy SMTP
+        // switch. Its own local lock and DB setting still gate every action.
+        const directAcknowledgements = await processPendingDirectContextualAcknowledgementDeliveries({ userId: settings.userId, limit: 1 });
         await db.update(comoNextEmailSyncSettings).set({
           lastRunAt: nowSql(), lastSuccessAt: nowSql(), lastStatus: "success",
           lastScanned: result.pendingCandidates, lastImported: result.analyzed,
@@ -102,7 +108,8 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
         }).where(eq(comoNextEmailSyncSettings.id, settings.id));
         res.status(200).json({ ok: true, phase: "process", analyzed: result.analyzed, pendingCandidates: result.pendingCandidates,
           trustedLinked: result.trustedLinked, internalActionIds: result.internalActionIds,
-          meetingReconciliation, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
+          meetingReconciliation, directAcknowledgements, readOnly: true, serverFlagsChanged: false,
+          externalSideEffects: directAcknowledgements.sent > 0 });
       } catch (error) {
         const errorCode = typeof error === "object" && error !== null && "code" in error && typeof (error as { code?: unknown }).code === "string"
           ? String((error as { code: string }).code).slice(0, 60)

@@ -9,6 +9,7 @@ import {
 import { invokeLLM } from "../_core/llm";
 import { getDb } from "../db";
 import {
+  applyComoCcPolicy,
   fetchReadonlyAutomationSignalByUID,
   fetchReadonlySentSince,
   getConfiguredMailboxAddress,
@@ -385,22 +386,6 @@ function containsArabic(value: string) {
   return /[\u0600-\u06ff]/.test(value);
 }
 
-function replyAllCc(message: DirectContextualAcknowledgementMessage) {
-  const sender = recipientAddress(message.fromEmail);
-  const owner = getConfiguredMailboxAddress();
-  const recipients = [message.toText, message.ccText]
-    .flatMap(value => String(value || "").split(/[;,]/))
-    .map(value => value.trim())
-    .filter(Boolean);
-  const seen = new Set<string>();
-  return recipients.filter(recipient => {
-    const address = recipientAddress(recipient);
-    if (!address || address === sender || address === owner || seen.has(address)) return false;
-    seen.add(address);
-    return true;
-  }).join(", ");
-}
-
 function replySubject(subject: string) {
   const clean = normalize(subject) || "(no subject)";
   return /^\s*re:/i.test(clean) ? clean : `Re: ${clean}`;
@@ -410,11 +395,11 @@ function replySubject(subject: string) {
 export function proposedNonCommittingAcknowledgementText(message: Pick<DirectContextualAcknowledgementMessage, "subject" | "bodyText">, mode: "courtesy" | "review") {
   if (containsArabic(`${message.subject}\n${message.bodyText}`)) {
     return mode === "courtesy"
-      ? "شكرًا لتأكيدكم. تم الاطلاع على رسالتكم.\n\nمع التحية،\nAbdalrahman Zaqout"
+      ? "شكرًا لرسالتكم وتواصلكم الكريم؛ أقدّر ذلك.\n\nمع خالص التحية،\nعبدالرحمن زقوت"
       : "شكرًا لرسالتكم. تم استلامها للمراجعة الداخلية. لا يؤكد هذا الإقرار أي إجراء أو اعتماد أو موعد أو دفعة أو التزام.\n\nمع التحية،\nAbdalrahman Zaqout";
   }
   return mode === "courtesy"
-    ? "Thank you for your confirmation. Your message has been noted.\n\nKind regards,\nAbdalrahman Zaqout"
+    ? "Thank you for your kind message. I appreciate you taking the time to write.\n\nKind regards,\nAbdalrahman Zaqout"
     : "Thank you for your message. It has been received for internal review. This acknowledgement does not confirm any action, approval, date, payment, or commitment.\n\nKind regards,\nAbdalrahman Zaqout";
 }
 
@@ -425,7 +410,9 @@ export function isNonCommittingAcknowledgementText(text: string) {
 function makeShadowReply(message: DirectContextualAcknowledgementMessage, key: string, mode: "courtesy" | "review"): DirectShadowReply {
   return {
     to: message.fromEmail.trim(),
-    cc: replyAllCc(message),
+    // Courtesy replies go to the sender, not every historical recipient. Wael
+    // is copied by the owner's current policy; Mia is never added for ordinary mail.
+    cc: applyComoCcPolicy({ to: message.fromEmail.trim() }),
     subject: replySubject(message.subject),
     body: proposedNonCommittingAcknowledgementText(message, mode),
     inReplyTo: message.messageId?.trim() || undefined,

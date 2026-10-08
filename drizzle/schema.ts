@@ -3803,6 +3803,64 @@ export const comoNextContextualAcknowledgmentLedger = mysqlTable("como_next_cont
   }).onDelete("restrict"),
 ]);
 
+// Independent direct-SMTP courtesy path. Unlike the 0098 Draft-only ledger,
+// this ledger reserves a deterministic Message-ID before SMTP begins. A
+// `sending` or `send_uncertain` row is never reclaimed automatically.
+export const comoNextDirectContextualAckDeliverySettings = mysqlTable("como_next_direct_contextual_ack_delivery_settings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  mailboxKey: varchar("mailbox_key", { length: 64 }).notNull(),
+  isEnabled: tinyint("is_enabled").notNull().default(0),
+  deliveryMode: mysqlEnum("delivery_mode", ["direct_courtesy_only"]).notNull().default("direct_courtesy_only"),
+  activationStartedAt: timestamp("activation_started_at", { mode: "string" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_direct_ack_delivery_setting_user_mailbox_uq").on(table.userId, table.mailboxKey),
+  index("como_next_direct_ack_delivery_setting_enabled_idx").on(table.isEnabled, table.updatedAt),
+]);
+
+export const comoNextDirectContextualAckDeliveryLedger = mysqlTable("como_next_direct_contextual_ack_delivery_ledger", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  emailMessageId: bigint("email_message_id", { mode: "number" }).notNull().references(() => comoNextEmailMessages.id, { onDelete: "restrict" }),
+  projectId: int("project_id").references(() => projects.id, { onDelete: "restrict" }),
+  workFileId: int("work_file_id"),
+  activationStartedAt: timestamp("activation_started_at", { mode: "string" }).notNull(),
+  status: mysqlEnum("status", ["claimed", "skipped", "manual_review", "draft_ready", "draft_and_sara_ready", "sending", "sent", "send_uncertain", "failed"]).notNull().default("claimed"),
+  claimToken: varchar("claim_token", { length: 64 }),
+  claimedAt: timestamp("claimed_at", { mode: "string" }),
+  disposition: mysqlEnum("disposition", ["direct_send_courtesy", "draft_and_notify_sara", "manual_review", "skip"]),
+  reason: varchar("reason", { length: 96 }),
+  sentReviewedAt: timestamp("sent_reviewed_at", { mode: "string" }),
+  sentReviewOutcome: mysqlEnum("sent_review_outcome", ["no_relevant_owner_reply", "owner_reply_present", "ambiguous", "not_reviewed"]).notNull().default("not_reviewed"),
+  communicationId: bigint("communication_id", { mode: "number" }).references(() => comoNextCommunications.id, { onDelete: "restrict" }),
+  mailboxDraftRef: varchar("mailbox_draft_ref", { length: 500 }),
+  saraProposalId: bigint("sara_proposal_id", { mode: "number" }).references(() => comoNextIntakeProposals.id, { onDelete: "restrict" }),
+  outboundMessageId: varchar("outbound_message_id", { length: 320 }),
+  sendStartedAt: timestamp("send_started_at", { mode: "string" }),
+  smtpAcceptedAt: timestamp("smtp_accepted_at", { mode: "string" }),
+  smtpResponse: text("smtp_response"),
+  sentRecordRef: varchar("sent_record_ref", { length: 500 }),
+  lastError: text("last_error"),
+  completedAt: timestamp("completed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_next_direct_ack_delivery_idempotency_uq").on(table.idempotencyKey),
+  uniqueIndex("como_next_direct_ack_delivery_email_uq").on(table.emailMessageId),
+  uniqueIndex("como_next_direct_ack_delivery_message_id_uq").on(table.outboundMessageId),
+  index("como_next_direct_ack_delivery_user_status_idx").on(table.userId, table.status, table.updatedAt),
+  index("como_next_direct_ack_delivery_claim_expiry_idx").on(table.status, table.claimedAt),
+  index("como_next_direct_ack_delivery_project_file_idx").on(table.projectId, table.workFileId, table.updatedAt),
+  foreignKey({
+    name: "como_next_direct_ack_delivery_file_fk",
+    columns: [table.projectId, table.workFileId],
+    foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id],
+  }).onDelete("restrict"),
+]);
+
 
 // The only active specialist capabilities in COMO Next. They run on explicit
 // owner request, write a review draft, and never execute operational work.

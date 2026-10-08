@@ -134,14 +134,21 @@ describe("COMO direct contextual acknowledgement shadow path", () => {
       workFileId: 22,
       shadowReply: {
         to: "consultant@example.com",
-        cc: "colleague@consultant.com, director@consultant.com",
+        cc: "wael@zooma.ae",
         subject: "Re: Thank you",
         inReplyTo: "<inbound-201@example.com>",
       },
       saraShadowIntent: null,
     });
     expect(isNonCommittingAcknowledgementText(result.shadowReply?.body || "")).toBe(true);
-    expect(result.shadowReply?.body).toContain("has been noted");
+    expect(result.shadowReply?.body).toContain("I appreciate you taking the time to write");
+  });
+
+  it("does not copy Mia on an ordinary reply addressed to Wael", () => {
+    const input = executionInput({ message: { fromEmail: "wael@zooma.ae", toText: "a.zaqout@comodevelopments.com", ccText: "" } });
+    const result = plan(input);
+    expect(result.shadowReply?.to).toBe("wael@zooma.ae");
+    expect(result.shadowReply?.cc).toBe("");
   });
 
   it("uses immutable message identity for a durable idempotency key", () => {
