@@ -249,8 +249,23 @@ export function classifyReadonlyAutomationHeaders(headers: ReadonlyAutomationHea
   ];
   const noReplySender = senderValues.some(value => /\b(?:no[-_.]?reply|do[-_.]?not[-_.]?reply|donotreply|mailer-daemon)\b/i.test(value));
 
+  // A signed response in an existing human conversation is positive evidence;
+  // a missing Auto-Submitted header alone is not. A later Sent review still
+  // checks the precise counterparty/thread and avoids replying twice.
+  const from = headerValues(headers, "from");
+  const fromAddress = from.length === 1
+    ? from[0].match(/(?:<|^)([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})(?:>|$)/i)?.[1]?.toLowerCase()
+    : undefined;
+  const fromDomain = fromAddress?.split("@")[1];
+  const authenticatedThreadReply = Boolean(fromDomain
+    && headerValues(headers, "in-reply-to").some(value => /^\s*<[^<>\s]+@[^<>\s]+>\s*$/.test(value))
+    && headerValues(headers, "authentication-results").some(value =>
+      /\bdkim=pass\b/i.test(value)
+      && new RegExp(`\\bheader\\.d=${fromDomain.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:[;\\s]|$)`, "i").test(value)));
+
   const explicitNonSystem = autoSubmitted.some(value => value === "no")
-    || precedence.some(value => value === "personal");
+    || precedence.some(value => value === "personal")
+    || authenticatedThreadReply;
   const explicitSystem = autoSubmitted.some(value => value !== "no")
     || precedence.some(value => /^(?:bulk|list|junk|auto[_ -]?reply)$/.test(value))
     || listId
@@ -346,7 +361,7 @@ export function fetchReadonlyAutomationSignalByUID(input: {
         };
         const fetch = imap.fetch([input.uid], {
           // Header fields only: no RFC822 body, MIME parts, or attachments.
-          bodies: "HEADER.FIELDS (AUTO-SUBMITTED PRECEDENCE LIST-ID X-AUTO-RESPONSE-SUPPRESS FROM RETURN-PATH)",
+          bodies: "HEADER.FIELDS (AUTO-SUBMITTED PRECEDENCE LIST-ID X-AUTO-RESPONSE-SUPPRESS FROM RETURN-PATH IN-REPLY-TO AUTHENTICATION-RESULTS)",
           markSeen: false,
         });
 

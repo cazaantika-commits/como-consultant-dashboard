@@ -18,6 +18,19 @@ describe("classifyReadonlyAutomationHeaders", () => {
     ).toBe("known_non_system");
   });
 
+  it("recognizes an authenticated reply in an existing conversation, not mere missing headers", () => {
+    const reply = {
+      from: "Mia Aranas <pa@zooma.ae>",
+      "in-reply-to": "<owner-message@comodevelopments.com>",
+      "authentication-results": "relay.example; dkim=pass header.d=zooma.ae header.s=google; dmarc=pass header.from=zooma.ae",
+    };
+    expect(classifyReadonlyAutomationHeaders(reply)).toBe("known_non_system");
+    expect(classifyReadonlyAutomationHeaders({ ...reply, "authentication-results": "relay.example; dkim=pass header.d=notzooma.ae" })).toBe("unknown");
+    expect(classifyReadonlyAutomationHeaders({ ...reply, "in-reply-to": "" })).toBe("unknown");
+    expect(classifyReadonlyAutomationHeaders({ ...reply, "auto-submitted": "auto-replied" })).toBe("unknown");
+    expect(classifyReadonlyAutomationHeaders({ ...reply, from: "No Reply <no-reply@zooma.ae>" })).toBe("unknown");
+  });
+
   it("classifies explicit automation and mailing-list signals as known_system", () => {
     expect(
       classifyReadonlyAutomationHeaders({
