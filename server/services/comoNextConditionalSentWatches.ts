@@ -25,6 +25,11 @@ export function isRelevantWatchReply(input: {
   return body.length > 2;
 }
 
+/** Query fetches 501 rows; 501 means the search was truncated, not no reply. */
+export function completedConditionalReplySearch(candidateCount: number) {
+  return candidateCount <= 500;
+}
+
 /**
  * Runs only after the read-only INBOX import, with strict sender/subject/time matching.
  * Leaves non-matching, ambiguous or auto-generated replies for manual review. It never
@@ -54,8 +59,8 @@ export async function reconcileConditionalSentWatches(input: {userId:number; lim
       eq(comoNextEmailMessages.userId,input.userId),eq(comoNextEmailMessages.folderName,'INBOX'),
       gt(comoNextEmailMessages.receivedAt,sent.receivedAt),
       eq(comoNextEmailMessages.fromEmail,recipientAddresses[0]),
-    )).orderBy(asc(comoNextEmailMessages.receivedAt)).limit(20);
-    const replies=candidates.filter(item=>isRelevantWatchReply({
+    )).orderBy(asc(comoNextEmailMessages.receivedAt)).limit(501);
+    const replies=candidates.slice(0,500).filter(item=>isRelevantWatchReply({
       sentTo:sent.toText,sentSubject:sent.subject,sentAt:sent.receivedAt,
       receivedFrom:item.fromEmail,receivedSubject:item.subject,receivedAt:item.receivedAt,receivedBody:item.bodyText,
     }));
@@ -71,6 +76,9 @@ export async function reconcileConditionalSentWatches(input: {userId:number; lim
       resolved++;
       continue;
     }
+    // When the bounded search is saturated, absence of a reply is unproven.
+    // Keep the watch waiting for manual reconciliation rather than maturing it.
+    if(!completedConditionalReplySearch(candidates.length)){skipped.push(watch.id);continue;}
     if(watch.actionStatus==='waiting_external' && watch.attentionAt && watch.attentionAt<=now){
       await changeActionStatusCommand({userId:input.userId,actionId:watch.id,nextStatus:'open',actorType:'system'});
       matured++;

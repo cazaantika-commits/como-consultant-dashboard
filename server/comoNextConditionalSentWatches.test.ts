@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {comparableReplySubject,isRelevantWatchReply} from './services/comoNextConditionalSentWatches';
+import {comparableReplySubject,completedConditionalReplySearch,isRelevantWatchReply} from './services/comoNextConditionalSentWatches';
 const sent={sentTo:'Jamil <jj@neb.ae>',sentSubject:'Majan Shopping Centre — Request for Lead Consultant Proposal',sentAt:'2026-10-07 15:02:56'};
 const reply={receivedFrom:'jj@neb.ae',receivedSubject:'Re: Majan Shopping Centre — Request for Lead Consultant Proposal',receivedAt:'2026-10-08 09:00:00',receivedBody:'Thank you, we have received the RFP.\nFrom: Owner'};
 describe('conditional Sent watch evidence',()=>{
@@ -18,5 +18,9 @@ describe('conditional Sent watch evidence',()=>{
  });
  it('does not accept multiple To recipients for a one-to-one watch',()=>{
   expect(isRelevantWatchReply({...sent,...reply,sentTo:'jj@neb.ae, another@neb.ae'})).toBe(false);
+ });
+ it('keeps a watch waiting when bounded reply discovery is truncated',()=>{
+  expect(completedConditionalReplySearch(500)).toBe(true);
+  expect(completedConditionalReplySearch(501)).toBe(false);
  });
 });

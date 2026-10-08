@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { comoNextEmailSyncSettings } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
+import { selectSaraLatestMeetingSchedule } from "./saraBriefings";
 import { presentSaraDubaiTimes, saraDubaiTimestamp } from "./saraDubaiTimes";
 
 export const SARA_REALTIME_MODEL = "gpt-realtime-2.1";
@@ -344,7 +345,8 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     `),
     db.execute(sql`
       SELECT m.id, wf.id AS workFileId, p.name AS project, wf.title AS workFile, m.title,
-        m.meeting_status AS status, m.starts_at AS startsAt,
+        m.meeting_status AS status, m.starts_at AS startsAt, m.created_at AS createdAt,
+        m.source_record_id AS sourceRecordId,
         (SELECT COUNT(*) FROM como_next_meeting_proposals proposal WHERE proposal.meeting_id=m.id AND proposal.review_status='pending') AS pendingProposals,
         (SELECT COUNT(*) FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id=m.id AND minutes.minutes_status='draft') AS draftMinutes
       FROM como_next_meetings m JOIN como_next_work_files wf ON wf.id = m.work_file_id
@@ -373,7 +375,15 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     actions: rows<Record<string, unknown>>(actionsResult),
     decisions: rows<Record<string, unknown>>(decisionsResult),
     communications: rows<Record<string, unknown>>(communicationsResult),
-    meetings: rows<Record<string, unknown>>(meetingsResult).map(meeting => {
+    meetings: selectSaraLatestMeetingSchedule(rows<Record<string, unknown>>(meetingsResult) as Array<{
+      id: number;
+      project?: string | null;
+      title?: string | null;
+      sourceRecordId?: string | null;
+      createdAt?: string | null;
+      updatedAt?: string | null;
+      [key: string]: unknown;
+    }>).map(meeting => {
       const startsAt = saraDubaiTimestamp(meeting.startsAt);
       return {
         ...meeting,

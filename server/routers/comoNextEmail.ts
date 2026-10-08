@@ -28,7 +28,8 @@ export const comoNextEmailRouter = router({
     assertOwner(ctx.user.role);
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
-    const [settings] = await db.select({
+    const settingsRows = await db.select({
+      mailboxKey: comoNextEmailSyncSettings.mailboxKey,
       isEnabled: comoNextEmailSyncSettings.isEnabled,
       cronExpression: comoNextEmailSyncSettings.cronExpression,
       lastRunAt: comoNextEmailSyncSettings.lastRunAt,
@@ -37,8 +38,26 @@ export const comoNextEmailRouter = router({
       lastScanned: comoNextEmailSyncSettings.lastScanned,
       lastImported: comoNextEmailSyncSettings.lastImported,
       lastDuplicates: comoNextEmailSyncSettings.lastDuplicates,
-    }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, ctx.user.id)).limit(1);
-    return settings || { isEnabled: 0, cronExpression: "0 0 2,7,13 * * *", lastRunAt: null, lastSuccessAt: null, lastStatus: "never" as const, lastScanned: 0, lastImported: 0, lastDuplicates: 0 };
+    }).from(comoNextEmailSyncSettings).where(eq(comoNextEmailSyncSettings.userId, ctx.user.id));
+    const importing = settingsRows.find(row => row.mailboxKey === "owner-primary");
+    const processing = settingsRows.find(row => row.mailboxKey === "owner-primary-processing");
+    const executive = settingsRows.find(row => row.mailboxKey === "owner-primary-executive");
+    return {
+      isEnabled: importing?.isEnabled ?? 0,
+      cronExpression: importing?.cronExpression ?? "0 0 2,7,13 * * *",
+      lastRunAt: importing?.lastRunAt ?? null,
+      lastSuccessAt: importing?.lastSuccessAt ?? null,
+      lastStatus: importing?.lastStatus ?? "never",
+      lastScanned: importing?.lastScanned ?? 0,
+      lastImported: importing?.lastImported ?? 0,
+      lastDuplicates: importing?.lastDuplicates ?? 0,
+      processingEnabled: processing?.isEnabled ?? 0,
+      processingLastSuccessAt: processing?.lastSuccessAt ?? null,
+      processingLastStatus: processing?.lastStatus ?? "never",
+      executiveEnabled: executive?.isEnabled ?? 0,
+      executiveLastSuccessAt: executive?.lastSuccessAt ?? null,
+      executiveLastStatus: executive?.lastStatus ?? "never",
+    };
   }),
 
   list: protectedProcedure

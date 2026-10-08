@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { assertMailboxWritesEnabled, assertOutboundEmailEnabled } from "./emailMonitor";
-import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, canProposeForWorkFile, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate, trustedSenderFileMatch } from "./services/comoNextEmailInbox";
+import { assertReadonlyEmailArchitecture, buildEmailAnalysisPrompt, buildReplyAllCc, canProposeForWorkFile, currentMeetingEmailText, extractConfirmedMeetingEvidence, isContractNegotiationEmail, isMeetingScheduleAcknowledgement, mailboxKeyFor, messageIdentitySha, normalizeOwnerEmailSignature, scoreEmailSuggestionCandidate, trustedSenderFileMatch } from "./services/comoNextEmailInbox";
 
 const migration = readFileSync("drizzle/0086_como_next_readonly_email_inbox.sql", "utf8");
 const service = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
@@ -192,6 +192,44 @@ describe("COMO Next read-only email inbox", () => {
       receivedAt: "2026-09-29 08:19:00",
       bodyText: "The meeting has been confirmed, but the time will follow.",
     } as any)).toBeNull();
+  });
+
+  it("extracts a fresh tomorrow 10 AM confirmation and its same-thread 7 PM reschedule in Dubai time", () => {
+    const confirmedAtTen = extractConfirmedMeetingEvidence({
+      folderName: "INBOX",
+      subject: "Re: Meeting Confirmation — Plot 6180578",
+      receivedAt: "2026-09-29 08:19:00",
+      bodyText: "The meeting has been confirmed for tomorrow at 10:00 AM for Plot 6180578.",
+    } as any);
+    const rescheduledAtSeven = extractConfirmedMeetingEvidence({
+      folderName: "INBOX",
+      subject: "Re: Meeting Confirmation — Plot 6180578",
+      receivedAt: "2026-09-29 09:00:00",
+      bodyText: "The meeting has been rescheduled to tomorrow at 7:00 PM for Plot 6180578.\n\n> The meeting has been confirmed for tomorrow at 10:00 AM.",
+    } as any);
+
+    expect(confirmedAtTen?.startsAt).toBe("2026-09-30T06:00:00.000Z");
+    expect(rescheduledAtSeven?.startsAt).toBe("2026-09-30T15:00:00.000Z");
+    expect(rescheduledAtSeven?.canonicalSubject).toBe(confirmedAtTen?.canonicalSubject);
+    expect(service).toContain('eventType: "meeting_rescheduled_from_email"');
+    expect(service).toContain('eventType: "meeting_preparation_rescheduled"');
+    expect(service).toContain('inArray(comoNextMeetings.meetingStatus, ["planned", "confirmed"])');
+  });
+
+  it("does not treat a quoted old slot as a fresh confirmation or infer a reschedule from a changed subject", () => {
+    const quotedOnly = {
+      folderName: "INBOX",
+      subject: "Different project catch-up",
+      receivedAt: "2026-09-30 12:00:00",
+      bodyText: "For reference only.\n\n> The meeting has been confirmed for 30 September at 10:00 AM for Plot 6180578.",
+    } as any;
+    expect(currentMeetingEmailText(quotedOnly.bodyText)).toBe("For reference only.");
+    expect(extractConfirmedMeetingEvidence(quotedOnly)).toBeNull();
+    expect(service).toContain("canonicalMeetingSubject(item.subject) === evidence.canonicalSubject");
+    expect(service).toContain('if (matched.length > 1)');
+    expect(service).toContain('skipped: "reschedule_match_ambiguous"');
+    expect(service).toContain('skipped: "reschedule_match_not_proven"');
+    expect(service).toContain('skipped: "legacy_meeting_closed"');
   });
 
   it("uses Abdalrahman Zaqout exactly in generated English email signatures", () => {

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { ComoNextIntakeProposals } from "@/components/ComoNextIntakeProposals";
+import { formatDubaiMailTime } from "@/lib/dubaiMailTime";
 import {
   Archive,
   ArrowLeft,
@@ -27,17 +28,6 @@ import {
 } from "lucide-react";
 
 type InboxFilter = "attention" | "sent" | "linked" | "dismissed";
-
-function normalizeUtc(value: string | null | undefined) {
-  if (!value) return null;
-  return /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
-}
-
-function formatDateTime(value: string | null | undefined) {
-  const normalized = normalizeUtc(value);
-  if (!normalized) return "غير مؤرخ";
-  return new Intl.DateTimeFormat("ar-AE", { timeZone: "Asia/Dubai", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(new Date(normalized));
-}
 
 const statusMeta: Record<string, { label: string; className: string }> = {
   unmatched: { label: "غير مطابق", className: "border-slate-200 bg-slate-100 text-slate-700" },
@@ -156,7 +146,7 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
         {detailQuery.isLoading ? <div className="flex min-h-80 items-center justify-center"><Loader2 className="h-7 w-7 animate-spin text-[#1f6478]" /></div> : detail ? <>
           <DialogHeader className="border-b border-slate-200 bg-white px-4 py-5 text-right sm:px-6">
             <div className="flex flex-wrap items-start justify-between gap-3 pe-8">
-              <div className="min-w-0"><DialogTitle className="text-xl leading-8">{detail.message.subject}</DialogTitle><DialogDescription className="mt-2">{detail.message.folderName === "INBOX" ? "من" : "إلى"} <bdi dir="ltr">{detail.message.folderName === "INBOX" ? detail.message.fromEmail : detail.message.toText || "غير محدد"}</bdi> · {formatDateTime(detail.message.receivedAt)}</DialogDescription></div>
+              <div className="min-w-0"><DialogTitle className="text-xl leading-8">{detail.message.subject}</DialogTitle><DialogDescription className="mt-2">{detail.message.folderName === "INBOX" ? "من" : "إلى"} <bdi dir="ltr">{detail.message.folderName === "INBOX" ? detail.message.fromEmail : detail.message.toText || "غير محدد"}</bdi> · {formatDubaiMailTime(detail.message.receivedAt)}</DialogDescription></div>
               <div className="flex gap-2"><Badge variant="outline" className={`rounded-full ${String(detail.message.suggestionReason || "").startsWith("تم الرد من COMO") ? "border-sky-200 bg-sky-50 text-sky-800" : statusMeta[detail.message.inboxStatus]?.className}`}>{String(detail.message.suggestionReason || "").startsWith("تم الرد من COMO") ? "تم الرد" : statusMeta[detail.message.inboxStatus]?.label}</Badge><Badge variant="outline" className={`rounded-full ${importanceMeta[detail.message.importance]?.className}`}>{importanceMeta[detail.message.importance]?.label}</Badge></div>
             </div>
           </DialogHeader>
@@ -225,7 +215,21 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-lg font-black text-slate-950">المراسلات البريدية</h3><p className="mt-1 text-[11px] text-slate-500">{scheduledStatusQuery.data?.isEnabled ? <>قراءة الوارد والمرسل وفهم الجديد ضمن السياق: 06:00 · 11:00 · 17:00 بتوقيت دبي{scheduledStatusQuery.data.lastSuccessAt ? <> · آخر نجاح <bdi dir="ltr">{new Date(scheduledStatusQuery.data.lastSuccessAt).toLocaleString()}</bdi></> : null}</> : "التحديث المجدول غير مفعل"}</p></div><Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="text-lg font-black text-slate-950">المراسلات البريدية</h3>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {scheduledStatusQuery.data?.isEnabled ? <>
+              تحديث البريد: 06:00 · 11:00 · 17:00 بتوقيت دبي
+              {scheduledStatusQuery.data.lastSuccessAt ? <> · آخر استيراد {formatDubaiMailTime(scheduledStatusQuery.data.lastSuccessAt)}</> : " · الاستيراد لم ينجح بعد"}
+              {scheduledStatusQuery.data.processingEnabled ? <> · آخر تحليل {scheduledStatusQuery.data.processingLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.processingLastSuccessAt) : "لم ينجح بعد"}</> : " · التحليل غير مفعل"}
+              {scheduledStatusQuery.data.executiveEnabled ? <> · آخر تنفيذ Manus {scheduledStatusQuery.data.executiveLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.executiveLastSuccessAt) : "لم يثبت بعد"}</> : " · تنفيذ Manus غير مفعل"}
+              {scheduledStatusQuery.data.lastStatus === "failed" || scheduledStatusQuery.data.processingLastStatus === "failed" || scheduledStatusQuery.data.executiveLastStatus === "failed" ? " · توجد مرحلة متعثرة" : null}
+            </> : "التحديث المجدول غير مفعل"}
+          </p>
+        </div>
+        <Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention },

@@ -6,6 +6,7 @@ import {
   chooseSaraAutoMode,
   getSaraDubaiWindow,
   rankSaraBriefingItem,
+  selectSaraLatestMeetingSchedule,
 } from "./services/saraBriefings";
 
 const baseItem = {
@@ -81,6 +82,63 @@ describe("Sara executive briefings", () => {
     const briefing = buildNarration("full", "day", snapshot, now);
     expect(briefing.text).toContain("تأكد من اجتماع أمس: الموعد السابق مضى؛ تحقق هل تأكد أو تغير");
     expect(briefing.text).not.toContain("المواعيد القريبة، 1 بالمجموع:");
+  });
+
+  it("uses the latest email reschedule in Dubai and never asks for an outcome from its superseded past slot", () => {
+    const now = new Date("2026-09-30T08:00:00Z"); // 12:00 Dubai
+    const snapshot = { workFiles: [], actions: [], decisions: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [], meetings: [
+      {
+        ...baseItem,
+        kind: "meeting" as const,
+        id: 31,
+        title: "اجتماع أرتك — تصور الفلل الأربع",
+        status: "confirmed",
+        dueAt: "2026-09-30 06:00:00", // 10:00 Dubai, already passed
+        createdAt: "2026-09-29 08:19:00",
+        sourceRecordId: "confirmed-meeting:old-slot",
+      },
+      {
+        ...baseItem,
+        kind: "meeting" as const,
+        id: 32,
+        title: "اجتماع أرتك — تصور الفلل الأربع",
+        status: "confirmed",
+        dueAt: "2026-10-01 06:00:00", // 10:00 Dubai, later email reschedule
+        createdAt: "2026-09-30 08:30:00",
+        sourceRecordId: "confirmed-meeting:rescheduled-slot",
+      },
+    ] };
+    const latest = selectSaraLatestMeetingSchedule(snapshot.meetings);
+    const briefing = buildNarration("full", "day", snapshot, now);
+    const afterReschedule = buildNarration("full", "day", snapshot, new Date("2026-10-01T08:00:00Z")); // 12:00 Dubai
+
+    expect(latest.map(item => item.id)).toEqual([32]);
+    expect(briefing.text).toContain("المواعيد القريبة، 1 بالمجموع:");
+    expect(briefing.text).toContain("اجتماع أرتك — تصور الفلل الأربع");
+    expect(briefing.text).not.toContain("نتيجة اجتماع أرتك");
+    expect(briefing.text).not.toContain("تحقق هل انعقد الاجتماع أو تغير موعده");
+    expect(afterReschedule.text).toContain("نتيجة اجتماع أرتك — تصور الفلل الأربع: تحقق هل انعقد الاجتماع أو تغير موعده");
+    expect(afterReschedule.text).not.toContain("المواعيد القريبة، 1 بالمجموع:");
+  });
+
+  it("uses the newest email confirmation even when the meeting is moved to an earlier hour", () => {
+    const reference = { ...baseItem, kind: "meeting" as const, title: "موعد المراجعة", status: "confirmed",
+      sourceRecordId: "confirmed-meeting:old" };
+    const selected = selectSaraLatestMeetingSchedule([
+      { ...reference, id: 41, dueAt: "2026-10-09 15:00:00", createdAt: "2026-10-07 10:00:00" }, // 19:00 Dubai
+      { ...reference, id: 42, dueAt: "2026-10-09 13:00:00", createdAt: "2026-10-08 10:00:00",
+        sourceRecordId: "confirmed-meeting:new" }, // 17:00 Dubai
+    ]);
+    expect(selected.map(item => item.id)).toEqual([42]);
+  });
+
+  it("does not collapse email meetings with the same title in distinct work files", () => {
+    const reference = { ...baseItem, kind: "meeting" as const, title: "جلسة مراجعة", status: "confirmed",
+      sourceRecordId: "confirmed-meeting:thread", dueAt: "2026-10-09 13:00:00" };
+    expect(selectSaraLatestMeetingSchedule([
+      { ...reference, id: 51, workFileId: 101 },
+      { ...reference, id: 52, workFileId: 102 },
+    ])).toHaveLength(2);
   });
 
   it("uses only active COMO Next files and avoids exaggerated pet names", () => {

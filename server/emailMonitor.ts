@@ -222,6 +222,167 @@ export function readonlyCursorAfterUid(cursor: { lastUid: number; uidValidity: s
     : 0;
 }
 
+
+export type ReadonlyAutomationSignal = "known_non_system" | "known_system" | "unknown";
+
+type ReadonlyAutomationHeaders = Readonly<Record<string, string | readonly string[] | undefined>>;
+
+function headerValues(headers: ReadonlyAutomationHeaders, name: string): string[] {
+  const value = headers[name.toLowerCase()];
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+  return [];
+}
+
+/**
+ * Applies only explicit, message-header signals. An absent automation header is
+ * deliberately not treated as evidence of a human sender.
+ */
+export function classifyReadonlyAutomationHeaders(headers: ReadonlyAutomationHeaders): ReadonlyAutomationSignal {
+  const autoSubmitted = headerValues(headers, "auto-submitted").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const precedence = headerValues(headers, "precedence").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const listId = headerValues(headers, "list-id").some(value => value.trim().length > 0);
+  const autoResponseSuppress = headerValues(headers, "x-auto-response-suppress").some(value => value.trim().length > 0);
+  const senderValues = [
+    ...headerValues(headers, "from"),
+    ...headerValues(headers, "return-path"),
+  ];
+  const noReplySender = senderValues.some(value => /\b(?:no[-_.]?reply|do[-_.]?not[-_.]?reply|donotreply|mailer-daemon)\b/i.test(value));
+
+  const explicitNonSystem = autoSubmitted.some(value => value === "no")
+    || precedence.some(value => value === "personal");
+  const explicitSystem = autoSubmitted.some(value => value !== "no")
+    || precedence.some(value => /^(?:bulk|list|junk|auto[_ -]?reply)$/.test(value))
+    || listId
+    || autoResponseSuppress
+    || noReplySender;
+
+  // Contradictory explicit metadata is not safe to classify. This also covers
+  // messages that claim Auto-Submitted: no while carrying list/automation data.
+  if (explicitSystem && explicitNonSystem) return "unknown";
+  if (explicitSystem) return "known_system";
+  if (explicitNonSystem) return "known_non_system";
+  return "unknown";
+}
+
+function parseReadonlyAutomationHeaders(rawHeaders: Buffer): ReadonlyAutomationHeaders | null {
+  const headers: Record<string, string[]> = {};
+  let currentName: string | undefined;
+  // IMAP header section responses include only headers, but stopping at the
+  // first blank line keeps this defensive if a server returns a full RFC822 part.
+  for (const line of rawHeaders.toString("utf8").split(/\r?\n/)) {
+    if (line === "") break;
+    if (/^[ \t]/.test(line)) {
+      if (!currentName || !headers[currentName]?.length) return null;
+      headers[currentName][headers[currentName].length - 1] += ` ${line.trim()}`;
+      continue;
+    }
+    const separator = line.indexOf(":");
+    if (separator <= 0) return null;
+    const name = line.slice(0, separator).trim().toLowerCase();
+    if (!/^[a-z0-9-]+$/i.test(name)) return null;
+    currentName = name;
+    (headers[name] ||= []).push(line.slice(separator + 1).trim());
+  }
+  return headers;
+}
+
+/**
+ * Fetches a single message's automation metadata without reading its body or
+ * attachments. The mailbox remains read-only and any transport, UIDVALIDITY,
+ * parsing, or classification ambiguity resolves to "unknown".
+ */
+export function fetchReadonlyAutomationSignalByUID(input: {
+  uid: number;
+  uidValidity: string;
+  folderName: string;
+}): Promise<ReadonlyAutomationSignal> {
+  return new Promise(resolve => {
+    if (!EMAIL_PASSWORD
+      || !Number.isSafeInteger(input.uid)
+      || input.uid <= 0
+      || !input.uidValidity.trim()
+      || !input.folderName.trim()) {
+      resolve("unknown");
+      return;
+    }
+
+    const imap = new Imap({
+      user: EMAIL_USER,
+      password: EMAIL_PASSWORD,
+      host: EMAIL_HOST,
+      port: 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false },
+      connTimeout: 15000,
+      authTimeout: 10000,
+    });
+    let settled = false;
+    const finish = (signal: ReadonlyAutomationSignal) => {
+      if (settled) return;
+      settled = true;
+      try { imap.end(); } catch { /* connection already closed */ }
+      resolve(signal);
+    };
+
+    imap.once("ready", () => {
+      // true opens the box read-only. Combined with markSeen: false below,
+      // node-imap uses a non-mutating header peek and does not alter flags.
+      imap.openBox(input.folderName, true, (openError, box) => {
+        if (openError || String(box?.uidvalidity ?? "") !== input.uidValidity) {
+          finish("unknown");
+          return;
+        }
+
+        let messageCount = 0;
+        let pendingMessages = 0;
+        let fetchEnded = false;
+        let signal: ReadonlyAutomationSignal = "unknown";
+        const finishAfterFetch = () => {
+          if (!fetchEnded) return;
+          if (messageCount === 0) { finish("unknown"); return; }
+          if (pendingMessages !== 0) return;
+          finish(messageCount === 1 ? signal : "unknown");
+        };
+        const fetch = imap.fetch([input.uid], {
+          // Header fields only: no RFC822 body, MIME parts, or attachments.
+          bodies: "HEADER.FIELDS (AUTO-SUBMITTED PRECEDENCE LIST-ID X-AUTO-RESPONSE-SUPPRESS FROM RETURN-PATH)",
+          markSeen: false,
+        });
+
+        fetch.on("message", msg => {
+          messageCount += 1;
+          pendingMessages += 1;
+          let fetchedUid: number | undefined;
+          let messageFailed = false;
+          const chunks: Buffer[] = [];
+          msg.on("attributes", attrs => { fetchedUid = attrs.uid; });
+          msg.on("body", stream => {
+            stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+            stream.once("error", () => { messageFailed = true; });
+          });
+          msg.once("end", () => {
+            if (!messageFailed && fetchedUid === input.uid) {
+              const parsedHeaders = parseReadonlyAutomationHeaders(Buffer.concat(chunks));
+              signal = parsedHeaders ? classifyReadonlyAutomationHeaders(parsedHeaders) : "unknown";
+            }
+            pendingMessages -= 1;
+            finishAfterFetch();
+          });
+        });
+        fetch.once("error", () => finish("unknown"));
+        fetch.once("end", () => {
+          fetchEnded = true;
+          finishAfterFetch();
+        });
+      });
+    });
+    imap.once("error", () => finish("unknown"));
+    imap.once("end", () => finish("unknown"));
+    imap.connect();
+  });
+}
+
 /**
  * Strict read-only mailbox snapshot for COMO Next.
  * Every folder is opened read-only and markSeen is explicitly disabled.

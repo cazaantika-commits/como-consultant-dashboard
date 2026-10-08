@@ -21,6 +21,8 @@ type BriefingItem = {
   status: string | null;
   dueAt: string | null;
   updatedAt: string | null;
+  createdAt?: string | null;
+  sourceRecordId?: string | null;
 };
 
 type ChangeItem = {
@@ -69,6 +71,55 @@ function parseDate(value: string | null | undefined) {
   const normalized = /Z$|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value.replace(" ", "T")}Z`;
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Email confirmations that carry a new date create a separate, evidence-bound
+ * meeting row. Until reconciliation can merge those rows safely, Sara uses
+ * the latest dated evidence, not the furthest slot: reschedules can move a
+ * meeting earlier. Manually created meetings and different titles stay apart.
+ */
+export function selectSaraLatestMeetingSchedule<T extends {
+  id: number;
+  project?: string | null;
+  workFile?: string | null;
+  workFileId?: number | null;
+  title?: string | null;
+  sourceRecordId?: string | null;
+  dueAt?: string | null;
+  startsAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}>(meetings: T[]) {
+  const emailMeetingKey = (meeting: T) => {
+    if (!meeting.sourceRecordId?.startsWith("confirmed-meeting:")) return null;
+    const title = String(meeting.title || "").toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
+    const project = String(meeting.project || "").toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
+    const file = meeting.workFileId != null ? `id:${meeting.workFileId}`
+      : String(meeting.workFile || "").toLocaleLowerCase("en-US").replace(/\s+/g, " ").trim();
+    return title && project && file ? `${project}\u0000${file}\u0000${title}` : null;
+  };
+  const scheduledTime = (meeting: T) => parseDate(meeting.dueAt || meeting.startsAt)?.getTime()
+    ?? Number.MIN_SAFE_INTEGER;
+  const noticeTime = (meeting: T) => parseDate(meeting.createdAt)?.getTime()
+    ?? parseDate(meeting.updatedAt)?.getTime()
+    ?? Number.MIN_SAFE_INTEGER;
+  const latestByAppointment = new Map<string, T>();
+  const unchanged: T[] = [];
+  for (const meeting of meetings) {
+    const key = emailMeetingKey(meeting);
+    if (!key) {
+      unchanged.push(meeting);
+      continue;
+    }
+    const current = latestByAppointment.get(key);
+    if (!current || noticeTime(meeting) > noticeTime(current)
+      || (noticeTime(meeting) === noticeTime(current) && scheduledTime(meeting) > scheduledTime(current))
+      || (noticeTime(meeting) === noticeTime(current) && scheduledTime(meeting) === scheduledTime(current) && meeting.id > current.id)) {
+      latestByAppointment.set(key, meeting);
+    }
+  }
+  return [...unchanged, ...Array.from(latestByAppointment.values())];
 }
 
 export function getSaraDubaiWindow(now = new Date()) {
@@ -240,7 +291,8 @@ function projectPicture(workFiles: WorkFileSummary[]) {
 
 export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPeriod, snapshot: BriefingSnapshot, now: Date) {
   const { end, nextThreeDays } = getSaraDubaiWindow(now);
-  const pastMeetings: BriefingItem[] = snapshot.meetings
+  const currentMeetings = selectSaraLatestMeetingSchedule(snapshot.meetings);
+  const pastMeetings: BriefingItem[] = currentMeetings
     .filter(item => {
       const starts = parseDate(item.dueAt);
       return Boolean(starts && starts.getTime() < now.getTime());
@@ -253,7 +305,7 @@ export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPerio
         ? `نتيجة ${item.title}: تحقق هل انعقد الاجتماع أو تغير موعده، وسجل ما حدث`
         : `تأكد من ${item.title}: الموعد السابق مضى؛ تحقق هل تأكد أو تغير`,
     }));
-  const futureMeetings = snapshot.meetings.filter(item => {
+  const futureMeetings = currentMeetings.filter(item => {
     const starts = parseDate(item.dueAt);
     return Boolean(starts && starts.getTime() >= now.getTime());
   });
@@ -401,8 +453,9 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
       LIMIT 40
     `),
     db.execute(sql`
-      SELECT m.id, p.name AS project, wf.title AS workFile, m.title, 'important' AS priority,
-        m.meeting_status AS status, m.starts_at AS dueAt, m.updated_at AS updatedAt
+      SELECT m.id, p.name AS project, wf.id AS workFileId, wf.title AS workFile, m.title, 'important' AS priority,
+        m.meeting_status AS status, m.starts_at AS dueAt, m.created_at AS createdAt,
+        m.updated_at AS updatedAt, m.source_record_id AS sourceRecordId
       FROM como_next_meetings m
       JOIN como_next_work_files wf ON wf.id=m.work_file_id AND wf.project_id=m.project_id
       JOIN projects p ON p.id=m.project_id AND p.is_test_project=0
@@ -593,7 +646,14 @@ async function loadBriefingState(memberId: string, now: Date) {
     hasEveningFull,
     changesCount: snapshot.changes.length,
   });
-  const allAttention = dedupeAttention([...snapshot.actions, ...snapshot.decisions, ...snapshot.meetings, ...snapshot.proposals, ...snapshot.communications, ...snapshot.emails]);
+  const allAttention = dedupeAttention([
+    ...snapshot.actions,
+    ...snapshot.decisions,
+    ...selectSaraLatestMeetingSchedule(snapshot.meetings),
+    ...snapshot.proposals,
+    ...snapshot.communications,
+    ...snapshot.emails,
+  ]);
   const todayCount = collapseSaraAttentionByTopic(allAttention.filter(item => isTodayAttention(item, now, window.end)), now, window.end).length;
   return { userId, db, window, snapshot, recommendedMode, todayCount, lastCompletedAt: last?.completedAt || null };
 }

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
 import {
   comoNextActions,
   comoNextCommunications,
@@ -12,6 +12,7 @@ import {
   comoNextIntakeProposals,
   comoNextMeetings,
   comoNextProjectParties,
+  comoNextWorkFileEvents,
   comoNextWorkFiles,
   comoNextWorkMemory,
   comoNextWorkMemoryDocuments,
@@ -28,7 +29,7 @@ import {
   type ReadonlyMailboxBatch,
 } from "../emailMonitor";
 import { storagePut } from "../storage";
-import { appendEvent, createActionCommand, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess } from "./comoNextCommands";
+import { appendEvent, createActionCommand, createCommunicationDraftCommand, createWorkFileCommand, requireProjectAccess, toSqlUtcTimestamp } from "./comoNextCommands";
 import { createIntakeProposalsCommand, reviewIntakeProposalCommand, type IntakeProposalDraft } from "./comoNextIntake";
 import { currentInboundEmailText, reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
@@ -83,30 +84,52 @@ function sqlUtcFromDubaiParts(year: number, month: number, day: number, hour: nu
   return utc.toISOString();
 }
 
-export function extractConfirmedMeetingEvidence(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">): ConfirmedMeetingEvidence | null {
-  const subject = asciiDigits(email.subject || "");
-  const body = asciiDigits(email.bodyText || "").split("\n").map(line => line.replace(/^\s*>+\s?/, "")).join("\n");
-  const text = `${subject}\n${body}`;
-  const isMeeting = /\bmeeting\b|اجتماع/i.test(subject);
-  const explicitConfirmation = /\b(?:has been|is|was) confirmed\b|\bconfirmed for\b|تم\s+تأكيد|موعد\s+مؤكد/i.test(body);
-  const scheduleAcknowledgement = /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(body);
-  if (!isMeeting || (!explicitConfirmation && !scheduleAcknowledgement)) return null;
-
-  const dateMatch = text.match(/\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر)(?:\s+(20\d{2}))?\b[\s\S]{0,80}?\b(?:at|الساعة)?\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباح(?:ًا|ا)?|مساء(?:ً|ًا|ا)?)\b/i);
-  if (!dateMatch) return null;
-  const receivedYear = parseStoredUtc(email.receivedAt).getUTCFullYear();
-  const year = Number(dateMatch[3] || receivedYear);
-  const month = monthNumbers[String(dateMatch[2]).toLowerCase()];
-  const day = Number(dateMatch[1]);
-  let hour = Number(dateMatch[4]);
-  const minute = Number(dateMatch[5] || 0);
-  const period = String(dateMatch[6]).toLowerCase();
+function meetingStartsAtFromText(text: string, receivedAt: string) {
+  const explicit = text.match(/\b(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december|يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر)(?:\s+(20\d{2}))?\b[\s\S]{0,80}?\b(?:at|الساعة)?\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباح(?:ًا|ا)?|مساء(?:ً|ًا|ا)?)\b/i);
+  const relative = text.match(/(?:\b(?:tomorrow)\b|غدًا|غدا)[\s\S]{0,80}?\b(?:at|الساعة)?\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباح(?:ًا|ا)?|مساء(?:ً|ًا|ا)?)\b/i)
+    || text.match(/\b(?:at|الساعة)?\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM|صباح(?:ًا|ا)?|مساء(?:ً|ًا|ا)?)[\s\S]{0,80}?(?:\b(?:tomorrow)\b|غدًا|غدا)/i);
+  const match = explicit || relative;
+  if (!match) return null;
+  let hour = Number(explicit ? explicit[4] : relative![1]);
+  const minute = Number(explicit ? explicit[5] || 0 : relative![2] || 0);
+  const period = String(explicit ? explicit[6] : relative![3]).toLowerCase();
   if (/pm|مساء/.test(period) && hour < 12) hour += 12;
   if (/am|صباح/.test(period) && hour === 12) hour = 0;
-  if (month === undefined || hour > 23 || minute > 59) return null;
-  const startsAt = sqlUtcFromDubaiParts(year, month, day, hour, minute);
-  if (!startsAt) return null;
+  if (hour > 23 || minute > 59) return null;
+  if (explicit) {
+    const month = monthNumbers[String(explicit[2]).toLowerCase()];
+    if (month === undefined) return null;
+    return sqlUtcFromDubaiParts(Number(explicit[3] || parseStoredUtc(receivedAt).getUTCFullYear()), month, Number(explicit[1]), hour, minute);
+  }
+  // Relative dates use the message's stated Dubai timezone, not its UTC day.
+  const dubaiNow = new Date(parseStoredUtc(receivedAt).getTime() + 4 * 60 * 60 * 1000);
+  const tomorrow = new Date(Date.UTC(dubaiNow.getUTCFullYear(), dubaiNow.getUTCMonth(), dubaiNow.getUTCDate() + 1));
+  return sqlUtcFromDubaiParts(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(), hour, minute);
+}
 
+/** Quoted history corroborates an old slot only; it must never produce a new one. */
+export function currentMeetingEmailText(body: string) {
+  const current: string[] = [];
+  for (const line of asciiDigits(body || "").split("\n")) {
+    if (/^\s*>/.test(line)) continue;
+    if (/^\s*(?:on\s+.+\s+wrote:|[-_]{2,}\s*original message\s*[-_]{2,}|(?:from|sent|to|subject|من)\s*:)/i.test(line)) break;
+    current.push(line);
+  }
+  return current.join("\n").trim();
+}
+
+const explicitMeetingConfirmation = /\b(?:has been|is|was) confirmed\b|\bconfirmed for\b|تم\s+تأكيد|موعد\s+مؤكد/i;
+const explicitMeetingReschedule = /\b(?:rescheduled|re-?scheduled|moved|postponed)\s+(?:for|to)\b|\b(?:meeting|appointment)\s+(?:has been\s+)?(?:moved|postponed)\b|(?:تم\s+)?(?:إعادة\s+جدولة|تغيير|تأجيل)\s+(?:الموعد|الاجتماع)(?:\s+إلى)?/i;
+
+function meetingEvidenceFromText(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">, body: string, allowScheduleAcknowledgement: boolean, metadataBody = body): ConfirmedMeetingEvidence | null {
+  const subject = asciiDigits(email.subject || "");
+  const text = `${subject}\n${metadataBody}`;
+  const isMeeting = /\bmeeting\b|اجتماع/i.test(subject);
+  const directConfirmation = explicitMeetingConfirmation.test(body) || explicitMeetingReschedule.test(body);
+  const scheduleAcknowledgement = allowScheduleAcknowledgement && /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(body);
+  if (!isMeeting || (!directConfirmation && !scheduleAcknowledgement)) return null;
+  const startsAt = meetingStartsAtFromText(body, email.receivedAt) || meetingStartsAtFromText(subject, email.receivedAt);
+  if (!startsAt) return null;
   const plotNumber = text.match(/(?:plot(?:\s*(?:no\.?|number))?|قطعة)\s*(?:-|–|:)?\s*(\d{5,})/i)?.[1] || null;
   const personAndOrganization = text.match(/(?:Eng\.?|Engineer|المهندس)\s+([\p{L}][\p{L} .'-]{1,60}?)\s+(?:from|من)\s+([\p{L}][\p{L}0-9 .&'-]{1,60}?)(?=\s+(?:has been|is|was)\s+confirmed|\s+تم\s+تأكيد|\s+for\s+tomorrow|\s+لمناقشة|[,\n.])/iu);
   const personName = personAndOrganization?.[1]?.trim() || null;
@@ -117,8 +140,21 @@ export function extractConfirmedMeetingEvidence(email: Pick<typeof comoNextEmail
   return { canonicalSubject: canonicalMeetingSubject(subject), plotNumber, startsAt, location, personName, organizationName, topic };
 }
 
+export function extractConfirmedMeetingEvidence(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">): ConfirmedMeetingEvidence | null {
+  const current = currentMeetingEmailText(email.bodyText || "");
+  return meetingEvidenceFromText(email, current, true, asciiDigits(email.bodyText || ""));
+}
+
+/** Old imports removed quote markers before extracting evidence. Retain that
+ * compatibility only to find an already-created legacy slot; never create or
+ * reschedule from it, because quoted text is not current confirmation. */
+function legacyConfirmedMeetingEvidence(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">) {
+  const legacyText = asciiDigits(email.bodyText || "").split("\n").map(line => line.replace(/^\s*>+\s?/, "")).join("\n");
+  return meetingEvidenceFromText(email, legacyText, true, legacyText);
+}
+
 export function isMeetingScheduleAcknowledgement(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">) {
-  return email.folderName === "INBOX" && Boolean(extractConfirmedMeetingEvidence(email)) && /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(email.bodyText);
+  return email.folderName === "INBOX" && Boolean(extractConfirmedMeetingEvidence(email)) && /take note.{0,40}(?:schedule|calendar)|(?:added|noted).{0,40}(?:schedule|calendar)|سأسجل.{0,40}(?:الجدول|التقويم)|تم.{0,30}(?:تسجيل|إضافة).{0,30}(?:الموعد|التقويم)/i.test(currentMeetingEmailText(email.bodyText));
 }
 
 function meetingDisplayPerson(value?: string | null) {
@@ -133,6 +169,23 @@ function confirmedMeetingKey(projectId: number, evidence: ConfirmedMeetingEviden
     evidence.startsAt,
     evidence.plotNumber || "",
   ].join("|")).digest("hex").slice(0, 32);
+}
+
+function freshConfirmedMeetingEvidence(email: Pick<typeof comoNextEmailMessages.$inferSelect, "folderName" | "subject" | "bodyText" | "receivedAt">) {
+  if (email.folderName !== "INBOX") return null;
+  const current = currentMeetingEmailText(email.bodyText || "");
+  if (!current) return null;
+  return meetingEvidenceFromText(email, current, false, asciiDigits(email.bodyText || ""));
+}
+
+function isLaterThreadEvidence(candidate: typeof comoNextEmailMessages.$inferSelect, prior: typeof comoNextEmailMessages.$inferSelect) {
+  const candidateTime = parseStoredUtc(candidate.receivedAt).getTime();
+  const priorTime = parseStoredUtc(prior.receivedAt).getTime();
+  return candidateTime > priorTime || (candidateTime === priorTime && Number(candidate.id) > Number(prior.id));
+}
+
+function confirmedMeetingEvidenceReference(email: typeof comoNextEmailMessages.$inferSelect) {
+  return `IMAP ${email.folderName}; UIDVALIDITY=${email.uidValidity}; UID=${email.imapUid}; SHA-256=${email.bodySha256}`;
 }
 
 async function ensureConfirmedMeetingPreparation(input: {
@@ -160,6 +213,51 @@ async function ensureConfirmedMeetingPreparation(input: {
   return Number(action.id);
 }
 
+/** A reschedule changes the due time of the existing preparation only while it
+ * remains active. Completed/cancelled preparation is never silently reopened. */
+async function rescheduleConfirmedMeetingPreparation(input: {
+  userId: number;
+  meetingId: number;
+  workFileId: number;
+  projectId: number;
+  emailId: number;
+  oldStartsAt: string | null;
+  evidence: ConfirmedMeetingEvidence;
+}) {
+  if (new Date(input.evidence.startsAt).getTime() <= Date.now()) return null;
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const preparationKey = `confirmed-meeting-preparation:${input.meetingId}`;
+  const [preparationEvent] = await db.select({ actionId: comoNextWorkFileEvents.actionId })
+    .from(comoNextWorkFileEvents).where(eq(comoNextWorkFileEvents.idempotencyKey, preparationKey)).limit(1);
+  if (!preparationEvent?.actionId) {
+    return ensureConfirmedMeetingPreparation({ userId: input.userId, meetingId: input.meetingId, workFileId: input.workFileId, evidence: input.evidence });
+  }
+  const [action] = await db.select().from(comoNextActions).where(eq(comoNextActions.id, preparationEvent.actionId)).limit(1);
+  if (!action || !["open", "in_progress", "waiting_external"].includes(action.actionStatus)) return Number(preparationEvent.actionId);
+  const dueAt = toSqlUtcTimestamp(input.evidence.startsAt);
+  if (action.dueAt === dueAt) return Number(action.id);
+  await db.transaction(async tx => {
+    await tx.update(comoNextActions).set({
+      dueAt,
+      attentionAt: action.followUpAt || dueAt,
+    }).where(eq(comoNextActions.id, action.id));
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: input.projectId,
+      workFileId: input.workFileId,
+      actionId: Number(action.id),
+      actorType: "system",
+      actorUserId: null,
+      eventType: "meeting_preparation_rescheduled",
+      summary: `تحديث موعد تحضير الاجتماع إلى ${dueAt}`,
+      payload: { meetingId: input.meetingId, emailId: input.emailId, fromStartsAt: input.oldStartsAt, toStartsAt: dueAt, externalSideEffect: false },
+      idempotencyKey: `meeting-preparation-rescheduled:${input.meetingId}:${input.emailId}`,
+    });
+  });
+  return Number(action.id);
+}
+
 export async function reconcileConfirmedMeetingEmailCommand(input: { userId: number; emailId: number }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -168,7 +266,8 @@ export async function reconcileConfirmedMeetingEmailCommand(input: { userId: num
     eq(comoNextEmailMessages.userId, input.userId),
   )).limit(1);
   if (!email) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الرسالة" });
-  const evidence = extractConfirmedMeetingEvidence(email);
+  const currentEvidence = extractConfirmedMeetingEvidence(email);
+  const evidence = currentEvidence || legacyConfirmedMeetingEvidence(email);
   if (!evidence?.plotNumber) return { skipped: "not_explicit_confirmed_meeting", meetingId: null, workFileId: null, externalSideEffect: false as const };
 
   const relatedEmails = await db.select().from(comoNextEmailMessages).where(eq(comoNextEmailMessages.userId, input.userId))
@@ -189,18 +288,107 @@ export async function reconcileConfirmedMeetingEmailCommand(input: { userId: num
   }
   if (accessible.length !== 1) return { skipped: "project_not_unique", meetingId: null, workFileId: null, externalSideEffect: false as const };
   const project = accessible[0];
+  // This is deliberately the historical key: records created before the
+  // reschedule fix keep replaying exactly as they did. It is not a series key.
   const key = confirmedMeetingKey(project.id, evidence);
   const [existingMeeting] = await db.select().from(comoNextMeetings).where(and(
     eq(comoNextMeetings.sourceSystem, "como_next"),
     eq(comoNextMeetings.sourceRecordId, `confirmed-meeting:${key}`),
   )).limit(1);
   if (existingMeeting) {
-    for (const item of sameThread) {
-      if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
-      await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(existingMeeting.workFileId), suppressReplyDraft: true });
+    if (["completed", "cancelled"].includes(existingMeeting.meetingStatus) || !existingMeeting.workFileId) {
+      return { skipped: "legacy_meeting_closed", meetingId: Number(existingMeeting.id), workFileId: existingMeeting.workFileId ? Number(existingMeeting.workFileId) : null, externalSideEffect: false as const };
+    }
+    if (email.inboxStatus === "linked" && Number(email.linkedWorkFileId || 0) !== Number(existingMeeting.workFileId)) {
+      return { skipped: "email_already_linked_elsewhere", meetingId: null, workFileId: null, externalSideEffect: false as const };
+    }
+    if (email.inboxStatus !== "linked") {
+      await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(email.id), projectId: project.id, workFileId: Number(existingMeeting.workFileId), suppressReplyDraft: true });
     }
     const preparationActionId = await ensureConfirmedMeetingPreparation({ userId: input.userId, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), evidence });
     return { replayed: true as const, meetingId: Number(existingMeeting.id), workFileId: Number(existingMeeting.workFileId), preparationActionId, externalSideEffect: false as const };
+  }
+
+  // A changed time cannot use the legacy slot key. Treat it as a reschedule
+  // only when the current (not quoted) text explicitly confirms/moves a time,
+  // and exactly one open COMO meeting has earlier linked evidence in this same
+  // normalized subject thread. A changed subject or multiple plausible files
+  // intentionally leaves the message for review rather than merging records.
+  const freshEvidence = currentEvidence && freshConfirmedMeetingEvidence(email);
+  if (freshEvidence?.plotNumber) {
+    const incompleteMeetings = await db.select().from(comoNextMeetings).where(and(
+      eq(comoNextMeetings.projectId, project.id),
+      eq(comoNextMeetings.sourceSystem, "como_next"),
+      like(comoNextMeetings.sourceRecordId, "confirmed-meeting:%"),
+      inArray(comoNextMeetings.meetingStatus, ["planned", "confirmed"]),
+      isNotNull(comoNextMeetings.workFileId),
+    ));
+    const matched = [] as typeof incompleteMeetings;
+    for (const meeting of incompleteMeetings) {
+      const linkedThreadEvidence = sameThread.some(item =>
+        Number(item.linkedWorkFileId || 0) === Number(meeting.workFileId)
+        && isLaterThreadEvidence(email, item)
+        && Boolean(extractConfirmedMeetingEvidence(item)),
+      );
+      if (linkedThreadEvidence) matched.push(meeting);
+    }
+    if (matched.length === 1) {
+      const meeting = matched[0];
+      if (email.inboxStatus === "linked" && Number(email.linkedWorkFileId || 0) !== Number(meeting.workFileId)) {
+        return { skipped: "email_already_linked_elsewhere", meetingId: null, workFileId: null, externalSideEffect: false as const };
+      }
+      if (email.inboxStatus !== "linked") {
+        await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(email.id), projectId: project.id, workFileId: Number(meeting.workFileId), suppressReplyDraft: true });
+      }
+      const oldStartsAt = meeting.startsAt;
+      const startsAt = toSqlUtcTimestamp(freshEvidence.startsAt);
+      const changed = oldStartsAt !== startsAt;
+      if (changed) {
+        await db.transaction(async tx => {
+          await tx.update(comoNextMeetings).set({
+            startsAt,
+            location: freshEvidence.location || meeting.location,
+            meetingStatus: "confirmed",
+          }).where(eq(comoNextMeetings.id, meeting.id));
+          await appendEvent(tx, {
+            userId: input.userId,
+            projectId: project.id,
+            workFileId: Number(meeting.workFileId),
+            actorType: "system",
+            actorUserId: null,
+            eventType: "meeting_rescheduled_from_email",
+            summary: `تحديث موعد الاجتماع المؤكد من ${oldStartsAt || "غير محدد"} إلى ${startsAt}`,
+            payload: {
+              meetingId: Number(meeting.id), emailId: Number(email.id), fromStartsAt: oldStartsAt,
+              toStartsAt: startsAt, evidenceReference: confirmedMeetingEvidenceReference(email), externalSideEffect: false,
+            },
+            idempotencyKey: `meeting-rescheduled:${meeting.id}:${email.id}`,
+          });
+        });
+      }
+      const preparationActionId = await rescheduleConfirmedMeetingPreparation({
+        userId: input.userId, meetingId: Number(meeting.id), workFileId: Number(meeting.workFileId), projectId: project.id,
+        emailId: Number(email.id), oldStartsAt, evidence: freshEvidence,
+      });
+      return {
+        replayed: !changed,
+        rescheduled: changed,
+        meetingId: Number(meeting.id),
+        workFileId: Number(meeting.workFileId),
+        preparationActionId,
+        externalSideEffect: false as const,
+      };
+    }
+    if (matched.length > 1) {
+      return { skipped: "reschedule_match_ambiguous", meetingId: null, workFileId: null, externalSideEffect: false as const };
+    }
+    if (explicitMeetingReschedule.test(currentMeetingEmailText(email.bodyText))) {
+      return { skipped: "reschedule_match_not_proven", meetingId: null, workFileId: null, externalSideEffect: false as const };
+    }
+  }
+
+  if (!currentEvidence) {
+    return { skipped: "legacy_confirmation_not_found", meetingId: null, workFileId: null, externalSideEffect: false as const };
   }
 
   const person = meetingDisplayPerson(evidence.personName);
@@ -227,9 +415,8 @@ export async function reconcileConfirmedMeetingEmailCommand(input: { userId: num
     participantNames: [`المهندس ${person} — ${organization}`, "Abdalrahman Zaqout", "Wael Zooma"],
     idempotencyKey: `confirmed-meeting:${key}`,
   });
-  for (const item of sameThread) {
-    if (item.inboxStatus === "linked" || !extractConfirmedMeetingEvidence(item)) continue;
-    await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(item.id), projectId: project.id, workFileId: Number(workFile.id), suppressReplyDraft: true });
+  if (email.inboxStatus !== "linked") {
+    await linkEmailToWorkFileCommand({ userId: input.userId, emailId: Number(email.id), projectId: project.id, workFileId: Number(workFile.id), suppressReplyDraft: true });
   }
   const preparationActionId = await ensureConfirmedMeetingPreparation({ userId: input.userId, meetingId: Number(meeting.id), workFileId: Number(workFile.id), evidence });
   return { replayed: false as const, meetingId: Number(meeting.id), workFileId: Number(workFile.id), preparationActionId, externalSideEffect: false as const };
