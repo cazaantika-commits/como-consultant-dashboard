@@ -180,9 +180,14 @@ describe("Sara Realtime architecture", () => {
     expect(roomSource).toContain("new SaraWebRtcDisconnectGuard");
     expect(roomSource).toContain("if (status.data.realtimeConfigured) void startSession()");
     expect(roomSource).not.toContain("setAvatarAudioDelta");
-    expect(avatarSource).toContain("videoRef.current.muted = true");
+    expect(avatarSource).toContain("session.attach(videoRef.current);");
+    expect(avatarSource.match(/silenceSaraAvatarVideo\(videoRef\.current\)/g)?.length).toBe(2);
+    expect(avatarSource).toContain("onVolumeChange={event => silenceSaraAvatarVideo(event.currentTarget)}");
     expect(avatarSource).toContain("Visual-only");
     expect(avatarSource).toContain("object-[center_25%]");
+    expect(roomSource).toContain('streamlined && status.data?.liveAvatarConfigured');
+    expect(roomSource).toContain('onClick={() => { void toggleAvatar(); }}');
+    expect(roomSource).toContain('صورة حية صامتة');
     expect(avatarSource).toContain('<img src={portrait}');
     expect(roomSource).not.toContain('@/assets/como/sara-idle.webm');
     expect(pageSource).not.toContain('@/assets/como/sara-idle.webm');

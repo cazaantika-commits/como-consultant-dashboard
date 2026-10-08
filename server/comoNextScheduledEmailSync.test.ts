@@ -6,8 +6,16 @@ import { normalizeIntakeProposalDraft } from "./services/comoNextIntake";
 const route = readFileSync("server/scheduledEmailSyncRoute.ts", "utf8");
 const inbox = readFileSync("server/services/comoNextEmailInbox.ts", "utf8");
 const imap = readFileSync("server/emailMonitor.ts", "utf8");
+const inboxView = readFileSync("client/src/components/ComoNextEmailInbox.tsx", "utf8");
 
 describe("COMO read-only scheduled mail phases", () => {
+  it("displays the current half-hour schedule rather than the superseded three daily times", () => {
+    expect(inboxView).toContain("استيراد كل نصف ساعة");
+    expect(inboxView).toContain("التحليل بعد 5 دقائق");
+    expect(inboxView).toContain("تنفيذ Manus بعد 10 دقائق");
+    expect(inboxView).not.toContain("06:00 · 11:00 · 17:00");
+  });
+
   it("advances UID only within one UIDVALIDITY and recovers after mailbox reset", () => {
     expect(readonlyCursorAfterUid({ lastUid: 459, uidValidity: "123" }, "123")).toBe(459);
     expect(readonlyCursorAfterUid({ lastUid: 459, uidValidity: "123" }, "124")).toBe(0);

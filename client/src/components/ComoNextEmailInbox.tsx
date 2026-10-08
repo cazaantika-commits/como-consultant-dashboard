@@ -220,7 +220,10 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
           <h3 className="text-lg font-black text-slate-950">المراسلات البريدية</h3>
           <p className="mt-1 text-[11px] text-slate-500">
             {scheduledStatusQuery.data?.isEnabled ? <>
-              تحديث البريد: 06:00 · 11:00 · 17:00 بتوقيت دبي
+              استيراد كل نصف ساعة (:00/:30) بتوقيت دبي
+              {scheduledStatusQuery.data.processingEnabled ? " · التحليل بعد 5 دقائق" : null}
+              {scheduledStatusQuery.data.executiveEnabled ? " · تنفيذ Manus بعد 10 دقائق" : null}
+              {" · أوقات مجدولة؛ التنفيذ الفعلي قد يتأخر"}
               {scheduledStatusQuery.data.lastSuccessAt ? <> · آخر استيراد {formatDubaiMailTime(scheduledStatusQuery.data.lastSuccessAt)}</> : " · الاستيراد لم ينجح بعد"}
               {scheduledStatusQuery.data.processingEnabled ? <> · آخر تحليل {scheduledStatusQuery.data.processingLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.processingLastSuccessAt) : "لم ينجح بعد"}</> : " · التحليل غير مفعل"}
               {scheduledStatusQuery.data.executiveEnabled ? <> · آخر تنفيذ Manus {scheduledStatusQuery.data.executiveLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.executiveLastSuccessAt) : "لم يثبت بعد"}</> : " · تنفيذ Manus غير مفعل"}

@@ -523,6 +523,19 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
             sessionToken={avatarToken}
             isSpeaking={visualSpeechActive}
           />
+          {streamlined && status.data?.liveAvatarConfigured ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { void toggleAvatar(); }}
+              disabled={createAvatarToken.isPending}
+              title="فيديو اختياري صامت؛ صوت سارة المباشر لا يعتمد عليه"
+              className="absolute left-4 top-16 z-[31] h-9 rounded-full border-white/25 bg-slate-950/70 px-3 text-xs font-bold text-white hover:bg-slate-950/85 hover:text-white sm:left-8 sm:top-24"
+            >
+              {avatarToken ? <VideoOff className="ml-1.5 h-4 w-4" /> : <Video className="ml-1.5 h-4 w-4" />}
+              {avatarToken ? "إيقاف الصورة" : "صورة حية صامتة"}
+            </Button>
+          ) : null}
           {!streamlined && !avatarToken ? (
             <div className="absolute inset-x-3 bottom-3 rounded-2xl border border-white/10 bg-slate-950/75 p-3 text-right text-white backdrop-blur-xl sm:inset-x-8 sm:bottom-10 sm:p-4">
               <p className="text-sm font-bold sm:text-base">سارة أمامك بحركتها المحلية</p>

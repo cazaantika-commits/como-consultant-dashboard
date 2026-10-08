@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LiveAvatarSession, SessionEvent, SessionState } from "@heygen/liveavatar-web-sdk";
 import { Radio } from "lucide-react";
+import { silenceSaraAvatarVideo } from "@/lib/saraAvatarSilence";
 
 type Props = {
   portrait: string;
@@ -37,10 +38,11 @@ export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false 
       if (videoRef.current) {
         // Set these before attaching the SDK's media tracks. The video is
         // visual-only even if the SDK session happens to expose remote audio.
-        videoRef.current.defaultMuted = true;
-        videoRef.current.muted = true;
-        videoRef.current.volume = 0;
+        silenceSaraAvatarVideo(videoRef.current);
         session.attach(videoRef.current);
+        // LiveAvatar/LiveKit may clear `muted` while attaching its audio track.
+        // Reassert silence immediately and on subsequent element events below.
+        silenceSaraAvatarVideo(videoRef.current);
       }
     };
     const onDisconnected = () => {
@@ -69,7 +71,12 @@ export function SaraLiveAvatarView({ portrait, sessionToken, isSpeaking = false 
         autoPlay
         muted
         playsInline
-        onPlaying={() => setLiveVideoPlaying(true)}
+        onVolumeChange={event => silenceSaraAvatarVideo(event.currentTarget)}
+        onLoadedMetadata={event => silenceSaraAvatarVideo(event.currentTarget)}
+        onPlaying={event => {
+          silenceSaraAvatarVideo(event.currentTarget);
+          setLiveVideoPlaying(true);
+        }}
         className={`absolute inset-0 h-full w-full object-cover object-[center_25%] transition-opacity duration-200 ${showLiveVideo ? "opacity-100" : "opacity-0"}`}
       />
       {/* A state-led visual cue, deliberately not an audio analysis or sync promise. */}
