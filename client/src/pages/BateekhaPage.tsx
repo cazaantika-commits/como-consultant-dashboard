@@ -21,6 +21,7 @@ import { trpc } from "@/lib/trpc";
 import { ProjectSelector } from "@/components/ProjectSelector";
 import { getFallbackFinancialStudiesTab, isFinancialStudiesTabVisible, type FinancialStudiesTabId } from "@/lib/financialStudiesNavigation";
 import { resolveReturnPath, withReturnPath } from "@/lib/returnNavigation";
+import { getMajanWorkspaceView, isMajanFinanceProject } from "@/lib/majanWorkspaceRouting";
 
 const UnifiedProjectCardPage = lazy(() => import("./UnifiedProjectCardPage"));
 const PricingPage = lazy(() => import("./PricingPage"));
@@ -33,6 +34,7 @@ const V2Feasibility = lazy(() => import("./V2Feasibility"));
 const V2CapitalPortfolio = lazy(() => import("./V2CapitalPortfolio"));
 const V2UnifiedGroupCashFlow = lazy(() => import("./V2UnifiedGroupCashFlow"));
 const TimelinePage = lazy(() => import("./TimelinePage"));
+const MajanFinanceWorkspace = lazy(() => import("./MajanFinanceWorkspace"));
 
 type TabId = FinancialStudiesTabId;
 type TileTone = { accent: string; wash: string; icon: string; border: string };
@@ -68,7 +70,12 @@ const TABS: { id: TabId; label: string; description: string; icon: any; projectS
   { id: "unified_group_cashflow", label: "التدفقات الموحدة", description: "كل المشاريع وحركة المجموعة الشهرية", icon: Layers3, projectScoped: false },
 ];
 
-function TabContent({ tabId }: { tabId: TabId }) {
+function TabContent({ tabId, projectId, isMajan }: { tabId: TabId; projectId?: number | null; isMajan?: boolean }) {
+  const showLegacy = new URLSearchParams(window.location.search).get("legacy") === "1";
+  const workspaceView = getMajanWorkspaceView(tabId, Boolean(isMajan && projectId === 1), showLegacy);
+  if (workspaceView) {
+    return <MajanFinanceWorkspace key={tabId} embedded initialView={workspaceView} />;
+  }
   switch (tabId) {
     case "general": return <UnifiedProjectCardPage />;
     case "units": return <PricingPage embedded />;
@@ -111,6 +118,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   const projectQuery = trpc.projects.getById.useQuery(effectiveProjectId!, { enabled: !!effectiveProjectId && !!user });
   const financingScenario = (projectQuery.data as any)?.financingScenario;
   const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" || financingScenario === "joint_venture_land_for_units" ? financingScenario : undefined;
+  const isMajan = isMajanFinanceProject(effectiveProjectId, (projectQuery.data as any)?.plotNumber, isTestMode);
 
   useEffect(() => {
     if (!isTestMode && requestedProjectId && requestedProjectId !== selectedProjectId) {
@@ -134,7 +142,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
       // Older Financial Studies links used "pricing" for Wael's unified sales and
       // marketing canvas. Keep these links valid when the page is reopened.
       const requestedTab = (requestedTabParam === "pricing" ? "sales" : requestedTabParam) as TabId | null;
-      if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && isFinancialStudiesTabVisible(requestedTab, projectType)) {
+      if (requestedTab && TABS.some((tab) => tab.id === requestedTab) && (isFinancialStudiesTabVisible(requestedTab, projectType) || (isMajan && requestedTab === "mall"))) {
         setActiveTab(requestedTab);
       } else {
         setActiveTab(null);
@@ -144,7 +152,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
     syncActiveTabFromUrl();
     window.addEventListener("popstate", syncActiveTabFromUrl);
     return () => window.removeEventListener("popstate", syncActiveTabFromUrl);
-  }, [projectType]);
+  }, [projectType, isMajan]);
 
   // Portfolio reports are company-wide reports. They stay visible after choosing a
   // project so the project picker never makes the three consolidated reports vanish.
@@ -157,7 +165,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
         ? `/bateekha?projectId=${effectiveProjectId}`
         : "/bateekha";
   const visibleTabs = TABS.filter((tab) =>
-    isFinancialStudiesTabVisible(tab.id, projectType) && (!isTestMode || tab.projectScoped)
+    (isFinancialStudiesTabVisible(tab.id, projectType) || (isMajan && tab.id === "mall")) && (!isTestMode || tab.projectScoped)
   );
   const selectTab = (tab: (typeof TABS)[number]) => {
     if (tab.projectScoped && !effectiveProjectId) return;
@@ -177,6 +185,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
     setActiveTab(null);
     navigate(resolveReturnPath(window.location.search, basePath));
   };
+  const showMajanLegacy = isMajan && new URLSearchParams(window.location.search).get("legacy") === "1";
 
   return (
     <div className="financial-studies-language min-h-screen w-full min-w-0 overflow-x-hidden bg-[#f8fafc]" dir="rtl">
@@ -188,6 +197,13 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
           {isTestMode && onExitTestProject && <button type="button" onClick={onExitTestProject} className="mr-auto rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-[11px] font-black text-violet-800 hover:bg-violet-100">مختبر المشاريع</button>}
         </div>
       </header>
+
+      {isMajan && <div className={`border-b px-5 py-3 text-sm ${showMajanLegacy ? "border-amber-200 bg-amber-50 text-amber-900" : "border-teal-200 bg-teal-50 text-teal-900"}`}>
+        <div className="mx-auto flex max-w-[1720px] flex-wrap items-center justify-between gap-3">
+          <span>{showMajanLegacy ? "مرجع ماجان السابق: أي تعديل هنا لا يغيّر سيناريو التأجير والتمويل المحفوظ الجديد." : "ماجان: مدخلات التأجير والتشغيل والتمويل وتقاريرها ضمن سيناريو مستقل؛ التدفق الأصلي محفوظ للمراجعة."}</span>
+          <a className="shrink-0 rounded-lg border border-current px-3 py-2 font-bold" href={showMajanLegacy ? "/majan-finance" : "/bateekha?projectId=1&tab=cashflows&legacy=1"}>{showMajanLegacy ? "العودة إلى نموذج ماجان الجديد" : "عرض التدفق الأصلي المحفوظ"}</a>
+        </div>
+      </div>}
 
       {!activeTab ? (
         <main className="mx-auto w-full max-w-[1720px] px-4 py-7 sm:px-6">
@@ -218,7 +234,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
               const disabled = tab.projectScoped && !effectiveProjectId;
               return <button key={tab.id} type="button" disabled={disabled} onClick={() => selectTab(tab)} className="group relative flex min-h-[94px] items-center justify-between overflow-hidden rounded-2xl border px-5 text-right shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50" style={{ borderColor: tone.border, background: `linear-gradient(135deg, ${tone.wash} 0%, #ffffff 74%)` }}>
                 <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: tone.accent }} />
-                <span className="text-[15px] font-black text-slate-900">{tab.label}</span>
+                <span className="text-[15px] font-black text-slate-900">{isMajan && tab.id === "mall" ? "ماجان — التأجير والتمويل الإسلامي" : tab.label}</span>
                 <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-white shadow-sm" style={{ backgroundColor: tone.accent, boxShadow: `0 10px 20px ${tone.accent}22` }}><Icon className="h-6 w-6" /></span>
               </button>;
             })}
@@ -227,7 +243,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
       ) : (
         <div className="w-full">
           <div className="sticky top-14 z-40 border-b-2 border-slate-300 bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-sm sm:px-6"><div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-3"><button type="button" onClick={returnFromTab} className="inline-flex items-center gap-1.5 rounded-lg border border-teal-700 bg-teal-700 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition-colors hover:bg-teal-800"><ArrowRight className="h-3.5 w-3.5" />العودة إلى الصفحة السابقة</button><span className="hidden h-5 w-px bg-slate-300 sm:block" /><span className="text-xs font-extrabold text-slate-900">{TABS.find((tab) => tab.id === activeTab)?.label}</span>{effectiveProjectId && TABS.find((tab) => tab.id === activeTab)?.projectScoped && <span className="mr-auto text-[11px] font-semibold text-slate-700">المشروع المحدد: {(projectQuery.data as any)?.name || "..."}</span>}</div></div>
-          <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} /></Suspense>
+          <Suspense fallback={<div className="flex items-center justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-teal-600" /></div>}><TabContent tabId={activeTab} projectId={effectiveProjectId} isMajan={isMajan} /></Suspense>
         </div>
       )}
     </div>

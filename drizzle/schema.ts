@@ -4005,3 +4005,34 @@ export const comoNextProjectOpportunityEvents = mysqlTable("como_next_project_op
   uniqueIndex("como_next_project_opportunity_event_idempotency_uq").on(table.idempotencyKey),
   index("como_next_project_opportunity_event_time_idx").on(table.opportunityId, table.createdAt),
 ]);
+
+/** Majan-only additive bank discussion scenarios; never replaces legacy development schedules. */
+export const majanFinanceCases = mysqlTable("majan_finance_cases", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  projectId: int("projectId").notNull().references(() => projects.id, { onDelete: "restrict" }),
+  caseName: varchar("caseName", { length: 200 }).notNull(),
+  revision: int("revision").notNull(),
+  inputJson: longtext("inputJson").notNull(),
+  baselineJson: longtext("baselineJson").notNull(),
+  inputHash: varchar("inputHash", { length: 64 }).notNull(),
+  updatedBy: int("updatedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("majan_finance_cases_project_case_uq").on(table.projectId, table.caseName),
+  index("majan_finance_cases_project_updated_idx").on(table.projectId, table.updatedAt),
+]);
+export const majanFinanceRevisions = mysqlTable("majan_finance_revisions", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  caseId: bigint("caseId", { mode: "number" }).notNull().references(() => majanFinanceCases.id, { onDelete: "restrict" }),
+  revision: int("revision").notNull(),
+  inputJson: longtext("inputJson").notNull(),
+  baselineJson: longtext("baselineJson").notNull(),
+  inputHash: varchar("inputHash", { length: 64 }).notNull(),
+  resultJson: longtext("resultJson").notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+}, table => [
+  uniqueIndex("majan_finance_revisions_case_revision_uq").on(table.caseId, table.revision),
+  index("majan_finance_revisions_case_created_idx").on(table.caseId, table.createdAt),
+]);

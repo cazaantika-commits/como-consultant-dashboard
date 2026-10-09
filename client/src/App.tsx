@@ -55,6 +55,7 @@ import SaraPage from "./pages/SaraPage";
 import ComoNextProjectPage from "./pages/ComoNextProjectPage";
 import ComoNextProjectOpeningPage from "./pages/ComoNextProjectOpeningPage";
 import ProjectManagementPage from "./pages/ProjectManagementPage";
+import MajanFinanceWorkspace from "./pages/MajanFinanceWorkspace";
 
 function FinancialWorkspaceRedirect({ tab }: { tab: string }) {
   const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
@@ -147,6 +148,7 @@ function Router() {
       <Route path="/v2/payment-plan" component={() => <FinancialWorkspaceRedirect tab="sales" />} />
       <Route path="/v2/timeline" component={() => <Redirect to="/development-phases" />} />
       <Route path="/v2" component={V2Hub} />
+      <Route path="/majan-finance" component={MajanFinanceWorkspace} />
       <Route path="/bateekha" component={BateekhaPage} />
       <Route path="/test-project" component={TestProjectPage} />
       <Route path="/project-management" component={ProjectManagementPage} />

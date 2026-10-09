@@ -892,15 +892,19 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     });
   }
   // ─── رسوم المساح As-Built (شهر قبل الأخير من الإنشاء) ───
+  // Build-for-rent is investor-funded like the other independent scenarios.
+  // Keeping unpaid equal to the scheduled row preserves the row-level
+  // reconciliation without changing its historical month or total.
+  const surveyorAsBuiltInvestorFunded = isScenario3 || isScenario4 || isBuildForSale || isBuildForRent;
   const surveyorAsbuiltConst = emptyConstruction();
   surveyorAsbuiltConst[penultimateConstruction] = i.surveyorFee;
   rows.push({
     label: "رسوم المساح (As-Built)",
     totalCost: i.surveyorFee,
-    investorAmount: (isScenario3 || isScenario4 || isBuildForSale) ? i.surveyorFee : 0,
+    investorAmount: surveyorAsBuiltInvestorFunded ? i.surveyorFee : 0,
     paid: 0,
-    unpaid: 0,
-    funder: (isScenario3 || isScenario4 || isBuildForSale) ? "investor" : "escrow",
+    unpaid: surveyorAsBuiltInvestorFunded ? i.surveyorFee : 0,
+    funder: surveyorAsBuiltInvestorFunded ? "investor" : "escrow",
     section: "الدراسات والمسوحات",
     designMonths: emptyDesign(),
     constructionMonths: surveyorAsbuiltConst,
@@ -2051,7 +2055,9 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
     designDuration,
     constructionDuration,
     postDuration,
-    totalRevenue,
+    // This schedule models development spending, not rental operations.
+    // Sale pricing must never be reported as annual rent or debt-service cash.
+    totalRevenue: isBuildForRent ? 0 : totalRevenue,
     monthDates,
     startDate: startDateStr,
     usedSalesResult: salesResult,

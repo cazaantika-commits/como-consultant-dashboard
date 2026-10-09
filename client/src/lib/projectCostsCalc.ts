@@ -5,6 +5,12 @@
  */
 import type { ProjectCosts } from "@/lib/cashFlowEngine";
 import {
+  readConsultantFeeSpecs,
+  readConsultantFeePercentage,
+  resolveConsultantFee,
+  type ConsultantFeeSpec,
+} from "@/lib/consultantFees";
+import {
   calculateCommunityFeeSchedule,
   getProjectCommunityFeeSettings,
 } from "@/lib/communityFee";
@@ -36,6 +42,7 @@ export function calculateProjectCosts(
   const isBuildForRent = financingScenario === "build_for_rent";
   const isJointVenture = isJointVentureLandForUnits(financingScenario);
   const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
+  const consultantFeeSpecs = readConsultantFeeSpecs(p.constructionScheduleJson);
 
   const landPrice = parseFloat(p.landPrice || "0");
   const agentCommissionLandPct = parseFloat(p.agentCommissionLandPct || "0");
@@ -50,9 +57,9 @@ export function calculateProjectCosts(
   const escrowAccountFee = parseFloat(p.escrowAccountFee || "0");
   const bankFees = parseFloat(p.bankFees || "0");
 
-  const designFeePct = parseFloat(p.designFeePct ?? (isJointVenture ? "0" : "2"));
+  const designFeePct = readConsultantFeePercentage(p.designFeePct, isJointVenture ? 0 : 2);
   const designFeeFixed = parseFloat(p.designFeeFixed || "0");
-  const supervisionFeePct = parseFloat(p.supervisionFeePct ?? (isJointVenture ? "0" : "2"));
+  const supervisionFeePct = readConsultantFeePercentage(p.supervisionFeePct, isJointVenture ? 0 : 2);
   const supervisionFeeFixed = parseFloat(p.supervisionFeeFixed || "0");
   const separationFeePerM2 = parseFloat(p.separationFeePerSqft ?? (isJointVenture ? "0" : "40"));
   const salesCommissionPct = parseFloat(p.salesCommissionPct ?? (isJointVenture ? "0" : "5"));
@@ -122,8 +129,19 @@ export function calculateProjectCosts(
   const agentCommissionLand = landPrice * (agentCommissionLandPct / 100);
   const landRegistration = landPrice * 0.04;
   const constructionCost = bua * estimatedConstructionPricePerSqft;
-  const designFee = designFeeFixed > 0 ? designFeeFixed : constructionCost * (designFeePct / 100);
-  const supervisionFee = supervisionFeeFixed > 0 ? supervisionFeeFixed : constructionCost * (supervisionFeePct / 100);
+  const resolveProjectCostConsultantFee = (
+    legacyPercentage: number,
+    legacyFixed: unknown,
+    spec?: ConsultantFeeSpec,
+  ) => resolveConsultantFee(
+    constructionCost,
+    spec ? spec.percentage ?? 0 : legacyPercentage,
+    spec ? (spec.mode === "percentage_minimum" ? spec.minimum ?? 0 : spec.amount ?? 0) : legacyFixed,
+    spec?.mode,
+    "fixed_override",
+  );
+  const designFee = resolveProjectCostConsultantFee(designFeePct, designFeeFixed, consultantFeeSpecs.design);
+  const supervisionFee = resolveProjectCostConsultantFee(supervisionFeePct, supervisionFeeFixed, consultantFeeSpecs.supervision);
   const separationFee = isBuildForRent ? 0 : totalGfaSqft * separationFeePerM2;
   const surveyorFees = parseFloat(p.surveyorFees || "0");
   const surveyorDwgFees = parseFloat(p.surveyorDwgFees || "0") || (isJointVenture ? 0 : 12000);

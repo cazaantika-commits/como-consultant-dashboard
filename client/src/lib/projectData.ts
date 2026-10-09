@@ -1,6 +1,12 @@
 
 import { getProjectDesignTiming } from "@/lib/projectTiming";
 import {
+  readConsultantFeeSpecs,
+  readConsultantFeePercentage,
+  resolveConsultantFee,
+  type ConsultantFeeSpec,
+} from "@/lib/consultantFees";
+import {
   calculateJointVentureAgreementCosts,
   calculateDeveloperRevenueShare,
   getJointVentureTerms,
@@ -61,6 +67,11 @@ export interface ProjectRates {
   landBroker: number;
   designFee: number;
   supervisionFee: number;
+  designFeeFixed?: number;
+  supervisionFeeFixed?: number;
+  /** Optional, additive Project Card setting. Absent means this engine retains percentage-only legacy behaviour. */
+  designFeeSpec?: ConsultantFeeSpec;
+  supervisionFeeSpec?: ConsultantFeeSpec;
   sortingFeePerSqft: number;
   reraUnitFee: number;
   developerFeeRate: number;
@@ -209,12 +220,22 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
   const isJointVenture = isJointVentureLandForUnits(dbProject.financingScenario);
   const isIndependentNoOffPlan = isBuildForSale || isBuildForRent;
   const jointVentureTerms = getJointVentureTerms(dbProject);
+  const consultantFeeSpecs = readConsultantFeeSpecs(dbProject.constructionScheduleJson);
   let savedRates: Record<string, unknown> = {};
   try {
     savedRates = JSON.parse(dbProject.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
   } catch {}
-  const designPct = parseFloat(dbProject.designFeePct || '0') || (isJointVenture ? 0 : 1.8);
-  const supervisionPct = parseFloat(dbProject.supervisionFeePct || '0') || (isJointVenture ? 0 : 2);
+  // Before explicit modes, this data-engine path always calculated the
+  // percentage and treated 0 as its historic fallback. Keep that behaviour
+  // until a Project Card setting deliberately selects a mode.
+  const legacyProjectDataPercentage = (value: unknown, fallback: number) =>
+    parseFloat(String(value || "0")) || fallback;
+  const designPct = consultantFeeSpecs.design
+    ? readConsultantFeePercentage(dbProject.designFeePct, isJointVenture ? 0 : 2)
+    : legacyProjectDataPercentage(dbProject.designFeePct, isJointVenture ? 0 : 1.8);
+  const supervisionPct = consultantFeeSpecs.supervision
+    ? readConsultantFeePercentage(dbProject.supervisionFeePct, isJointVenture ? 0 : 2)
+    : legacyProjectDataPercentage(dbProject.supervisionFeePct, isJointVenture ? 0 : 2);
   const salesPct = parseFloat(dbProject.salesCommissionPct || '0') || (isJointVenture ? 0 : 5);
   const marketingPct = isBuildForRent ? 0 : isBuildForSale
     ? Number(savedRates.buildForSaleMarketingRate ?? 1)
@@ -246,6 +267,10 @@ export function dbProjectToRates(dbProject: any): ProjectRates {
     landBroker: landBrokerPct / 100,
     designFee: designPct / 100,
     supervisionFee: supervisionPct / 100,
+    designFeeFixed: Number(dbProject.designFeeFixed) || 0,
+    supervisionFeeFixed: Number(dbProject.supervisionFeeFixed) || 0,
+    designFeeSpec: consultantFeeSpecs.design,
+    supervisionFeeSpec: consultantFeeSpecs.supervision,
     sortingFeePerSqft: sortingPerSqft,
     reraUnitFee: Number(savedRates.reraUnitRegistrationFee ?? 520),
     developerFeeRate: developerPct / 100,
@@ -430,8 +455,19 @@ export function calculateCosts(
   );
 
   // ─── بنود التكاليف (نفس ترتيب البطاقة) ───
-  const designFee = constructionCost * rates.designFee;
-  const supervisionFee = constructionCost * rates.supervisionFee;
+  const resolveProjectDataConsultantFee = (
+    legacyPercentage: number,
+    legacyFixed: unknown,
+    spec?: ConsultantFeeSpec,
+  ) => resolveConsultantFee(
+    constructionCost,
+    spec ? spec.percentage ?? 0 : legacyPercentage,
+    spec ? (spec.mode === "percentage_minimum" ? spec.minimum ?? 0 : spec.amount ?? 0) : legacyFixed,
+    spec?.mode,
+    "percentage",
+  );
+  const designFee = resolveProjectDataConsultantFee(rates.designFee * 100, rates.designFeeFixed, rates.designFeeSpec);
+  const supervisionFee = resolveProjectDataConsultantFee(rates.supervisionFee * 100, rates.supervisionFeeFixed, rates.supervisionFeeSpec);
   const rawSortingFee = gfaTotal * rates.sortingFeePerSqft;
   const rawReraUnits = totalUnits * rates.reraUnitFee;
   const salesCommission = totalRevenue * rates.salesCommission;
