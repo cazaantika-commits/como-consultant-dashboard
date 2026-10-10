@@ -1,5 +1,5 @@
 import { and, asc, eq, gt, isNotNull, sql } from "drizzle-orm";
-import { comoNextActions, comoNextEmailMessages, comoNextWorkFiles } from "../../drizzle/schema";
+import { comoNextActions, comoNextEmailMessages, comoNextWorkFileEvents, comoNextWorkFiles } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { appendEvent } from "./comoNextCommands";
 import {
@@ -7,6 +7,7 @@ import {
   type DubaiBusinessCalendar,
 } from "./comoNextEmailFollowups";
 import { isRelevantWatchReply } from "./comoNextConditionalSentWatches";
+import { hasExactFinancePaymentEnvelope, isFinancePaymentRequest } from "./comoFinancePaymentFollowups";
 
 /**
  * This is deliberately a one-way activation boundary at the owner's explicit
@@ -15,6 +16,7 @@ import { isRelevantWatchReply } from "./comoNextConditionalSentWatches";
 export const CONDITIONAL_SENT_WATCH_ACTIVATION_AT = "2026-10-08T01:43:29.000Z";
 export const CONDITIONAL_SENT_WATCH_SOURCE_SYSTEM = "conditional_sent_watch";
 const MAX_INBOUND_REPLY_CANDIDATES = 500;
+const MAX_DEFERRED_RETRY_RESERVATION = 3;
 
 export type ConditionalSentWatchClassification = {
   kind: "reply_request" | "quotation_request" | "clear_offer";
@@ -32,6 +34,8 @@ export type ConditionalSentWatchSent = {
   subject: string;
   bodyText: string;
   receivedAt: string;
+  /** Projected from existing durable work-file events; never a new column. */
+  deferredReplyScanAt?: string | null;
 };
 
 export type ConditionalSentWatchInbound = {
@@ -61,20 +65,33 @@ export type ConditionalSentWatchSkipReason =
   | "work_file_not_open"
   | "not_single_to_recipient"
   | "not_whitelisted_reply_or_quotation_request"
+  | "handled_by_finance_payment_policy"
   | "reply_already_present"
   | "reply_scan_incomplete";
+
+export type ConditionalSentWatchTerminalReason = Exclude<ConditionalSentWatchSkipReason, "reply_scan_incomplete">;
 
 export type ConditionalSentWatchSeedStore = {
   listUnwatchedSentCandidates(input: {
     userId: number;
     activationAt: string;
     limit: number;
+    deferredLimit: number;
   }): Promise<ConditionalSentWatchSent[]>;
   findInboundCandidates(input: {
     userId: number;
     recipientEmail: string;
     sentAt: string;
   }): Promise<{ messages: ConditionalSentWatchInbound[]; complete: boolean }>;
+  recordTerminalDisposition(input: {
+    userId: number;
+    sent: ConditionalSentWatchSent;
+    reason: ConditionalSentWatchTerminalReason;
+  }): Promise<void>;
+  recordDeferredReplyScan(input: {
+    userId: number;
+    sent: ConditionalSentWatchSent;
+  }): Promise<void>;
   createWaitingWatchIfAbsent(input: ConditionalSentWatchPlan & { userId: number }): Promise<{ actionId: number; replayed: boolean }>;
 };
 
@@ -173,6 +190,14 @@ export function sourceRecordIdForConditionalSentWatch(sentEmailId: number) {
   return `sent-email-${sentEmailId}`;
 }
 
+function terminalDispositionEventKey(sentEmailId: number) {
+  return `conditional-sent-watch:terminal:${sourceRecordIdForConditionalSentWatch(sentEmailId)}`;
+}
+
+function deferredReplyScanEventKey(sentEmailId: number) {
+  return `conditional-sent-watch:deferred:${sourceRecordIdForConditionalSentWatch(sentEmailId)}`;
+}
+
 /** Builds a plan only for a future, linked Sent message that matches the strict allow-list. */
 export function planConditionalSentWatch(
   sent: ConditionalSentWatchSent,
@@ -185,6 +210,10 @@ export function planConditionalSentWatch(
   if (!sent.linkedWorkFileId || !sent.projectId || sent.workFileStatus !== "open") return { skip: "work_file_not_open" };
   const recipientEmail = extractSingleToRecipient(sent.toText);
   if (!recipientEmail) return { skip: "not_single_to_recipient" };
+  if (hasExactFinancePaymentEnvelope({ toText: sent.toText, ccText: sent.ccText ?? null })
+    && isFinancePaymentRequest({ subject: sent.subject, bodyText: sent.bodyText })) {
+    return { skip: "handled_by_finance_payment_policy" };
+  }
   const classification = classifyConditionalSentWatchRequest({ subject: sent.subject, bodyText: sent.bodyText });
   if (!classification) return { skip: "not_whitelisted_reply_or_quotation_request" };
 
@@ -236,15 +265,29 @@ export class ConditionalSentWatchSeeder {
       userId: input.userId,
       activationAt: CONDITIONAL_SENT_WATCH_ACTIVATION_AT,
       limit,
+      deferredLimit: Math.min(MAX_DEFERRED_RETRY_RESERVATION, limit),
     });
+    const fresh = sentRows.filter(sent => sent.deferredReplyScanAt == null);
+    const deferred = sentRows.filter(sent => sent.deferredReplyScanAt != null);
+    // New Sent records retain the normal priority, but a bounded deferred lane
+    // is always reserved whenever an INBOX scan previously proved incomplete.
+    // This avoids starvation under a continuous stream of new Sent traffic.
+    const deferredQuota = Math.min(MAX_DEFERRED_RETRY_RESERVATION, deferred.length, limit);
+    const selectedRows = [
+      ...fresh.slice(0, limit - deferredQuota),
+      ...deferred.slice(0, deferredQuota),
+      ...fresh.slice(limit - deferredQuota),
+      ...deferred.slice(deferredQuota),
+    ].slice(0, limit);
     const skipped: Array<{ emailId: number; reason: ConditionalSentWatchSkipReason }> = [];
     let created = 0;
     let replayed = 0;
     let replyAlreadyPresent = 0;
 
-    for (const sent of sentRows) {
+    for (const sent of selectedRows) {
       const planned = planConditionalSentWatch(sent, input.calendar);
       if ("skip" in planned) {
+        await this.store.recordTerminalDisposition({ userId: input.userId, sent, reason: planned.skip });
         skipped.push({ emailId: sent.id, reason: planned.skip });
         continue;
       }
@@ -255,6 +298,7 @@ export class ConditionalSentWatchSeeder {
       });
       const replyExists = inbound.messages.some(message => isSuitableInboundReplyForConditionalWatch({ plan: planned.plan, sent, inbound: message }));
       if (replyExists) {
+        await this.store.recordTerminalDisposition({ userId: input.userId, sent, reason: "reply_already_present" });
         replyAlreadyPresent += 1;
         skipped.push({ emailId: sent.id, reason: "reply_already_present" });
         continue;
@@ -262,6 +306,9 @@ export class ConditionalSentWatchSeeder {
       // Do not create a late watch when bounded reply discovery cannot prove that
       // all potential replies were examined; the next invocation may retry.
       if (!inbound.complete) {
+        // This is intentionally not terminal. The durable deferred event makes
+        // retrying safe while letting untouched Sent records move ahead first.
+        await this.store.recordDeferredReplyScan({ userId: input.userId, sent });
         skipped.push({ emailId: sent.id, reason: "reply_scan_incomplete" });
         continue;
       }
@@ -271,7 +318,7 @@ export class ConditionalSentWatchSeeder {
     }
 
     return {
-      examined: sentRows.length,
+      examined: selectedRows.length,
       created,
       replayed,
       replyAlreadyPresent,
@@ -282,12 +329,17 @@ export class ConditionalSentWatchSeeder {
 }
 
 class DatabaseConditionalSentWatchSeedStore implements ConditionalSentWatchSeedStore {
-  async listUnwatchedSentCandidates(input: { userId: number; activationAt: string; limit: number }) {
+  async listUnwatchedSentCandidates(input: { userId: number; activationAt: string; limit: number; deferredLimit: number }) {
     const db = await getDb();
     if (!db) throw new Error("database_unavailable");
     const activationAt = utcSqlTimestamp(input.activationAt);
     if (!activationAt) throw new Error("invalid_activation_timestamp");
-    return db.select({
+    const deferredReplyScanAt = sql<string | null>`(
+      SELECT MAX(deferred_reply_scan.occurred_at)
+      FROM como_next_work_file_events deferred_reply_scan
+      WHERE deferred_reply_scan.idempotency_key = CONCAT('conditional-sent-watch:deferred:sent-email-', ${comoNextEmailMessages.id})
+    )`;
+    const fields = {
       id: comoNextEmailMessages.id,
       folderName: comoNextEmailMessages.folderName,
       linkedWorkFileId: comoNextEmailMessages.linkedWorkFileId,
@@ -298,9 +350,9 @@ class DatabaseConditionalSentWatchSeedStore implements ConditionalSentWatchSeedS
       subject: comoNextEmailMessages.subject,
       bodyText: comoNextEmailMessages.bodyText,
       receivedAt: comoNextEmailMessages.receivedAt,
-    }).from(comoNextEmailMessages)
-      .innerJoin(comoNextWorkFiles, eq(comoNextEmailMessages.linkedWorkFileId, comoNextWorkFiles.id))
-      .where(and(
+      deferredReplyScanAt,
+    };
+    const commonConditions = [
         eq(comoNextEmailMessages.userId, input.userId),
         eq(comoNextEmailMessages.folderName, "Sent"),
         eq(comoNextWorkFiles.workFileStatus, "open"),
@@ -311,10 +363,41 @@ class DatabaseConditionalSentWatchSeedStore implements ConditionalSentWatchSeedS
           WHERE existing_watch.source_system = ${CONDITIONAL_SENT_WATCH_SOURCE_SYSTEM}
             AND existing_watch.source_record_id = CONCAT('sent-email-', ${comoNextEmailMessages.id})
         )`,
+        sql`NOT EXISTS (
+          SELECT 1 FROM como_next_work_file_events terminal_disposition
+          WHERE terminal_disposition.idempotency_key = CONCAT('conditional-sent-watch:terminal:sent-email-', ${comoNextEmailMessages.id})
+        )`,
+    ];
+    const deferredReplyScanExists = sql`EXISTS (
+      SELECT 1 FROM como_next_work_file_events deferred_reply_scan
+      WHERE deferred_reply_scan.idempotency_key = CONCAT('conditional-sent-watch:deferred:sent-email-', ${comoNextEmailMessages.id})
+    )`;
+    const selectLane = (deferred: boolean, limit: number) => db.select(fields)
+      .from(comoNextEmailMessages)
+      .innerJoin(comoNextWorkFiles, eq(comoNextEmailMessages.linkedWorkFileId, comoNextWorkFiles.id))
+      .where(and(
+        ...commonConditions,
+        deferred ? deferredReplyScanExists : sql`NOT ${deferredReplyScanExists}`,
       ))
-      .orderBy(asc(comoNextEmailMessages.receivedAt), asc(comoNextEmailMessages.id))
-      .limit(input.limit)
-      .then(rows => rows.map(row => ({ ...row, id: Number(row.id), linkedWorkFileId: row.linkedWorkFileId == null ? null : Number(row.linkedWorkFileId), projectId: row.projectId == null ? null : Number(row.projectId) })));
+      .orderBy(
+        ...(deferred ? [asc(deferredReplyScanAt)] : []),
+        asc(comoNextEmailMessages.receivedAt),
+        asc(comoNextEmailMessages.id),
+      )
+      .limit(limit);
+    // Separate bounded lanes preserve normal fresh-Sent priority in every
+    // non-reserved slot, while making up to three deferred retries available
+    // even during an uninterrupted fresh-Sent stream.
+    const [freshRows, deferredRows] = await Promise.all([
+      selectLane(false, input.limit),
+      selectLane(true, input.deferredLimit),
+    ]);
+    return [...freshRows, ...deferredRows].map(row => ({
+      ...row,
+      id: Number(row.id),
+      linkedWorkFileId: row.linkedWorkFileId == null ? null : Number(row.linkedWorkFileId),
+      projectId: row.projectId == null ? null : Number(row.projectId),
+    }));
   }
 
   async findInboundCandidates(input: { userId: number; recipientEmail: string; sentAt: string }) {
@@ -343,6 +426,59 @@ class DatabaseConditionalSentWatchSeedStore implements ConditionalSentWatchSeedS
       })),
       complete: rows.length <= MAX_INBOUND_REPLY_CANDIDATES,
     };
+  }
+
+  async recordTerminalDisposition(input: { userId: number; sent: ConditionalSentWatchSent; reason: ConditionalSentWatchTerminalReason }) {
+    await this.recordDisposition({ ...input, disposition: "terminal" });
+  }
+
+  async recordDeferredReplyScan(input: { userId: number; sent: ConditionalSentWatchSent }) {
+    await this.recordDisposition({ ...input, disposition: "deferred" });
+  }
+
+  private async recordDisposition(input: {
+    userId: number;
+    sent: ConditionalSentWatchSent;
+    disposition: "terminal" | "deferred";
+    reason?: ConditionalSentWatchTerminalReason;
+  }) {
+    const workFileId = input.sent.linkedWorkFileId;
+    const projectId = input.sent.projectId;
+    // Candidate reads are joined to an open work file. Keep this guard so a
+    // malformed store cannot write a cross-file cursor event.
+    if (!workFileId || !projectId) throw new Error("conditional_sent_watch_disposition_missing_work_file");
+    const eventKey = input.disposition === "terminal"
+      ? terminalDispositionEventKey(input.sent.id)
+      : deferredReplyScanEventKey(input.sent.id);
+    const db = await getDb();
+    if (!db) throw new Error("database_unavailable");
+    await db.transaction(async tx => {
+      // appendEvent serializes by work file. The idempotency key makes the
+      // event table a durable cursor even when scheduler retries race.
+      await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id = ${workFileId} FOR UPDATE`);
+      const [existing] = await tx.select({ id: comoNextWorkFileEvents.id }).from(comoNextWorkFileEvents)
+        .where(eq(comoNextWorkFileEvents.idempotencyKey, eventKey)).limit(1);
+      if (existing) return;
+      await appendEvent(tx, {
+        userId: input.userId,
+        projectId,
+        workFileId,
+        actorType: "system",
+        actorUserId: null,
+        eventType: input.disposition === "terminal"
+          ? "conditional_sent_watch_terminal_disposition"
+          : "conditional_sent_watch_reply_scan_deferred",
+        summary: input.disposition === "terminal"
+          ? `حسم عدم إنشاء انتظار رد للرسالة Sent #${input.sent.id}: ${input.reason}`
+          : `تأجيل فحص رد الرسالة Sent #${input.sent.id} حتى يكتمل مسح INBOX`,
+        payload: {
+          sentEmailId: input.sent.id,
+          disposition: input.disposition,
+          reason: input.reason ?? "reply_scan_incomplete",
+        },
+        idempotencyKey: eventKey,
+      });
+    });
   }
 
   async createWaitingWatchIfAbsent(input: ConditionalSentWatchPlan & { userId: number }) {

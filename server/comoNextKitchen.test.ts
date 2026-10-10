@@ -99,6 +99,17 @@ describe("COMO Next executive kitchen", () => {
     expect(mainRouter).toContain("AND meeting.starts_at IS NOT NULL");
   });
 
+  it("never asks again for a completed meeting outcome", () => {
+    const input = { ...seed(), actions: [], decisions: [], draftCommunications: [], emails: [], filesWithoutNextAction: [],
+      meetings: [{ id: 9, title: "اجتماع أرتك", meetingStatus: "completed", outcomeSummary: "حُفظت النتيجة", projectId: 6, workFileId: 390001, startsAt: "2026-09-30 08:00:00" }] };
+    expect(buildExecutiveKitchenQueue(input)).toEqual([]);
+    input.meetings[0] = { ...input.meetings[0], pendingProposalCount: 2 } as any;
+    const [item] = buildExecutiveKitchenQueue(input);
+    expect(item).toMatchObject({ phase: "owner_review", needsOutcome: false });
+    expect(item.title).not.toContain("أخبر Manus بما حدث");
+    expect(item.title).toContain("مراجعة المقترحات");
+  });
+
   it("counts only inbox messages in the kitchen attention badge", () => {
     expect(mainRouter).toContain('eq(comoNextEmailMessages.folderName, "INBOX")');
     expect(mainRouter).toContain("analysis.suggested_next_step");
@@ -199,7 +210,7 @@ describe("COMO Next executive kitchen", () => {
     expect(kitchenPage).toContain("فتح التقرير المحمي");
     expect(kitchenPage).toContain("/api/como-next/documents/");
     expect(kitchenPage).toContain("سلّم التوجيه إلى Manus");
-    expect(kitchenPage).toContain("يُحفظ أولًا للمراجعة في هذا الملف فقط");
+    expect(kitchenPage).toContain("لن ينفذ Manus ولن تُنشأ مسودة بريد أو أثر خارجي عند الحفظ");
     expect(kitchenPage).toContain('defaultSourceChannel === "meeting"');
     expect(kitchenPage).toContain('meetingMutation.mutateAsync');
     expect(kitchenPage).toContain("سجل تسليم مختصر");
@@ -234,6 +245,7 @@ describe("COMO Next executive kitchen", () => {
     expect(scheduleRoute).toContain("serverFlagsChanged: false");
     expect(scheduleRoute).toContain('lastStatus: "failed"');
     expect(scheduleRoute).not.toContain("sendReply");
-    expect(emailPage).toContain("06:00 · 11:00 · 17:00 بتوقيت دبي");
+    expect(emailPage).not.toContain("06:00 · 11:00 · 17:00 بتوقيت دبي");
+    expect(emailPage).toContain("نصف ساعة");
   });
 });

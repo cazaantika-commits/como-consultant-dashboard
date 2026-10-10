@@ -46,15 +46,29 @@ class InMemoryConditionalSentWatchStore implements ConditionalSentWatchSeedStore
   rows: ConditionalSentWatchSent[] = [];
   inbound = new Map<number, { messages: ConditionalSentWatchInbound[]; complete: boolean }>();
   watchIds = new Map<string, number>();
+  terminal = new Map<number, string>();
+  deferred = new Set<number>();
   creates: ConditionalSentWatchPlan[] = [];
 
-  async listUnwatchedSentCandidates() {
-    return this.rows.filter(row => !this.watchIds.has(`sent-email-${row.id}`));
+  async listUnwatchedSentCandidates(input: { limit: number; deferredLimit: number }) {
+    return this.rows
+      .filter(row => !this.watchIds.has(`sent-email-${row.id}`) && !this.terminal.has(row.id))
+      .sort((left, right) => Number(!this.deferred.has(left.id)) - Number(!this.deferred.has(right.id)))
+      .slice(0, input.limit + input.deferredLimit)
+      .map(row => ({ ...row, deferredReplyScanAt: this.deferred.has(row.id) ? "2026-10-08T10:00:00.000Z" : null }));
   }
 
   async findInboundCandidates(input: { sentAt: string }) {
     const email = this.rows.find(row => row.receivedAt === input.sentAt);
     return this.inbound.get(email?.id || -1) || { messages: [], complete: true };
+  }
+
+  async recordTerminalDisposition(input: { sent: ConditionalSentWatchSent; reason: string }) {
+    this.terminal.set(input.sent.id, input.reason);
+  }
+
+  async recordDeferredReplyScan(input: { sent: ConditionalSentWatchSent }) {
+    this.deferred.add(input.sent.id);
   }
 
   async createWaitingWatchIfAbsent(input: ConditionalSentWatchPlan & { userId: number }) {
@@ -97,6 +111,13 @@ describe("COMO future-only conditional Sent watch seeder", () => {
     expect(planConditionalSentWatch(sent({ folderName: "Drafts" }))).toEqual({ skip: "not_sent" });
   });
 
+  it("leaves exact finance payment requests to the four-calendar-day finance policy", () => {
+    expect(planConditionalSentWatch(sent({
+      toText: "wael@zooma.ae", ccText: "shahid@zooma.ae, account.mrt@zooma.ae",
+      bodyText: "Hi Wael, Please review the attached consultant invoice and arrange payment if due. Please confirm.",
+    }))).toEqual({ skip: "handled_by_finance_payment_policy" });
+  });
+
   it("only accepts a narrow explicit request/quotation/clear-offer allow-list and excludes courtesy, rejection, and final-offer emails", () => {
     expect(classifyConditionalSentWatchRequest({ subject: "Thanks", bodyText: "Thank you for your time and support." })).toBeNull();
     expect(classifyConditionalSentWatchRequest({ subject: "شكر", bodyText: "شكرًا لتعاونكم ودعمكم." })).toBeNull();
@@ -119,6 +140,7 @@ describe("COMO future-only conditional Sent watch seeder", () => {
     expect(result).toMatchObject({ examined: 1, created: 0, replyAlreadyPresent: 1, externalSideEffects: false });
     expect(result.skipped).toEqual([{ emailId: 196, reason: "reply_already_present" }]);
     expect(store.creates).toEqual([]);
+    expect(store.terminal.get(196)).toBe("reply_already_present");
   });
 
   it("does not accept an auto-reply, a different sender, a subject mismatch, or a reply linked to another file", async () => {
@@ -147,6 +169,59 @@ describe("COMO future-only conditional Sent watch seeder", () => {
 
     expect(result).toMatchObject({ created: 0, replyAlreadyPresent: 0 });
     expect(result.skipped).toEqual([{ emailId: 196, reason: "reply_scan_incomplete" }]);
+    expect(store.deferred.has(196)).toBe(true);
+    expect(store.terminal.has(196)).toBe(false);
+  });
+
+  it("records terminal dispositions and progresses beyond an old bounded Sent head while retrying incomplete scans later", async () => {
+    const store = new InMemoryConditionalSentWatchStore();
+    const staleAt = "2026-10-08T06:00:00.000Z";
+    const incompleteAt = "2026-10-08T07:00:00.000Z";
+    store.rows = [
+      sent({ id: 1, receivedAt: staleAt, subject: "Thanks", bodyText: "Thank you for your time." }),
+      sent({ id: 2, receivedAt: incompleteAt }),
+      sent({ id: 3, receivedAt: "2026-10-08T08:00:00.000Z" }),
+      sent({ id: 4, receivedAt: "2026-10-08T09:00:00.000Z" }),
+    ];
+    store.inbound.set(2, { messages: [], complete: false });
+    const service = new ConditionalSentWatchSeeder(store);
+
+    await service.seed({ userId: 41, limit: 1 }); // terminal: not a request
+    await service.seed({ userId: 41, limit: 1 }); // deferred: bounded INBOX scan
+    // With one fresh slot plus one reserved deferred slot, new Sent work still
+    // advances while the incomplete scan receives a retry every invocation.
+    const third = await service.seed({ userId: 41, limit: 2 });
+    const fourth = await service.seed({ userId: 41, limit: 2 });
+
+    expect(store.terminal.get(1)).toBe("not_whitelisted_reply_or_quotation_request");
+    expect(store.deferred.has(2)).toBe(true);
+    expect(third.created).toBe(1);
+    expect(fourth.created).toBe(1);
+    expect(store.creates.map(plan => plan.sentEmailId)).toEqual([3, 4]);
+
+    store.inbound.set(2, { messages: [], complete: true });
+    const retry = await service.seed({ userId: 41, limit: 2 });
+    expect(retry.created).toBe(1);
+    expect(store.creates.map(plan => plan.sentEmailId)).toEqual([3, 4, 2]);
+  });
+
+  it("reserves a deferred retry under a steady stream of new Sent rows", async () => {
+    const store = new InMemoryConditionalSentWatchStore();
+    const deferred = sent({ id: 700, receivedAt: "2026-10-08T06:00:00.000Z" });
+    store.rows = [
+      deferred,
+      sent({ id: 701, receivedAt: "2026-10-08T07:00:00.000Z" }),
+      sent({ id: 702, receivedAt: "2026-10-08T08:00:00.000Z" }),
+      sent({ id: 703, receivedAt: "2026-10-08T09:00:00.000Z" }),
+    ];
+    store.deferred.add(700);
+    store.inbound.set(700, { messages: [], complete: true });
+    const service = new ConditionalSentWatchSeeder(store);
+
+    const result = await service.seed({ userId: 41, limit: 2 });
+
+    expect(result).toMatchObject({ examined: 2, created: 2 });
+    expect(store.creates.map(plan => plan.sentEmailId)).toContain(700);
   });
 
   it("is idempotent across an import replay and stores a waiting watch only, never an outbound reminder", async () => {

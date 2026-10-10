@@ -453,11 +453,16 @@ export async function createCommunicationDraftCommand(input: {
   const draftRecord = await db.transaction(async tx => {
     if (input.idempotencyKey) {
       const [existing] = await tx
-        .select({ id: comoNextCommunications.id })
+        .select({
+          id: comoNextCommunications.id,
+          communicationStatus: comoNextCommunications.communicationStatus,
+          externalMessageRef: comoNextCommunications.externalMessageRef,
+          evidenceReference: comoNextCommunications.evidenceReference,
+        })
         .from(comoNextCommunications)
         .where(and(eq(comoNextCommunications.sourceSystem, "como_next"), eq(comoNextCommunications.sourceRecordId, input.idempotencyKey)))
         .limit(1);
-      if (existing) return { id: existing.id, replayed: true as const };
+      if (existing) return { ...existing, replayed: true as const };
     }
     const now = new Date().toISOString().slice(0, 19).replace("T", " ");
     const result = await tx.insert(comoNextCommunications).values({
@@ -486,10 +491,20 @@ export async function createCommunicationDraftCommand(input: {
       payload: { communicationId: id, channel: input.channel, externalSideEffect: false },
       idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
     });
-    return { id, replayed: false as const };
+    return { id, communicationStatus: "draft" as const, externalMessageRef: null, evidenceReference: null, replayed: false as const };
   });
 
   if (input.channel !== "email") return draftRecord;
+
+  // A synced Sent message is the durable evidence boundary. Replaying the
+  // producer must preserve it rather than re-archiving/re-saving a Draft.
+  if (draftRecord.replayed && draftRecord.communicationStatus === "sent") {
+    return {
+      ...draftRecord,
+      mailboxDraft: null,
+      externalSideEffect: false as const,
+    };
+  }
 
   const sourceEmailId = Number(input.sourceEmailId || String(input.idempotencyKey || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
   let inReplyTo: string | undefined;
@@ -508,16 +523,25 @@ export async function createCommunicationDraftCommand(input: {
     inReplyTo,
     draftKey: input.idempotencyKey || `como-next-communication-${draftRecord.id}`,
     attachments: input.attachments,
+    lineage: {
+      userId: input.userId,
+      projectId: Number(workFile.projectId),
+      workFileId: Number(workFile.id),
+      communicationId: Number(draftRecord.id),
+    },
   });
   const savedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
   await db.transaction(async tx => {
     await tx.update(comoNextCommunications).set({
-      communicationStatus: "archived",
+      communicationStatus: mailboxDraft.observedInSent ? "sent" : "archived",
       approvalStatus: "not_required",
       externalMessageRef: mailboxDraft.uid ? `${mailboxDraft.folder} UID ${mailboxDraft.uid}` : mailboxDraft.folder,
       evidenceReference: mailboxDraft.uid
         ? `Private Email ${mailboxDraft.folder} · UID ${mailboxDraft.uid}`
         : `Private Email ${mailboxDraft.folder}`,
+      // The mailbox observation may lack an immutable sent Date header here;
+      // the later read-only Sent import supplies the authoritative timestamp.
+      sentAt: mailboxDraft.observedInSent ? savedAt : null,
       reviewNote: input.attachments?.length
         ? `المسودة محفوظة في بريد عبدالرحمن مع ${input.attachments.length} مرفق؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.`
         : "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
@@ -529,14 +553,16 @@ export async function createCommunicationDraftCommand(input: {
       workFileId: workFile.id,
       actorType: "manus",
       actorUserId: null,
-      eventType: "communication_mailbox_draft_created",
-      summary: `حفظ Manus المسودة في Private Email Drafts: ${input.subject.trim()}`,
+      eventType: mailboxDraft.observedInSent ? "communication_sent_observed" : "communication_mailbox_draft_created",
+      summary: mailboxDraft.observedInSent
+        ? `رُصدت المراسلة مرسلة في Private Email: ${input.subject.trim()}`
+        : `حفظ Manus المسودة في Private Email Drafts: ${input.subject.trim()}`,
       payload: {
         communicationId: draftRecord.id,
         folder: mailboxDraft.folder,
         uid: mailboxDraft.uid,
         attachmentNames: input.attachments?.map(file => file.filename) || [],
-        sent: false,
+        sent: Boolean(mailboxDraft.observedInSent),
       },
       idempotencyKey: `mailbox-draft:event:${draftRecord.id}`,
     });

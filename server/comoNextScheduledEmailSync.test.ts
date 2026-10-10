@@ -42,6 +42,26 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(inbox).toContain('knownUids.has(message.uid) || knownHashes.has(identitySha)');
   });
 
+  it("runs policy-gated finance Drafts only in the separate executive phase", () => {
+    const importBlock = route.slice(route.indexOf('if (mailboxKey === "owner-primary")'), route.indexOf('if (mailboxKey === "owner-primary-executive")'));
+    const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
+    expect(importBlock).not.toMatch(/runComoFinanceInvoiceDraftsCommand|reconcileFinancePaymentFollowups/);
+    expect(executive).toContain('await runComoFinanceInvoiceDraftsCommand');
+    expect(executive).toContain('await reconcileFinancePaymentFollowups');
+    expect(executive).toContain('financeInvoices.status === "error"');
+    expect(executive).not.toMatch(/sendEmail|sendMail|sendComoEmail|setInterval|node-cron/);
+    expect(executive).toContain('financeInvoices, financePayments, externalSideEffects: false');
+  });
+
+  it("does not let an invoice failure starve payment watches or internal work", () => {
+    const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
+    const deferredFailure = executive.indexOf('throw new Error("finance_lane_failed_after_internal_work")');
+    expect(deferredFailure).toBeGreaterThan(executive.indexOf('runExecutiveControlLoopCommand'));
+    expect(deferredFailure).toBeGreaterThan(executive.indexOf('await reconcileFinancePaymentFollowups'));
+    expect(executive).toContain('finance_payment_followup_failed');
+    expect(executive).not.toContain('if (financeInvoices.status === "error") throw');
+  });
+
   it("keeps a failed analysis retryable without creating automatic mailbox drafts", () => {
     const processor = inbox.slice(inbox.indexOf('export async function processPendingReadonlyMailboxCommand'), inbox.indexOf('export async function syncAndAnalyzeReadonlyMailboxCommand'));
     expect(processor).toContain('analysis_row.analysis_status = \'draft\'');

@@ -3472,6 +3472,42 @@ export const comoNextCommunications = mysqlTable("como_next_communications", {
   }).onDelete("restrict"),
 ]);
 
+// Durable pre-append claim/observation ledger for Private Email Drafts. A
+// unique mailbox+draft key elects the only worker that may append. append_started
+// deliberately has no takeover lease because an IMAP timeout is ambiguous.
+export const comoMailboxDraftLedger = mysqlTable("como_mailbox_draft_ledger", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  mailboxKey: varchar("mailbox_key", { length: 64 }).notNull(),
+  draftKey: varchar("draft_key", { length: 255 }).notNull(),
+  userId: int("user_id").references(() => users.id, { onDelete: "restrict" }),
+  projectId: int("project_id").references(() => projects.id, { onDelete: "restrict" }),
+  workFileId: int("work_file_id"),
+  communicationId: bigint("communication_id", { mode: "number" }).references(() => comoNextCommunications.id, { onDelete: "restrict" }),
+  messageId: varchar("message_id", { length: 320 }).notNull(),
+  subjectSha256: varchar("subject_sha256", { length: 64 }).notNull(),
+  bodySha256: varchar("body_sha256", { length: 64 }).notNull(),
+  toEnvelopeSha256: varchar("to_envelope_sha256", { length: 64 }).notNull(),
+  ccEnvelopeSha256: varchar("cc_envelope_sha256", { length: 64 }).notNull(),
+  state: mysqlEnum("state", ["preappend_claimed", "append_started", "draft_saved", "sent_confirmed", "human_review"]).notNull().default("preappend_claimed"),
+  claimToken: varchar("claim_token", { length: 64 }),
+  claimExpiresAt: timestamp("claim_expires_at", { mode: "string" }),
+  appendStartedAt: timestamp("append_started_at", { mode: "string" }),
+  draftFolder: varchar("draft_folder", { length: 255 }),
+  draftUid: bigint("draft_uid", { mode: "number" }),
+  sentFolder: varchar("sent_folder", { length: 255 }),
+  sentUid: bigint("sent_uid", { mode: "number" }),
+  reviewReason: varchar("review_reason", { length: 255 }),
+  confirmedAt: timestamp("confirmed_at", { mode: "string" }),
+  createdAt: timestamp("created_at", { mode: "string" }).default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("como_mailbox_draft_ledger_key_uq").on(table.mailboxKey, table.draftKey),
+  uniqueIndex("como_mailbox_draft_ledger_message_uq").on(table.mailboxKey, table.messageId),
+  index("como_mailbox_draft_ledger_claim_idx").on(table.state, table.claimExpiresAt),
+  index("como_mailbox_draft_ledger_communication_idx").on(table.communicationId),
+  foreignKey({ name: "como_mailbox_draft_ledger_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+]);
+
 
 // Read-only mailbox projection. Messages arrive only through an explicit import
 // command; this model has no send, reply, forward, delete, or server-flag action.

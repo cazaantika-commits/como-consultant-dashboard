@@ -34,6 +34,7 @@ import { createIntakeProposalsCommand, reviewIntakeProposalCommand, type IntakeP
 import { currentInboundEmailText, reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
 import { createMeetingCommand } from "./comoNextMeetings";
+import { confirmSentLineageObservation, findValidatedSentLineage } from "./comoMailboxDraftLedger";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
 const rowsOf = <T>(result: unknown): T[] => Array.isArray(result) && Array.isArray(result[0]) ? result[0] as T[] : result as T[];
@@ -663,6 +664,63 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
   return { imported, duplicates, suggested, unmatched, autoLinked, importedIds, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
 }
 
+/**
+ * Sent mail is never suggestion-linked. It can only enter a work file through a
+ * validated durable Draft ledger binding (custom header/Message-ID), or the
+ * deliberately exact, unique finance fallback inside that validator. Replays
+ * keep attempting this independently of a duplicate mailbox import.
+ */
+async function linkValidatedSentLineageFromBatch(input: { userId: number; batch: ReadonlyMailboxBatch }) {
+  if (input.batch.folderName !== "Sent" || !input.batch.messages.length) return { linked: 0, review: 0 };
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const byUid = new Map(input.batch.messages.map(message => [message.uid, message]));
+  const rows = await db.select().from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.userId, input.userId),
+    eq(comoNextEmailMessages.mailboxKey, mailboxKeyFor(input.batch.mailbox)),
+    eq(comoNextEmailMessages.folderName, "Sent"),
+    eq(comoNextEmailMessages.uidValidity, input.batch.uidValidity),
+    inArray(comoNextEmailMessages.imapUid, input.batch.messages.map(message => message.uid)),
+  ));
+  let linked = 0;
+  let review = 0;
+  for (const email of rows) {
+    const message = byUid.get(Number(email.imapUid));
+    if (!message) continue;
+    const lineage = await findValidatedSentLineage({
+      userId: input.userId,
+      mailboxKey: mailboxKeyFor(input.batch.mailbox),
+      ownerMailbox: getConfiguredMailboxAddress(),
+      message,
+    });
+    if (lineage.kind === "review") { review += 1; continue; }
+    if (lineage.kind !== "validated") continue;
+    // A source mismatch is an explicit stop, not permission to replace a
+    // manually/previously linked other project.
+    if (email.linkedProjectId && (Number(email.linkedProjectId) !== lineage.projectId || Number(email.linkedWorkFileId || 0) !== lineage.workFileId)) {
+      review += 1;
+      continue;
+    }
+    if (!email.communicationId) {
+      try {
+        await linkEmailToWorkFileCommand({
+          userId: input.userId,
+          emailId: Number(email.id),
+          projectId: lineage.projectId,
+          workFileId: lineage.workFileId,
+          suppressReplyDraft: true,
+        });
+      } catch {
+        review += 1;
+        continue;
+      }
+    }
+    await confirmSentLineageObservation({ ledgerId: lineage.ledgerId, folder: input.batch.folderName, uid: Number(email.imapUid) });
+    linked += 1;
+  }
+  return { linked, review };
+}
+
 export async function syncReadonlyInboxCommand(input: { userId: number; hours: number; maxMessages: number }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
@@ -681,6 +739,7 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
   ]);
   const inbox = await importReadonlyBatch(input.userId, inboxBatch);
   const sent = await importReadonlyBatch(input.userId, sentBatch);
+  const sentLineage = await linkValidatedSentLineageFromBatch({ userId: input.userId, batch: sentBatch });
   return {
     imported: inbox.imported + sent.imported,
     duplicates: inbox.duplicates + sent.duplicates,
@@ -691,6 +750,7 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
     scanned: inboxBatch.messages.length + sentBatch.messages.length,
     uidValidity: { inbox: inboxBatch.uidValidity, sent: sentBatch.uidValidity },
     folders: { inbox, sent },
+    sentLineage,
     readOnly: true as const,
     serverFlagsChanged: false as const,
     externalSideEffects: false as const,

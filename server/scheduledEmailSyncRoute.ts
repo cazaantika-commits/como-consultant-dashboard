@@ -8,6 +8,8 @@ import { processPendingDirectContextualAcknowledgementDeliveries } from "./servi
 import { runExecutiveControlLoopCommand } from "./services/comoNextExecutiveControl";
 import { reconcileConditionalSentWatches } from "./services/comoNextConditionalSentWatches";
 import { seedConditionalSentWatches } from "./services/comoNextConditionalSentWatchSeeder";
+import { runComoFinanceInvoiceDraftsCommand } from "./services/comoFinanceInvoiceDrafts";
+import { reconcileFinancePaymentFollowups } from "./services/comoFinancePaymentFollowups";
 
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
@@ -64,6 +66,13 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // records, not messages. Resolve inbound replies before considering work.
           const seededWatches = await seedConditionalSentWatches({ userId: settings.userId, limit: 3 });
           const conditionalWatches = await reconcileConditionalSentWatches({ userId: settings.userId, limit: 3 });
+          // Owner-authorized finance handling is Draft-only. It runs after the
+          // separate import/analysis stages and has its own policy/source gates.
+          const financeInvoices = await runComoFinanceInvoiceDraftsCommand({ userId: settings.userId });
+          // A transient invoice error must not starve payment watches or the
+          // unrelated internal work. Report failure only after those lanes run.
+          const financePayments = await reconcileFinancePaymentFollowups({ userId: settings.userId, limit: 3 })
+            .catch(() => ({ error: "finance_payment_followup_failed" as const }));
           const candidates = await db.select({ id: comoNextActions.id, title: comoNextActions.title,
             description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria }).from(comoNextActions)
             .innerJoin(comoNextWorkFiles, eq(comoNextActions.workFileId, comoNextWorkFiles.id))
@@ -83,13 +92,17 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
             userId: settings.userId, trigger: "email_sync", actionIds: [Number(eligible.id)], maxItems: 1,
           }) : null;
           if (result?.failures.length) throw new Error(`executive_action_failed:${result.failures[0].kind}`);
+          if (financeInvoices.status === "error" || "error" in financePayments) {
+            throw new Error("finance_lane_failed_after_internal_work");
+          }
           await db.update(comoNextEmailSyncSettings).set({
             lastRunAt: nowSql(), lastSuccessAt: nowSql(), lastStatus: "success",
             lastScanned: eligible ? 1 : 0, lastImported: result?.executedActionIds.length || 0,
             lastDuplicates: 0, lastError: null,
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
           res.status(200).json({ ok: true, phase: "executive", selectedActionId: eligible ? Number(eligible.id) : null,
-            executedActionIds: result?.executedActionIds || [], seededWatches, conditionalWatches, externalSideEffects: false });
+            executedActionIds: result?.executedActionIds || [], seededWatches, conditionalWatches,
+            financeInvoices, financePayments, externalSideEffects: false });
           return;
         }
         // Separate, retryable callback; analyses are keyed by message ID and

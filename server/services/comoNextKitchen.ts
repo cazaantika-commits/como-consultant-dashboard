@@ -161,18 +161,21 @@ export function buildExecutiveKitchenQueue(input: {
   for (const draft of input.draftCommunications) items.push({ id: `communication:${draft.id}`, kind: "communication", phase: "owner_review", title: draft.subject, projectId: draft.projectId, workFileId: draft.workFileId, recordId: draft.id, dueAt: draft.occurredAt });
   for (const proposal of input.intakeProposals) items.push({ id: `proposal:${proposal.id}`, kind: "proposal", phase: "owner_review", title: proposal.title, projectId: proposal.projectId, workFileId: proposal.workFileId, recordId: proposal.id, priority: proposal.priority, dueAt: proposal.dueAt });
   for (const meeting of input.meetings) {
+    const closed = ["completed", "cancelled"].includes(meeting.meetingStatus);
+    const reviewPending = Number(meeting.pendingProposalCount || 0) > 0 || Number(meeting.draftMinutesCount || 0) > 0;
+    if (closed && !reviewPending) continue;
     const startsAt = meeting.startsAt ? new Date(`${String(meeting.startsAt).replace(" ", "T")}Z`).getTime() : Number.POSITIVE_INFINITY;
-    const needsOutcome = Number.isFinite(startsAt) && startsAt <= Date.now();
+    const needsOutcome = !closed && Number.isFinite(startsAt) && startsAt <= Date.now();
     items.push({
       id: `meeting:${meeting.id}`,
       kind: "meeting",
-      phase: needsOutcome ? "act_now" : "scheduled",
-      title: needsOutcome ? `أخبر Manus بما حدث في ${meeting.title}` : meeting.title,
+      phase: closed ? "owner_review" : needsOutcome ? "act_now" : "scheduled",
+      title: closed ? `مراجعة المقترحات أو المحضر المتبقي: ${meeting.title}` : needsOutcome ? `أخبر Manus بما حدث في ${meeting.title}` : meeting.title,
       projectId: meeting.projectId,
       workFileId: meeting.workFileId,
       recordId: meeting.id,
       dueAt: meeting.startsAt,
-      ownerType: needsOutcome ? "human" : null,
+      ownerType: closed || needsOutcome ? "human" : null,
       needsOutcome,
       priority: needsOutcome ? "urgent" : null,
     });

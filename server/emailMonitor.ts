@@ -1,6 +1,13 @@
 import Imap from "imap";
 import { simpleParser, ParsedMail, Attachment } from "mailparser";
 import nodemailer from "nodemailer";
+import {
+  DatabaseMailboxDraftLedger,
+  deterministicDraftMessageId,
+  mailboxKeyForDraftLedger,
+  saveMailboxDraftExactlyOnce,
+  type MailboxDraftLookup,
+} from "./services/comoMailboxDraftLedger";
 
 /**
  * Email Monitor Service for COMO
@@ -17,6 +24,8 @@ const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || "";
 export interface EmailMessage {
   uid: number;
   messageId: string;
+  /** Scalar RFC header projection for read-only identity/lineage checks. */
+  headers?: Readonly<Record<string, string | readonly string[] | undefined>>;
   from: string;
   fromName: string;
   to: string;
@@ -43,6 +52,18 @@ export interface ReadonlyMailboxBatch {
   folderName: string;
   uidValidity: string;
   messages: EmailMessage[];
+}
+
+/** Preserve scalar headers only; structured MIME values are intentionally excluded. */
+export function readonlyEmailHeadersFromParsedMail(parsed: Pick<ParsedMail, "headers">): Readonly<Record<string, string | readonly string[] | undefined>> {
+  const result: Record<string, string | readonly string[] | undefined> = {};
+  parsed.headers.forEach((value, name) => {
+    const key = String(name || "").trim().toLowerCase();
+    if (!key) return;
+    if (typeof value === "string") result[key] = value;
+    else if (Array.isArray(value) && value.every(item => typeof item === "string")) result[key] = value as string[];
+  });
+  return result;
 }
 
 export function getConfiguredMailboxAddress() {
@@ -466,6 +487,7 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
                 messages.push({
                   uid,
                   messageId: parsed.messageId || "",
+                  headers: readonlyEmailHeadersFromParsedMail(parsed),
                   from: parsed.from?.value?.[0]?.address || "",
                   fromName: parsed.from?.value?.[0]?.name || parsed.from?.value?.[0]?.address || "",
                   to: parsed.to ? (Array.isArray(parsed.to) ? parsed.to : [parsed.to]).map(item => item.value.map(value => value.address).join(", ")).join(", ") : "",
@@ -987,6 +1009,21 @@ function findDraftMailbox(boxes: Record<string, ImapMailboxNode>) {
     || "Drafts";
 }
 
+function findSentMailbox(boxes: Record<string, ImapMailboxNode>) {
+  const rows: Array<{ path: string; attribs: string[] }> = [];
+  const walk = (nodes: Record<string, ImapMailboxNode>, parent = "") => {
+    for (const [name, node] of Object.entries(nodes || {})) {
+      const path = parent ? `${parent}${node.delimiter || "/"}${name}` : name;
+      rows.push({ path, attribs: node.attribs || [] });
+      if (node.children) walk(node.children, path);
+    }
+  };
+  walk(boxes);
+  return rows.find(row => row.attribs.includes("\\Sent"))?.path
+    || rows.find(row => /(^|[./])sent(?: items| messages)?$/i.test(row.path))?.path
+    || "Sent";
+}
+
 const WAEL_EMAIL = "wael@zooma.ae";
 const MIA_EMAIL = "pa@zooma.ae";
 
@@ -1026,7 +1063,9 @@ export async function saveComoMailboxDraft(input: {
   inReplyTo?: string;
   draftKey: string;
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
-}): Promise<{ folder: string; uid: number | null; created: boolean }> {
+  /** Existing command association; never inferred from untrusted mailbox text. */
+  lineage?: { userId: number; projectId: number; workFileId: number; communicationId: number } | null;
+}): Promise<{ folder: string; uid: number | null; created: boolean; observedInSent?: boolean }> {
   if (!EMAIL_PASSWORD) throw new Error("EMAIL_PASSWORD not configured");
   const to = input.to.trim();
   const subject = input.subject.replace(/[\r\n]+/g, " ").trim();
@@ -1040,6 +1079,8 @@ export async function saveComoMailboxDraft(input: {
     || input.attachments?.some(file => !file.filename.trim() || file.content.length > 15 * 1024 * 1024)) {
     throw new Error("Draft attachments exceed the allowed count or size");
   }
+  const mailboxKey = mailboxKeyForDraftLedger(EMAIL_USER);
+  const messageId = deterministicDraftMessageId({ mailboxKey, draftKey });
 
   const streamTransport = nodemailer.createTransport({
     streamTransport: true,
@@ -1055,72 +1096,89 @@ export async function saveComoMailboxDraft(input: {
     html: `<div dir="auto" style="white-space:normal;line-height:1.7">${plainTextToSafeHtml(body)}</div>`,
     ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     ...(input.inReplyTo ? { inReplyTo: input.inReplyTo, references: input.inReplyTo } : {}),
+    messageId,
     headers: { "X-COMO-Draft-Key": draftKey },
   });
   const raw = generated.message as Buffer;
+  const saved = await saveMailboxDraftExactlyOnce({
+    ledger: new DatabaseMailboxDraftLedger(),
+    claim: { mailboxKey, draftKey, messageId, subject, body, to, cc, lineage: input.lineage || null },
+    mailbox: privateEmailDraftAppendPort(raw),
+  });
+  return { folder: saved.folder, uid: saved.uid, created: saved.created, observedInSent: saved.observedInSent };
+}
 
-  return new Promise((resolve, reject) => {
-    const imap = new Imap({
-      user: EMAIL_USER,
-      password: EMAIL_PASSWORD,
-      host: EMAIL_HOST,
-      port: 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false },
-      connTimeout: 15000,
-      authTimeout: 10000,
-    });
-    let settled = false;
-    const finish = (error?: Error, result?: { folder: string; uid: number | null; created: boolean }) => {
-      if (settled) return;
-      settled = true;
-      imap.end();
-      if (error) reject(error);
-      else resolve(result!);
-    };
-    const searchDraft = (folder: string, created: boolean) => {
-      imap.openBox(folder, true, openError => {
-        if (openError) return finish(openError);
-        imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (searchError, uids) => {
-          if (searchError) return finish(searchError);
-          const uid = Array.isArray(uids) && uids.length ? Math.max(...uids) : null;
-          if (uid || created) return finish(undefined, { folder, uid, created });
-          imap.append(raw, { mailbox: folder, flags: ["\\Draft"], date: new Date() }, appendError => {
-            if (appendError) return finish(appendError);
-            imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (verifyError, createdUids) => {
-              if (verifyError) return finish(verifyError);
-              finish(undefined, {
-                folder,
-                uid: Array.isArray(createdUids) && createdUids.length ? Math.max(...createdUids) : null,
-                created: true,
+/** IMAP is a narrow port: inspection is read-only; append occurs only after the durable ledger transitions to append_started. */
+function privateEmailDraftAppendPort(raw: Buffer) {
+  return {
+    findByStableIdentity(input: { draftKey: string; messageId: string }): Promise<MailboxDraftLookup> {
+      return new Promise((resolve, reject) => {
+        const imap = new Imap({ user: EMAIL_USER, password: EMAIL_PASSWORD, host: EMAIL_HOST, port: 993, tls: true,
+          tlsOptions: { rejectUnauthorized: false }, connTimeout: 15000, authTimeout: 10000 });
+        let settled = false;
+        const finish = (error?: Error, value?: MailboxDraftLookup) => {
+          if (settled) return;
+          settled = true;
+          try { imap.end(); } catch { /* already closed */ }
+          if (error) reject(error); else resolve(value!);
+        };
+        imap.once("ready", () => imap.getBoxes((boxError, boxes) => {
+          if (boxError) return finish(boxError);
+          const nodes = boxes as unknown as Record<string, ImapMailboxNode>;
+          const folders = [
+            { folder: findDraftMailbox(nodes), sent: false },
+            { folder: findSentMailbox(nodes), sent: true },
+          ];
+          const matches: Array<{ folder: string; uid: number; sent: boolean }> = [];
+          const inspectOne = (index: number) => {
+            if (index >= folders.length) {
+              const unique = matches.filter((match, matchIndex, all) => matchIndex === all.findIndex(item => item.folder === match.folder && item.uid === match.uid));
+              if (!unique.length) return finish(undefined, { kind: "missing" });
+              if (unique.length === 1) return finish(undefined, { kind: "found", ...unique[0]! });
+              return finish(undefined, { kind: "ambiguous", folders: unique });
+            }
+            const target = folders[index]!;
+            imap.openBox(target.folder, true, openError => {
+              if (openError) return finish(openError);
+              // node-imap's OR grammar is one search criterion inside the
+              // outer criteria list. A selected box is inspected to completion
+              // before the next one is opened on this connection.
+              imap.search([["OR", ["HEADER", "X-COMO-Draft-Key", input.draftKey], ["HEADER", "Message-ID", input.messageId]]], (searchError, uids) => {
+                if (searchError) return finish(searchError);
+                if (Array.isArray(uids)) {
+                  for (const uid of uids) matches.push({ folder: target.folder, uid, sent: target.sent });
+                }
+                inspectOne(index + 1);
               });
             });
-          });
-        });
+          };
+          inspectOne(0);
+        }));
+        imap.once("error", (error: Error) => finish(error));
+        imap.connect();
       });
-    };
-    imap.once("ready", () => {
-      imap.getBoxes((boxesError, boxes) => {
-        if (boxesError) return finish(boxesError);
-        const folder = findDraftMailbox(boxes as unknown as Record<string, ImapMailboxNode>);
-        imap.openBox(folder, true, openError => {
-          if (openError) return finish(openError);
-          imap.search([["HEADER", "X-COMO-Draft-Key", draftKey]], (searchError, uids) => {
-            if (searchError) return finish(searchError);
-            if (Array.isArray(uids) && uids.length) {
-              return finish(undefined, { folder, uid: Math.max(...uids), created: false });
-            }
-            imap.append(raw, { mailbox: folder, flags: ["\\Draft"], date: new Date() }, appendError => {
-              if (appendError) return finish(appendError);
-              searchDraft(folder, true);
-            });
-          });
-        });
+    },
+    appendDraft(): Promise<void> {
+      return new Promise((resolve, reject) => {
+        const imap = new Imap({ user: EMAIL_USER, password: EMAIL_PASSWORD, host: EMAIL_HOST, port: 993, tls: true,
+          tlsOptions: { rejectUnauthorized: false }, connTimeout: 15000, authTimeout: 10000 });
+        let settled = false;
+        const finish = (error?: Error) => {
+          if (settled) return;
+          settled = true;
+          try { imap.end(); } catch { /* already closed */ }
+          if (error) reject(error); else resolve();
+        };
+        imap.once("ready", () => imap.getBoxes((boxError, boxes) => {
+          if (boxError) return finish(boxError);
+          const folder = findDraftMailbox(boxes as unknown as Record<string, ImapMailboxNode>);
+          imap.append(raw, { mailbox: folder, flags: ["\\Draft"], date: new Date() }, appendError => finish(appendError || undefined));
+        }));
+        imap.once("error", (error: Error) => finish(error));
+        imap.connect();
       });
-    });
-    imap.once("error", (error: Error) => finish(error));
-    imap.connect();
-  });
+    },
+  };
 }
 
 /**
