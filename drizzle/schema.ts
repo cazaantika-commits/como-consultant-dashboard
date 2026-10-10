@@ -4072,3 +4072,18 @@ export const majanFinanceRevisions = mysqlTable("majan_finance_revisions", {
   uniqueIndex("majan_finance_revisions_case_revision_uq").on(table.caseId, table.revision),
   index("majan_finance_revisions_case_created_idx").on(table.caseId, table.createdAt),
 ]);
+
+/** Provisioned owner identity; only deployment provisioning writes this table.
+ * This binds the existing owner, not a new role or an ownership-transfer API.
+ */
+export const comoAppOwnerIdentity = mysqlTable("como_app_owner_identity", {
+  id: int("id").primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  openId: varchar("open_id", { length: 64 }).notNull(),
+  isActive: int("is_active").notNull().default(1),
+  evidenceReference: text("evidence_reference").notNull(),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+}, table => [
+  uniqueIndex("como_app_owner_identity_user_uq").on(table.userId),
+  uniqueIndex("como_app_owner_identity_open_id_uq").on(table.openId),
+]);

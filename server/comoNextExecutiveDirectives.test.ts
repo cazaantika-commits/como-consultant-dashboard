@@ -63,7 +63,7 @@ describe("COMO Next executive directives", () => {
   });
 
   it("exposes the same write-or-voice directive channel inside the dossier and an open decision", () => {
-    expect(kitchenUi).toContain("وجّه Manus");
+    expect(kitchenUi).toContain("طلبك إلى Manus");
     expect(kitchenUi).toContain("كتابة أو صوت");
     expect(kitchenUi).toContain("حفظ للمراجعة");
     expect(kitchenUi).toContain("سلّم التوجيه إلى Manus");
