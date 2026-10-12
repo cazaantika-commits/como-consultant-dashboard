@@ -66,7 +66,7 @@ describe("COMO Next executive kitchen", () => {
     input.draftCommunications = [];
     input.emails = [];
     input.filesWithoutNextAction = [];
-    expect(buildExecutiveKitchenQueue(input)).toEqual([]);
+    expect(buildExecutiveKitchenQueue(input)).toMatchObject([{phase:"waiting_external",recordId:41}]);
   });
 
   it("turns a past confirmed meeting into one outcome-capture intervention", () => {
@@ -195,43 +195,20 @@ describe("COMO Next executive kitchen", () => {
     expect(prompt.indexOf("انتظار تأكيد موعد الاثنين")).toBeLessThan(prompt.indexOf("Yes Confirmed"));
   });
 
-  it("opens a queue topic on its calm dossier and drills into a record only from its stage", () => {
-    expect(kitchenPage).toContain("ما الذي يحتاج إنجازًا الآن؟");
-    expect(kitchenPage).toContain("visibleExecutionQueue.map");
-    expect(kitchenPage).toContain('aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل"');
-    expect(kitchenPage).toContain('<li key={item.id}><ExecutiveQueueCard');
-    expect(kitchenPage).not.toContain('className="grid gap-3 sm:grid-cols-2">{data.executionQueue.length');
-    expect(kitchenPage).toContain("ينفذه Manus");
-    expect(kitchenPage).toContain("مطلوب منك: مراجعة أو حسم");
-    expect(kitchenPage).toContain("ownerWorkCount");
-    expect(kitchenPage).toContain("manusWorkCount");
-    expect(kitchenPage).toContain("queueOwnerFilter");
-    expect(kitchenPage).toContain('aria-pressed={queueOwnerFilter === "manus"}');
-    expect(kitchenPage).toContain("فتح التقرير المحمي");
+  it("opens on separate work and waiting lists, with documentation secondary", () => {
+    expect(kitchenPage).toContain("المطلوب منك");
+    expect(kitchenPage).toContain("المطلوب من Manus");
+    expect(kitchenPage).toContain("بانتظار الاستلام أو الرد");
+    expect(kitchenPage).toContain("buildKitchenBoard");
+    expect(kitchenPage).toContain("confirmActionReceipt");
+    expect(kitchenPage).toContain("تم الاستلام");
+    expect(kitchenPage).toContain("projectLabel");
+    expect(kitchenPage).toContain("openFocusedRecord");
     expect(kitchenPage).toContain("/api/como-next/documents/");
-    expect(kitchenPage).toContain("سلّم التوجيه إلى Manus");
     expect(kitchenPage).toContain("لن ينفذ Manus ولن تُنشأ مسودة بريد أو أثر خارجي عند الحفظ");
-    expect(kitchenPage).toContain('defaultSourceChannel === "meeting"');
-    expect(kitchenPage).toContain('meetingMutation.mutateAsync');
-    expect(kitchenPage).toContain("سجل تسليم مختصر");
-    expect(kitchenPage).toContain('meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus)');
-    expect(kitchenPage).toContain("activeMeetingNeedsOutcome");
-    expect(kitchenPage).toContain("أخبر Manus بما حدث");
-    expect(kitchenPage).toContain('defaultSourceChannel="meeting"');
-    expect(kitchenPage).toContain('alwaysOpen submissionLabel="سلّم نتيجة الاجتماع إلى Manus"');
-    expect(kitchenPage).toContain("مسودة محفوظة على هذا الجهاز فقط — لم تصل إلى Manus بعد");
-    expect(kitchenPage).toContain("وصلت إلى Manus وحُفظت في الملف — تحديث #");
+    expect(kitchenPage).toContain("التوثيق والأدوات");
+    expect(kitchenPage).toContain("إيصالات التوجيه السابقة");
     expect(kitchenPage).toContain("وصلت النتيجة إلى Manus وحُفظت في ملف الاجتماع");
-    expect(kitchenPage).toContain("meetingOutcome.id");
-    expect(kitchenPage).toContain("Manus سيحلل النتيجة، يغلق الاجتماع، ويحدّث الخطوات التالية تلقائيًا");
-    expect(kitchenPage).toContain('ownerCommunication?.subject');
-    expect(kitchenPage).toContain('مراجعة المسودة');
-    expect(kitchenPage).toContain("!activeActions.length ? <WorkFileUpdateComposer");
-    expect(kitchenPage).toContain("!w-screen !max-w-none");
-    expect(kitchenPage).toContain('if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);');
-    expect(kitchenPage).toContain('item.kind === "meeting" && item.needsOutcome');
-    expect(kitchenPage).toContain('openFocusedRecord(item.workFileId, "meeting", item.recordId)');
-    expect(kitchenPage).not.toContain('if (item.kind === "action") return openWorkFile(item.workFileId, item.recordId);');
   });
 
   it("schedules read-only import and retryable analysis through signed task identities", () => {

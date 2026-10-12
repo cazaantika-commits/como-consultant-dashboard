@@ -146,9 +146,11 @@ export function buildExecutiveKitchenQueue(input: {
 }) {
   const items: Array<Record<string, unknown>> = [];
   for (const action of input.actions) {
-    if (!actionNeedsAttentionNow(action)) continue;
+    if (["verified", "cancelled"].includes(action.actionStatus)) continue;
     const phase = action.actionStatus === "waiting_external"
       ? "waiting_external"
+      : !actionNeedsAttentionNow(action)
+        ? "scheduled"
       : action.actionStatus === "completed_pending_verification"
         ? "verify"
         : "act_now";
@@ -159,7 +161,10 @@ export function buildExecutiveKitchenQueue(input: {
     items.push({ id: `decision:${decision.id}`, kind: "decision", phase: "owner_review", title: decision.title, projectId: decision.projectId, workFileId: decision.workFileId, recordId: decision.id, dueAt: decision.dueAt });
   }
   for (const draft of input.draftCommunications) items.push({ id: `communication:${draft.id}`, kind: "communication", phase: "owner_review", title: draft.subject, projectId: draft.projectId, workFileId: draft.workFileId, recordId: draft.id, dueAt: draft.occurredAt });
-  for (const proposal of input.intakeProposals) items.push({ id: `proposal:${proposal.id}`, kind: "proposal", phase: "owner_review", title: proposal.title, projectId: proposal.projectId, workFileId: proposal.workFileId, recordId: proposal.id, priority: proposal.priority, dueAt: proposal.dueAt });
+  for (const proposal of input.intakeProposals) {
+    if (proposal.proposalKind === "note") continue;
+    items.push({ id: `proposal:${proposal.id}`, kind: "proposal", phase: "owner_review", title: proposal.title, projectId: proposal.projectId, workFileId: proposal.workFileId, recordId: proposal.id, priority: proposal.priority, dueAt: proposal.dueAt });
+  }
   for (const meeting of input.meetings) {
     const closed = ["completed", "cancelled"].includes(meeting.meetingStatus);
     const reviewPending = Number(meeting.pendingProposalCount || 0) > 0 || Number(meeting.draftMinutesCount || 0) > 0;
@@ -194,7 +199,7 @@ export function buildExecutiveKitchenQueue(input: {
     });
   }
   for (const review of input.specialistReviews) items.push({ id: `specialist:${review.id}`, kind: "specialist", phase: "owner_review", title: review.executiveSummary || review.requestText, projectId: review.projectId, workFileId: review.workFileId, recordId: review.id });
-  for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority });
+  for (const file of input.filesWithoutNextAction) items.push({ id: `gap:${file.id}`, kind: "gap", phase: "define_next_step", title: `تحديد الخطوة التالية: ${file.title}`, projectId: file.projectId, workFileId: file.id, recordId: file.id, priority: file.priority, ownerType: "manus" });
 
   const itemRank = (item: Record<string, unknown>) => {
     if (item.kind === "meeting" && item.needsOutcome) return -1;
@@ -219,7 +224,7 @@ export function buildExecutiveKitchenQueue(input: {
     const existingIndex = groupedIndex.get(groupKey);
     if (existingIndex === undefined) {
       groupedIndex.set(groupKey, groupedItems.length);
-      groupedItems.push({ ...item, id: `topic:${groupKey}`, reviewItemCount: 1, relatedReviewIds: [String(item.id)] });
+      groupedItems.push({ ...item, id: `topic:${groupKey}`, reviewItemCount: 1, relatedReviewIds: [String(item.id)], relatedItems: [{ ...item }] });
       continue;
     }
     const existing = groupedItems[existingIndex];
@@ -231,6 +236,7 @@ export function buildExecutiveKitchenQueue(input: {
       id: `topic:${groupKey}`,
       reviewItemCount: existingCount + 1,
       relatedReviewIds,
+      relatedItems: [...((existing.relatedItems as Array<Record<string, unknown>>) || []), { ...item }],
     };
   }
 

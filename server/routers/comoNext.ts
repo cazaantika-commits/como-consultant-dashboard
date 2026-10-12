@@ -66,6 +66,7 @@ import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveD
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 import { assertAuthenticatedAppOwner } from "../services/comoAppOwner";
 import { readWorkFileLifecycle } from "../services/comoWorkFileLifecycle";
+import { confirmActionReceiptCommand } from "../services/comoKitchenReceipts";
 import {
   cancelStagedExecutiveDirectiveCommand,
   listWorkFileStagedDirectives,
@@ -250,6 +251,7 @@ export const comoNextRouter = router({
       LEFT JOIN como_next_parties waiting_party ON waiting_party.id = waiting_link.party_id
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND a.action_status NOT IN ('verified','cancelled')
+        AND wf.work_file_status NOT IN ('closed','cancelled')
         AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
     `);
 
@@ -276,6 +278,7 @@ export const comoNextRouter = router({
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND decision_row.decision_status IN ('required','deferred')
+        AND wf.work_file_status NOT IN ('closed','cancelled')
         AND (wf.import_batch_id IS NULL OR import_batch.batch_status = 'promoted')
       ORDER BY
         CASE wf.priority WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END,
@@ -299,6 +302,7 @@ export const comoNextRouter = router({
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
         AND communication.communication_status IN ('draft','approved_for_send')
+        AND wf.work_file_status NOT IN ('closed','cancelled')
       ORDER BY communication.created_at ASC, communication.id ASC
     `);
 
@@ -407,6 +411,7 @@ export const comoNextRouter = router({
     }));
     const nowMs = Date.now();
     const todayRows = unresolvedActions.filter(row => actionNeedsAttentionNow(row, nowMs));
+    const queueActions = unresolvedActions;
     const decisions = unresolvedDecisions.filter(row => decisionNeedsAttentionNow(row, nowMs));
     const draftCommunications = getRows<any>(draftCommunicationsResult).map(row => ({
       ...row,
@@ -431,7 +436,7 @@ export const comoNextRouter = router({
       ...intakeProposals.map(row => Number(row.workFileId || 0)),
       ...specialistAttention.map(row => Number(row.workFileId || 0)),
     ].filter(Boolean));
-    const filesWithoutNextAction = workFiles.filter(file => file.workFileStatus !== "waiting" && !workFilesWithOperationalStep.has(file.id));
+    const filesWithoutNextAction = workFiles.filter(file => !["waiting", "ready_to_close"].includes(file.workFileStatus) && !workFilesWithOperationalStep.has(file.id));
     return {
       today: buildComoNextTodayProjection(todayRows, ctx.user.id),
       actions: todayRows,
@@ -444,7 +449,7 @@ export const comoNextRouter = router({
       workFiles,
       filesWithoutNextAction,
       executionQueue: buildExecutiveKitchenQueue({
-        actions: todayRows,
+        actions: queueActions,
         decisions,
         draftCommunications,
         meetings: meetingAttention,
@@ -947,6 +952,14 @@ export const comoNextRouter = router({
     .mutation(({ ctx, input }) => {
       assertComoNextEnabled();
       return changeActionStatusCommand({ userId: ctx.user.id, ...input });
+    }),
+
+  confirmActionReceipt: protectedProcedure
+    .input(z.object({ actionId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      assertComoNextEnabled();
+      await assertAuthenticatedAppOwner(ctx.user);
+      return confirmActionReceiptCommand({ userId: ctx.user.id, ...input });
     }),
 
   resolveDecision: protectedProcedure

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { buildKitchenBoard, kitchenProjectLabel } from "../../../shared/comoKitchenBoard";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -62,13 +63,19 @@ import {
 type ExecutiveSection = "actions" | "decisions" | "communications" | "meetings" | "email" | "intake" | "specialists" | "work-files" | "transfer";
 type ExecutiveFocusKind = "action" | "decision" | "communication" | "meeting" | "proposal";
 type WorkFileStage = "now" | "evidence" | "outputs" | "decisions" | "execution" | "history";
-type QueueOwnerFilter = "all" | "owner" | "manus" | "external" | "scheduled";
 type Priority = "normal" | "important" | "urgent";
 type OwnerType = "human" | "manus" | "team";
 type ActionStatus = "open" | "in_progress" | "waiting_external" | "completed_pending_verification" | "verified" | "cancelled";
 type DecisionStatus = "required" | "approved" | "rejected" | "deferred" | "superseded";
 type DecisionAuthority = "abdulrahman" | "wael" | "sheikh_issa" | "joint" | "other";
 type CommunicationChannel = "email" | "whatsapp" | "letter" | "phone_note" | "internal";
+
+const executiveSections: ExecutiveSection[] = ["actions", "decisions", "communications", "meetings", "email", "intake", "specialists", "work-files", "transfer"];
+
+function normalizeExecutiveSection(value: string | null): ExecutiveSection | null {
+  if (!value || value === "kitchen") return null;
+  return executiveSections.includes(value as ExecutiveSection) ? value as ExecutiveSection : null;
+}
 
 const priorityMeta: Record<Priority, { label: string; className: string }> = {
   normal: { label: "عادي", className: "bg-slate-100 text-slate-700 border-slate-200" },
@@ -154,17 +161,6 @@ const queueKindLabel: Record<string, string> = {
   gap: "ملف عمل",
 };
 
-function queueResponsibilityMeta(item: any) {
-  if (item.phase === "waiting_external") return { label: "الدور الآن: الطرف الخارجي", className: "bg-orange-100 text-orange-800" };
-  if (item.phase === "scheduled") return { label: "الدور الآن: موعدك", className: "bg-blue-100 text-blue-800" };
-  if (item.ownerType === "manus") return { label: "ينفذه Manus", className: "bg-violet-100 text-violet-800" };
-  if (item.ownerType === "team") return { label: "ينفذه الفريق", className: "bg-cyan-100 text-cyan-800" };
-  if (item.phase === "owner_review" || ["decision", "proposal", "communication", "email", "specialist"].includes(item.kind)) {
-    return { label: "مطلوب منك: مراجعة أو حسم", className: "bg-amber-100 text-amber-900" };
-  }
-  return { label: "مطلوب منك", className: "bg-emerald-100 text-emerald-800" };
-}
-
 const workFileStages: Array<{ key: WorkFileStage; label: string; caption: string; icon: typeof Sparkles }> = [
   { key: "now", label: "الوضع الآن", caption: "الحقيقة والخطوة التالية", icon: Sparkles },
   { key: "evidence", label: "الدليل والمواد", caption: "ما وصل وما ثبت", icon: Paperclip },
@@ -174,33 +170,33 @@ const workFileStages: Array<{ key: WorkFileStage; label: string; caption: string
   { key: "history", label: "السجل", caption: "ما انتهى أو استُبدل", icon: GitMerge },
 ];
 
-function ExecutiveQueueCard({ item, index, onOpen }: { item: any; index: number; onOpen: (item: any) => void }) {
-  const meta = queuePhaseMeta[item.phase] || queuePhaseMeta.act_now;
-  const responsibility = queueResponsibilityMeta(item);
-  const Icon = meta.icon;
+function KitchenBoardCard({ item, onOpen, onConfirmReceipt, receiptPending, receiptError }: { item: any; onOpen: (item: any) => void; onConfirmReceipt: (item: any) => void; receiptPending: boolean; receiptError?: string | null }) {
+  const projectLabel = kitchenProjectLabel(item);
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(item)}
-      className={`group relative min-h-[82px] w-full min-w-0 overflow-hidden rounded-[22px] border p-3.5 text-right shadow-[0_8px_22px_rgba(15,23,42,.06)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,.10)] active:scale-[.99] sm:p-4 ${meta.card}`}
-    >
-      <span className={`absolute inset-y-0 right-0 w-1.5 ${item.priority === "urgent" ? "bg-rose-500" : item.priority === "important" ? "bg-amber-400" : "bg-[#1d6577]"}`} />
-      <div className="flex h-full min-w-0 items-center gap-3 pr-1 sm:gap-4">
-        <bdi className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white bg-white/80 text-sm font-black text-slate-500 shadow-sm">{String(index + 1).padStart(2, "0")}</bdi>
-        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${meta.iconClass}`}><Icon className="h-4.5 w-4.5" /></span>
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-2">
-            <span className={`text-[10px] font-black tracking-wide ${meta.eyebrow}`}>{meta.label}</span>
-            <span className="rounded-full border border-white bg-white/75 px-2 py-0.5 text-[9px] font-bold text-slate-500">{queueKindLabel[item.kind] || "عمل"}</span>
-            <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${responsibility.className}`}>{responsibility.label}</span>
-            {Number(item.reviewItemCount || 0) > 1 ? <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black text-violet-800">{item.reviewItemCount} سجلات ضمن الموضوع</span> : null}
-          </span>
-          <span className="mt-1.5 block break-words text-[15px] font-black leading-6 text-slate-950 sm:text-base">{item.title}</span>
-        </span>
-        <ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:-translate-x-1 group-hover:text-[#1d6577]" />
-      </div>
-    </button>
+    <article className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <button type="button" onClick={() => onOpen(item)} className="w-full rounded-xl p-1 text-right transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d6577]">
+        <p className="break-words text-sm font-black leading-6 text-slate-950">{projectLabel}</p>
+        <p className="mt-1 break-words text-sm leading-6 text-slate-600">{item.title}</p>
+      </button>
+      {item.canConfirmReceipt ? <Button type="button" size="sm" onClick={() => onConfirmReceipt(item)} disabled={receiptPending} className="mt-3 w-full rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">
+        {receiptPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}
+        تم الاستلام
+      </Button> : null}
+      {receiptError ? <p role="alert" className="mt-2 text-xs font-bold leading-5 text-rose-700">{receiptError}</p> : null}
+    </article>
   );
+}
+
+function KitchenBoardSection({ title, items, emptyMessage, onOpen, onConfirmReceipt, receiptActionId, receiptError }: { title: string; items: any[]; emptyMessage: string; onOpen: (item: any) => void; onConfirmReceipt: (item: any) => void; receiptActionId: number | null; receiptError: { actionId: number; message: string } | null }) {
+  return <section aria-label={title} className="rounded-[26px] border border-slate-200 bg-white/65 p-4 shadow-sm">
+    <h2 className="text-base font-black text-slate-950">{title}</h2>
+    <div className="mt-3 space-y-2.5">
+      {items.length ? items.map((item: any) => {
+        const errorMessage = receiptError && receiptError.actionId === item.recordId ? receiptError.message : null;
+        return <KitchenBoardCard key={`${item.kind}-${item.recordId}`} item={item} onOpen={onOpen} onConfirmReceipt={onConfirmReceipt} receiptPending={receiptActionId === item.recordId} receiptError={errorMessage} />;
+      }) : <p className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-5 text-center text-sm font-bold leading-6 text-slate-500">{emptyMessage}</p>}
+    </div>
+  </section>;
 }
 
 function normalizeUtc(value: string | null | undefined) {
@@ -952,6 +948,7 @@ function FocusedActionView({ action, updates, isClosed, onBack, onUpdated }: { a
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#8fb7c2] sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" /><span className="break-words text-right">العودة إلى عناوين الإجراءات</span></button>
     <article className="mx-auto mt-4 min-w-0 max-w-xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
+      <p className="mb-4 text-sm font-black text-[#1d6577]">{action.projectLabel || kitchenProjectLabel(action)}</p>
       <div className="flex flex-wrap items-center gap-2"><StatusBadge status={action.actionStatus} /><OwnerChip ownerType={action.ownerType} /><PriorityBadge priority={action.priority} /></div>
       <h2 className="mt-5 break-words text-xl font-black leading-9 text-slate-950 sm:text-2xl sm:leading-10">{action.title}</h2>
       {action.description ? <div className="mt-6 border-t border-slate-100 pt-5"><p className="text-[11px] font-black text-slate-400">التفاصيل</p><p className="mt-2 whitespace-pre-wrap text-sm leading-8 text-slate-700">{action.description}</p></div> : null}
@@ -971,6 +968,7 @@ function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onB
   return <div className="min-h-[100dvh] min-w-0 max-w-full overflow-x-hidden bg-[#f8f8f5] p-3 pt-14 sm:min-h-[calc(100vh-8rem)] sm:p-7">
     <button type="button" onClick={onBack} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm sm:px-4 sm:text-sm"><ArrowLeft className="h-4 w-4 shrink-0" />العودة إلى القائمة</button>
     <article className="mx-auto mt-4 min-w-0 max-w-2xl rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:mt-6 sm:rounded-[28px] sm:p-8">
+      <p className="mb-4 text-sm font-black text-[#1d6577]">{item.projectLabel || kitchenProjectLabel(item)}</p>
       {kind === "decision" ? <>
         <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${decisionStatusMeta[item.decisionStatus as DecisionStatus]?.className || ""}`}>{decisionStatusMeta[item.decisionStatus as DecisionStatus]?.label || item.decisionStatus}</Badge><Badge variant="outline" className="rounded-full bg-white">{decisionAuthorityMeta[item.decisionAuthority as DecisionAuthority]}</Badge></div>
         <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{item.title}</h2>
@@ -1057,7 +1055,7 @@ function LifecycleLanesPanel({ lanes }: { lanes: LifecycleLaneView[] }) {
       if (!lane) return <div key={kind} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4"><Badge variant="outline" className={`rounded-full ${kindMeta.className}`}>{kindMeta.label}</Badge><p className="mt-4 text-sm font-bold text-slate-500">لا توجد حالة موثقة لهذا المسار بعد.</p></div>;
       const view = describeLifecycleLane(lane);
       const ownerLabel = view.owner === "human" ? "الدور التالي: المالك" : view.owner === "manus" ? "الدور التالي: Manus" : view.owner === "team" ? "الدور التالي: الفريق" : view.waiting ? "الدور التالي: طرف خارجي أو شرط سابق" : "لا توجد خطوة تالية مسجلة";
-      const statusLabel = lane.status === "paid_owner_reported" ? "مسدد بإفادة المالك" : lane.status === "awaiting_owner_send" ? "بانتظار مراجعة وإرسال المالك" : lane.status === "waiting_external" ? "بانتظار الطرف الخارجي" : lane.status;
+      const statusLabel = lane.status === "received_owner_reported" ? "تم الاستلام بإفادتك" : lane.status === "paid_owner_reported" ? "مسدد بإفادة المالك" : lane.status === "awaiting_owner_send" ? "بانتظار مراجعة وإرسال المالك" : lane.status === "waiting_external" ? "بانتظار الطرف الخارجي" : lane.status;
       return <article key={lane.key} className="rounded-2xl border border-slate-200 bg-[#fbfcfb] p-4"><div className="flex flex-wrap items-start justify-between gap-2"><Badge variant="outline" className={`rounded-full ${kindMeta.className}`}>{kindMeta.label}</Badge><Badge variant="outline" className={`rounded-full ${view.waiting ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>{statusLabel}</Badge></div><h3 className="mt-4 text-sm font-black leading-7 text-slate-950">{lane.title}</h3><p className="mt-3 text-[11px] font-bold leading-6 text-slate-600">{view.sourceLabel}</p>{lane.evidenceReference ? <p className="mt-2 rounded-lg bg-white px-2.5 py-2 text-[11px] leading-5 text-slate-600">المرجع: {lane.evidenceReference}</p> : null}{lane.sourceText ? <p className="mt-2 line-clamp-3 text-[11px] leading-5 text-slate-500">{lane.sourceText}</p> : null}<div className="mt-4 border-t border-slate-100 pt-3 text-[11px] font-bold"><p className={view.waiting ? "text-amber-900" : "text-slate-600"}>{ownerLabel}</p>{view.dueAt ? <p className={`mt-1 ${view.due ? "text-rose-700" : "text-slate-400"}`}>موعد الاستحقاق: <bdi dir="ltr">{formatDateTime(view.dueAt)}</bdi></p> : null}{view.attentionAt ? <p className="mt-1 text-slate-400">وقت الانتباه الداخلي (ليس استحقاقًا): <bdi dir="ltr">{formatDateTime(view.attentionAt)}</bdi></p> : null}{lane.nextActionTitle ? <p className="mt-1 text-[#1d6577]">الخطوة التالية: {lane.nextActionTitle}</p> : null}</div></article>;
     })}</div>
   </section>;
@@ -1091,9 +1089,10 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;
   const hasPendingCommunications = data?.communications.some((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) ?? false;
   const hasPendingMeetings = data?.meetings.some((meeting: any) => ["planned", "confirmed"].includes(meeting.meetingStatus) || meeting.pendingProposalCount > 0 || meeting.latestMinutesStatus === "draft") ?? false;
-  const hasPendingIntake = (data?.intakeProposals?.length || 0) > 0;
+  const activeIntakeProposals = (data?.intakeProposals || []).filter((proposal: any) => proposal.proposalKind !== "note");
+  const hasPendingIntake = activeIntakeProposals.length > 0;
   const lifecycleLanes = (data?.lifecycleLanes || []) as LifecycleLaneView[];
-  const hasOpenLifecycleLane = lifecycleLanes.some(lane => !["paid_owner_reported", "paid_document_verified", "completed", "verified", "cancelled"].includes(lane.status));
+  const hasOpenLifecycleLane = lifecycleLanes.some(lane => !["paid_owner_reported", "paid_document_verified", "completed", "verified", "cancelled", "received_owner_reported"].includes(lane.status));
   const hasPendingDirective = (data?.stagedDirectives || []).some((directive: any) => {
     const dispatch = describeDirectiveDispatch(directive);
     return directive.status === "pending" || directive.status === "failed" || dispatch.active || dispatch.state === "delivery_unknown";
@@ -1129,8 +1128,8 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const nowLabel = activeMeetingNeedsOutcome
     ? "دورك الآن: أخبر Manus بما حدث"
     : pendingDecisions[0]
-      ? "قرار حقيقي مطلوب منك"
-    : data?.intakeProposals[0]
+    ? "قرار حقيقي مطلوب منك"
+    : activeIntakeProposals[0]
       ? "مراجعة لازمة قبل أثر خارجي"
       : ownerCommunication
         ? "مسودة جاهزة لمراجعتك"
@@ -1156,7 +1155,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     setSelectedMemoryId(null);
   }, [workFileId]);
   const stageCounts: Record<WorkFileStage, number> = {
-    now: activeMeetingNeedsOutcome || attentionActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length || hasPendingDirective ? 1 : 0,
+    now: activeMeetingNeedsOutcome || attentionActions.length || pendingDecisions.length || activeCommunications.length || activeIntakeProposals.length || hasPendingDirective ? 1 : 0,
     evidence: evidenceEntries.length + (data?.communications.filter((communication: any) => communication.communicationStatus === "received").length || 0),
     outputs: outputEntries.length + activeCommunications.length + (data?.intakeProposals.length || 0),
     decisions: data?.decisions.length || 0,
@@ -1167,7 +1166,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent dir="rtl" side="left" className="!left-0 !right-0 !h-[100dvh] !w-screen !max-w-none overflow-x-hidden overflow-y-auto border-slate-200 bg-[#f8f8f5] p-0">
         {detailQuery.isLoading ? <div className="space-y-4 p-6"><Skeleton className="h-28 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /><Skeleton className="h-48 rounded-2xl" /></div> : detailQuery.isError ? <div className="p-8"><EmptyState title="تعذر فتح الملف" description={detailQuery.error.message} action={<Button type="button" variant="outline" onClick={() => detailQuery.refetch()}>إعادة المحاولة</Button>} /></div> : data ? <>
-          {focusedAction ? <FocusedActionView action={focusedAction} updates={(data.updates || []).filter((update: any) => update.actionId === focusedAction.id)} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={focusedDecision} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={focusedCommunication} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={focusedMeeting} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
+          {focusedAction ? <FocusedActionView action={{ ...focusedAction, projectLabel: kitchenProjectLabel({ workFileId: data.workFile.id }, [data.workFile]) }} updates={(data.updates || []).filter((update: any) => update.actionId === focusedAction.id)} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedDecision ? <FocusedRecordView kind="decision" item={{ ...focusedDecision, projectLabel: kitchenProjectLabel({ workFileId: data.workFile.id }, [data.workFile]) }} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedCommunication ? <FocusedRecordView kind="communication" item={{ ...focusedCommunication, projectLabel: kitchenProjectLabel({ workFileId: data.workFile.id }, [data.workFile]) }} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : focusedMeeting ? <FocusedRecordView kind="meeting" item={{ ...focusedMeeting, projectLabel: kitchenProjectLabel({ workFileId: data.workFile.id }, [data.workFile]) }} workFileId={data.workFile.id} updates={data.updates || []} isClosed={isClosed} onBack={onFocusBack} onUpdated={onChanged} /> : <>
           <div className="border-b border-slate-700 bg-[radial-gradient(circle_at_12%_0%,rgba(198,158,91,.26),transparent_30%),linear-gradient(135deg,#0d2335_0%,#173948_62%,#1f5a54_100%)] px-4 py-7 text-white sm:px-8 sm:py-9">
             <div className="mx-auto max-w-5xl">
               <SheetHeader className="text-right">
@@ -1192,8 +1191,8 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
               <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
                 <Card className="rounded-[30px] border-amber-100 bg-[linear-gradient(145deg,#fffdf7_0%,#fff6dc_100%)] p-5 shadow-sm sm:p-7">
                   <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-800"><Sparkles className="h-5 w-5" /></span><div><p className="text-[10px] font-black text-amber-700">{nowLabel}</p><h2 className="text-xl font-black text-slate-950">{activeMeetingNeedsOutcome ? `أخبر Manus بما حدث في ${activeMeeting.title}` : pendingDecisions[0]?.title || data.intakeProposals[0]?.title || ownerCommunication?.subject || ownerAction?.title || activeMeeting?.title || currentAction?.title || (isClosed ? "الملف مكتمل ومحفوظ بالسجل" : "لا توجد خطوة مفتوحة")}</h2></div></div>
-                  {activeMeetingNeedsOutcome ? <p className="mt-5 text-sm leading-8 text-slate-700">سجّل ما اتُّفق عليه، ما رُفض أو بقي مفتوحًا، ومن سيفعل ماذا. يتولى Manus تحليل النتيجة وتحديث الملف وفتح الأعمال الداخلية التالية.</p> : pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : data.intakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
-                  <div className="mt-5 flex flex-wrap gap-2">{hasPendingDirective ? <Button onClick={() => document.getElementById("work-file-directives")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">توجيه Manus يحتاج متابعة</Button> : activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
+                  {activeMeetingNeedsOutcome ? <p className="mt-5 text-sm leading-8 text-slate-700">سجّل ما اتُّفق عليه، ما رُفض أو بقي مفتوحًا، ومن سيفعل ماذا. يتولى Manus تحليل النتيجة وتحديث الملف وفتح الأعمال الداخلية التالية.</p> : pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : activeIntakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
+                  <div className="mt-5 flex flex-wrap gap-2">{hasPendingDirective ? <Button onClick={() => document.getElementById("work-file-directives")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">توجيه Manus يحتاج متابعة</Button> : activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : activeIntakeProposals[0] ? <Button onClick={() => onProposalChange(activeIntakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
                 </Card>
                 <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{ownerActionCount}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء مطلوب منك الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.pendingDirectiveCount || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-400">توجيهات تحتاج متابعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{externalWaitingCount}</p><p className="mt-1 text-[10px] font-bold text-slate-400">انتظار الطرف الخارجي</p></div></div></Card>
               </div>
@@ -1305,7 +1304,7 @@ export default function ComoNextTodayPage() {
   const [, navigate] = useLocation();
   const requestParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const requestedTab = requestParams?.get("tab") ?? null;
-  const requestedSection = requestParams?.get("section") as ExecutiveSection | null;
+  const requestedSection = normalizeExecutiveSection(requestParams?.get("section") ?? null);
   const requestedWorkFileId = Number(requestParams?.get("workFileId") || 0);
   const requestedActionId = Number(requestParams?.get("actionId") || 0);
   const requestedFocusKind = requestParams?.get("focusKind") as ExecutiveFocusKind | null;
@@ -1319,8 +1318,9 @@ export default function ComoNextTodayPage() {
   const [selectedWorkFileId, setSelectedWorkFileId] = useState<number | null>(requestedWorkFileId > 0 ? requestedWorkFileId : null);
   const [selectedFocusKind, setSelectedFocusKind] = useState<ExecutiveFocusKind | null>(requestedActionId > 0 ? "action" : requestedFocusKind);
   const [selectedFocusId, setSelectedFocusId] = useState<number | null>(requestedActionId > 0 ? requestedActionId : requestedFocusId > 0 ? requestedFocusId : null);
-  const [showSections, setShowSections] = useState(false);
-  const [queueOwnerFilter, setQueueOwnerFilter] = useState<QueueOwnerFilter>("all");
+  const [receiptPendingActionId, setReceiptPendingActionId] = useState<number | null>(null);
+  const [receiptConfirmedActionIds, setReceiptConfirmedActionIds] = useState<number[]>([]);
+  const [receiptError, setReceiptError] = useState<{ actionId: number; message: string } | null>(null);
   const utils = trpc.useUtils();
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
@@ -1347,7 +1347,7 @@ export default function ComoNextTodayPage() {
       const params = new URLSearchParams(window.location.search);
       const workFileId = Number(params.get("workFileId") || 0);
       const actionId = Number(params.get("actionId") || 0);
-      const section = params.get("section") as ExecutiveSection | null;
+      const section = normalizeExecutiveSection(params.get("section"));
       const focusKind = params.get("focusKind") as ExecutiveFocusKind | null;
       const focusId = Number(params.get("focusId") || 0);
       setSelectedWorkFileId(workFileId > 0 ? workFileId : null);
@@ -1404,8 +1404,11 @@ export default function ComoNextTodayPage() {
     syncFocusUrl(null, null, null, "replace");
   };
   const openQueueItem = (item: any) => {
+    if (item.workFileId && item.recordId && item.kind === "action") return openFocusedRecord(item.workFileId, "action", item.recordId);
+    if (item.workFileId && item.recordId && item.kind === "decision") return openFocusedRecord(item.workFileId, "decision", item.recordId);
+    if (item.workFileId && item.recordId && item.kind === "communication") return openFocusedRecord(item.workFileId, "communication", item.recordId);
     if (item.kind === "meeting" && item.needsOutcome && item.workFileId && item.recordId) return openFocusedRecord(item.workFileId, "meeting", item.recordId);
-    if (item.workFileId && ["action", "decision", "communication", "meeting"].includes(item.kind)) return openWorkFile(item.workFileId);
+    if (item.workFileId && item.kind === "meeting") return openWorkFile(item.workFileId);
     if (item.kind === "email") return openSection("email");
     if (item.kind === "proposal") return openProposal(item.recordId);
     if (item.kind === "specialist") return openSection("specialists");
@@ -1422,6 +1425,25 @@ export default function ComoNextTodayPage() {
     setSelectedFocusId(actionId);
     syncFocusUrl(selectedWorkFileId, actionId ? "action" : null, actionId, "replace");
   };
+  const confirmActionReceiptMutation = trpc.comoNext.confirmActionReceipt.useMutation();
+  const confirmReceipt = async (item: any) => {
+    const actionId = Number(item.recordId);
+    if (!actionId || receiptPendingActionId !== null) return;
+    setReceiptError(null);
+    setReceiptPendingActionId(actionId);
+    try {
+      await confirmActionReceiptMutation.mutateAsync({ actionId });
+      setReceiptConfirmedActionIds(current => current.includes(actionId) ? current : [...current, actionId]);
+      await Promise.all([
+        utils.comoNext.getOverview.invalidate(),
+        item.workFileId ? utils.comoNext.getWorkFile.invalidate({ workFileId: Number(item.workFileId) }) : Promise.resolve(),
+      ]);
+    } catch (error: any) {
+      setReceiptError({ actionId, message: error?.message || "تعذر توثيق الاستلام. لم يتغير الإجراء." });
+    } finally {
+      setReceiptPendingActionId(null);
+    }
+  };
   const leaveFocusedRecord = () => selectedSection && selectedSection !== "work-files" ? closeWorkFile() : changeFocusedAction(null);
   const sectionCards = useMemo(() => data ? [
     { key: "actions" as const, title: "الإجراءات والمتابعات", count: data.actions.length, icon: CheckCheck, tone: "bg-slate-100 text-slate-700" },
@@ -1433,6 +1455,8 @@ export default function ComoNextTodayPage() {
     { key: "specialists" as const, title: "المراجعات التخصصية", count: data.specialistAttention.length, icon: BriefcaseBusiness, tone: "bg-emerald-50 text-emerald-700" },
     { key: "work-files" as const, title: "ملفات العمل", count: data.workFiles.length, icon: FileStack, tone: "bg-cyan-50 text-cyan-800" },
   ].filter(item => !item.adminOnly || user?.role === "admin") : [], [data, user?.role]);
+  const kitchenBoard = useMemo(() => buildKitchenBoard(data?.executionQueue || [], data?.workFiles || []), [data?.executionQueue, data?.workFiles]);
+  const visibleWaiting = kitchenBoard.waiting.filter(item => !receiptConfirmedActionIds.includes(Number(item.recordId)));
 
   if (loading) return <PageSkeleton />;
   if (!isAuthenticated || !user) {
@@ -1440,21 +1464,6 @@ export default function ComoNextTodayPage() {
   }
 
   const selectedMeta = sectionCards.find(item => item.key === selectedSection);
-  const ownerWorkCount = data?.executionQueue.filter((item: any) =>
-    item.phase === "owner_review"
-    || (["act_now", "verify", "define_next_step"].includes(item.phase) && item.ownerType !== "manus" && item.ownerType !== "team")
-  ).length || 0;
-  const manusWorkCount = data?.executionQueue.filter((item: any) =>
-    item.ownerType === "manus" && !["waiting_external", "scheduled"].includes(item.phase)
-  ).length || 0;
-  const visibleExecutionQueue = data?.executionQueue.filter((item: any) => {
-    if (queueOwnerFilter === "all") return true;
-    if (queueOwnerFilter === "manus") return item.ownerType === "manus" && !["waiting_external", "scheduled"].includes(item.phase);
-    if (queueOwnerFilter === "external") return item.phase === "waiting_external";
-    if (queueOwnerFilter === "scheduled") return item.phase === "scheduled";
-    return item.phase === "owner_review"
-      || (["act_now", "verify", "define_next_step"].includes(item.phase) && item.ownerType !== "manus" && item.ownerType !== "team");
-  }) || [];
   return (
     <div dir="rtl" className="como-next-workspace min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff7e8_0,#f7f6ef_36%,#eaf1ee_100%)] pb-24 text-slate-900 sm:pb-0">
       <header className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_right,#284965_0%,#14243a_48%,#091523_100%)] text-white shadow-[0_18px_50px_rgba(2,12,24,.18)]">
@@ -1473,20 +1482,19 @@ export default function ComoNextTodayPage() {
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {overviewQuery.isLoading ? <PageSkeleton /> : overviewQuery.isError ? <EmptyState title="تعذر تحميل المكتب التنفيذي" description={overviewQuery.error.message} action={<Button variant="outline" onClick={() => overviewQuery.refetch()} className="rounded-xl bg-white">إعادة المحاولة</Button>} /> : data ? <>
           {!selectedSection ? <section>
-            <div className="mb-5 overflow-hidden rounded-[34px] bg-[linear-gradient(145deg,#0a2b35_0%,#113f45_55%,#1f5d50_100%)] p-6 text-white shadow-[0_26px_70px_rgba(8,47,54,.22)] sm:p-9">
-              <div className="flex flex-wrap items-start justify-between gap-5">
-                <div><p className="text-xs font-black text-amber-200">{new Intl.DateTimeFormat("ar-AE", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date())}</p><h2 className="mt-3 max-w-2xl text-3xl font-black leading-tight sm:text-5xl">ما الذي يحتاج إنجازًا الآن؟</h2><p className="mt-3 max-w-xl text-sm leading-7 text-white/65">كل موضوع في سطر مستقل، مرتب من الأعلى إلى الأسفل. افتح واحدًا فتختفي البقية حتى تنهيه أو تحدّثه.</p></div>
-                <Button type="button" variant="outline" onClick={() => setShowSections(value => !value)} className="rounded-2xl border-white/15 bg-white/10 text-white hover:bg-white/20 hover:text-white">{showSections ? "إخفاء الأقسام" : "عرض حسب النوع"}</Button>
-              </div>
-              <div className="mt-7 grid grid-cols-2 gap-2 sm:max-w-3xl sm:grid-cols-4 sm:gap-3">
-                <button type="button" aria-pressed={queueOwnerFilter === "owner"} onClick={() => setQueueOwnerFilter(value => value === "owner" ? "all" : "owner")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "owner" ? "border-amber-200 bg-white/20 ring-2 ring-amber-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{ownerWorkCount}</p><p className="mt-1 text-[10px] font-bold text-white/55">مطلوب منك</p></button>
-                <button type="button" aria-pressed={queueOwnerFilter === "manus"} onClick={() => setQueueOwnerFilter(value => value === "manus" ? "all" : "manus")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "manus" ? "border-violet-200 bg-violet-300/20 ring-2 ring-violet-200/60" : "border-violet-300/15 bg-violet-300/10 hover:bg-violet-300/15"}`}><p className="text-2xl font-black text-violet-200">{manusWorkCount}</p><p className="mt-1 text-[10px] font-bold text-white/55">ينفذه Manus</p></button>
-                <button type="button" aria-pressed={queueOwnerFilter === "external"} onClick={() => setQueueOwnerFilter(value => value === "external" ? "all" : "external")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "external" ? "border-amber-200 bg-white/20 ring-2 ring-amber-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "waiting_external").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">بانتظار الغير</p></button>
-                <button type="button" aria-pressed={queueOwnerFilter === "scheduled"} onClick={() => setQueueOwnerFilter(value => value === "scheduled" ? "all" : "scheduled")} className={`rounded-[22px] border p-3 text-center transition ${queueOwnerFilter === "scheduled" ? "border-blue-200 bg-white/20 ring-2 ring-blue-200/60" : "border-white/10 bg-white/8 hover:bg-white/15"}`}><p className="text-2xl font-black text-amber-200">{data.executionQueue.filter((item: any) => item.phase === "scheduled").length}</p><p className="mt-1 text-[10px] font-bold text-white/55">مواعيد قادمة</p></button>
-              </div>
+            <div className="grid gap-4 xl:grid-cols-3">
+              <KitchenBoardSection title="المطلوب منك" items={kitchenBoard.owner} emptyMessage="لا توجد مهام مطلوبة منك الآن" onOpen={openQueueItem} onConfirmReceipt={confirmReceipt} receiptActionId={receiptPendingActionId} receiptError={receiptError} />
+              <KitchenBoardSection title="المطلوب من Manus" items={kitchenBoard.manus} emptyMessage="لا يوجد عمل مسند إلى Manus الآن" onOpen={openQueueItem} onConfirmReceipt={confirmReceipt} receiptActionId={receiptPendingActionId} receiptError={receiptError} />
+              <KitchenBoardSection title="بانتظار الاستلام أو الرد" items={visibleWaiting} emptyMessage="لا توجد متابعة بانتظار الاستلام أو الرد الآن" onOpen={openQueueItem} onConfirmReceipt={confirmReceipt} receiptActionId={receiptPendingActionId} receiptError={receiptError} />
             </div>
-            {showSections ? <div className="mb-6 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[92px] overflow-hidden rounded-[24px] border border-white bg-white p-4 text-right shadow-[0_12px_30px_rgba(15,23,42,.07)] transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${item.tone}`}><Icon className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span><span className="mt-1 block text-[10px] font-bold text-slate-400">افتح العناوين ثم سجل واحد</span></span><bdi className="text-2xl font-black text-slate-300">{item.count}</bdi></span></button>; })}</div> : null}
-            <ol aria-label="قائمة الأعمال مرتبة من الأعلى إلى الأسفل" className="space-y-3">{visibleExecutionQueue.length ? visibleExecutionQueue.map((item: any, index: number) => <li key={item.id}><ExecutiveQueueCard item={item} index={index} onOpen={openQueueItem} /></li>) : <li className="rounded-[26px] border border-dashed border-slate-300 bg-white p-7 text-center text-sm font-bold text-slate-500">لا يوجد عمل في هذا التصنيف الآن</li>}</ol>
+            {kitchenBoard.scheduled.length ? <section aria-label="مواعيد قادمة" className="mt-4 rounded-[26px] border border-slate-200 bg-white/65 p-4 shadow-sm"><h2 className="text-base font-black text-slate-950">مواعيد قادمة</h2><div className="mt-3 grid gap-2.5 md:grid-cols-2">{kitchenBoard.scheduled.map((item: any) => {
+              const errorMessage = receiptError && receiptError.actionId === item.recordId ? receiptError.message : null;
+              return <KitchenBoardCard key={`${item.kind}-${item.recordId}`} item={item} onOpen={openQueueItem} onConfirmReceipt={confirmReceipt} receiptPending={receiptPendingActionId === item.recordId} receiptError={errorMessage} />;
+            })}</div></section> : null}
+            <details className="mt-6 rounded-[26px] border border-slate-200 bg-white/65 p-4 shadow-sm">
+              <summary className="cursor-pointer text-sm font-black text-slate-800">التوثيق والأدوات</summary>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">{sectionCards.map(item => { const Icon = item.icon; return <button key={item.key} type="button" onClick={() => openSection(item.key)} className="group relative min-h-[82px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 text-right shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><span className={`absolute inset-y-0 right-0 w-1.5 ${item.tone.split(" ")[0]}`} /><span className="flex h-full min-w-0 items-center gap-3 pr-1"><span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.tone}`}><Icon className="h-4 w-4" /></span><span className="min-w-0 flex-1"><span className="block text-sm font-black text-slate-950">{item.title}</span></span><bdi className="text-lg font-black text-slate-300">{item.count}</bdi></span></button>; })}</div>
+            </details>
           </section> : <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <button type="button" onClick={closeSection} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />كل الأعمال</button>
