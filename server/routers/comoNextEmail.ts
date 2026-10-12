@@ -15,6 +15,7 @@ import {
   syncAndAnalyzeReadonlyMailboxCommand,
 } from "../services/comoNextEmailInbox";
 import { updateReplyDraftFromEmailCommand } from "../services/comoNextEmailOutbox";
+import { readMailExecutionHealth } from "../services/comoMailExecution";
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 
 function assertOwner(role?: string) {
@@ -57,6 +58,7 @@ export const comoNextEmailRouter = router({
       executiveEnabled: executive?.isEnabled ?? 0,
       executiveLastSuccessAt: executive?.lastSuccessAt ?? null,
       executiveLastStatus: executive?.lastStatus ?? "never",
+      mailExecution:await readMailExecutionHealth(ctx.user.id),
     };
   }),
 

@@ -9,7 +9,7 @@ export function isInternalSystemActionEligible(title:string){
 }
 export async function queueSystemManusAction(input:{userId:number;actionId:number}){
  const db=await getDb();if(!db)throw new Error('database_unavailable');
- const [a]=rows(await db.execute(sql`SELECT a.*,wf.work_file_status FROM como_next_actions a JOIN como_next_work_files wf ON wf.id=a.work_file_id WHERE a.id=${input.actionId} AND a.user_id=${input.userId} AND a.owner_type='manus' AND a.action_status='open' AND wf.work_file_status NOT IN ('closed','cancelled','waiting') AND NOT EXISTS (SELECT 1 FROM como_next_decisions g WHERE g.work_file_id=a.work_file_id AND (g.decision_status='required' OR (g.decision_status='deferred' AND g.due_at>UTC_TIMESTAMP()))) LIMIT 1`));
+ const [a]=rows(await db.execute(sql`SELECT a.*,wf.work_file_status FROM como_next_actions a JOIN como_next_work_files wf ON wf.id=a.work_file_id WHERE a.id=${input.actionId} AND a.user_id=${input.userId} AND a.owner_type='manus' AND a.action_status='open' AND wf.work_file_status NOT IN ('closed','cancelled') AND (wf.work_file_status<>'waiting' OR a.source_system='como_mail_execution') AND (a.source_system='como_mail_execution' OR NOT EXISTS (SELECT 1 FROM como_next_decisions g WHERE g.work_file_id=a.work_file_id AND (g.decision_status='required' OR (g.decision_status='deferred' AND g.due_at>UTC_TIMESTAMP())))) LIMIT 1`));
  if(!a)return {queued:false,reason:'not_eligible_internal_action'};
  if(!isInternalSystemActionEligible(a.title))return {queued:false,reason:'outside_internal_action_authority'};
  const key=`system-manus-action:${a.id}`;

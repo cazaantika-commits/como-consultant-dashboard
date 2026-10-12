@@ -1,3 +1,4 @@
+import {MAIL_EXECUTION_STARTED_AT} from "./comoMailExecution";
 import { createHash, randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
@@ -443,6 +444,8 @@ export function scoreEmailSuggestionCandidate(row: any, message: Pick<EmailMessa
   const participantEmails = new Set([normalizeEmail(message.from), ...extractEmails(message.to), ...extractEmails(message.cc)].filter(Boolean));
   let score = 0;
   const reasons: string[] = [];
+  const explicitPlot = `${message.subject}\n${currentInboundEmailText(message.textBody)}`.match(/(?:plot(?:\s*(?:no\.?|number))?|قطعة)\s*(?:-|–|:)?\s*(\d{5,})/i)?.[1];
+  if (explicitPlot && row.plotNumber && explicitPlot !== String(row.plotNumber).trim()) return {score:0,reasons:["رقم القطعة الصريح يخص مشروعًا آخر"]};
   const contactEmail = normalizeEmail(row.contactEmail);
   if (contactEmail && participantEmails.has(contactEmail)) {
     score += 100;
@@ -780,8 +783,19 @@ async function linkFromTrustedSenderBeforeAnalysis(userId: number, emailId: numb
   const [email] = await db.select().from(comoNextEmailMessages).where(and(
     eq(comoNextEmailMessages.id, emailId), eq(comoNextEmailMessages.userId, userId),
   )).limit(1);
-  if (!email || email.folderName !== "INBOX" || email.inboxStatus !== "suggested"
-    || !email.suggestedProjectId || !email.suggestedWorkFileId) return false;
+  if (!email || email.folderName !== "INBOX" || ["linked", "dismissed"].includes(email.inboxStatus)) return false;
+  const refreshed = await buildSuggestion(db, userId, {
+    uid: email.imapUid, messageId: email.messageId || "", from: email.fromEmail,
+    fromName: email.fromName || "", to: email.toText || "", cc: email.ccText || "",
+    subject: email.subject, date: parseStoredUtc(email.receivedAt), textBody: email.bodyText,
+    htmlBody: "", attachments: [], isRead: email.serverSeen === 1,
+  });
+  if (refreshed?.workFileId && refreshed.confidenceScore >= 130) {
+    await linkEmailToWorkFileCommand({ userId, emailId, projectId: refreshed.projectId,
+      workFileId: refreshed.workFileId, projectPartyId: refreshed.projectPartyId, suppressReplyDraft: true });
+    return true;
+  }
+  if (email.inboxStatus !== "suggested" || !email.suggestedProjectId || !email.suggestedWorkFileId) return false;
   const previousLinkedFiles = await db.select({
     projectId: comoNextEmailMessages.linkedProjectId,
     workFileId: comoNextEmailMessages.linkedWorkFileId,
@@ -804,6 +818,22 @@ async function linkFromTrustedSenderBeforeAnalysis(userId: number, emailId: numb
   return true;
 }
 
+/** Linking recovery is separate from analysis. A saved analysis must not hide an
+ * unresolved source. Only current imports; no historical operational reopening. */
+export async function reconcileCurrentMailLinkage(input:{userId:number;limit?:number}) {
+  const db=await getDb();if(!db)databaseUnavailable();
+  const pending=await db.select({id:comoNextEmailMessages.id}).from(comoNextEmailMessages).where(and(
+    eq(comoNextEmailMessages.userId,input.userId),eq(comoNextEmailMessages.folderName,'INBOX'),
+    inArray(comoNextEmailMessages.inboxStatus,['unmatched','suggested']),
+    sql`${comoNextEmailMessages.importedAt} >= ${MAIL_EXECUTION_STARTED_AT}`,
+    sql`${comoNextEmailMessages.receivedAt} >= ${MAIL_EXECUTION_STARTED_AT}`,
+  )).orderBy(comoNextEmailMessages.importedAt,comoNextEmailMessages.id).limit(Math.max(1,Math.min(input.limit||5,10)));
+  let linked=0,failed=0;
+  for(const email of pending){try{if(await linkFromTrustedSenderBeforeAnalysis(input.userId,Number(email.id)))linked++;}catch{failed++;}}
+  if(failed)throw new Error('current_mail_linkage_failed');
+  return {considered:pending.length,linked,unresolved:pending.length-linked,externalSideEffects:false as const};
+}
+
 /** Progress only a fresh, file-linked *internal Manus* action. Owner decisions,
  * deferred files, replies, drafts, payments and appointments never pass here. */
 async function applyCurrentInternalProposal(userId: number, emailId: number) {
@@ -814,6 +844,7 @@ async function applyCurrentInternalProposal(userId: number, emailId: number) {
   )).limit(1);
   if (!email || email.folderName !== "INBOX" || !email.linkedWorkFileId
     || Date.now() - parseStoredUtc(email.receivedAt).getTime() > 48 * 60 * 60_000) return null;
+  if (String(email.importedAt) >= MAIL_EXECUTION_STARTED_AT) return null; // current mail has one source-bound real Manus review, not a parallel model proposal
   const [file] = await db.select({ status: comoNextWorkFiles.workFileStatus }).from(comoNextWorkFiles)
     .where(and(eq(comoNextWorkFiles.id, email.linkedWorkFileId), eq(comoNextWorkFiles.userId, userId))).limit(1);
   if (!file || file.status !== "open") return null;
@@ -858,7 +889,7 @@ export async function processPendingReadonlyMailboxCommand(input: { userId: numb
         SELECT 1 FROM como_next_email_analyses analysis_row
         WHERE analysis_row.email_message_id = email_row.id AND analysis_row.analysis_status = 'draft'
       )
-    ORDER BY email_row.received_at DESC, email_row.id DESC
+    ORDER BY CASE WHEN email_row.folder_name='INBOX' AND email_row.imported_at >= ${MAIL_EXECUTION_STARTED_AT} THEN 0 ELSE 1 END, email_row.imported_at, email_row.id
     LIMIT ${Math.max(1, Math.min(input.analysisLimit || 1, 2))}
   `);
   const ids = rowsOf<{ id: number }>(pending).map(row => Number(row.id));

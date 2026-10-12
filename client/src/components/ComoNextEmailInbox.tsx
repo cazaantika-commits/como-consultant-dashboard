@@ -222,17 +222,19 @@ export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: (
             {scheduledStatusQuery.data?.isEnabled ? <>
               استيراد كل نصف ساعة (:00/:30) بتوقيت دبي
               {scheduledStatusQuery.data.processingEnabled ? " · التحليل بعد 5 دقائق" : null}
-              {scheduledStatusQuery.data.executiveEnabled ? " · تنفيذ Manus بعد 10 دقائق" : null}
+              {scheduledStatusQuery.data.executiveEnabled ? " · فحص طابور التنفيذ بعد 10 دقائق" : null}
               {" · أوقات مجدولة؛ التنفيذ الفعلي قد يتأخر"}
               {scheduledStatusQuery.data.lastSuccessAt ? <> · آخر استيراد {formatDubaiMailTime(scheduledStatusQuery.data.lastSuccessAt)}</> : " · الاستيراد لم ينجح بعد"}
               {scheduledStatusQuery.data.processingEnabled ? <> · آخر تحليل {scheduledStatusQuery.data.processingLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.processingLastSuccessAt) : "لم ينجح بعد"}</> : " · التحليل غير مفعل"}
-              {scheduledStatusQuery.data.executiveEnabled ? <> · آخر تنفيذ Manus {scheduledStatusQuery.data.executiveLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.executiveLastSuccessAt) : "لم يثبت بعد"}</> : " · تنفيذ Manus غير مفعل"}
+              {scheduledStatusQuery.data.executiveEnabled ? <> · آخر دورة متابعة داخلية {scheduledStatusQuery.data.executiveLastSuccessAt ? formatDubaiMailTime(scheduledStatusQuery.data.executiveLastSuccessAt) : "لم يثبت بعد"}</> : " · تنفيذ Manus غير مفعل"}
               {scheduledStatusQuery.data.lastStatus === "failed" || scheduledStatusQuery.data.processingLastStatus === "failed" || scheduledStatusQuery.data.executiveLastStatus === "failed" ? " · توجد مرحلة متعثرة" : null}
             </> : "التحديث المجدول غير مفعل"}
           </p>
         </div>
         <Button onClick={sync} disabled={syncMutation.isPending} variant="outline" className="rounded-xl bg-white">{syncMutation.isPending ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ms-2 h-4 w-4" />}تحديث الآن</Button>
       </div>
+
+      {scheduledStatusQuery.data?.mailExecution?.warning ? <div role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-7 text-amber-950"><strong>التعامل مع البريد لم يكتمل</strong><p>{scheduledStatusQuery.data.mailExecution.warning}</p><p>التعطّل في الربط أو التنفيذ مسؤولية Manus؛ لا يلزم إعادة كتابة المعلومات.</p>{scheduledStatusQuery.data.mailExecution.items.filter((item:any)=>!["excluded","system_message","review_completed"].includes(item.state)).slice(0,8).map((item:any)=><p key={item.emailId}>#{item.emailId} — {item.subject}: {item.reason}</p>)}</div> : null}
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[
         { key: "attention", label: "تحتاج مراجعة", value: counts.attention },

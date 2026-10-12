@@ -1,3 +1,4 @@
+import {readMailExecutionHealth} from "./comoMailExecution";
 import { createHash } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -743,10 +744,12 @@ export async function prepareSaraBriefing(input: { memberId: string; mode: SaraB
   const staleExecutive = !executive?.isEnabled || !lastExecutive || now.getTime() - Date.parse(lastExecutive.utc) > COMO_MAIL_STAGE_STALE_MS
     || executive?.lastStatus === "failed"
     || (executive?.lastStatus === "running" && (!executiveRun || now.getTime() - Date.parse(executiveRun.utc) > 2 * 60_000));
-  const briefingText = staleImport
+  const mailExecution=await readMailExecutionHealth(state.userId,now);
+  const freshnessText = staleImport
     ? `تنبيه موجز: البريد الذي يظهر لي هو ما وصل إلى COMO، لكن المزامنة المجدولة لم تؤكد تحديث كل الرسائل${lastSuccess ? ` منذ ${lastSuccess.dubai}` : ""}. لا أؤكد عدم وجود وارد أحدث.\n---\n${narration.text}`
     : staleProcessing ? `تنبيه موجز: استُورد البريد، لكن معالجة الرسائل الجديدة لم يثبت اكتمالها؛ قد تنقص المتابعات والأولويات.\n---\n${narration.text}`
     : staleExecutive ? `تنبيه موجز: استُورد البريد وحُلّل، لكن تنفيذ متابعة Manus الداخلية لم يثبت اكتماله؛ لا أعرض التحليل كأنه تنفيذ منجز.\n---\n${narration.text}` : narration.text;
+  const briefingText=mailExecution.warning?`${mailExecution.warning}\n---\n${freshnessText}`:freshnessText;
   const contentSha256 = createHash("sha256").update(`${kind}\n${briefingText}`).digest("hex");
   await state.db.update(comoNextSaraBriefingDeliveries)
     .set({ deliveryStatus: "interrupted", completedAt: toSqlTimestamp(now) })

@@ -12,7 +12,7 @@ describe("COMO read-only scheduled mail phases", () => {
   it("displays the current half-hour schedule rather than the superseded three daily times", () => {
     expect(inboxView).toContain("استيراد كل نصف ساعة");
     expect(inboxView).toContain("التحليل بعد 5 دقائق");
-    expect(inboxView).toContain("تنفيذ Manus بعد 10 دقائق");
+    expect(inboxView).toContain("فحص طابور التنفيذ بعد 10 دقائق");
     expect(inboxView).not.toContain("06:00 · 11:00 · 17:00");
   });
 
@@ -50,13 +50,14 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(executive).toContain('await reconcileFinancePaymentFollowups');
     expect(executive).toContain('financeInvoices.status === "error"');
     expect(executive).not.toMatch(/sendEmail|sendMail|sendComoEmail|setInterval|node-cron/);
-    expect(executive).toContain('financeInvoices, financePayments, externalSideEffects: false');
+    expect(executive).toContain('financeInvoices, financePayments, lifecycleResponses');
+    expect(executive).toContain('externalSideEffects: false');
   });
 
   it("does not let an invoice failure starve payment watches or internal work", () => {
     const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
     const deferredFailure = executive.indexOf('throw new Error("finance_lane_failed_after_internal_work")');
-    expect(deferredFailure).toBeGreaterThan(executive.indexOf('runExecutiveControlLoopCommand'));
+    expect(deferredFailure).toBeGreaterThan(executive.indexOf('queueSystemManusAction'));
     expect(deferredFailure).toBeGreaterThan(executive.indexOf('await reconcileFinancePaymentFollowups'));
     expect(executive).toContain('finance_payment_followup_failed');
     expect(executive).not.toContain('if (financeInvoices.status === "error") throw');
@@ -78,12 +79,12 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(executive).toContain('await seedConditionalSentWatches');
     expect(executive).toContain('await reconcileConditionalSentWatches');
     expect(executive.indexOf('await seedConditionalSentWatches')).toBeLessThan(executive.indexOf('await reconcileConditionalSentWatches'));
-    expect(executive.indexOf('await reconcileConditionalSentWatches')).toBeLessThan(executive.indexOf('runExecutiveControlLoopCommand'));
-    expect(executive).toContain('runExecutiveControlLoopCommand');
-    expect(executive).toContain('maxItems: 1');
+    expect(executive.indexOf('await reconcileConditionalSentWatches')).toBeLessThan(executive.indexOf('queueSystemManusAction'));
+    expect(executive).toContain('queueSystemManusAction');
+    expect(executive).toContain('const eligible = candidates.find');
     expect(executive).not.toContain('scanPending: true');
-    expect(executive).toContain('notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled", "waiting"])');
-    expect(executive).toContain('if (result?.failures.length) throw');
+    expect(executive).toContain('notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"])');
+    expect(executive).toContain('mailExecution:await readMailExecutionHealth');
     expect(route).toContain('settings.mailboxKey !== mailboxKey');
   });
 

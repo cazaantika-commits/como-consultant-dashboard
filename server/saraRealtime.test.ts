@@ -63,8 +63,8 @@ describe("Sara Realtime architecture", () => {
     const names = saraRealtimeTools.map(tool => tool.name).join(" ");
     expect(names).not.toMatch(/send|approve|execute|create|update|delete/i);
     expect(saraRealtimeTools.find(tool => tool.name === "read_executive_work_file")?.description).toContain("التقارير والتحليلات");
-    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("كمراجعة معلقة للمالك");
-    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("لا تشغّل Manus");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("عند الحفظ أو التسجيل أو الشك");
+    expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("execution_authorized=true");
     expect(saraRealtimeTools.find(tool => tool.name === "direct_manus_in_work_file")?.description).toContain("لا ترسل بريدًا");
     expect(names).not.toContain("lookup_command_center");
   });

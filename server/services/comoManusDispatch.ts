@@ -91,6 +91,14 @@ export async function executeDispatchedDirectiveCommand(input:{directiveId:numbe
     const [action]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_actions WHERE id=${Number(r.action_id)} AND work_file_id=${Number(r.work_file_id)} AND user_id=${Number(r.user_id)} AND owner_type='manus' AND action_status='open' LIMIT 1`));
     const {isInternalSystemActionEligible}=await import('./comoSystemActionDispatch');
     if(!action || !isInternalSystemActionEligible(action.title))throw new Error('system_action_no_longer_eligible');
+    if(action.source_system==='como_mail_execution'){
+      const emailId=Number(String(action.source_record_id).match(/^mail-review:(\d+)$/)?.[1]||0);
+      const [email]=rowsFrom<any>(await db.execute(sql`SELECT id,linked_work_file_id,body_sha256 FROM como_next_email_messages WHERE id=${emailId} AND user_id=${Number(r.user_id)} AND folder_name='INBOX' AND inbox_status='linked'`));
+      if(!email||Number(email.linked_work_file_id)!==Number(r.work_file_id))throw new Error('mail_review_source_changed');
+      await recordManusDispatchProgress({directiveId:input.directiveId,summary:`وصلت مراجعة رسالة COMO #${emailId} إلى Manus. قراءة الخيط والمرفقات الفعلية مطلوبة؛ التحليل الآلي ليس إيصال تنفيذ.`});
+      return {accepted:true,completed:false,fulfillment:'requires_agent_mail_review',sourceEmailId:emailId,workFileId:Number(r.work_file_id),bodySha256:email.body_sha256,
+        completionMethod:'completeDispatchedMailReview',dispatch:await readDispatchForDirective(input)};
+    }
   }
   const result=await executeExecutiveDirectiveCommand({userId:Number(r.user_id),workFileId:Number(r.work_file_id),actionId:asNumber(r.action_id),currentDecisionId:asNumber(r.current_decision_id),sourceChannel:'internal',directiveText:r.directive_text,executionSource:systemAction?'executive_control':'owner',idempotencyKey:`staged-directive:${input.directiveId}`});
   if(systemAction && result.completedNow){await db.execute(sql`UPDATE como_next_actions SET action_status='verified',completed_at=UTC_TIMESTAMP(),verified_at=UTC_TIMESTAMP(),evidence_reference=${result.workProductId?`مخرج Manus #${result.workProductId}`:`إيصال تنفيذ #${result.updateId}`} WHERE id=${Number(r.action_id)} AND owner_type='manus' AND action_status='open'`);}
@@ -100,3 +108,38 @@ export async function executeDispatchedDirectiveCommand(input:{directiveId:numbe
  }catch(error){const code=typeof error==='object'&&error&&'code' in error?(error as any).code:'';const message=error instanceof Error?error.message:'';const safeCode=code==='PRECONDITION_FAILED'&&/فاتورة|invoice|دفع|payment/i.test(message)?'dispatch_payment_precondition_failed':'dispatch_execution_failed';await db.transaction(async tx=>{await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${Number(r.work_file_id)} FOR UPDATE`);await tx.execute(sql`UPDATE como_manus_dispatches SET state='failed',last_progress_at=UTC_TIMESTAMP(),error=${safeCode} WHERE directive_id=${input.directiveId} AND state='running' AND claim_token=${token}`);await tx.execute(sql`UPDATE como_next_staged_directives SET status='failed',failure_message=${safeFailureMessage(safeCode)} WHERE id=${input.directiveId} AND user_id=${Number(r.user_id)} AND status='submitting'`);await appendEvent(tx,{userId:Number(r.user_id),projectId:Number(r.project_id),workFileId:Number(r.work_file_id),actorType:'manus',actorUserId:null,eventType:'manus_directive_failed',summary:'توقف تنفيذ التوجيه؛ السبب محفوظ، ولا إعادة تلقائية قبل مصالحة الأثر',payload:{directiveId:input.directiveId,reason:safeCode},idempotencyKey:`dispatch-failed:${input.directiveId}`});});return {accepted:true,completed:false,fulfillment:'execution_failed',dispatch:await readDispatchForDirective(input)};}
 }
 export const comoManusDispatchInternals={canClaimDispatchForWorker,canRetryKnownUndeliveredDispatch,delayFor,hasCompletedFulfillment,publicDispatch,safeError,safeFailureMessage};
+
+/** Main Manus invokes this only after actually reading the source and every
+ * substantive attachment. The website's one-shot analyzer cannot complete it. */
+export async function completeDispatchedMailReview(input:{directiveId:number;bodySha256:string;reviewedDocumentIds:number[];summary:string;workProductBody:string}){
+ const db=await getDb();if(!db)throw Error('database_unavailable');const r=await loadWorkerRow(db,input.directiveId);
+ if(!r||!isAuthoritativeOwner(r)||r.source_member_id!=='system:manus-action')throw Error('mail_review_not_authorized');
+ if(r.state==='completed')return readDispatchForDirective({directiveId:input.directiveId});
+ if(r.state!=='running'||!r.claim_token?.startsWith('worker:'))throw Error('dispatch_not_claimed');
+ const [action]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_actions WHERE id=${Number(r.action_id)} AND user_id=${Number(r.user_id)} AND work_file_id=${Number(r.work_file_id)} AND source_system='como_mail_execution' AND action_status='open'`));
+ const emailId=Number(String(action?.source_record_id).match(/^mail-review:(\d+)$/)?.[1]||0);if(!emailId)throw Error('mail_review_action_changed');
+ const [email]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_email_messages WHERE id=${emailId} AND user_id=${Number(r.user_id)} AND linked_work_file_id=${Number(r.work_file_id)} AND inbox_status='linked'`));
+ if(!email||email.body_sha256!==input.bodySha256)throw Error('mail_review_source_changed');
+ const attachments=rowsFrom<any>(await db.execute(sql`SELECT id,document_id,mime_type,disposition,file_name,storage_status FROM como_next_email_attachments WHERE email_message_id=${emailId}`));
+ const substantive=attachments.filter(a=>!(a.disposition==='inline'&&String(a.mime_type).startsWith('image/')));
+ if(substantive.some(a=>a.storage_status!=='stored'||!a.document_id||!input.reviewedDocumentIds.includes(Number(a.document_id))))throw Error('mail_review_attachments_not_reviewed');
+ if(input.summary.trim().length<20||input.workProductBody.trim().length<80||!input.workProductBody.includes(String(emailId)))throw Error('mail_review_receipt_incomplete');
+ const [savedDraft]=rowsFrom<any>(await db.execute(sql`SELECT c.id,c.external_message_ref FROM como_next_communications c JOIN como_mailbox_draft_ledger l ON l.communication_id=c.id AND l.user_id=c.user_id AND l.work_file_id=c.work_file_id AND l.state IN ('draft_saved','sent_confirmed') WHERE c.id=${Number(email.reply_draft_communication_id||0)} AND c.user_id=${Number(r.user_id)} AND c.work_file_id=${Number(r.work_file_id)} AND c.source_record_id=${`email-reply-draft:${emailId}`} LIMIT 1`));
+ return db.transaction(async tx=>{
+  await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${Number(r.work_file_id)} FOR UPDATE`);
+  const [live]=rowsFrom<any>(await tx.execute(sql`SELECT state,claim_token FROM como_manus_dispatches WHERE directive_id=${input.directiveId} FOR UPDATE`));
+  if(live?.state==='completed')return readDispatchForDirective({directiveId:input.directiveId});
+  if(live?.state!=='running'||live.claim_token!==r.claim_token)throw Error('dispatch_claim_lost');
+  const [current]=rowsFrom<any>(await tx.execute(sql`SELECT body_sha256,linked_work_file_id FROM como_next_email_messages WHERE id=${emailId} AND user_id=${Number(r.user_id)} FOR UPDATE`));
+  if(current?.body_sha256!==input.bodySha256||Number(current?.linked_work_file_id)!==Number(r.work_file_id))throw Error('mail_review_source_changed');
+  const memory:any=await tx.execute(sql`INSERT INTO como_next_work_memory (project_id,work_file_id,memory_type,entry_type,title,body,source_status,source_system,source_record_id,is_current,occurred_at) VALUES (${Number(r.project_id)},${Number(r.work_file_id)},'work_product','mail_execution_review',${`نتيجة مراجعة رسالة COMO #${emailId}`},${input.workProductBody},'reviewed','como_mail_execution',${`dispatch-review:${input.directiveId}`},1,UTC_TIMESTAMP())`);
+  const workProductId=Number(memory[0].insertId);const receipt={completedNow:true,workProductId,sourceEmailId:emailId,bodySha256:input.bodySha256,reviewedDocumentIds:input.reviewedDocumentIds,executionSummary:input.summary,externalSideEffect:false};
+  const communicationDraftId=savedDraft?Number(savedDraft.id):null;const mailboxDraftRef=savedDraft?.external_message_ref||null;
+  Object.assign(receipt,{communicationDraftId,mailboxDraftRef});
+  await tx.execute(sql`UPDATE como_next_actions SET action_status='verified',completed_at=UTC_TIMESTAMP(),verified_at=UTC_TIMESTAMP(),evidence_reference=${`إيصال مراجعة Manus #${workProductId}؛ رسالة COMO #${emailId}`} WHERE id=${Number(r.action_id)} AND source_system='como_mail_execution' AND action_status='open'`);
+  await tx.execute(sql`UPDATE como_manus_dispatches SET state='completed',work_product_id=${workProductId},communication_draft_id=${communicationDraftId},mailbox_draft_ref=${mailboxDraftRef},execution_summary=${input.summary},result_json=${JSON.stringify(receipt)},completed_at=UTC_TIMESTAMP(),last_progress_at=UTC_TIMESTAMP(),error=NULL WHERE directive_id=${input.directiveId} AND state='running' AND claim_token=${r.claim_token}`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET status='submitted',work_product_id=${workProductId},communication_draft_id=${communicationDraftId},mailbox_draft_ref=${mailboxDraftRef},execution_summary=${input.summary},result_json=${JSON.stringify(receipt)},submitted_at=UTC_TIMESTAMP(),failure_message=NULL WHERE id=${input.directiveId} AND user_id=${Number(r.user_id)} AND status='submitting'`);
+  await appendEvent(tx,{userId:Number(r.user_id),projectId:Number(r.project_id),workFileId:Number(r.work_file_id),actionId:Number(r.action_id),actorType:'manus',actorUserId:null,eventType:'mail_review_completed',summary:input.summary.slice(0,950),payload:receipt,idempotencyKey:`mail-review-completed:${input.directiveId}`});
+  return {directiveId:input.directiveId,state:'completed',workProductId,receipt};
+ });
+}

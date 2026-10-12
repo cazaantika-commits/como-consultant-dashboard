@@ -1,3 +1,4 @@
+import {readMailExecutionHealth} from "./comoMailExecution";
 import { createHash } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
@@ -124,6 +125,7 @@ VOICE DELIVERY — never read these directions aloud:
 - إذا قال عبد الرحمن «اكتبي لManus»، «احكي لمانوس»، «اخبري مانوس»، «تابعي»، «اعملي»، «حضّري»، «ذكّري وائل»، أو أعطاك الخطوة التالية: حددي work_file_id من مصدر COMO ثم استخدمي direct_manus_in_work_file. احفظي كلامه نفسه بلا إعادة كتابة ولا تطلبي منه فتح التطبيق أو تعبئة حقول. حددي execution_authorized=true فقط إذا احتوت عبارته تفويضًا صريحًا لتنفيذ العمل الآن، لا لمجرد تسجيل الفكرة.
 - استخدمي action_id فقط عندما يكون كلام عبد الرحمن هو النتيجة المطلوبة لإغلاق تدخل بشري ظاهر مثل «أخبر Manus بما حدث». استخدمي current_decision_id فقط إذا حسم القرار صراحة. إذا كان يوجّه Manus للعمل من دون حسم القرار، اتركيهما null.
 - إذا قاطعه كلام ينفي توجيهًا أو أثرًا مثل «خلي ما نرسل»، «لا تبعتي»، «لا تسلّمي»، «وقف»، أو «إلغاء»، فخذي النفي حرفيًا: execution_authorized=false، ولا تفترضي الإرسال ولا التنفيذ ولا إنشاء المسودة. إذا ألغى التوجيه نفسه فلا تستدعي الأداة.
+- في كل سؤال عن التفاعل مع البريد اقرئي mailSync.execution من المصدر الحي. current تعني حداثة الفحص فقط. عند healthy=false اذكري الرسائل المعلقة وسبب التعطّل ومسؤولية Manus؛ لا تقولي إن التفاعل اكتمل. إنشاء مراجعة أو وصول الطلب لا يعني قراءة المرفقات أو حفظ مسودة. لا تطلبي إعادة شرح معلومات موجودة.
 - بعد نجاح الأداة لا تقولي فقط «سجلته». عند الحفظ فقط قولي: «كتبته داخل ملف [اسم الموضوع] للمراجعة؛ ما بلش Manus». عند التفويض الصريح قولي: «سلّمته إلى قناة Manus ونراقب الإيصال». لا تقولي وصل أو اكتمل إلا إذا كانت حالة البيانات تؤكد delivered أو completed. إذا تأخر، اشرحي أن النص محفوظ في طابور التنفيذ وأنه لا يعاد تلقائيًا عند تعذر تأكيد التسليم.
 - القرار ليس تنفيذًا، والمسودة ليست إرسالًا، والتحليل ليس اعتمادًا، ووجود خطوة تالية ليس إيصال إنجاز.
 - عند عدم وجود دليل كافٍ قولي ذلك مباشرة واسألي عن المصدر أو الخطوة المطلوبة.
@@ -253,7 +255,9 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
   const executiveStale = !executive?.isEnabled || !lastExecutive || Date.now() - Date.parse(lastExecutive.utc) > COMO_MAIL_STAGE_STALE_MS
     || executive?.lastStatus === "failed"
     || (executive?.lastStatus === "running" && (!executiveRun || Date.now() - Date.parse(executiveRun.utc) > 2 * 60_000));
+  const mailExecution=await readMailExecutionHealth(userId);
   const mailSync = {
+    execution:mailExecution,
     state: importStale || processingStale || executiveStale ? "stale" : "current",
     lastSuccessAt: lastSuccess?.utc || null,
     lastSuccessAtDubai: lastSuccess?.dubai || null,
@@ -263,7 +267,7 @@ export async function lookupExecutiveWorkspace(member: SaraMember, rawArguments:
     lastExecutiveAtDubai: lastExecutive?.dubai || null,
     note: importStale ? "البريد المستورد قد لا يشمل الرسائل الجديدة؛ لا تؤكدي أنه محدث أو خالٍ من وارد جديد."
       : processingStale ? "وصل البريد لكن تحليله التشغيلي لم يثبت اكتماله؛ لا تؤكدي أن المتابعة أو الأولويات محدثة من كل الوارد."
-      : executiveStale ? "وصل البريد وحُلّل، لكن تنفيذ أعمال Manus الداخلية المجدولة لم يثبت اكتماله؛ لا تؤكدي إغلاق المتابعات." : null,
+      : executiveStale ? "وصل البريد وحُلّل، لكن تنفيذ أعمال Manus الداخلية المجدولة لم يثبت اكتماله؛ لا تؤكدي إغلاق المتابعات." : mailExecution.warning,
   };
   if (category === "project_memory") {
     const [dossiersResult, memoryResult] = await Promise.all([

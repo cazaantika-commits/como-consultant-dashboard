@@ -12,6 +12,8 @@ import { runComoFinanceInvoiceDraftsCommand } from "./services/comoFinanceInvoic
 import { reconcileFinancePaymentFollowups } from "./services/comoFinancePaymentFollowups";
 import { reconcileLifecycleResponseLanes } from "./services/comoLifecycleResponses";
 import { retryKnownUndeliveredDispatches } from "./services/comoManusDispatch";
+import { ensureCurrentMailReviewWork, readMailExecutionHealth } from "./services/comoMailExecution";
+import { reconcileCurrentMailLinkage } from "./services/comoNextEmailInbox";
 import { queueSystemManusAction, isInternalSystemActionEligible } from "./services/comoSystemActionDispatch";
 
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -67,11 +69,14 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // Never auto-apply historical/owner-gated proposals from this heartbeat.
           // Future-only, narrow request/quotation watches are durable internal
           // records, not messages. Resolve inbound replies before considering work.
+          const mailLinkage = await reconcileCurrentMailLinkage({userId:settings.userId,limit:5}).catch(()=>({error:"mail_linkage_failed" as const}));
+          const mailReviewWork = await ensureCurrentMailReviewWork(settings.userId).catch(()=>({error:"mail_review_work_failed" as const}));
           const seededWatches = await seedConditionalSentWatches({ userId: settings.userId, limit: 3 });
           const conditionalWatches = await reconcileConditionalSentWatches({ userId: settings.userId, limit: 3 });
           // Owner-authorized finance handling is Draft-only. It runs after the
           // separate import/analysis stages and has its own policy/source gates.
-          const financeInvoices = await runComoFinanceInvoiceDraftsCommand({ userId: settings.userId });
+          const financeInvoices = await runComoFinanceInvoiceDraftsCommand({ userId: settings.userId })
+            .catch(() => ({status:"error" as const,error:"finance_invoice_failed"}));
           // A transient invoice error must not starve payment watches or the
           // unrelated internal work. Report failure only after those lanes run.
           const financePayments = await reconcileFinancePaymentFollowups({ userId: settings.userId, limit: 3 })
@@ -86,31 +91,31 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
             .where(and(eq(comoNextActions.userId, settings.userId),
               eq(comoNextActions.ownerType, "manus"), eq(comoNextActions.actionStatus, "open"),
               or(isNull(comoNextActions.attentionAt), lte(comoNextActions.attentionAt, nowSql())),
-              notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled", "waiting"]),
+              notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"]),
+              sql`(${comoNextWorkFiles.workFileStatus}<>'waiting' OR ${comoNextActions.sourceSystem}='como_mail_execution')`,
               sql`NOT EXISTS (SELECT 1 FROM como_next_staged_directives dispatched
                   WHERE dispatched.user_id=${settings.userId}
                     AND dispatched.stage_key=CONCAT('system-manus-action:',${comoNextActions.id}))`,
-              sql`NOT EXISTS (SELECT 1 FROM como_next_decisions gate
+              sql`(${comoNextActions.sourceSystem}='como_mail_execution' OR NOT EXISTS (SELECT 1 FROM como_next_decisions gate
                   WHERE gate.work_file_id = ${comoNextActions.workFileId}
                     AND (gate.decision_status = 'required' OR
-                      (gate.decision_status = 'deferred' AND gate.due_at > UTC_TIMESTAMP())))`))
+                      (gate.decision_status = 'deferred' AND gate.due_at > UTC_TIMESTAMP()))))`))
             .orderBy(sql`CASE ${comoNextActions.priority} WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END`,
               asc(comoNextActions.createdAt), asc(comoNextActions.id)).limit(20);
           const eligible = candidates.find(row => isInternalSystemActionEligible(row.title));
           const systemWorkDispatch = eligible ? await queueSystemManusAction({ userId: settings.userId, actionId: Number(eligible.id) }) : null;
           // Real Manus receives the event; queueing is not completed execution.
-          const result = null as { failures: Array<{kind:string}>; executedActionIds:number[] } | null;
-          if (result?.failures.length) throw new Error(`executive_action_failed:${result.failures[0].kind}`);
-          if (financeInvoices.status === "error" || "error" in financePayments || "error" in lifecycleResponses || "error" in manusDispatch) {
+          const executedActionIds:number[]=[];
+          if ("error" in mailLinkage || "error" in mailReviewWork || financeInvoices.status === "error" || "error" in financePayments || "error" in lifecycleResponses || "error" in manusDispatch) {
             throw new Error("finance_lane_failed_after_internal_work");
           }
           await db.update(comoNextEmailSyncSettings).set({
             lastRunAt: nowSql(), lastSuccessAt: nowSql(), lastStatus: "success",
-            lastScanned: eligible ? 1 : 0, lastImported: result?.executedActionIds.length || 0,
+            lastScanned: eligible ? 1 : 0, lastImported: executedActionIds.length,
             lastDuplicates: 0, lastError: null,
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
           res.status(200).json({ ok: true, phase: "executive", selectedActionId: eligible ? Number(eligible.id) : null,
-            executedActionIds: result?.executedActionIds || [], seededWatches, conditionalWatches,
+            executedActionIds: executedActionIds, seededWatches, conditionalWatches, mailLinkage, mailReviewWork, mailExecution:await readMailExecutionHealth(settings.userId),
             financeInvoices, financePayments, lifecycleResponses, manusDispatch, systemWorkDispatch, externalSideEffects: false });
           return;
         }
