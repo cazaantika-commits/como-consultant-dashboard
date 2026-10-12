@@ -23,6 +23,7 @@ import {
   toSqlUtcTimestamp,
 } from "./comoNextCommands";
 import { recordWorkFileUpdateCommand, type KitchenUpdateChannel } from "./comoNextKitchen";
+import { applyOwnerPaymentAssertion, classifyLifecycleAction, linkReportFollowupDraft, ownerAssertsPaymentPaid } from "./comoWorkFileLifecycle";
 
 const DIRECTIVE_MODEL = "gpt-5";
 
@@ -125,6 +126,10 @@ function compact(value: unknown, max = 4_000) {
 
 export function directiveRequestsCommunicationDraft(directiveText: string) {
   const normalized = directiveText.replace(/\s+/g, " ").trim().toLowerCase();
+  const explicitDraft = /(?:prepare|draft|write).{0,60}(?:reminder|email|message|reply)|(?:جه[ّ]?ز|حض[ّ]?ر|اكتب|أعد|اعد).{0,60}(?:رسالة|مسودة|تذكير|بريد)/i.test(normalized);
+  const cancelDraft = /(?:لا|ما)\s*(?:تجهز|تحضر|تكتب|تعد)|(?:do not|don't)\s+(?:prepare|draft|write)|(?:ألغ|الغي|وقف).{0,25}(?:الطلب|التوجيه|المسودة)/i.test(normalized);
+  if (cancelDraft) return false;
+  if (explicitDraft) return true;
   // Negatives are instructions, not soft caveats. This protects interrupted phrases
   // such as "ذكّري وائل، خلي ما نرسل" from being turned into a mailbox draft.
   const explicitNoSend = /(?:لا\s*(?:ترسل|ترسلي|نبعت|نبعث|تبعث|تبعت|نرسل|نبعتو)|ما\s*(?:نرسل|نبعت|نبعث|ترسل|ترسلي|تبعث|تبعت)|خلي\s*ما\s*(?:نرسل|نبعت|نبعث|ترسل|ترسلي|تبعث|تبعت)|وقف(?:ي)?\s*(?:الإرسال|ارسال|البريد|الرسالة)|don't\s+send|do\s+not\s+send|no\s+send)/i;
@@ -162,7 +167,7 @@ async function loadDirectiveContext(userId: number, workFileId: number) {
       .from(comoNextWorkFiles)
       .where(and(eq(comoNextWorkFiles.projectId, workFile.projectId), notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"])))
       .orderBy(desc(comoNextWorkFiles.updatedAt)),
-    db.select({ id: comoNextActions.id, workFileId: comoNextActions.workFileId, title: comoNextActions.title, description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria, ownerType: comoNextActions.ownerType, status: comoNextActions.actionStatus, attentionAt: comoNextActions.attentionAt })
+    db.select({ id: comoNextActions.id, workFileId: comoNextActions.workFileId, title: comoNextActions.title, description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria, ownerType: comoNextActions.ownerType, status: comoNextActions.actionStatus, dueAt: comoNextActions.dueAt, attentionAt: comoNextActions.attentionAt })
       .from(comoNextActions)
       .where(and(eq(comoNextActions.projectId, workFile.projectId), notInArray(comoNextActions.actionStatus, ["verified", "cancelled"])))
       .orderBy(desc(comoNextActions.updatedAt))
@@ -172,7 +177,7 @@ async function loadDirectiveContext(userId: number, workFileId: number) {
       .where(and(eq(comoNextDecisions.projectId, workFile.projectId), inArray(comoNextDecisions.decisionStatus, ["required", "deferred"])))
       .orderBy(desc(comoNextDecisions.updatedAt))
       .limit(20),
-    db.select({ workFileId: comoNextCommunications.workFileId, direction: comoNextCommunications.direction, status: comoNextCommunications.communicationStatus, subject: comoNextCommunications.subject, body: comoNextCommunications.body, externalMessageRef: comoNextCommunications.externalMessageRef, occurredAt: comoNextCommunications.occurredAt })
+    db.select({ workFileId: comoNextCommunications.workFileId, direction: comoNextCommunications.direction, status: comoNextCommunications.communicationStatus, subject: comoNextCommunications.subject, body: comoNextCommunications.body, fromText: comoNextCommunications.fromText, toText: comoNextCommunications.toText, ccText: comoNextCommunications.ccText, externalMessageRef: comoNextCommunications.externalMessageRef, occurredAt: comoNextCommunications.occurredAt })
       .from(comoNextCommunications)
       .where(eq(comoNextCommunications.projectId, workFile.projectId))
       .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id))
@@ -201,7 +206,7 @@ function buildDirectivePrompt(input: {
 3) إذا احتاج العمل وثائق أو بيانات غير موجودة، أنشئ خطوة Manus واحدة محددة تجمع الناقص وتنتج مخرجًا واضحًا؛ لا تجعل المستخدم مسؤولاً عن عمل يستطيع Manus فعله.
 4) اذكر ملفات الموضوع المرتبطة التي يجب تعليق خطواتها المنفردة إلى أن يكتمل العمل الموحد، باستعمال المعرفات المتاحة فقط.
 5) لا ترسل بريدًا، ولا تقبل عرضًا، ولا تعيّن استشاريًا، ولا تنشئ التزامًا أو دفعًا. إذا طلب عبد الرحمن إرسال/كتابة/تذكير شخص برسالة، جهّز communicationDraft كاملة؛ النظام سيحفظها فعليًا في Private Email Drafts ليُراجعها ويرسلها من بريده. ممنوع اعتبار نص داخلي يقول «أعددت مسودة» تنفيذًا.
-5-أ) إذا احتوى التوجيه على نفي صريح مثل «خلي ما نرسل» أو «لا تبعتي»، فالنفي مقدّم: لا تنشئ communicationDraft ولا تدّعي إرسالًا أو إعداد مسودة، واكتف بالعمل الداخلي المسموح إن بقي مطلوبًا.
+5-أ) فرّق بين إلغاء الطلب ومنع الإرسال الفعلي. «جهّز مسودة ولا ترسلها» طلب إعداد مسودة، لا إلغاؤها؛ prepare a reminder, do not send, just prepare for my review يعني communicationDraft كاملة. النفي الذي يلغي إعداد المسودة نفسه يمنع إنشاءها.
 6) في communicationDraft استخدم عنوان البريد المثبت من السياق. وائل هو wael@zooma.ae؛ لا تضف ميا تلقائيًا لمجرد مخاطبة وائل. تُذكر ميا في CC فقط إذا ثبت أن الرسالة تخص موعدًا لوائل، أو ورد توجيه صريح بشأنها. اذكر externalMessageRef الأنسب إذا كانت الرسالة متابعة لخيط سابق.
 7) لا تقل إن ملفًا مرفق أو سيُرفق؛ مسار توجيه Manus الحالي ينشئ نص المسودة ويحفظه في البريد ولا يضيف مرفقات. وقّع الاسم العربي «عبد الرحمن زقوت» أو الإنجليزي حصراً «Abdalrahman Zaqout».
 8) لا تخترع أسعارًا أو نطاقًا. أي رقم غير مثبت يبقى TBD، واذكر عدم قابلية المقارنة إذا اختلف نطاق الخدمة.
@@ -209,6 +214,8 @@ function buildDirectivePrompt(input: {
 10) التوجيه الجديد يغيّر الواقع ولا يُحفظ بجانب حالة قديمة متعارضة. إذا قال عبد الرحمن إن قرارًا حُسم أو رُفض أو أُجل، أدرجه في decisionTransitions بالمعرف الصحيح. التأجيل يحتاج deferredUntil صريحًا؛ القرار المؤجل لا يعود أولوية قبل ذلك التاريخ.
 11) إذا قال إن إجراءً انتهى أو أُلغي أو أصبح بانتظار طرف/تاريخ، أدرجه في actionTransitions. عند waiting_external استخدم resumeAt إذا ثُبت موعد العودة. لا تترك الإجراء القديم مفتوحًا بالتوازي مع التوجيه الأحدث.
 12) إذا جاء التوجيه من داخل قرار محدد، لا تفترض الموافقة. اختر حالته الفعلية من كلام عبد الرحمن: approved أو rejected أو deferred. إذا لم يحسمه فلا تغيّر حالته.
+13) سداد الفاتورة مستقل عن تسليم التقرير والرد الخارجي. إفادة المالك «تم السداد» ليست إيصالًا بنكيًا. لا تغلق التقرير بسببها، ولا تخترع تاريخ سداد أو مهلة رد. إعداد متابعة التقرير ليس استلامًا له. لا تحول موعد الانتباه إلى موعد استحقاق.
+14) كل مراسلة خارجية يكون وائل wael@zooma.ae في CC، دون Slsl أو ميا؛ ميا فقط عندما يكون موعدًا مثبتًا يخص وائل. استخدم لغة المستلم في نص المسودة: الخيط الإنجليزي مسودة إنجليزية كاملة. اسمح لإفادة السداد أن تغير المسار المالي فقط؛ لا تطلب تأكيدًا سبق أن أعطاه المالك.
 
 التوجيه الحالي من عبد الرحمن:
 ${input.directiveText}
@@ -224,7 +231,7 @@ ${input.currentDecisionId ? `- القرار المفتوح الذي جاء ال�
 ${projectFiles.map(file => `- ${file.id}: ${file.title} [${file.status}]`).join("\n")}
 
 الإجراءات الحالية:
-${actions.length ? actions.map(item => `- إجراء ${item.id} في ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}): ${item.title} · ${item.ownerType}/${item.status} · العودة/الانتباه: ${item.attentionAt || "الآن"} · معيار القبول: ${compact(item.acceptanceCriteria, 700)}`).join("\n") : "لا توجد."}
+${actions.length ? actions.map(item => `- إجراء ${item.id} في ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}): ${item.title} · ${item.ownerType}/${item.status} · الاستحقاق: ${item.dueAt || "غير محدد"} · الانتباه الداخلي (ليس استحقاقًا): ${item.attentionAt || "غير محدد"} · معيار القبول: ${compact(item.acceptanceCriteria, 700)}`).join("\n") : "لا توجد."}
 
 القرارات المفتوحة:
 ${decisions.length ? decisions.map(item => `- قرار ${item.id} في ملف ${item.workFileId}: ${item.title} · الحالة: ${item.status} · موعد العودة: ${item.dueAt || "غير محدد"} · ${compact(item.question, 900)} · التوصية: ${compact(item.recommendation, 700)}`).join("\n") : "لا توجد."}
@@ -233,7 +240,7 @@ ${decisions.length ? decisions.map(item => `- قرار ${item.id} في ملف ${
 ${memory.length ? memory.map(item => `- ملف ${item.workFileId} (${fileName.get(Number(item.workFileId)) || ""}) · ${item.memoryType}/${item.entryType || ""} · ${item.title}\n${compact(item.body, 3_000)}`).join("\n\n") : "لا توجد."}
 
 أحدث المراسلات:
-${communications.length ? communications.map(item => `- ملف ${item.workFileId} · ${item.direction}/${item.status} · ${item.subject} · المرجع: ${item.externalMessageRef || "لا يوجد"}\n${compact(item.body, 1_200)}`).join("\n\n") : "لا توجد."}`;
+${communications.length ? communications.map(item => `- ملف ${item.workFileId} · ${item.direction}/${item.status} · ${item.subject} · من: ${item.fromText || "غير مثبت"} · إلى: ${item.toText || "غير مثبت"} · CC: ${item.ccText || "لا يوجد"} · المرجع: ${item.externalMessageRef || "لا يوجد"}\n${compact(item.body, 1_200)}`).join("\n\n") : "لا توجد."}`;
 }
 
 export async function executeExecutiveDirectiveCommand(input: {
@@ -262,6 +269,10 @@ export async function executeExecutiveDirectiveCommand(input: {
     idempotencyKey: input.idempotencyKey || null,
   });
 
+  const paymentAssertion = input.executionSource === "executive_control"
+    ? { applied: false, closedActionIds: [], lifecycleResults: [] }
+    : await applyOwnerPaymentAssertion({ userId: input.userId, workFileId: input.workFileId, updateId: Number(saved.id), text: input.directiveText });
+  const lifecycleResults = [...paymentAssertion.lifecycleResults];
   const response = await invokeLLM({
     model: DIRECTIVE_MODEL,
     messages: [
@@ -332,6 +343,10 @@ export async function executeExecutiveDirectiveCommand(input: {
       throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "طلب المراسلة لم يُنفّذ: لم يرجع البريد Draft UID موثقًا" });
     }
     mailboxDraftRef = `${mailbox.folder} UID ${mailbox.uid}`;
+    if (/تقرير|تحليل مالي|report|financial analysis|deliverable/i.test(input.directiveText)) {
+      const reportDraft = await linkReportFollowupDraft({ userId: input.userId, workFileId: input.workFileId, updateId: Number(saved.id), communicationId: communicationDraftId, mailboxDraftRef });
+      lifecycleResults.push(...reportDraft.lifecycleResults);
+    }
   }
 
   if (!communicationDraftRequested && parsed.completedNow && String(parsed.workProductTitle || "").trim() && String(parsed.workProductBody || "").trim()) {
@@ -425,6 +440,10 @@ export async function executeExecutiveDirectiveCommand(input: {
       const current = actionById.get(actionId);
       const nextStatus = String(transition.nextStatus);
       if (!current || !["verified", "cancelled", "waiting_external"].includes(nextStatus)) continue;
+      if (paymentAssertion.closedActionIds.includes(actionId)) continue;
+      // Payment transitions were already scoped deterministically to one invoice.
+      // Do not let a language model close any other action, even another invoice.
+      if (ownerAssertsPaymentPaid(input.directiveText)) continue;
       const evidenceReference = `توجيه تنفيذي #${saved.id}: ${String(transition.reason || input.directiveText).trim().slice(0, 1000)}`;
       if (nextStatus === "verified") {
         if (current.status !== "completed_pending_verification") {
@@ -484,9 +503,10 @@ export async function executeExecutiveDirectiveCommand(input: {
   const executionSummary = mailboxDraftRef
     ? `حفظ Manus مسودة البريد فعليًا في Private Email Drafts (${mailboxDraftRef}). لم تُرسل؛ المراجعة والتعديل والإرسال من تطبيق البريد.`
     : String(parsed.executionSummary || "").trim();
+  const truthfulSummary = [executionSummary, ...lifecycleResults].filter(Boolean).join("\n\n");
   await context.db.update(comoNextWorkFileUpdates).set({
     analysisStatus: "applied",
-    analysisSummary: `${String(parsed.acknowledgement || "تم فهم التوجيه.").trim()}\n\n${executionSummary}`.trim(),
+    analysisSummary: `${String(parsed.acknowledgement || "تم فهم التوجيه.").trim()}\n\n${truthfulSummary}`.trim(),
     suggestedActionTitle: nextActionId ? String(parsed.nextActionTitle).trim().slice(0, 500) : null,
     suggestedActionDescription: nextActionId ? String(parsed.nextActionDescription || "").trim().slice(0, 5000) || null : null,
     suggestedAcceptanceCriteria: nextActionId ? String(parsed.nextActionAcceptanceCriteria || "").trim().slice(0, 5000) : null,
@@ -500,7 +520,8 @@ export async function executeExecutiveDirectiveCommand(input: {
   return {
     updateId: Number(saved.id),
     acknowledgement: String(parsed.acknowledgement || "تم فهم التوجيه.").trim(),
-    executionSummary: String(parsed.executionSummary || "").trim(),
+    executionSummary: truthfulSummary,
+    lifecycleResults,
     workProductId,
     communicationDraftId,
     mailboxDraftRef,
@@ -509,7 +530,7 @@ export async function executeExecutiveDirectiveCommand(input: {
     transitionedDecisionIds,
     transitionedActionIds,
     relatedWorkFileIds,
-    completedNow: Boolean(workProductId || mailboxDraftRef),
+    completedNow: Boolean(workProductId || mailboxDraftRef || (paymentAssertion.applied && !nextActionId)),
     externalSideEffect: false as const,
   };
 }

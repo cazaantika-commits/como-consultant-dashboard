@@ -37,6 +37,7 @@ const baseSent = (overrides: Partial<FinancePaymentSent> = {}): FinancePaymentSe
 
 class FakeFinanceStore implements FinancePaymentFollowupStore {
   policyEnabled = true;
+  paidRecorded = false;
   fresh = true;
   candidates: FinancePaymentSent[] = [];
   replies: FinanceThreadReply[] = [];
@@ -50,6 +51,7 @@ class FakeFinanceStore implements FinancePaymentFollowupStore {
   private examinedSequence = new Map<number, number>();
 
   async isPolicyEnabled() { return this.policyEnabled; }
+  async isInvoicePaidRecorded() { return this.paidRecorded; }
   async hasFreshCompletedImportAndProcessing() { return this.fresh; }
   async listCandidates(input: { limit: number }) {
     // Mirror the database projection: a completed watch is no longer fresh or
@@ -102,6 +104,17 @@ class FakeFinanceStore implements FinancePaymentFollowupStore {
 }
 
 describe("como finance payment followups", () => {
+  it("does not recreate a watch or draft when the matching invoice has an owner payment assertion", async () => {
+    const store = new FakeFinanceStore();
+    store.paidRecorded = true;
+    store.candidates = [baseSent()];
+    const reconciler = new FinancePaymentFollowupReconciler(store);
+    const first = await reconciler.reconcile({ userId: 7, now: "2026-10-15T08:00:00Z" });
+    await reconciler.reconcile({ userId: 7, now: "2026-10-15T08:05:00Z" });
+    expect(first.skipped).toContainEqual({ sentEmailId: 41, reason: "invoice_paid_recorded" });
+    expect(store.actions).toHaveLength(0);
+    expect(store.draftCalls).toHaveLength(0);
+  });
   it("requires the exact Wael-only To and the two exact finance CC recipients", () => {
     expect(hasExactFinancePaymentEnvelope(baseSent())).toBe(true);
     expect(hasExactFinancePaymentEnvelope(baseSent({ toText: "wael@zooma.ae, other@zooma.ae" }))).toBe(false);

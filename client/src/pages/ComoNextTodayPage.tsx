@@ -236,6 +236,84 @@ function toIso(localValue: string) {
   return localValue ? new Date(localValue).toISOString() : undefined;
 }
 
+export type LifecycleLaneView = {
+  key: string;
+  kind: "payment" | "deliverable" | "external_response";
+  title: string;
+  status: string;
+  sourceKind?: string | null;
+  evidenceReference?: string | null;
+  sourceText?: string | null;
+  recordedAt?: string | null;
+  nextActionId?: number | null;
+  nextActionTitle?: string | null;
+  nextOwnerType?: "human" | "manus" | "team" | null;
+  dueAt?: string | null;
+  attentionAt?: string | null;
+};
+
+const lifecycleKindMeta: Record<LifecycleLaneView["kind"], { label: string; className: string }> = {
+  payment: { label: "مسار السداد", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  deliverable: { label: "مسار التقرير أو المخرج", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  external_response: { label: "مسار الرد الخارجي", className: "border-sky-200 bg-sky-50 text-sky-800" },
+};
+
+const directiveDispatchMeta: Record<string, { label: string; className: string }> = {
+  pending: { label: "معلّق للمراجعة", className: "border-amber-200 bg-amber-50 text-amber-900" },
+  submitting: { label: "جارٍ وضعه في طابور التنفيذ", className: "border-blue-200 bg-blue-50 text-blue-800" },
+  queued: { label: "في طابور Manus — لم يتأكد التسليم", className: "border-blue-200 bg-blue-50 text-blue-800" },
+  delivered: { label: "تأكد وصوله إلى Manus — التنفيذ يتابع", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  running: { label: "Manus ينفذ الآن", className: "border-violet-200 bg-violet-50 text-violet-800" },
+  completed: { label: "اكتمل بإيصال تنفيذ", className: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  failed: { label: "تعذر التنفيذ أو التسليم", className: "border-rose-200 bg-rose-50 text-rose-800" },
+  delivery_unknown: { label: "تعذر تأكيد التسليم", className: "border-rose-200 bg-rose-50 text-rose-800" },
+  submitted: { label: "نتيجة مسجلة — لا يوجد إيصال إرسال حي", className: "border-slate-200 bg-slate-50 text-slate-700" },
+};
+
+/** Presentation only: due time, waiting status, and the next owner are deliberately independent facts. */
+export function describeLifecycleLane(lane: LifecycleLaneView, now = Date.now()) {
+  const attention = normalizeUtc(lane.attentionAt);
+  const dueAt = normalizeUtc(lane.dueAt);
+  const attentionMs = attention ? Date.parse(attention) : Number.NaN;
+  const waiting = ["waiting_external", "awaiting_owner_send", "blocked"].includes(lane.status);
+  const dueMs = dueAt ? Date.parse(dueAt) : Number.NaN;
+  const due = Number.isFinite(dueMs) && dueMs <= now;
+  const needsAttention = Number.isFinite(attentionMs) && attentionMs <= now;
+  const owner = lane.nextOwnerType || null;
+  const sourceLabel = lane.sourceKind === "owner_statement"
+    ? "مصدر الحالة: إفادة المالك، وليست إيصالًا بنكيًا"
+    : lane.sourceKind === "mailbox_draft"
+      ? "مصدر الحالة: مسودة بريد؛ لم تُرسل"
+      : lane.sourceKind === "linked_correspondence"
+        ? "مصدر الحالة: مراسلة مرتبطة"
+        : lane.sourceKind ? `مصدر الحالة: ${lane.sourceKind}` : "مصدر الحالة غير محدد";
+  return { waiting, due, needsAttention, dueAt, owner, sourceLabel, attentionAt: attention, meta: lifecycleKindMeta[lane.kind] };
+}
+
+/** A next action or a submitted row is not itself a completed Manus execution receipt. */
+export function describeDirectiveDispatch(directive: any) {
+  const dispatch = directive?.dispatch || null;
+  const state = String(dispatch?.status || dispatch?.executionState || directive?.status || "pending");
+  const delayed = Boolean(dispatch?.delay?.detected || dispatch?.delayed);
+  const completed = state === "completed";
+  const active = ["queued", "delivered", "running"].includes(state) || directive?.status === "submitting";
+  const delivered = ["delivered", "running", "completed"].includes(state);
+  const receipt = directive?.receipt || null;
+  return {
+    state,
+    delayed,
+    completed,
+    active,
+    delivered,
+    meta: directiveDispatchMeta[state] || directiveDispatchMeta.pending,
+    failureMessage: dispatch?.failureMessage || directive?.failureMessage || null,
+    executionSummary: dispatch?.executionSummary || directive?.executionSummary || null,
+    lifecycleResults: receipt?.lifecycleResults || null,
+    mailboxDraftRef: dispatch?.mailboxDraftRef || directive?.mailboxDraftRef || null,
+    lastProgressAt: dispatch?.lastProgressAt || null,
+  };
+}
+
 function StatusBadge({ status, kind = "action" }: { status: string; kind?: "action" | "work-file" }) {
   const meta = kind === "work-file" ? workFileStatusMeta[status] : actionStatusMeta[status as ActionStatus];
   return <Badge variant="outline" className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${meta?.className || ""}`}>{meta?.label || status}</Badge>;
@@ -720,7 +798,10 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
   const submitDirectiveMutation = trpc.comoNext.submitStagedDirective.useMutation();
   const stagedQuery = trpc.comoNext.listStagedDirectives.useQuery(
     { workFileId, includeHistory: true },
-    { refetchInterval: 3_000, refetchIntervalInBackground: false },
+    {
+      refetchInterval: query => (query.state.data || []).some((directive: any) => describeDirectiveDispatch(directive).active) ? 5_000 : false,
+      refetchIntervalInBackground: false,
+    },
   );
   const busy = meetingMutation.isPending || reviewMutation.isPending || stageMutation.isPending || updateDirectiveMutation.isPending || cancelDirectiveMutation.isPending || submitDirectiveMutation.isPending;
   const localDraftKey = `como-next:directive-draft:${workFileId}:${actionId || currentDecisionId || defaultSourceChannel}`;
@@ -816,15 +897,21 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
         await updateDirectiveMutation.mutateAsync({ directiveId: directive.id, directiveText: text });
       }
       const result = await submitDirectiveMutation.mutateAsync({ directiveId: directive.id });
-      const receipt = result.directive;
-      toast.success(receipt.updateId ? `سُلّم التوجيه إلى Manus — تحديث #${receipt.updateId}` : "سُلّم التوجيه إلى Manus");
+      const dispatch = describeDirectiveDispatch(result.directive);
+      if (dispatch.completed) toast.success("اكتمل التوجيه بإيصال تنفيذ محفوظ");
+      else if (dispatch.delivered) toast.success("تأكد وصول التوجيه إلى Manus؛ التنفيذ ما زال يتابع");
+      else if (dispatch.state === "queued" || dispatch.state === "submitting") toast.info("حُفظ التوجيه في طابور Manus؛ لم يتأكد التسليم بعد");
+      else toast.info("حُفظت حالة التسليم؛ راجع الإيصال الظاهر قبل اعتبار العمل منجزًا");
       await stagedQuery.refetch();
       await onChanged();
     } catch (error: any) { toast.error(error?.message || "تعذر تسليم التوجيه إلى Manus؛ لم يُنشأ إيصال" ); }
   };
 
-  const pendingDirectives = (stagedQuery.data || []).filter((directive: any) => ["pending", "failed", "submitting"].includes(directive.status));
-  const deliveredDirectives = (stagedQuery.data || []).filter((directive: any) => directive.status === "submitted").slice(0, 4);
+  const pendingDirectives = (stagedQuery.data || []).filter((directive: any) => {
+    const dispatch = describeDirectiveDispatch(directive);
+    return ["pending", "failed", "submitting"].includes(directive.status) || dispatch.active || dispatch.state === "delivery_unknown";
+  });
+  const deliveredDirectives = (stagedQuery.data || []).filter((directive: any) => !pendingDirectives.some((pending: any) => pending.id === directive.id)).slice(0, 4);
 
   return <section className="rounded-2xl border border-[#cfe3df] bg-[#f4faf8] p-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="text-sm font-black text-slate-950">{defaultSourceChannel === "meeting" ? "نتيجة الاجتماع" : "طلبك إلى Manus"}</h3><p className="mt-1 text-[11px] leading-5 text-slate-500">{defaultSourceChannel === "meeting" ? "اكتب ما حدث ثم سلّمه مرة واحدة؛ بعد ظهور رقم التحديث يكون قد وصل فعلًا." : "اكتب الطلب هنا أو قله لسارة؛ يظهر النص نفسه للمراجعة، ثم زر واحد يسلّم النسخة الظاهرة إلى Manus."}</p></div>{!alwaysOpen ? <Button type="button" onClick={() => setOpen(value => !value)} variant="outline" className="rounded-xl bg-white">{open ? "إغلاق" : "كتابة أو صوت"}</Button> : null}</div>
@@ -835,7 +922,7 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
       <p className="text-[10px] leading-5 text-slate-400">{defaultSourceChannel === "meeting" ? "بعد التسليم يحلل Manus النتيجة ويحدث الملف؛ لا إرسال أو قبول أو دفع تلقائي." : "لن ينفذ Manus ولن تُنشأ مسودة بريد أو أثر خارجي عند الحفظ. التنفيذ يبدأ فقط من زر «سلّم التوجيه إلى Manus» أدناه."}</p>
     </div> : null}
     {pendingDirectives.length ? <div className="mt-4 space-y-3 border-t border-[#d9e9e5] pt-4">{pendingDirectives.map((directive: any) => <StagedDirectiveCard key={directive.id} directive={directive} busy={busy} onSave={updateDirective} onCancel={cancelDirective} onSubmit={submitDirective} />)}</div> : null}
-    {deliveredDirectives.length ? <details className="mt-4 rounded-xl border border-[#d9e9e5] bg-white/75"><summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-slate-700">سجل تسليم مختصر ({deliveredDirectives.length})</summary><div className="space-y-2 border-t border-[#d9e9e5] p-3">{deliveredDirectives.map((directive: any) => <div key={directive.id} className="rounded-lg border border-slate-100 bg-white p-2.5 text-[11px] leading-5 text-slate-600"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-black text-emerald-800">سُلّم إلى Manus{directive.updateId ? ` · تحديث #${directive.updateId}` : ""}</span><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(directive.submittedAt)}</bdi></div>{directive.mailboxDraftRef ? <p className="mt-1 font-bold text-amber-800">مسودة بريد: {directive.mailboxDraftRef} — لم تُرسل.</p> : null}{directive.executionSummary ? <p className="mt-1 line-clamp-2">{directive.executionSummary}</p> : null}</div>)}</div></details> : null}
+    {deliveredDirectives.length ? <details className="mt-4 rounded-xl border border-[#d9e9e5] bg-white/75"><summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-slate-700">إيصالات التوجيه السابقة ({deliveredDirectives.length})</summary><div className="space-y-2 border-t border-[#d9e9e5] p-3">{deliveredDirectives.map((directive: any) => { const dispatch = describeDirectiveDispatch(directive); return <div key={directive.id} className="rounded-lg border border-slate-100 bg-white p-2.5 text-[11px] leading-5 text-slate-600"><div className="flex flex-wrap items-center justify-between gap-2"><span className={`font-black ${dispatch.completed ? "text-emerald-800" : "text-slate-700"}`}>{dispatch.meta.label}</span><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(directive.submittedAt || directive.updatedAt)}</bdi></div>{dispatch.mailboxDraftRef ? <p className="mt-1 font-bold text-amber-800">مسودة بريد: {dispatch.mailboxDraftRef} — لم تُرسل.</p> : null}{dispatch.executionSummary ? <p className="mt-1 line-clamp-2">{dispatch.executionSummary}</p> : null}</div>; })}</div></details> : null}
     {updates.some(update => update.analysisStatus === "draft" && update.suggestedActionTitle) ? <details className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60"><summary className="cursor-pointer px-3 py-2.5 text-xs font-black text-violet-800">اقتراحات قديمة تحتاج حسمًا</summary><div className="space-y-2 border-t border-violet-100 p-3">{updates.filter(update => update.analysisStatus === "draft" && update.suggestedActionTitle).slice(0, 3).map(update => <div key={update.id} className="rounded-xl border border-violet-100 bg-white p-3"><p className="text-xs font-black leading-6 text-violet-950">{update.suggestedActionTitle}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" onClick={() => review(update.id, "apply")} disabled={busy} className="rounded-lg bg-violet-700 text-white hover:bg-violet-800">تطبيق الاقتراح القديم</Button><Button size="sm" variant="ghost" onClick={() => review(update.id, "dismiss")} disabled={busy} className="rounded-lg">استبعاده</Button></div></div>)}</div></details> : null}
   </section>;
 }
@@ -843,14 +930,19 @@ function WorkFileUpdateComposer({ workFileId, actionId, currentDecisionId, updat
 function StagedDirectiveCard({ directive, busy, onSave, onCancel, onSubmit }: { directive: any; busy: boolean; onSave: (directive: any, text: string) => void; onCancel: (id: number) => void; onSubmit: (directive: any, text: string) => void }) {
   const [text, setText] = useState(directive.directiveText || "");
   useEffect(() => { setText(directive.directiveText || ""); }, [directive.id, directive.directiveText]);
-  const isSubmitting = directive.status === "submitting";
+  const dispatch = describeDirectiveDispatch(directive);
+  const isSubmitting = directive.status === "submitting" || dispatch.active;
   const editable = ["pending", "failed"].includes(directive.status);
   return <div className={`rounded-xl border p-3 ${directive.source === "sara" ? "border-violet-200 bg-violet-50/60" : "border-amber-200 bg-amber-50/60"}`}>
-    <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Badge variant="outline" className="rounded-full bg-white">{directive.source === "sara" ? "طلبك عبر سارة" : "طلبك المكتوب"}</Badge><span className="text-[10px] font-black text-slate-500">{isSubmitting ? "قيد التسليم مرة واحدة" : directive.status === "failed" ? "تعذر التسليم — عدّل أو أعد المحاولة" : "راجع النص أو سلّمه كما هو"}</span></div><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(directive.updatedAt || directive.createdAt)}</bdi></div>
+    <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><Badge variant="outline" className="rounded-full bg-white">{directive.source === "sara" ? "طلبك عبر سارة" : "طلبك المكتوب"}</Badge><Badge variant="outline" className={`rounded-full ${dispatch.meta.className}`}>{dispatch.meta.label}</Badge></div><bdi dir="ltr" className="text-[10px] text-slate-400">{formatDateTime(dispatch.lastProgressAt || directive.updatedAt || directive.createdAt)}</bdi></div>
     <Textarea value={text} disabled={!editable || busy} onChange={event => setText(event.target.value)} className="mt-3 min-h-28 rounded-xl bg-white leading-7 disabled:opacity-100" />
-    {directive.failureMessage ? <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] font-bold leading-5 text-rose-800">فشل واضح: {directive.failureMessage}</p> : null}
-    {editable ? <div className="mt-3 grid gap-2 sm:grid-cols-3"><Button type="button" variant="outline" disabled={busy || text.trim() === directive.directiveText} onClick={() => onSave(directive, text)} className="rounded-xl bg-white">حفظ فقط</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => onCancel(directive.id)} className="rounded-xl text-rose-700">إلغاء</Button><Button type="button" disabled={busy || text.trim().length < 3} onClick={() => onSubmit(directive, text)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}سلّم النص الظاهر إلى Manus</Button></div> : <p className="mt-3 text-[11px] font-bold text-slate-500">يُنتظر الإيصال؛ لا يمكن تعديل النص أو تسليمه مرتين.</p>}
-    <p className="mt-2 text-[10px] leading-5 text-slate-400">زر التسليم يحفظ أي تعديل ظاهر ثم يسلّمه في الخطوة نفسها. لا يبدأ Manus ولا تُنشأ مسودة بريد قبله.</p>
+    {dispatch.delayed ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-bold leading-5 text-amber-900">تأخر التحديث من Manus. التوجيه محفوظ؛ لا نعيده تلقائيًا ولا نعده منجزًا.</p> : null}
+    {dispatch.failureMessage ? <p className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[11px] font-bold leading-5 text-rose-800">سبب واضح: {dispatch.failureMessage}</p> : null}
+    {dispatch.executionSummary ? <p className="mt-2 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-2 text-[11px] leading-5 text-emerald-900">نتيجة التنفيذ: {dispatch.executionSummary}</p> : null}
+    {Array.isArray(dispatch.lifecycleResults) && dispatch.lifecycleResults.length ? <div className="mt-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] leading-5 text-slate-700"><p className="font-black">نتائج مسارات الملف</p>{dispatch.lifecycleResults.map((result: string, index: number) => <p key={index} className="mt-1">{result}</p>)}</div> : null}
+    {dispatch.mailboxDraftRef ? <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-bold leading-5 text-amber-900">مسودة بريد: {dispatch.mailboxDraftRef} — لم تُرسل.</p> : null}
+    {editable ? <div className="mt-3 grid gap-2 sm:grid-cols-3"><Button type="button" variant="outline" disabled={busy || text.trim() === directive.directiveText} onClick={() => onSave(directive, text)} className="rounded-xl bg-white">حفظ فقط</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => onCancel(directive.id)} className="rounded-xl text-rose-700">إلغاء</Button><Button type="button" disabled={busy || text.trim().length < 3} onClick={() => onSubmit(directive, text)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]">{busy ? <Loader2 className="ms-2 h-4 w-4 animate-spin" /> : null}سلّم النص الظاهر إلى Manus</Button></div> : <p className="mt-3 text-[11px] font-bold text-slate-500">{dispatch.completed ? "الإيصال مكتمل ومحفوظ." : isSubmitting ? "نراقب الإيصال؛ الوصول أو الخطوة التالية لا يعنيان الإنجاز." : "لا يمكن تعديل النص أو تسليمه مرتين."}</p>}
+    <p className="mt-2 text-[10px] leading-5 text-slate-400">زر التسليم يحفظ أي تعديل ظاهر ثم يضعه في قناة Manus. لا يُعد العمل واصلًا إلا عند تأكيد التسليم، ولا منجزًا إلا بإيصال تنفيذ.</p>
   </div>;
 }
 
@@ -954,25 +1046,58 @@ function WorkOutputCard({ entry }: { entry: any }) {
   </Card>;
 }
 
+function LifecycleLanesPanel({ lanes }: { lanes: LifecycleLaneView[] }) {
+  const laneOrder: LifecycleLaneView["kind"][] = ["payment", "deliverable", "external_response"];
+  const byKind = new Map(lanes.map(lane => [lane.kind, lane]));
+  return <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black text-[#1d6577]">مسارات مستقلة</p><h2 className="mt-1 text-xl font-black text-slate-950">السداد والتسليم والرد</h2><p className="mt-1 text-sm leading-7 text-slate-500">لا يغلق السداد التقرير، ولا تبدأ متابعة الرد قبل الإرسال الفعلي.</p></div></div>
+    <div className="mt-4 grid gap-3 lg:grid-cols-3">{laneOrder.map(kind => {
+      const lane = byKind.get(kind);
+      const kindMeta = lifecycleKindMeta[kind];
+      if (!lane) return <div key={kind} className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4"><Badge variant="outline" className={`rounded-full ${kindMeta.className}`}>{kindMeta.label}</Badge><p className="mt-4 text-sm font-bold text-slate-500">لا توجد حالة موثقة لهذا المسار بعد.</p></div>;
+      const view = describeLifecycleLane(lane);
+      const ownerLabel = view.owner === "human" ? "الدور التالي: المالك" : view.owner === "manus" ? "الدور التالي: Manus" : view.owner === "team" ? "الدور التالي: الفريق" : view.waiting ? "الدور التالي: طرف خارجي أو شرط سابق" : "لا توجد خطوة تالية مسجلة";
+      const statusLabel = lane.status === "paid_owner_reported" ? "مسدد بإفادة المالك" : lane.status === "awaiting_owner_send" ? "بانتظار مراجعة وإرسال المالك" : lane.status === "waiting_external" ? "بانتظار الطرف الخارجي" : lane.status;
+      return <article key={lane.key} className="rounded-2xl border border-slate-200 bg-[#fbfcfb] p-4"><div className="flex flex-wrap items-start justify-between gap-2"><Badge variant="outline" className={`rounded-full ${kindMeta.className}`}>{kindMeta.label}</Badge><Badge variant="outline" className={`rounded-full ${view.waiting ? "border-amber-200 bg-amber-50 text-amber-900" : "border-slate-200 bg-slate-50 text-slate-700"}`}>{statusLabel}</Badge></div><h3 className="mt-4 text-sm font-black leading-7 text-slate-950">{lane.title}</h3><p className="mt-3 text-[11px] font-bold leading-6 text-slate-600">{view.sourceLabel}</p>{lane.evidenceReference ? <p className="mt-2 rounded-lg bg-white px-2.5 py-2 text-[11px] leading-5 text-slate-600">المرجع: {lane.evidenceReference}</p> : null}{lane.sourceText ? <p className="mt-2 line-clamp-3 text-[11px] leading-5 text-slate-500">{lane.sourceText}</p> : null}<div className="mt-4 border-t border-slate-100 pt-3 text-[11px] font-bold"><p className={view.waiting ? "text-amber-900" : "text-slate-600"}>{ownerLabel}</p>{view.dueAt ? <p className={`mt-1 ${view.due ? "text-rose-700" : "text-slate-400"}`}>موعد الاستحقاق: <bdi dir="ltr">{formatDateTime(view.dueAt)}</bdi></p> : null}{view.attentionAt ? <p className="mt-1 text-slate-400">وقت الانتباه الداخلي (ليس استحقاقًا): <bdi dir="ltr">{formatDateTime(view.attentionAt)}</bdi></p> : null}{lane.nextActionTitle ? <p className="mt-1 text-[#1d6577]">الخطوة التالية: {lane.nextActionTitle}</p> : null}</div></article>;
+    })}</div>
+  </section>;
+}
+
 function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onActionChange, onProposalChange, onRecordChange, onFocusBack, onChanged }: { workFileId: number | null; focusKind: ExecutiveFocusKind | null; focusId: number | null; open: boolean; onOpenChange: (open: boolean) => void; onActionChange: (actionId: number | null) => void; onProposalChange: (proposalId: number) => void; onRecordChange: (kind: Exclude<ExecutiveFocusKind, "action" | "proposal">, id: number) => void; onFocusBack: () => void; onChanged: () => void }) {
-  const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, { enabled: open && Boolean(workFileId) });
+  const detailQuery = trpc.comoNext.getWorkFile.useQuery({ workFileId: workFileId || 1 }, {
+    enabled: open && Boolean(workFileId),
+    refetchInterval: query => (query.state.data?.stagedDirectives || []).some((directive: any) => describeDirectiveDispatch(directive).active) ? 5_000 : false,
+    refetchIntervalInBackground: false,
+  });
+  const utils = trpc.useUtils();
   const [, navigate] = useLocation();
   const [selectedStage, setSelectedStage] = useState<WorkFileStage>("now");
   const [selectedMemoryId, setSelectedMemoryId] = useState<number | null>(null);
   useEffect(() => {
     const refreshStagedDirective = (event: Event) => {
       const staged = event as CustomEvent<{ workFileId?: number }>;
-      if (Number(staged.detail?.workFileId) === Number(workFileId)) void detailQuery.refetch();
+      if (Number(staged.detail?.workFileId) !== Number(workFileId)) return;
+      void Promise.all([
+        utils.comoNext.getWorkFile.invalidate({ workFileId: Number(workFileId) }),
+        utils.comoNext.listStagedDirectives.invalidate({ workFileId: Number(workFileId), includeHistory: true }),
+        utils.comoNext.getOverview.invalidate(),
+      ]);
     };
     window.addEventListener("como-next:directive-staged", refreshStagedDirective);
     return () => window.removeEventListener("como-next:directive-staged", refreshStagedDirective);
-  }, [detailQuery, workFileId]);
+  }, [utils, workFileId]);
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
   const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;
   const hasPendingCommunications = data?.communications.some((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) ?? false;
   const hasPendingMeetings = data?.meetings.some((meeting: any) => ["planned", "confirmed"].includes(meeting.meetingStatus) || meeting.pendingProposalCount > 0 || meeting.latestMinutesStatus === "draft") ?? false;
   const hasPendingIntake = (data?.intakeProposals?.length || 0) > 0;
+  const lifecycleLanes = (data?.lifecycleLanes || []) as LifecycleLaneView[];
+  const hasOpenLifecycleLane = lifecycleLanes.some(lane => !["paid_owner_reported", "paid_document_verified", "completed", "verified", "cancelled"].includes(lane.status));
+  const hasPendingDirective = (data?.stagedDirectives || []).some((directive: any) => {
+    const dispatch = describeDirectiveDispatch(directive);
+    return directive.status === "pending" || directive.status === "failed" || dispatch.active || dispatch.state === "delivery_unknown";
+  });
   const isClosed = data?.workFile.workFileStatus === "closed" || data?.workFile.workFileStatus === "cancelled";
   const focusedAction = focusKind === "action" && focusId ? data?.actions.find((action: any) => action.id === focusId) : null;
   const focusedDecision = focusKind === "decision" && focusId ? data?.decisions.find((decision: any) => decision.id === focusId) : null;
@@ -980,6 +1105,9 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const focusedMeeting = focusKind === "meeting" && focusId ? data?.meetings.find((meeting: any) => meeting.id === focusId) : null;
   const activeActions = data?.actions.filter((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) || [];
   const attentionActions = activeActions.filter(actionNeedsAttentionNow);
+  const ownerActionCount = attentionActions.filter((a:any)=>a.ownerType === "human" && a.actionStatus !== "waiting_external").length;
+  const manusActionCount = attentionActions.filter((a:any)=>a.ownerType === "manus" && a.actionStatus !== "waiting_external").length;
+  const externalWaitingCount = activeActions.filter((a:any)=>a.actionStatus === "waiting_external").length;
   const historicalActions = data?.actions.filter((action: any) => ["verified", "cancelled"].includes(action.actionStatus)) || [];
   const evidenceEntries = data?.memory.filter((entry: any) => entry.memoryType === "material" || entry.memoryType === "note") || [];
   const outputEntries = data?.memory.filter((entry: any) => entry.memoryType === "work_product") || [];
@@ -1011,7 +1139,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
             : activeMeeting
               ? "موعدك التالي"
             : manusAction
-              ? "ينفذه Manus الآن"
+              ? "عمل مسند إلى Manus"
               : waitingAction
                 ? "بانتظار الطرف الآخر"
                 : "الوضع الآن";
@@ -1028,7 +1156,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
     setSelectedMemoryId(null);
   }, [workFileId]);
   const stageCounts: Record<WorkFileStage, number> = {
-    now: activeMeetingNeedsOutcome || attentionActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length ? 1 : 0,
+    now: activeMeetingNeedsOutcome || attentionActions.length || pendingDecisions.length || activeCommunications.length || data?.intakeProposals.length || hasPendingDirective ? 1 : 0,
     evidence: evidenceEntries.length + (data?.communications.filter((communication: any) => communication.communicationStatus === "received").length || 0),
     outputs: outputEntries.length + activeCommunications.length + (data?.intakeProposals.length || 0),
     decisions: data?.decisions.length || 0,
@@ -1065,12 +1193,14 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
                 <Card className="rounded-[30px] border-amber-100 bg-[linear-gradient(145deg,#fffdf7_0%,#fff6dc_100%)] p-5 shadow-sm sm:p-7">
                   <div className="flex items-center gap-3"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-800"><Sparkles className="h-5 w-5" /></span><div><p className="text-[10px] font-black text-amber-700">{nowLabel}</p><h2 className="text-xl font-black text-slate-950">{activeMeetingNeedsOutcome ? `أخبر Manus بما حدث في ${activeMeeting.title}` : pendingDecisions[0]?.title || data.intakeProposals[0]?.title || ownerCommunication?.subject || ownerAction?.title || activeMeeting?.title || currentAction?.title || (isClosed ? "الملف مكتمل ومحفوظ بالسجل" : "لا توجد خطوة مفتوحة")}</h2></div></div>
                   {activeMeetingNeedsOutcome ? <p className="mt-5 text-sm leading-8 text-slate-700">سجّل ما اتُّفق عليه، ما رُفض أو بقي مفتوحًا، ومن سيفعل ماذا. يتولى Manus تحليل النتيجة وتحديث الملف وفتح الأعمال الداخلية التالية.</p> : pendingDecisions[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">{pendingDecisions[0].question}</p> : data.intakeProposals[0] ? <p className="mt-5 text-sm leading-8 text-slate-700">لا يتوقف العمل هنا إلا لأن المقترح قد ينشئ قرارًا أو مراسلة أو التزامًا يحتاج صلاحيتك.</p> : ownerCommunication ? <p className="mt-5 text-sm leading-8 text-slate-700">أعد Manus هذه المسودة من القرار المسجل. راجع النص ثم اعتمده أو عدله أو ألغِه؛ لن تُرسل من هذا المسار تلقائيًا.</p> : ownerAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{ownerAction.description}</p> : activeMeeting ? <p className="mt-5 text-sm leading-8 text-slate-700">افتح الاجتماع للتحضير أو لتسجيل ما حدث؛ يتولى Manus التحليل والخطوة التالية.</p> : currentAction?.description ? <p className="mt-5 text-sm leading-8 text-slate-700">{currentAction.description}</p> : null}
-                  <div className="mt-5 flex flex-wrap gap-2">{activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
+                  <div className="mt-5 flex flex-wrap gap-2">{hasPendingDirective ? <Button onClick={() => document.getElementById("work-file-directives")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">توجيه Manus يحتاج متابعة</Button> : activeMeetingNeedsOutcome ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">أخبر Manus بما حدث</Button> : pendingDecisions[0] ? <Button onClick={() => onRecordChange("decision", pendingDecisions[0].id)} className="rounded-xl bg-rose-700 text-white hover:bg-rose-800">فتح القرار المطلوب</Button> : data.intakeProposals[0] ? <Button onClick={() => onProposalChange(data.intakeProposals[0].id)} className="rounded-xl bg-violet-700 text-white hover:bg-violet-800">فتح المراجعة اللازمة</Button> : ownerCommunication ? <Button onClick={() => onRecordChange("communication", ownerCommunication.id)} className="rounded-xl bg-amber-700 text-white hover:bg-amber-800">مراجعة المسودة</Button> : ownerAction ? <Button onClick={() => onActionChange(ownerAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">تسجيل ما حدث</Button> : activeMeeting ? <Button onClick={() => onRecordChange("meeting", activeMeeting.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الاجتماع</Button> : currentAction ? <Button onClick={() => onActionChange(currentAction.id)} className="rounded-xl bg-[#163847] text-white hover:bg-[#22566a]">فتح الخطوة الجارية</Button> : null}</div>
                 </Card>
-                <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{attentionActions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.intakeProposals.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">مقترح للمراجعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.meetings.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">اجتماع مرتبط</p></div></div></Card>
+                <Card className="rounded-[30px] border-[#cfe3df] bg-[#f4faf8] p-5 shadow-sm sm:p-7"><p className="text-[10px] font-black text-[#1d6577]">الحقيقة التشغيلية</p><div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{ownerActionCount}</p><p className="mt-1 text-[10px] font-bold text-slate-400">إجراء مطلوب منك الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{pendingDecisions.length}</p><p className="mt-1 text-[10px] font-bold text-slate-400">قرار مطلوب الآن</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{data.pendingDirectiveCount || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-400">توجيهات تحتاج متابعة</p></div><div className="rounded-2xl bg-white p-4"><p className="text-2xl font-black text-slate-950">{externalWaitingCount}</p><p className="mt-1 text-[10px] font-bold text-slate-400">انتظار الطرف الخارجي</p></div></div></Card>
               </div>
+              <LifecycleLanesPanel lanes={lifecycleLanes} />
+              {hasPendingDirective ? <div id="work-file-directives" className="rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm font-bold leading-7 text-violet-950">يوجد توجيه محفوظ أو في مسار Manus يحتاج متابعة ظاهرة. لا يمثل وجود خطوة تالية إيصال إنجاز.</div> : null}
               {!isClosed ? <WorkFileUpdateComposer workFileId={data.workFile.id} updates={(data.updates || []).filter((update: any) => !update.actionId)} onChanged={onChanged} /> : null}
-              <div className="grid gap-3 sm:grid-cols-3">{!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions || hasPendingCommunications || hasPendingMeetings || hasPendingIntake} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}<Button onClick={() => navigate(`/como-next/projects/${data.workFile.projectId}`)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]"><FolderOpen className="ms-2 h-4 w-4" />ملف المشروع</Button><Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />بطاقة المشروع</Button></div>
+              <div className="grid gap-3 sm:grid-cols-3">{!isClosed ? <CloseWorkFileDialog workFileId={data.workFile.id} disabled={hasOpenActions || hasPendingDecisions || hasPendingCommunications || hasPendingMeetings || hasPendingIntake || hasPendingDirective || hasOpenLifecycleLane} onClosed={async () => { await onChanged(); onOpenChange(false); }} /> : <div className="flex min-h-11 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-800"><CheckCheck className="ms-2 h-4 w-4" />الملف مغلق بدليل</div>}<Button onClick={() => navigate(`/como-next/projects/${data.workFile.projectId}`)} className="rounded-xl bg-[#1e6478] text-white hover:bg-[#18566a]"><FolderOpen className="ms-2 h-4 w-4" />ملف المشروع</Button><Button variant="outline" onClick={() => navigate(`/project/${data.workFile.projectId}`)} className="rounded-xl bg-white"><Building2 className="ms-2 h-4 w-4" />بطاقة المشروع</Button></div>
             </section> : null}
 
             {selectedStage === "evidence" ? <section>

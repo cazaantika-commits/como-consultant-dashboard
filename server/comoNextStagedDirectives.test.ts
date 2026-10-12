@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { directiveRequestsCommunicationDraft } from "./services/comoNextExecutiveDirectives";
 
 const service = readFileSync("server/services/comoNextStagedDirectives.ts", "utf8");
+const dispatch = readFileSync("server/services/comoManusDispatch.ts", "utf8");
 const schema = readFileSync("drizzle/schema.ts", "utf8");
 const migration = readFileSync("drizzle/0096_como_next_staged_directives.sql", "utf8");
 const saraRouter = readFileSync("server/routers/saraRealtime.ts", "utf8");
@@ -43,33 +44,34 @@ describe("COMO Next staged directives", () => {
   it("requires the authenticated app owner and atomically claims exactly one idempotent submission", () => {
     expect(comoRouter).toContain("assertAuthenticatedAppOwner");
     expect(comoRouter).toContain("submitStagedDirective:");
-    expect(service).toContain("SET status = 'submitting'");
-    expect(service).toContain("AND status IN ('pending', 'failed')");
+    expect(dispatch).toContain("status='submitting'");
+    expect(dispatch).toContain("['pending','failed','submitting']");
     expect(service).toContain("CONFLICT");
-    expect(service).toContain("idempotencyKey: `staged-directive:${directive.id}`");
-    expect(service).toContain("recoverAppliedSubmission");
-    expect(service).toContain("executeExecutiveDirectiveCommand");
+    expect(dispatch).toContain("idempotencyKey:`staged-directive:${input.directiveId}`");
+    expect(service).toContain("recoverDispatchFromAppliedReceipt");
+    expect(service).not.toContain("executeExecutiveDirectiveCommand(");
+    expect(service).toContain("deliverQueuedManusDispatch");
   });
 
   it("keeps the exact dossier context editable before delivery and collapses delivery receipts", () => {
     expect(kitchenUi).toContain("listStagedDirectives.useQuery");
-    expect(kitchenUi).toContain("refetchInterval: 3_000");
+    expect(kitchenUi).toContain("5_000 : false");
     expect(kitchenUi).toContain("StagedDirectiveCard");
     expect(kitchenUi).toContain("سلّم التوجيه إلى Manus");
     expect(kitchenUi).toContain('if (text !== directive.directiveText)');
     expect(kitchenUi).toContain('onSubmit(directive, text)');
-    expect(kitchenUi).toContain("سجل تسليم مختصر");
+    expect(kitchenUi).toContain("StagedDirectiveCard");
     expect(service).toContain('const activeStatuses: DirectiveStatus[] = ["pending", "submitting", "failed"]');
     expect(service).toContain('eq(comoNextStagedDirectives.status, "submitted")');
-    expect(service).toContain('return [...active, ...delivered].map(publicDirective)');
+    expect(service).toContain("const directives = [...active, ...delivered]");
     expect(kitchenUi).toContain("como-next:directive-staged");
-    expect(kitchenUi).toContain("لا يبدأ Manus ولا تُنشأ مسودة بريد");
+    expect(kitchenUi).toContain("لا يُعد العمل واصلًا إلا عند تأكيد التسليم");
   });
 
   it("presents Sara as the capture channel for the owner's request and delivers the text visible after editing", () => {
     expect(kitchenUi).toContain("طلبك عبر سارة");
     expect(kitchenUi).toContain("طلبك إلى Manus");
-    expect(kitchenUi).toContain("زر التسليم يحفظ أي تعديل ظاهر ثم يسلّمه في الخطوة نفسها");
+    expect(kitchenUi).toContain("زر التسليم يحفظ أي تعديل ظاهر ثم يضعه في قناة Manus");
     expect(kitchenUi).toContain("سلّم النص الظاهر إلى Manus");
     expect(kitchenUi).not.toContain('directive.source === "sara" ? "من سارة"');
   });

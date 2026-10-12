@@ -9,13 +9,14 @@ import { SARA_LIVE_AVATAR_ID, createSaraLiveAvatarToken } from "../liveAvatar";
 import { verifyToken } from "./commandCenter";
 import {
   createSaraRealtimeClientSecret,
+  isSaraExecutionAuthorized,
   lookupExecutiveWorkspace,
   SARA_REALTIME_MODEL,
   SARA_REALTIME_VOICE,
 } from "../services/saraRealtime";
 import { readExecutiveWorkFile } from "../services/saraWorkFileReader";
 import { resolveOwnerUserIdForSara } from "../services/comoNextIntake";
-import { stageExecutiveDirectiveCommand } from "../services/comoNextStagedDirectives";
+import { stageExecutiveDirectiveCommand, submitStagedExecutiveDirectiveCommand } from "../services/comoNextStagedDirectives";
 import {
   completeSaraBriefing,
   getSaraBriefingStatus,
@@ -30,7 +31,14 @@ const executiveDirectiveArguments = z.object({
   directive_text: z.string().trim().min(3).max(10_000),
   action_id: z.number().int().positive().nullable(),
   current_decision_id: z.number().int().positive().nullable(),
+  execution_authorized: z.boolean(),
 });
+
+function requireAbdulrahman(member: { memberId: string }) {
+  if (member.memberId !== "abdulrahman") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "سارة التنفيذية متاحة لعبد الرحمن فقط" });
+  }
+}
 
 function getSaraOpenAiKey() {
   return process.env.COMO_OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY || "";
@@ -76,6 +84,21 @@ export const saraRealtimeRouter = router({
     return getSaraBriefingStatus(member.memberId);
   }),
 
+  /** Read-only status surface for the live room; it deliberately returns no token, storage URL, or dispatch endpoint. */
+  directiveStatus: publicProcedure
+    .input(tokenInput.extend({ workFileId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const member = await verifyToken(input.token);
+      requireAbdulrahman(member);
+      await resolveOwnerUserIdForSara(member.memberId);
+      return readExecutiveWorkFile(member, JSON.stringify({
+        work_file_id: input.workFileId,
+        focus: "overview",
+        question: null,
+        document_id: null,
+      }));
+    }),
+
   prepareBriefing: publicProcedure
     .input(tokenInput.extend({ mode: briefingMode, sessionId: z.string().max(200).optional().nullable() }))
     .mutation(async ({ input }) => {
@@ -102,6 +125,7 @@ export const saraRealtimeRouter = router({
       const member = await verifyToken(input.token);
       const normalizedMember = { memberId: member.memberId, nameAr: member.nameAr, role: member.role };
       if (input.toolName === "direct_manus_in_work_file") {
+        requireAbdulrahman(member);
         let parsed: z.infer<typeof executiveDirectiveArguments>;
         try { parsed = executiveDirectiveArguments.parse(JSON.parse(input.arguments || "{}")); }
         catch { throw new TRPCError({ code: "BAD_REQUEST", message: "لم تتمكن سارة من تحديد التوجيه وملف الموضوع بدقة" }); }
@@ -117,13 +141,29 @@ export const saraRealtimeRouter = router({
           sourceMemberId: member.memberId,
           stageKey,
         });
+        if (!isSaraExecutionAuthorized(parsed.execution_authorized)) {
+          return {
+            staged: true as const,
+            executionAuthorized: false as const,
+            executionStarted: false as const,
+            directiveId: result.directive.id,
+            workFileId: parsed.work_file_id,
+            status: result.directive.status,
+            message: "حُفظ التوجيه داخل ملف الموضوع للمراجعة. لن يبدأ Manus ولن تُنشأ مسودة بريد قبل تفويض صريح بالتنفيذ." as const,
+          };
+        }
+        const submission = await submitStagedExecutiveDirectiveCommand({ userId, directiveId: result.directive.id });
         return {
           staged: true as const,
+          executionAuthorized: true as const,
+          // The submit command only durably queues/delivers an event. A queued row
+          // is not evidence that Manus has started or completed the work.
           executionStarted: false as const,
           directiveId: result.directive.id,
           workFileId: parsed.work_file_id,
-          status: result.directive.status,
-          message: "حُفظ التوجيه داخل ملف الموضوع للمراجعة. لن يبدأ Manus ولن تُنشأ مسودة بريد قبل ضغط المالك «سلّم التوجيه إلى Manus»." as const,
+          status: submission.directive.status,
+          dispatch: (submission.directive as any).dispatch || null,
+          message: "حُفظ التوجيه وسُلّم إلى قناة Manus. لا يعني ذلك وصوله أو اكتمال تنفيذه حتى تؤكده حالة الإيصال." as const,
         };
       }
       if (input.toolName === "lookup_executive_workspace") {

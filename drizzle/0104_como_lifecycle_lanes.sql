@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS como_next_lifecycle_lanes (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ user_id INT NOT NULL,
+ project_id INT NOT NULL,
+ work_file_id INT NOT NULL,
+ lane_key VARCHAR(128) NOT NULL,
+ kind ENUM('payment','deliverable','external_response') NOT NULL,
+ title VARCHAR(500) NOT NULL,
+ status VARCHAR(64) NOT NULL,
+ source_kind VARCHAR(64) NOT NULL,
+ evidence_reference TEXT NOT NULL,
+ source_text LONGTEXT NOT NULL,
+ recorded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ action_id INT NULL,
+ next_action_id INT NULL,
+ next_action_title VARCHAR(500) NULL,
+ next_owner_type ENUM('human','manus','team') NULL,
+ due_at TIMESTAMP NULL,
+ attention_at TIMESTAMP NULL,
+ UNIQUE KEY como_lifecycle_file_key_uq(work_file_id,lane_key),
+ KEY como_lifecycle_kind_status_idx(kind,status),
+ CONSTRAINT como_lifecycle_file_fk FOREIGN KEY(project_id,work_file_id) REFERENCES como_next_work_files(project_id,id) ON DELETE RESTRICT
+);

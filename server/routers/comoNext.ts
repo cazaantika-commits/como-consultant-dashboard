@@ -65,6 +65,7 @@ import {
 import { executeExecutiveDirectiveCommand } from "../services/comoNextExecutiveDirectives";
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 import { assertAuthenticatedAppOwner } from "../services/comoAppOwner";
+import { readWorkFileLifecycle } from "../services/comoWorkFileLifecycle";
 import {
   cancelStagedExecutiveDirectiveCommand,
   listWorkFileStagedDirectives,
@@ -676,6 +677,8 @@ export const comoNextRouter = router({
         .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id));
       const intakeProposals = await listPendingIntakeProposals(ctx.user.id, input.workFileId);
       const updates = await listWorkFileUpdates(ctx.user.id, input.workFileId);
+      const lifecycleLanes = await readWorkFileLifecycle(input.workFileId);
+      const stagedDirectives = await listWorkFileStagedDirectives({ userId: ctx.user.id, workFileId: input.workFileId, includeHistory: true });
       const documentsByMemory = new Map<number, any[]>();
       for (const row of getRows<any>(documentsResult)) {
         const memoryId = Number(row.memoryId);
@@ -709,6 +712,9 @@ export const comoNextRouter = router({
         communications,
         intakeProposals,
         updates,
+        lifecycleLanes,
+        pendingDirectiveCount: stagedDirectives.filter(item => ["pending", "submitting", "failed"].includes(item.status)).length,
+        stagedDirectives,
         parties: getRows<any>(partiesResult).map(row => ({ ...row, id: Number(row.id) })),
         accessRole: access.role,
       };

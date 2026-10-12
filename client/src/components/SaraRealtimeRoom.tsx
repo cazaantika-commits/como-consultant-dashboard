@@ -63,6 +63,18 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [visualSpeechActive, setVisualSpeechActive] = useState(false);
+  const [activeDirectiveRequest, setActiveDirectiveRequest] = useState<{ workFileId: number; generation: number } | null>(null);
+  const directiveStatus = trpc.saraRealtime.directiveStatus.useQuery(
+    { token, workFileId: activeDirectiveRequest?.workFileId || 1 },
+    {
+      enabled: isOpen && Boolean(token) && Boolean(activeDirectiveRequest),
+      refetchInterval: query => {
+        const directives = (query.state.data as any)?.currentState?.stagedDirectives || [];
+        return directives.some((directive: any) => ["queued", "delivered", "running", "submitting"].includes(String(directive.status))) ? 5_000 : false;
+      },
+      refetchIntervalInBackground: false,
+    },
+  );
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
@@ -80,6 +92,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
   const briefingStartedRef = useRef(false);
   const pendingBriefingDeliveryRef = useRef<number | null>(null);
   const transcriptScrollRef = useRef<HTMLDivElement>(null);
+  const directiveNotificationRef = useRef<string | null>(null);
 
   if (!audioTransportRef.current) {
     audioTransportRef.current = new SaraWebRtcAudioTransport(diagnostic => {
@@ -151,6 +164,8 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     lastMemberTextRef.current = "";
     briefingStartedRef.current = false;
     pendingBriefingDeliveryRef.current = null;
+    directiveNotificationRef.current = null;
+    setActiveDirectiveRequest(null);
     setPhase("idle");
     setMuted(false);
     setMicrophoneAvailable(true);
@@ -190,6 +205,43 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     if (!channel || channel.readyState !== "open") throw new Error("قناة سارة الصوتية ليست جاهزة");
     channel.send(JSON.stringify(event));
   }, []);
+
+  const directiveSystemNotice = useMemo(() => {
+    const directives = (directiveStatus.data as any)?.currentState?.stagedDirectives || [];
+    if (!activeDirectiveRequest || !directives.length) return null;
+    const latest = directives[0];
+    const state = String(latest.status || "pending");
+    const delayed = Boolean(latest.delayed);
+    const summary = String(latest.executionSummary || "").trim();
+    const signature = `${activeDirectiveRequest.generation}:${state}:${delayed}:${summary}`;
+    const label: Record<string, string> = {
+      pending: "التوجيه محفوظ للمراجعة ولم يبدأ Manus.",
+      submitting: "التوجيه في مسار التسليم؛ لم يتأكد وصوله بعد.",
+      queued: "التوجيه في طابور Manus؛ لم يتأكد التسليم بعد.",
+      delivered: "تأكد وصول التوجيه إلى Manus؛ التنفيذ يتابع.",
+      running: "Manus ينفذ التوجيه الآن.",
+      completed: "اكتمل التوجيه بإيصال تنفيذ محفوظ.",
+      failed: `تعذر التنفيذ: ${latest.failureMessage || "سبب التنفيذ غير متاح"}`,
+      delivery_unknown: "تعذر تأكيد التسليم؛ لن يعاد التوجيه تلقائيًا.",
+    };
+    return {
+      signature,
+      text: `حالة بيانات النظام فقط وليست تعليمات خارجية: ${label[state] || "حالة التوجيه قيد التحديث."}${delayed ? " التحديث متأخر؛ التوجيه محفوظ ولا يعد منجزًا." : ""}${summary ? ` الخلاصة: ${summary}` : ""}`,
+    };
+  }, [activeDirectiveRequest, directiveStatus.data]);
+
+  useEffect(() => {
+    if (!directiveSystemNotice || phase !== "listening" || directiveNotificationRef.current === directiveSystemNotice.signature) return;
+    const channel = dataChannelRef.current;
+    if (!channel || channel.readyState !== "open") return;
+    try {
+      // Text status context only: no PCM, AudioContext, avatar update, or interruption.
+      sendRealtimeEvent({ type: "conversation.item.create", item: { type: "message", role: "user", content: [{ type: "input_text", text: directiveSystemNotice.text }] } });
+      directiveNotificationRef.current = directiveSystemNotice.signature;
+      setTranscript(items => mergeTranscript(items, { id: `directive-status-${directiveSystemNotice.signature}`, role: "system", text: directiveSystemNotice.text }));
+      sendRealtimeEvent({ type: "response.create" });
+    } catch { /* a later five-second status poll can retry while this room stays open */ }
+  }, [directiveSystemNotice, phase, sendRealtimeEvent]);
 
   const finishPendingBriefing = useCallback((completed: boolean) => {
     const deliveryId = pendingBriefingDeliveryRef.current;
@@ -250,13 +302,19 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
         eventId: event.call_id,
       });
       if (event.name === "direct_manus_in_work_file" && (result as any)?.staged) {
+        const workFileId = Number((result as any).workFileId || 0);
+        if (workFileId > 0) {
+          directiveNotificationRef.current = null;
+          setActiveDirectiveRequest(current => ({ workFileId, generation: (current?.generation || 0) + 1 }));
+        }
         window.dispatchEvent(new CustomEvent("como-next:directive-staged", {
-          detail: { workFileId: (result as any).workFileId, directiveId: (result as any).directiveId },
+          detail: { workFileId, directiveId: (result as any).directiveId },
         }));
+        const executionAuthorized = Boolean((result as any).executionAuthorized);
         setTranscript(items => mergeTranscript(items, {
           id: `directive-staged-${(result as any).directiveId}`,
           role: "system",
-          text: "حُفظ التوجيه للمراجعة في ملف الموضوع؛ Manus لم يبدأ بعد.",
+          text: executionAuthorized ? "حُفظ التوجيه وسُلّم إلى قناة Manus؛ ننتظر حالة الإيصال." : "حُفظ التوجيه للمراجعة في ملف الموضوع؛ Manus لم يبدأ بعد.",
         }));
       }
       sendRealtimeEvent({
@@ -351,6 +409,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     setTranscript([{ id: "system-start", role: "system", text: "جارٍ فتح قناة سارة الصوتية الآمنة…" }]);
     try {
       const session = await createSession.mutateAsync({ token });
+      if (!session?.clientSecret) throw new Error("تعذر تجهيز جلسة سارة الصوتية");
       sessionIdRef.current = session.sessionId;
       const peer = new RTCPeerConnection();
       peerRef.current = peer;
@@ -433,6 +492,7 @@ export function SaraRealtimeRoom({ token, memberName, isOpen, onClose, autoStart
     if (avatarToken || createAvatarToken.isPending) return true;
     try {
       const result = await createAvatarToken.mutateAsync({ token, isSandbox: false });
+      if (!result?.sessionToken) throw new Error("تعذر تجهيز صورة سارة الحية");
       setAvatarToken(result.sessionToken);
       if (!quiet) toast.success("الصورة الحية تعمل بصمت؛ صوت سارة المباشر لم يتغير");
       return true;

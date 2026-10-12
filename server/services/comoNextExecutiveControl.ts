@@ -79,6 +79,15 @@ async function releaseFailedAction(userId: number, action: NonNullable<Awaited<R
   }));
 }
 
+async function dbUpdateActionWaiting(userId:number,actionId:number,nextActionId:number|null,nextDecisionId:number|null) {
+  const db=await getDb();if(!db)throw new Error("database_unavailable");
+  const [action]=await db.select().from(comoNextActions).where(eq(comoNextActions.id,actionId)).limit(1);
+  if(!action)throw new Error("action_missing");
+  await requireProjectAccess(db,action.projectId,userId,"write");
+  await db.update(comoNextActions).set({actionStatus:"waiting_external",evidenceReference:`اعتماد داخلي غير منجز: إجراء ${nextActionId||"لا يوجد"} / قرار ${nextDecisionId||"لا يوجد"}`}).where(eq(comoNextActions.id,actionId));
+  await db.transaction(tx=>appendEvent(tx,{userId,projectId:action.projectId,workFileId:action.workFileId,actionId,actorType:"manus",actorUserId:null,eventType:"executive_action_dependency_recorded",summary:"العمل لم يكتمل؛ حُفظ الاعتماد على الخطوة التالية دون اعتباره إنجازًا",payload:{nextActionId,nextDecisionId,completed:false}}));
+}
+
 async function executeManusAction(userId: number, actionId: number) {
   if (activeRuns.has(actionId)) return { skipped: "already_running" as const, nextActionId: null };
   activeRuns.add(actionId);
@@ -101,7 +110,7 @@ async function executeManusAction(userId: number, actionId: number) {
       directiveText: directive,
       executionSource: "executive_control",
     });
-    if (result.completedNow || result.nextActionId || result.nextDecisionId) {
+    if (result.completedNow) {
       await changeActionStatusCommand({ userId, actionId: action.id, nextStatus: "completed_pending_verification", actorType: "manus", actorUserId: null });
       await changeActionStatusCommand({
         userId,
@@ -115,6 +124,9 @@ async function executeManusAction(userId: number, actionId: number) {
         actorType: "manus",
         actorUserId: null,
       });
+    } else if (result.nextActionId || result.nextDecisionId) {
+      // A dependency/next task is traceable, but is not completion of this work.
+      await dbUpdateActionWaiting(userId, action.id, result.nextActionId, result.nextDecisionId);
     } else {
       await releaseFailedAction(userId, action, "لم ينتج التنفيذ مخرجًا أو خطوة تالية قابلة للتتبع");
     }
@@ -254,7 +266,7 @@ export async function runExecutiveControlLoopCommand(input: {
     operationCount += 1;
     const outcome = await executeManusAction(input.userId, actionId);
     if (!("skipped" in outcome) && !("error" in outcome)) executedActionIds.push(actionId);
-    if ("error" in outcome) failures.push({ kind: "manus_action", id: actionId, message: outcome.error });
+    if ("error" in outcome) failures.push({ kind: "manus_action", id: actionId, message: outcome.error || "execution_failed" });
     if (outcome.nextActionId && !uniqueActions.includes(outcome.nextActionId) && uniqueActions.length < maxItems) uniqueActions.push(outcome.nextActionId);
   }
 

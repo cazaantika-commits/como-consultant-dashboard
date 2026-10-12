@@ -9,6 +9,7 @@ import {
 } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { appendEvent, createCommunicationDraftCommand } from "./comoNextCommands";
+import { invoiceKeys } from "./comoWorkFileLifecycle";
 
 /**
  * This service is intentionally narrow.  It watches only future, persisted Sent
@@ -89,11 +90,12 @@ export type FinancePaymentSkipReason =
   | "not_exact_finance_envelope"
   | "not_explicit_payment_request";
 
-export type FinancePaymentTerminalReason = FinancePaymentSkipReason;
+export type FinancePaymentTerminalReason = FinancePaymentSkipReason | "invoice_paid_recorded";
 export type FinancePaymentDeferredReason = "reply_scan_incomplete" | "not_due" | "mailbox_import_or_processing_not_fresh";
 
 export type FinancePaymentFollowupStore = {
   isPolicyEnabled(): Promise<boolean>;
+  isInvoicePaidRecorded?(sent: FinancePaymentSent): Promise<boolean>;
   hasFreshCompletedImportAndProcessing(input: { userId: number; now: string; maxAgeMinutes: number }): Promise<boolean>;
   listCandidates(input: { userId: number; limit: number }): Promise<FinancePaymentSent[]>;
   recordTerminalDisposition(input: { sent: FinancePaymentSent; reason: FinancePaymentTerminalReason }): Promise<void>;
@@ -290,6 +292,11 @@ export class FinancePaymentFollowupReconciler {
         skipped.push({ sentEmailId: sent.id, reason: planned.skip });
         continue;
       }
+      if (await this.store.isInvoicePaidRecorded?.(sent)) {
+        await this.store.recordTerminalDisposition({ sent, reason: "invoice_paid_recorded" });
+        skipped.push({ sentEmailId: sent.id, reason: "invoice_paid_recorded" });
+        continue;
+      }
       plannedCandidates.push({ sent, plan: planned.plan });
     }
 
@@ -374,6 +381,16 @@ function sqlLikelyFinancePaymentRequest() {
 }
 
 export class DatabaseFinancePaymentFollowupStore implements FinancePaymentFollowupStore {
+  async isInvoicePaidRecorded(sent: FinancePaymentSent) {
+    if (!sent.workFileId) return false;
+    const keys = invoiceKeys(`${sent.subject} ${currentFinanceEmailText(sent.bodyText)}`);
+    if (keys.length !== 1) return false;
+    const db = await getDb();
+    if (!db) throw new Error("database_unavailable");
+    const result = await db.execute(sql`SELECT id FROM como_next_lifecycle_lanes WHERE work_file_id=${sent.workFileId} AND user_id=${sent.userId} AND lane_key=${`invoice:${keys[0]}`} AND kind='payment' AND status IN ('paid_owner_reported','paid_document_verified') LIMIT 1`);
+    const rows = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+    return Array.isArray(rows) && rows.length > 0;
+  }
   async isPolicyEnabled() {
     const db = await getDb();
     if (!db) throw new Error("database_unavailable");
@@ -650,6 +667,7 @@ export class DatabaseFinancePaymentFollowupStore implements FinancePaymentFollow
   }
 
   async saveThreadDraft(input: { plan: FinancePaymentPlan; sent: FinancePaymentSent; subject: string; body: string }) {
+    if (await this.isInvoicePaidRecorded(input.sent)) throw new Error("invoice_paid_no_reminder");
     const created = await createCommunicationDraftCommand({
       userId: input.plan.userId,
       workFileId: input.plan.workFileId,

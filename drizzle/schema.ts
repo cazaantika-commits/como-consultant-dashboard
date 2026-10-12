@@ -4087,3 +4087,63 @@ export const comoAppOwnerIdentity = mysqlTable("como_app_owner_identity", {
   uniqueIndex("como_app_owner_identity_user_uq").on(table.userId),
   uniqueIndex("como_app_owner_identity_open_id_uq").on(table.openId),
 ]);
+
+// Independent obligations: payment, deliverable and response never share completion.
+export const comoNextLifecycleLanes = mysqlTable("como_next_lifecycle_lanes", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("user_id").notNull(),
+  projectId: int("project_id").notNull(),
+  workFileId: int("work_file_id").notNull(),
+  laneKey: varchar("lane_key", { length: 128 }).notNull(),
+  kind: mysqlEnum("kind", ["payment", "deliverable", "external_response"]).notNull(),
+  title: varchar("title", { length: 500 }).notNull(),
+  status: varchar("status", { length: 64 }).notNull(),
+  sourceKind: varchar("source_kind", { length: 64 }).notNull(),
+  evidenceReference: text("evidence_reference").notNull(),
+  sourceText: longtext("source_text").notNull(),
+  recordedAt: timestamp("recorded_at", { mode: "string" }).defaultNow().notNull(),
+  actionId: int("action_id"),
+  nextActionId: int("next_action_id"),
+  nextActionTitle: varchar("next_action_title", { length: 500 }),
+  nextOwnerType: mysqlEnum("next_owner_type", ["human", "manus", "team"]),
+  dueAt: timestamp("due_at", { mode: "string" }),
+  attentionAt: timestamp("attention_at", { mode: "string" }),
+}, table => [
+  uniqueIndex("como_lifecycle_file_key_uq").on(table.workFileId, table.laneKey),
+  index("como_lifecycle_kind_status_idx").on(table.kind, table.status),
+  foreignKey({ name: "como_lifecycle_file_fk", columns: [table.projectId, table.workFileId], foreignColumns: [comoNextWorkFiles.projectId, comoNextWorkFiles.id] }).onDelete("restrict"),
+]);
+
+export const comoManusDispatchConfig = mysqlTable("como_manus_dispatch_config", {
+  id: tinyint("id").primaryKey(),
+  webhookUrl: text("webhook_url"),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+export const comoManusDispatches = mysqlTable("como_manus_dispatches", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  directiveId: bigint("directive_id", { mode: "number" }).notNull(),
+  state: mysqlEnum("state", ["queued", "delivered", "running", "completed", "failed", "delivery_unknown"]).default("queued").notNull(),
+  queuedAt: timestamp("queued_at", { mode: "string" }).defaultNow().notNull(),
+  deliveredAt: timestamp("delivered_at", { mode: "string" }),
+  startedAt: timestamp("started_at", { mode: "string" }),
+  lastProgressAt: timestamp("last_progress_at", { mode: "string" }),
+  completedAt: timestamp("completed_at", { mode: "string" }),
+  deliveryAttempts: int("delivery_attempts").default(0).notNull(),
+  error: text("error"),
+  claimToken: varchar("claim_token", { length: 96 }),
+  targetMetadata: longtext("target_metadata").notNull(),
+  executionSummary: longtext("execution_summary"),
+  resultJson: longtext("result_json"),
+  updateId: bigint("update_id", { mode: "number" }),
+  communicationDraftId: bigint("communication_draft_id", { mode: "number" }),
+  mailboxDraftRef: varchar("mailbox_draft_ref", { length: 500 }),
+  workProductId: bigint("work_product_id", { mode: "number" }),
+  nextActionId: bigint("next_action_id", { mode: "number" }),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+}, table => [
+  uniqueIndex("como_manus_dispatch_directive_uq").on(table.directiveId),
+  index("como_manus_dispatch_state_queue_idx").on(table.state, table.queuedAt),
+  index("como_manus_dispatch_progress_idx").on(table.lastProgressAt),
+  foreignKey({ name: "como_manus_dispatch_directive_fk", columns: [table.directiveId], foreignColumns: [comoNextStagedDirectives.id] }).onDelete("restrict"),
+]);

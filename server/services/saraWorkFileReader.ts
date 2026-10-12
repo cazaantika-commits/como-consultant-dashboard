@@ -6,6 +6,8 @@ import { PDFParse } from "pdf-parse";
 import { getDb } from "../db";
 import { storageGet } from "../storage";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
+import { listWorkFileStagedDirectives } from "./comoNextStagedDirectives";
+import { readWorkFileLifecycle } from "./comoWorkFileLifecycle";
 import { presentSaraDubaiTimes } from "./saraDubaiTimes";
 
 export type SaraWorkFileFocus = "overview" | "analysis" | "meetings" | "communications" | "history" | "full";
@@ -27,6 +29,23 @@ type LinkedDocument = {
   storageKey: string;
 };
 
+type SaraLifecycleLane = {
+  key: string;
+  kind: "payment" | "deliverable" | "external_response";
+  title: string;
+  status: string;
+  sourceKind: string | null;
+  evidenceReference: string | null;
+  sourceText: string | null;
+  recordedAt: string | null;
+  actionId: number | null;
+  nextActionId: number | null;
+  nextActionTitle: string | null;
+  nextOwnerType: "human" | "manus" | "team" | null;
+  dueAt: string | null;
+  attentionAt: string | null;
+};
+
 const documentTextCache = new Map<number, string>();
 const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_DOCUMENT_CONTEXT_CHARS = 24_000;
@@ -38,6 +57,45 @@ function rows<T>(result: unknown): T[] {
 
 function clean(value: unknown, max = 20_000) {
   return String(value || "").replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").trim().slice(0, max);
+}
+
+/** Keep ownership, waiting state, and time boundaries distinct for a spoken status. */
+export function presentSaraLifecycleLane(lane: SaraLifecycleLane) {
+  return {
+    key: lane.key,
+    kind: lane.kind,
+    title: lane.title,
+    status: lane.status,
+    sourceKind: lane.sourceKind,
+    evidenceReference: lane.evidenceReference,
+    sourceText: lane.sourceText,
+    recordedAt: lane.recordedAt,
+    actionId: lane.actionId == null ? null : Number(lane.actionId),
+    nextActionId: lane.nextActionId == null ? null : Number(lane.nextActionId),
+    nextActionTitle: lane.nextActionTitle,
+    nextOwnerType: lane.nextOwnerType,
+    dueAt: lane.dueAt,
+    attentionAt: lane.attentionAt,
+    waiting: ["waiting_external", "awaiting_owner_send", "blocked"].includes(lane.status),
+  };
+}
+
+/** A queued or delivered directive is never presented as completed without its execution receipt. */
+export function presentSaraDirectiveStatus(directive: any) {
+  const dispatch = directive?.dispatch || null;
+  const state = String(dispatch?.status || dispatch?.executionState || directive?.status || "pending");
+  return {
+    id: Number(directive?.id || 0),
+    status: state,
+    delayed: Boolean(dispatch?.delay?.detected || dispatch?.delayed),
+    executionSummary: dispatch?.executionSummary || directive?.executionSummary || null,
+    lifecycleResults: dispatch?.receipt?.lifecycleResults || directive?.receipt?.lifecycleResults || null,
+    mailboxDraftRef: dispatch?.mailboxDraftRef || directive?.mailboxDraftRef || null,
+    failureMessage: dispatch?.failureMessage || directive?.failureMessage || null,
+    completed: state === "completed",
+    delivered: ["delivered", "running", "completed"].includes(state),
+    lastProgressAt: dispatch?.lastProgressAt || null,
+  };
 }
 
 function words(value: string) {
@@ -171,7 +229,7 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
   const workFile = rows<any>(workFileResult)[0];
   if (!workFile) return { found: false, reason: "لم يُعثر على ملف الموضوع ضمن ملفات عبد الرحمن الحالية." };
 
-  const [actionsResult, decisionsResult, updatesResult, memoryResult, documentsResult, meetingsResult, communicationsResult, eventsResult] = await Promise.all([
+  const [actionsResult, decisionsResult, updatesResult, memoryResult, documentsResult, meetingsResult, communicationsResult, eventsResult, lifecycleLanes, stagedDirectives] = await Promise.all([
     db.execute(sql`SELECT id,title,description,acceptance_criteria AS acceptanceCriteria,action_status AS status,priority,owner_type AS ownerType,due_at AS dueAt,attention_at AS attentionAt,follow_up_at AS followUpAt,updated_at AS updatedAt FROM como_next_actions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,title,question,context_summary AS contextSummary,recommendation,decision_status AS status,decision_authority AS authority,decision_text AS decisionText,evidence_reference AS evidenceReference,due_at AS dueAt,decided_at AS decidedAt,updated_at AS updatedAt FROM como_next_decisions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 25`),
     db.execute(sql`SELECT id,source_channel AS sourceChannel,update_text AS updateText,occurred_at AS occurredAt,analysis_status AS analysisStatus,analysis_summary AS analysisSummary,target_action_id AS targetActionId FROM como_next_work_file_updates WHERE work_file_id=${workFileId} ORDER BY occurred_at DESC,id DESC LIMIT 30`),
@@ -180,6 +238,8 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     db.execute(sql`SELECT m.id,m.title,m.objective,m.meeting_status AS status,m.starts_at AS startsAt,m.ends_at AS endsAt,m.timezone,m.location,m.outcome_summary AS outcomeSummary,m.updated_at AS updatedAt FROM como_next_meetings m WHERE m.work_file_id=${workFileId} ORDER BY m.starts_at DESC,m.id DESC LIMIT 20`),
     db.execute(sql`SELECT id,channel,direction,communication_status AS status,approval_status AS approvalStatus,subject,body,from_text AS fromText,to_text AS toText,cc_text AS ccText,evidence_reference AS evidenceReference,occurred_at AS occurredAt FROM como_next_communications WHERE work_file_id=${workFileId} ORDER BY occurred_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,sequence_no AS sequenceNo,actor_type AS actorType,event_type AS eventType,summary,occurred_at AS occurredAt FROM como_next_work_file_events WHERE work_file_id=${workFileId} ORDER BY sequence_no DESC LIMIT 40`),
+    readWorkFileLifecycle(workFileId),
+    listWorkFileStagedDirectives({ userId: Number(userId), workFileId, includeHistory: true }),
   ]);
 
   const meetings = rows<any>(meetingsResult);
@@ -249,6 +309,9 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
       actions: rows<any>(actionsResult),
       decisions: rows<any>(decisionsResult),
       recentUpdates: rows<any>(updatesResult),
+      lifecycleLanes: lifecycleLanes.map(lane => presentSaraLifecycleLane(lane as SaraLifecycleLane)),
+      pendingDirectiveCount: stagedDirectives.filter(item => ["pending", "submitting", "failed"].includes(String(item.status))).length,
+      stagedDirectives: stagedDirectives.map(presentSaraDirectiveStatus),
     },
   };
   const documentIndex = linkedDocuments.map(item => ({ documentId: item.documentId, memoryId: item.memoryId, memoryTitle: item.memoryTitle, title: item.title, fileName: item.fileName, mimeType: item.mimeType, byteSize: item.byteSize, isCurrent: item.isCurrent === 1 }));

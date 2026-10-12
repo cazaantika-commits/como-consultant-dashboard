@@ -10,6 +10,9 @@ import { reconcileConditionalSentWatches } from "./services/comoNextConditionalS
 import { seedConditionalSentWatches } from "./services/comoNextConditionalSentWatchSeeder";
 import { runComoFinanceInvoiceDraftsCommand } from "./services/comoFinanceInvoiceDrafts";
 import { reconcileFinancePaymentFollowups } from "./services/comoFinancePaymentFollowups";
+import { reconcileLifecycleResponseLanes } from "./services/comoLifecycleResponses";
+import { retryKnownUndeliveredDispatches } from "./services/comoManusDispatch";
+import { queueSystemManusAction, isInternalSystemActionEligible } from "./services/comoSystemActionDispatch";
 
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
@@ -73,6 +76,10 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // unrelated internal work. Report failure only after those lanes run.
           const financePayments = await reconcileFinancePaymentFollowups({ userId: settings.userId, limit: 3 })
             .catch(() => ({ error: "finance_payment_followup_failed" as const }));
+          const lifecycleResponses = await reconcileLifecycleResponseLanes({ userId: settings.userId, limit: 10 })
+            .catch(() => ({ error: "lifecycle_response_reconciliation_failed" as const }));
+          const manusDispatch = await retryKnownUndeliveredDispatches({ limit: 3, olderThanSeconds: 120 })
+            .catch(() => ({ error: "manus_dispatch_reconciliation_failed" as const }));
           const candidates = await db.select({ id: comoNextActions.id, title: comoNextActions.title,
             description: comoNextActions.description, acceptanceCriteria: comoNextActions.acceptanceCriteria }).from(comoNextActions)
             .innerJoin(comoNextWorkFiles, eq(comoNextActions.workFileId, comoNextWorkFiles.id))
@@ -80,19 +87,21 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
               eq(comoNextActions.ownerType, "manus"), eq(comoNextActions.actionStatus, "open"),
               or(isNull(comoNextActions.attentionAt), lte(comoNextActions.attentionAt, nowSql())),
               notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled", "waiting"]),
+              sql`NOT EXISTS (SELECT 1 FROM como_next_staged_directives dispatched
+                  WHERE dispatched.user_id=${settings.userId}
+                    AND dispatched.stage_key=CONCAT('system-manus-action:',${comoNextActions.id}))`,
               sql`NOT EXISTS (SELECT 1 FROM como_next_decisions gate
                   WHERE gate.work_file_id = ${comoNextActions.workFileId}
                     AND (gate.decision_status = 'required' OR
                       (gate.decision_status = 'deferred' AND gate.due_at > UTC_TIMESTAMP())))`))
             .orderBy(sql`CASE ${comoNextActions.priority} WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END`,
               asc(comoNextActions.createdAt), asc(comoNextActions.id)).limit(20);
-          const eligible = candidates.find(row => !/(?:إرسال|أرسل|ارسل|رسالة|مراسلة|بريد|مسودة|دفع|سداد|توقيع|تعيين|\bsend\b|\breply\b|\bdraft\b|\bemail\b|\bpay\b|\bsign\b|\bappoint\w*)/i
-            .test(`${row.title} ${row.description || ""} ${row.acceptanceCriteria || ""}`));
-          const result = eligible ? await runExecutiveControlLoopCommand({
-            userId: settings.userId, trigger: "email_sync", actionIds: [Number(eligible.id)], maxItems: 1,
-          }) : null;
+          const eligible = candidates.find(row => isInternalSystemActionEligible(row.title));
+          const systemWorkDispatch = eligible ? await queueSystemManusAction({ userId: settings.userId, actionId: Number(eligible.id) }) : null;
+          // Real Manus receives the event; queueing is not completed execution.
+          const result = null as { failures: Array<{kind:string}>; executedActionIds:number[] } | null;
           if (result?.failures.length) throw new Error(`executive_action_failed:${result.failures[0].kind}`);
-          if (financeInvoices.status === "error" || "error" in financePayments) {
+          if (financeInvoices.status === "error" || "error" in financePayments || "error" in lifecycleResponses || "error" in manusDispatch) {
             throw new Error("finance_lane_failed_after_internal_work");
           }
           await db.update(comoNextEmailSyncSettings).set({
@@ -102,7 +111,7 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
           res.status(200).json({ ok: true, phase: "executive", selectedActionId: eligible ? Number(eligible.id) : null,
             executedActionIds: result?.executedActionIds || [], seededWatches, conditionalWatches,
-            financeInvoices, financePayments, externalSideEffects: false });
+            financeInvoices, financePayments, lifecycleResponses, manusDispatch, systemWorkDispatch, externalSideEffects: false });
           return;
         }
         // Separate, retryable callback; analyses are keyed by message ID and
