@@ -147,6 +147,62 @@ describe("Sara executive briefings", () => {
     expect(briefingSource).not.toContain("يا كبير");
   });
 
+  it("keeps a future deadline distinct from an elapsed attention time", () => {
+    const now = new Date("2026-10-12T03:52:00Z");
+    const snapshot = { workFiles: [], decisions: [], meetings: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [], actions: [
+      { ...baseItem, ownerType: "human", title: "حسم إدخال الانتيريور واللاندسكيب خلال أسبوع",
+        attentionAt: "2026-10-10 05:00:00", dueAt: "2026-10-17 05:00:00" },
+    ] };
+    const briefing = buildNarration("full", "morning", snapshot, now);
+    expect(briefing.text).toContain("أعمال بموعد لاحق، 1 بالمجموع:");
+    expect(briefing.text).toContain("حسم إدخال الانتيريور واللاندسكيب خلال أسبوع");
+    expect(briefing.text).not.toContain("ومتأخر");
+    expect(briefing.text).not.toContain("اللي بدّه حركة منك، 1");
+    expect(buildNarration("today", "morning", snapshot, now).itemCount).toBe(0);
+    expect(briefingSource).toContain("a.due_at AS dueAt");
+    expect(briefingSource).not.toContain("COALESCE(a.attention_at,a.due_at,a.follow_up_at) AS dueAt");
+  });
+
+  it("separates owner action, Manus work and external waiting even within one topic", () => {
+    const now = new Date("2026-10-12T03:52:00Z");
+    const snapshot = { workFiles: [], decisions: [], meetings: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [], actions: [
+      { ...baseItem, id: 1, ownerType: "human", title: "مراجعة مسودة وائل" },
+      { ...baseItem, id: 2, ownerType: "manus", title: "إعداد المقارنة الداخلية" },
+      { ...baseItem, id: 3, ownerType: "team", status: "waiting_external", title: "بانتظار تحليل كولييرز", dueAt: "2026-09-24 07:00:00" },
+      { ...baseItem, id: 4, ownerType: "manus", status: "waiting_external", title: "انتظار المسح الموقع" },
+    ] };
+    const briefing = buildNarration("full", "morning", snapshot, now);
+    const ownerSection = briefing.text.split("اللي بدّه حركة منك، 1 بالمجموع:")[1]?.split("\n---\n")[0];
+    expect(ownerSection).toContain("مراجعة مسودة وائل");
+    expect(ownerSection).not.toContain("كولييرز");
+    expect(ownerSection).not.toContain("المقارنة");
+    expect(briefing.text).toContain("على Manus، 1 بالمجموع:");
+    expect(briefing.text).toContain("بانتظار الغير أو متطلب سابق، 1 بالمجموع:");
+    expect(briefing.text).toContain("2 متطلبات قيد الانتظار");
+    expect(briefing.text).not.toContain("ومتأخر");
+    const today = buildNarration("today", "morning", snapshot, now);
+    expect(today.itemCount).toBe(2);
+    expect(today.text).toContain("مطلوب منك: مراجعة مسودة وائل");
+    expect(today.text).toContain("على Manus: إعداد المقارنة الداخلية");
+    expect(today.text).not.toContain("كولييرز");
+  });
+
+  it("does not assign an unknown or team owner to the application owner", () => {
+    const now = new Date("2026-10-12T03:52:00Z");
+    const snapshot = { workFiles: [], decisions: [], meetings: [], proposals: [], communications: [], emails: [], changes: [], dayEvents: [], actions: [
+      { ...baseItem, ownerType: "team", title: "مراجعة الفريق", dueAt: "2026-10-12 02:00:00" },
+    ] };
+    const briefing = buildNarration("full", "morning", snapshot, now);
+    expect(briefing.text).toContain("على الفريق أو يحتاج تحديد مسؤول، 1 بالمجموع:");
+    expect(briefing.text).not.toContain("اللي بدّه حركة منك، 1");
+    expect(briefing.text).toContain("ومتأخر");
+  });
+
+  it("does not use a received email timestamp as an owner deadline", () => {
+    expect(briefingSource).toContain("email.inbox_status AS status, NULL AS dueAt");
+    expect(briefingSource).not.toContain("email.received_at AS dueAt");
+  });
+
   it("flags stale email sync in the spoken briefing rather than claiming full coverage", () => {
     expect(briefingSource).toContain("const staleImport =");
     expect(briefingSource).toContain("const staleProcessing =");

@@ -21,6 +21,9 @@ type BriefingItem = {
   priority: string | null;
   status: string | null;
   dueAt: string | null;
+  attentionAt?: string | null;
+  followUpAt?: string | null;
+  ownerType?: string | null;
   updatedAt: string | null;
   createdAt?: string | null;
   sourceRecordId?: string | null;
@@ -206,6 +209,9 @@ function formatDue(value: string | null, now: Date, dayEnd: Date) {
 
 function spokenItem(item: BriefingItem, now: Date, dayEnd: Date) {
   const project = item.project ? `بـ${item.project}` : "";
+  if (item.status === "waiting_external" || item.status === "blocked") {
+    return `${item.title}${project ? ` ${project}` : ""}؛ قيد الانتظار، ولا أعتبره إنجازًا أو طلبًا منك`;
+  }
   if (item.status === "needs_meeting_outcome" || item.status === "needs_meeting_confirmation") {
     return `${item.title}${project ? ` ${project}` : ""}`;
   }
@@ -214,10 +220,23 @@ function spokenItem(item: BriefingItem, now: Date, dayEnd: Date) {
 
 function isTodayAttention(item: BriefingItem, now: Date, dayEnd: Date) {
   const due = parseDate(item.dueAt);
+  if (item.status === "waiting_external" || item.status === "blocked") return false;
   if (item.status === "needs_meeting_outcome" || item.status === "needs_meeting_confirmation") return true;
   if (item.status === "completed_pending_verification") return true;
   if (due) return due.getTime() <= dayEnd.getTime();
+  if (item.kind === "action") return item.status === "open" || item.status === "in_progress";
   return item.priority === "urgent";
+}
+
+function responsibility(item: BriefingItem) {
+  if (item.kind !== "action") return "human";
+  if (item.status === "waiting_external" || item.status === "blocked") return "waiting";
+  return item.ownerType === "human" ? "human" : item.ownerType === "manus" ? "manus" : "team";
+}
+
+function collapseByResponsibility(items: BriefingItem[], now: Date, dayEnd: Date) {
+  return ["human", "manus", "team", "waiting"].flatMap(owner =>
+    collapseSaraAttentionByTopic(items.filter(item => responsibility(item) === owner), now, dayEnd));
 }
 
 function dedupeAttention(items: BriefingItem[]) {
@@ -249,7 +268,7 @@ export function collapseSaraAttentionByTopic(items: BriefingItem[], now: Date, d
     if (group.length === 1) return first;
     return {
       ...first,
-      title: `${first.workFile || first.project || "موضوع"}: ${group.length} نقاط تحتاج حركة؛ أولها ${first.title}`,
+      title: `${first.workFile || first.project || "موضوع"}: ${group.length} ${responsibility(first) === "waiting" ? "متطلبات قيد الانتظار" : "نقاط تحتاج حركة"}؛ أولها ${first.title}`,
     };
   });
 }
@@ -301,6 +320,7 @@ export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPerio
     .map(item => ({
       ...item,
       kind: "action",
+      ownerType: "human",
       status: item.status === "confirmed" ? "needs_meeting_outcome" : "needs_meeting_confirmation",
       title: item.status === "confirmed"
         ? `نتيجة ${item.title}: تحقق هل انعقد الاجتماع أو تغير موعده، وسجل ما حدث`
@@ -319,8 +339,16 @@ export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPerio
     ...snapshot.communications,
     ...snapshot.emails,
   ]).sort((a, b) => compareRank(a, b, now, end));
-  const today = collapseSaraAttentionByTopic(allAttention.filter(item => isTodayAttention(item, now, end)), now, end);
+  const today = collapseByResponsibility(allAttention.filter(item => isTodayAttention(item, now, end)), now, end);
   const todayOperational = today.filter(item => item.kind !== "meeting");
+  const ownerActions = todayOperational.filter(item => responsibility(item) === "human");
+  const manusActions = todayOperational.filter(item => responsibility(item) === "manus");
+  const teamActions = todayOperational.filter(item => responsibility(item) === "team");
+  const waiting = collapseByResponsibility(allAttention.filter(item => responsibility(item) === "waiting"), now, end);
+  const laterActions = collapseByResponsibility(snapshot.actions.filter(item => {
+    const due = parseDate(item.dueAt);
+    return responsibility(item) !== "waiting" && Boolean(due && due.getTime() > end.getTime());
+  }), now, end);
   const upcomingMeetings = futureMeetings
     .filter(item => {
       const due = parseDate(item.dueAt);
@@ -367,7 +395,7 @@ export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPerio
       text: [
         `عندك اليوم ${today.length} موضوع${today.length === 1 ? "" : "ات"}. رتبتلك ياهم حسب الوقت والأثر، مش حسب مين صوته أعلى:`,
         "---",
-        ...items.map((item, index) => `${index + 1}. ${spokenItem(item, now, end)}.`),
+        ...items.map((item, index) => `${index + 1}. ${responsibility(item) === "manus" ? "على Manus: " : responsibility(item) === "team" ? "على الفريق أو يحتاج تحديد مسؤول: " : item.kind === "meeting" ? "موعدك: " : "مطلوب منك: "}${spokenItem(item, now, end)}.`),
         "---",
         remainingToday ? `هيدي أول عشرة، وبقي ${remainingToday} أقل إلحاحًا. منمسك الأول أو بتقلي كمّلي؟` : `الأول اللي لازم نمسكه هو: ${items[0]?.title}. منبلّش فيه؟`,
       ].join("\n"),
@@ -387,13 +415,17 @@ export function buildNarration(kind: SaraBriefingKind, period: SaraBriefingPerio
     .map(item => spokenItem(item, now, end));
   const sections = [
     completedToday.length ? section("أول شي، حصيلة اليوم:", completedToday) : "",
-    section(`اللي بدّه حركة منك، ${todayOperational.length} بالمجموع:`, todayOperational.slice(0, 8).map(item => spokenItem(item, now, end))),
+    section(`اللي بدّه حركة منك، ${ownerActions.length} بالمجموع:`, ownerActions.slice(0, 8).map(item => spokenItem(item, now, end))),
+    section(`على Manus، ${manusActions.length} بالمجموع:`, manusActions.slice(0, 8).map(item => spokenItem(item, now, end))),
+    section(`على الفريق أو يحتاج تحديد مسؤول، ${teamActions.length} بالمجموع:`, teamActions.slice(0, 5).map(item => spokenItem(item, now, end))),
+    section(`بانتظار الغير أو متطلب سابق، ${waiting.length} بالمجموع:`, waiting.slice(0, 8).map(item => spokenItem(item, now, end))),
+    section(`أعمال بموعد لاحق، ${laterActions.length} بالمجموع:`, laterActions.slice(0, 5).map(item => spokenItem(item, now, end))),
     section(`قراراتك المفتوحة، ${snapshot.decisions.length} بالمجموع:`, decisions),
     section(`مراجعات جاهزة عندك، ${snapshot.proposals.length + snapshot.emails.length + snapshot.communications.length} بالمجموع:`, reviews),
     section(`المواعيد القريبة، ${upcomingMeetings.length} بالمجموع:`, upcomingMeetings.slice(0, 5).map(item => spokenItem(item, now, end))),
     section("صورة المشاريع:", projectPicture(snapshot.workFiles)),
   ].filter(Boolean);
-  const itemCount = today.length + decisions.length + reviews.length + upcomingMeetings.length + snapshot.workFiles.length;
+  const itemCount = today.length + waiting.length + laterActions.length + decisions.length + reviews.length + upcomingMeetings.length + snapshot.workFiles.length;
   const ending = period === "evening"
     ? "هيدي الخلاصة. اللي ما خلص اليوم حطيته بترتيبه لبكرا، وما في شي رح نخبّيه تحت السجادة."
     : today[0]
@@ -433,7 +465,8 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
     `),
     db.execute(sql`
       SELECT a.id, p.name AS project, wf.title AS workFile, a.title, a.priority,
-        a.action_status AS status, COALESCE(a.attention_at,a.due_at,a.follow_up_at) AS dueAt, a.updated_at AS updatedAt
+        a.action_status AS status, a.owner_type AS ownerType, a.due_at AS dueAt,
+        a.attention_at AS attentionAt, a.follow_up_at AS followUpAt, a.updated_at AS updatedAt
       FROM como_next_actions a
       JOIN como_next_work_files wf ON wf.id=a.work_file_id AND wf.project_id=a.project_id
       JOIN projects p ON p.id=a.project_id AND p.is_test_project=0
@@ -490,7 +523,7 @@ async function loadSnapshot(userId: number, since: Date, dayStart: Date): Promis
           WHERE analysis.email_message_id=email.id AND analysis.analysis_status='draft'
           ORDER BY analysis.id DESC LIMIT 1), email.subject) AS title,
         email.importance AS priority,
-        email.inbox_status AS status, email.received_at AS dueAt, email.updated_at AS updatedAt
+        email.inbox_status AS status, NULL AS dueAt, email.updated_at AS updatedAt
       FROM como_next_email_messages email
       LEFT JOIN projects p ON p.id=COALESCE(email.linked_project_id,email.suggested_project_id) AND p.is_test_project=0
       LEFT JOIN como_next_work_files wf ON wf.id=COALESCE(email.linked_work_file_id,email.suggested_work_file_id)
@@ -655,7 +688,7 @@ async function loadBriefingState(memberId: string, now: Date) {
     ...snapshot.communications,
     ...snapshot.emails,
   ]);
-  const todayCount = collapseSaraAttentionByTopic(allAttention.filter(item => isTodayAttention(item, now, window.end)), now, window.end).length;
+  const todayCount = collapseByResponsibility(allAttention.filter(item => isTodayAttention(item, now, window.end)), now, window.end).length;
   return { userId, db, window, snapshot, recommendedMode, todayCount, lastCompletedAt: last?.completedAt || null };
 }
 
