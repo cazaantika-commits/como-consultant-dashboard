@@ -506,6 +506,11 @@ export async function createCommunicationDraftCommand(input: {
     return { id, communicationStatus: "draft" as const, externalMessageRef: null, evidenceReference: null, replayed: false as const };
   });
 
+  // An explicit owner cancellation is a terminal boundary for this draft key.
+  // A producer replay must not silently restore what the owner rejected.
+  if (draftRecord.replayed && draftRecord.communicationStatus === "cancelled") {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هذه المراسلة ملغاة بقرار محفوظ؛ لن تُعاد المسودة دون توجيه جديد." });
+  }
   if (input.channel !== "email") return draftRecord;
 
   // A synced Sent message is the durable evidence boundary. Replaying the
