@@ -106,12 +106,24 @@ export async function appendEvent(
     payload?: Record<string, string | number | boolean | null>;
     idempotencyKey?: string | null;
   },
-) {
+): Promise<void> {
+  // A lock issued on the database outside a transaction is released before
+  // MAX/insert. Ensure root callers hold the same lock through the insert.
+  if (typeof tx.transaction === "function" && typeof tx.rollback !== "function") {
+    await tx.transaction((inner: any) => appendEvent(inner, input));
+    return;
+  }
   await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id = ${input.workFileId} FOR UPDATE`);
+  if (input.idempotencyKey) {
+    const seen = await tx.execute(sql`SELECT id FROM como_next_work_file_events WHERE user_id=${input.userId} AND idempotency_key=${input.idempotencyKey} LIMIT 1 FOR UPDATE`);
+    const entries = Array.isArray(seen) && Array.isArray(seen[0]) ? seen[0] : seen;
+    if ((entries as any[])[0]?.id) return;
+  }
   const raw = await tx.execute(sql`
-    SELECT COALESCE(MAX(sequence_no), 0) AS sequenceNo
+    SELECT sequence_no AS sequenceNo
     FROM como_next_work_file_events
     WHERE work_file_id = ${input.workFileId}
+    ORDER BY sequence_no DESC LIMIT 1 FOR UPDATE
   `);
   const rows = Array.isArray(raw) && Array.isArray(raw[0]) ? raw[0] : raw;
   const sequenceNo = Number((rows as any[])[0]?.sequenceNo ?? 0) + 1;

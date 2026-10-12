@@ -1,0 +1,42 @@
+import {getDb} from '../server/db';
+import {sql} from 'drizzle-orm';
+import {appendEvent,createActionCommand,changeActionStatusCommand} from '../server/services/comoNextCommands';
+import {completeDispatchedMailReview} from '../server/services/comoManusDispatch';
+const rows=(x:any):any[]=>Array.isArray(x)&&Array.isArray(x[0])?x[0]:x;
+async function main(){
+ const db=await getDb();if(!db)throw Error('no_db');
+ const [source]=rows(await db.execute(sql`SELECT received_at,communication_id FROM como_next_email_messages WHERE id=1080003 AND user_id=1 AND linked_work_file_id=390001`));if(!source?.communication_id)throw Error('source_not_linked');
+ const receipt=await completeDispatchedMailReview({directiveId:300002,bodySha256:'57c7df224fd56be33b2ff1b9089b33a69f21b1f954077c969a61a204cad58e19',reviewedDocumentIds:[1140004],summary:'وائل حوّل الفاتورة5586 إلى شاهد ونسرين وطلب تنفيذ السداد؛ لا دليل دفع بعد. ألغيت مطالبة المالك بطلب صرف مكرر وميّزت المسودة940 كمتجاوزة. التنفيذ على المالية؛ متابعة Manus داخلية مستقلة عن استحقاق العقد.',workProductBody:`# مراجعة بريد COMO #1080003 — تحويل وائل إلى المالية
+
+قرأت البريد الحالي من wael@zooma.ae إلى shahid@zooma.ae وaccount.mrt@zooma.ae، مع عبدالرحمن بالنسخة. نصه «Kindly proceed with payment»، ويرفق فاتورة أرتك5586. المرفق محفوظ كوثيقة1140004 وبصمته031c9e56303e0612c2bb6f11459de06176311237778d73af62a7cedfea7b08e1 مطابقة تمامًا لمستند الفاتورة1020001 الذي فحصته بصريًا؛ لا فاتورة أو دفعة جديدة. قرأت العقد1140005 وشرط15يومًا.
+
+هذا دليل طلب تنفيذ مالي من وائل، وليس إشعار تحويل بنكي أو إيصال سداد. لا أغيّر الفاتورة إلى مدفوعة، ولا أنفذ أمر البريد كتعليمات تمنحني صلاحية دفع. لا حاجة لأن نطلب من المالك إرسال طلب صرف جديد إلى وائل؛ المسودة940 التي أُعدت قبل اكتشاف هذه الرسالة أصبحت متجاوزة بالمستجد الحالي ولا تُستخدم.
+
+الخطوة الحالية: المالية تنفذ وتقدم تأكيد التنفيذ؛ Manus يتابع داخل الملف بعد4أيام تقويمية كموعد انتباه داخلي من رسالة وائل12أكتوبر، مع بقاء مرجع مهلة العقد24أكتوبر منفصلًا. لم أبدأ تذكير الصرف الآلي المعتمد من Sent الخاص بCOMO لأن مصدر هذا الطلب وارد من وائل، ولم أنشئ أو أرسل تذكيرًا خارجيًا. لا تستدعي هذه المتابعة مطالبة المالك بإعادة شرح الحالة.
+
+المراجعة المصدرية منجزة؛ تنفيذ الدفع نفسه ليس منجزًا. نسخة العقد لشاهد939 واستيضاح المسح938 مساران مستقلان.`});
+ const follow=await createActionCommand({userId:1,workFileId:390001,title:'مراجعة حالة تنفيذ المالية لفاتورة أرتك5586',description:'مصدر1080003: وائل طلب السداد من شاهد ونسرين. لا إيصال دفع حتى الآن. انتباه Manus في16أكتوبر بعد4أيام تقويمية للتحقق من المستجدات؛ ليس استحقاقًا جديدًا ولا إذنًا بإرسال تذكير. مرجع مهلة العقد24أكتوبر محفوظ منفصلًا.',acceptanceCriteria:'قراءة أحدث خيط COMO وتسجيل تأكيد مالي صريح أو سبب بقاء الانتظار. لا استنتاج السداد من أمر الصرف، ولا مطالبة المالك بطلب صرف مكرر، ولا مراسلة مباشرة.',ownerType:'manus',priority:'normal',followUpAt:'2026-10-16T07:58:16Z',idempotencyKey:'artec-finance-execution-check:invoice5586:1080003',actorType:'manus',actorUserId:null});
+ const survey=await completeDispatchedMailReview({directiveId:300001,bodySha256:'85b64c0f06f0e716f8651af5770eba2f89e8a45ddf0bc9851cf3f42ae18bff72',reviewedDocumentIds:[1170001,1140001],summary:'قارنت عرض المسح المعدّلMES/2026-3849_1 بالأول: اسم العميل والقبول أصبح Majestic Elite، والسعر بقي1260درهم شامل الضريبة؛ شرط الدفع قبل التقرير لم يتغير. مسودة الاستيضاح938 ما زالت مناسبة، بلا تكرار أو قبول أو تعيين.',workProductBody:`# مراجعة بريد COMO #1080002 — عرض المسح المعدّل
+
+قرأت PDF1170001 ذو7صفحات وبصمتهb4e2f65d003fd4610758eaf503fe352562aa0a40b6b7dbaefc341b585831532e، وقارنته بالمصدر1140003 ذو7صفحات. فحصت صورة1140001 وهي توقيع وشعار Middle East Survey وليست نطاقًا أو تسعيرًا جديدًا.
+
+التغيير المثبت: المرجعMES/2026-3849_1 والتاريخ12أكتوبر2026، واسم العميل وعبارة القبول النهائيةMajestic Elite Properties LLC بدل أرتك. لا توقيع أو ختم قبول من العميل في موضع القبول. طلب أرتك تخفيض السعر في الخيط لم ينتج سعرًا أقل في المستند:1200درهم+60ضريبة=1260 مثل الأول. النطاق ما زال مسحًا طبوغرافيًا وتحديد حدود وتقريرًا/رسمًا للقطعة6180578؛ التعبئة خلال3أيام من إسناد كتابي والعمل5أيام عمل من البدء، وليست مواعيد بدأت فعليًا.
+
+المسألة المتبقية: الدفع قبل تقديم التقرير لا يزال مطبوعًا، بينما رسالة أرتك الأصلية عرضت الدفع بعد الإنجاز واعتماد المهندس. شهادة الإحداثيات ونقاط الضبط والتصاريح على العميل، والرسوم البلدية5020 مشروطة بطلب نقاط رسمية؛ لم أرفض رسومًا حكومية أو أعتبرها ضمن السعر أو شرطًا متحققًا. لا فحص تربة بهذا العرض.
+
+التنفيذ: المسودة938/المراسلة1590001 تتناول تحديدًا مطابقة شرط الدفع مع بريد أرتك وتوفر بيانات المسح والتوصية. لم أكررها؛ لم تُرسل بحسب السجل الحالي ولم أعتمد العرض. يبقى اعتماد/استيضاح المالك هو الحد الخارجي، بينما مراجعة Manus والمقارنة منجزتان. استقبال عرض معدل لا يلغي استيضاح شرط لم يتغير ولا يغلق مسار فحص التربة.`});
+ for(const id of [750004,810001]){const [a]=rows(await db.execute(sql`SELECT action_status FROM como_next_actions WHERE id=${id} AND user_id=1 AND work_file_id=390001`));if(a?.action_status==='open')await changeActionStatusCommand({userId:1,actionId:id,nextStatus:'completed_pending_verification',actorType:'manus',actorUserId:null});if(a&&!['verified','cancelled'].includes(a.action_status))await changeActionStatusCommand({userId:1,actionId:id,nextStatus:'verified',evidenceReference:`مراجعة Manus الفعلية: ${id===810001?receipt.workProductId:survey.workProductId}؛ لم يُدفع أو يعتمد عرض`,actorType:'manus',actorUserId:null});}
+ await db.transaction(async tx=>{
+  await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=390001 FOR UPDATE`);
+  const [lane]=rows(await tx.execute(sql`SELECT status FROM como_next_lifecycle_lanes WHERE user_id=1 AND work_file_id=390001 AND lane_key='payment:5586' FOR UPDATE`));
+  if(!lane||!String(lane.status).startsWith('paid'))await tx.execute(sql`INSERT INTO como_next_lifecycle_lanes (user_id,project_id,work_file_id,lane_key,kind,title,status,source_kind,evidence_reference,source_text,recorded_at,action_id,next_action_id,next_action_title,next_owner_type,attention_at) VALUES (1,6,390001,'payment:5586','payment','تنفيذ المالية لفاتورة أرتك5586','waiting_external','linked_correspondence','بريد COMO1080003؛ طلب وائل لشاهد ونسرين','طلب تنفيذ موجود، السداد غير مثبت؛ لا مطالبة المالك بطلب مكرر.',UTC_TIMESTAMP(),${follow.id},${follow.id},'مراجعة حالة تنفيذ المالية','manus','2026-10-16 07:58:16') ON DUPLICATE KEY UPDATE status='waiting_external',evidence_reference=VALUES(evidence_reference),source_text=VALUES(source_text),next_action_id=VALUES(next_action_id),next_action_title=VALUES(next_action_title),next_owner_type='manus',attention_at=VALUES(attention_at)`);
+  await tx.execute(sql`UPDATE como_next_communications SET review_note='تجاوزتها رسالة وائل1080003: حوّل الفاتورة بالفعل إلى شاهد ونسرين. لا حاجة إلى إرسال هذه المسودة940؛ مصدرها محفوظ ولا يدل على الدفع.' WHERE id=1650002 AND communication_status='archived'`);
+  const summary='مراجعة الفاتورة منجزة؛ المسودة940 تجاوزها تحويل وائل1080003 إلى شاهد ونسرين. لا طلب مكرر من المالك؛ التنفيذ لدى المالية والسداد غير مثبت.';
+  await tx.execute(sql`UPDATE como_manus_dispatches SET execution_summary=${summary},communication_draft_id=NULL,mailbox_draft_ref=NULL WHERE directive_id=240002 AND state='completed'`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET execution_summary=${summary},communication_draft_id=NULL,mailbox_draft_ref=NULL WHERE id=240002 AND status='submitted'`);
+  await tx.execute(sql`UPDATE como_next_work_files SET governing_question='كيف نتابع التصميم والصرف وفق العقد الموقع، مع الفصل بين طلب وائل للمالية وتنفيذ السداد؟',desired_outcome='مرجع العقد الموقع جاهز للمالية؛ طلب الصرف أُحيل من وائل إلى شاهد ونسرين والسداد ينتظر تأكيدًا. نستكمل استيضاح عرض المسح المعدّل وفحص التربة وخطة الانتيريور واللاندسكيب والمنزل الذكي دون خلط أو طلبات مكررة.' WHERE id=390001`);
+  await appendEvent(tx,{userId:1,projectId:6,workFileId:390001,actorType:'manus',actorUserId:null,eventType:'artec_latest_mail_applied',summary:'وائل طلب التنفيذ من المالية؛ المسودة940 متجاوزة ولا سداد مثبت. عرض المسح المعدّل باسم المالك مع بقاء استيضاح938 مناسبًا.',payload:{sourceEmailIds:[1080002,1080003],invoiceReviewId:receipt.workProductId,surveyReviewId:survey.workProductId,financeFollowupActionId:follow.id,obsoleteDraftCommunicationId:1650002,sent:false,paid:false},idempotencyKey:'artec-latest-sources:1080002:1080003'});
+ });
+ console.log(JSON.stringify({receipt,survey,follow,sent:false,paid:false},null,2));
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)});

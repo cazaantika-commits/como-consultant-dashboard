@@ -111,7 +111,7 @@ export const comoManusDispatchInternals={canClaimDispatchForWorker,canRetryKnown
 
 /** Main Manus invokes this only after actually reading the source and every
  * substantive attachment. The website's one-shot analyzer cannot complete it. */
-export async function completeDispatchedMailReview(input:{directiveId:number;bodySha256:string;reviewedDocumentIds:number[];summary:string;workProductBody:string}){
+export async function completeDispatchedMailReview(input:{directiveId:number;bodySha256:string;reviewedDocumentIds:number[];summary:string;workProductBody:string;communicationDraftId?:number}){
  const db=await getDb();if(!db)throw Error('database_unavailable');const r=await loadWorkerRow(db,input.directiveId);
  if(!r||!isAuthoritativeOwner(r)||r.source_member_id!=='system:manus-action')throw Error('mail_review_not_authorized');
  if(r.state==='completed')return readDispatchForDirective({directiveId:input.directiveId});
@@ -124,7 +124,8 @@ export async function completeDispatchedMailReview(input:{directiveId:number;bod
  const substantive=attachments.filter(a=>!(a.disposition==='inline'&&String(a.mime_type).startsWith('image/')));
  if(substantive.some(a=>a.storage_status!=='stored'||!a.document_id||!input.reviewedDocumentIds.includes(Number(a.document_id))))throw Error('mail_review_attachments_not_reviewed');
  if(input.summary.trim().length<20||input.workProductBody.trim().length<80||!input.workProductBody.includes(String(emailId)))throw Error('mail_review_receipt_incomplete');
- const [savedDraft]=rowsFrom<any>(await db.execute(sql`SELECT c.id,c.external_message_ref FROM como_next_communications c JOIN como_mailbox_draft_ledger l ON l.communication_id=c.id AND l.user_id=c.user_id AND l.work_file_id=c.work_file_id AND l.state IN ('draft_saved','sent_confirmed') WHERE c.id=${Number(email.reply_draft_communication_id||0)} AND c.user_id=${Number(r.user_id)} AND c.work_file_id=${Number(r.work_file_id)} AND c.source_record_id=${`email-reply-draft:${emailId}`} LIMIT 1`));
+ const [savedDraft]=rowsFrom<any>(await db.execute(sql`SELECT c.id,c.external_message_ref FROM como_next_communications c JOIN como_mailbox_draft_ledger l ON l.communication_id=c.id AND l.user_id=c.user_id AND l.work_file_id=c.work_file_id AND l.state IN ('draft_saved','sent_confirmed') WHERE c.id=${Number(input.communicationDraftId||email.reply_draft_communication_id||0)} AND c.user_id=${Number(r.user_id)} AND c.work_file_id=${Number(r.work_file_id)} AND c.direction='outbound' AND c.communication_status IN ('archived','sent') LIMIT 1`));
+ if(input.communicationDraftId&&!savedDraft)throw Error('mail_review_output_draft_not_proven');
  return db.transaction(async tx=>{
   await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${Number(r.work_file_id)} FOR UPDATE`);
   const [live]=rowsFrom<any>(await tx.execute(sql`SELECT state,claim_token FROM como_manus_dispatches WHERE directive_id=${input.directiveId} FOR UPDATE`));
