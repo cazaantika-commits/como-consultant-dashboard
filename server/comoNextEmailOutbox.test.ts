@@ -60,6 +60,12 @@ describe("COMO Next mailbox drafts", () => {
     expect(applyComoCcPolicy({ to: "wael@zooma.ae", cc: "pa@zooma.ae" })).toBe("pa@zooma.ae");
   });
 
+  it("honours a recorded owner exclusion for this draft without changing defaults", () => {
+    expect(applyComoCcPolicy({ to: "tdimitrova@artecint.com", cc: "shahid@zooma.ae, Wael <wael@zooma.ae>, account.mrt@zooma.ae", ownerWaelCcExclusion: { evidenceReference: "owner update 21:36" } })).toBe("shahid@zooma.ae, account.mrt@zooma.ae");
+    expect(applyComoCcPolicy({ to: "tdimitrova@artecint.com", cc: "shahid@zooma.ae, account.mrt@zooma.ae" })).toBe("shahid@zooma.ae, account.mrt@zooma.ae, wael@zooma.ae");
+    expect(() => applyComoCcPolicy({ to: "tdimitrova@artecint.com", ownerWaelCcExclusion: { evidenceReference: " " } })).toThrow("recorded evidence reference");
+  });
+
   it("exposes Drafts saving only and removes direct send buttons and mutations", () => {
     expect(router).toContain("updateReplyDraft: protectedProcedure");
     expect(router).not.toContain("sendReplyDraft: protectedProcedure");

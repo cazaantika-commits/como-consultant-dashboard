@@ -1033,16 +1033,19 @@ function recipientAddress(value: string) {
     || value.trim().toLowerCase();
 }
 
-export function applyComoCcPolicy(input: { to: string; cc?: string; waelAppointment?: boolean }) {
+export function applyComoCcPolicy(input: { to: string; cc?: string; waelAppointment?: boolean; ownerWaelCcExclusion?: { evidenceReference: string } }) {
   const toAddresses = new Set(input.to.split(/[;,]/).map(recipientAddress).filter(Boolean));
   const ccRecipients = (input.cc || "").split(/[;,]/).map(item => item.trim()).filter(Boolean);
+  const exclusion = input.ownerWaelCcExclusion;
+  if (exclusion && !exclusion.evidenceReference.trim()) throw new Error("Owner CC exclusion requires a recorded evidence reference");
   // Wael is copied on other correspondence. Mia is NOT his default CC; only
   // add her when the originating workflow has verified this is his appointment.
-  const required = toAddresses.has(WAEL_EMAIL) ? null : WAEL_EMAIL;
+  const required = toAddresses.has(WAEL_EMAIL) || exclusion ? null : WAEL_EMAIL;
   const merged = [...ccRecipients, ...(required ? [required] : []), ...(input.waelAppointment ? [MIA_EMAIL] : [])];
   const seen = new Set<string>();
   return merged.filter(recipient => {
     const address = recipientAddress(recipient);
+    if (exclusion && address === WAEL_EMAIL) return false;
     if (!address || toAddresses.has(address) || seen.has(address)) return false;
     seen.add(address);
     return true;
@@ -1060,6 +1063,8 @@ export async function saveComoMailboxDraft(input: {
   body: string;
   cc?: string;
   waelAppointment?: boolean;
+  /** Server-side owner instruction only; never inferred from email contents. */
+  ownerWaelCcExclusion?: { evidenceReference: string };
   inReplyTo?: string;
   draftKey: string;
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
@@ -1070,7 +1075,7 @@ export async function saveComoMailboxDraft(input: {
   const to = input.to.trim();
   const subject = input.subject.replace(/[\r\n]+/g, " ").trim();
   const body = input.body.trim();
-  const cc = applyComoCcPolicy({ to, cc: input.cc, waelAppointment: input.waelAppointment });
+  const cc = applyComoCcPolicy({ to, cc: input.cc, waelAppointment: input.waelAppointment, ownerWaelCcExclusion: input.ownerWaelCcExclusion });
   const draftKey = input.draftKey.trim();
   if (!to || !to.includes("@") || !subject || !body || !draftKey) {
     throw new Error("Draft recipient, subject, body, and key are required");
