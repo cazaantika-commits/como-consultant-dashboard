@@ -423,7 +423,7 @@ export function fetchReadonlyAutomationSignalByUID(input: {
  * Strict read-only mailbox snapshot for COMO Next.
  * Every folder is opened read-only and markSeen is explicitly disabled.
  */
-export function fetchReadonlyFolderSince(folderName: string, hours: number = 72, maxMessages: number = 100, cursor?: { lastUid: number; uidValidity: string }): Promise<ReadonlyMailboxBatch> {
+export function fetchReadonlyFolderSince(folderName: string, hours: number = 72, maxMessages: number = 100, cursor?: { lastUid: number; uidValidity: string }, subjectFilter?:string): Promise<ReadonlyMailboxBatch> {
   return new Promise((resolve, reject) => {
     if (!EMAIL_PASSWORD) {
       reject(new Error("EMAIL_PASSWORD not configured"));
@@ -438,15 +438,25 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
       tlsOptions: { rejectUnauthorized: false },
       connTimeout: 15000,
       authTimeout: 10000,
+      socketTimeout:90000,
+      keepalive:false,
     });
     const messages: EmailMessage[] = [];
     let uidValidity = "0";
     let settled = false;
+    const deadline=AbortSignal.timeout(90_000);
+    const onDeadline=()=>fail(new Error(`readonly_folder_fetch_timeout:${folderName}`));
+    const finish=()=>{
+      if(settled)return;settled=true;deadline.removeEventListener('abort',onDeadline);imap.destroy();
+      messages.sort((a,b)=>b.date.getTime()-a.date.getTime());
+      resolve({mailbox:getConfiguredMailboxAddress(),folderName,uidValidity,messages});
+    };
     const fail = (error: Error) => {
       if (settled) return;
-      settled = true;
+      settled = true;deadline.removeEventListener('abort',onDeadline);imap.destroy();
       reject(error);
     };
+    deadline.addEventListener('abort',onDeadline,{once:true});
     imap.once("ready", () => {
       imap.openBox(folderName, true, (openError, box) => {
         if (openError) { imap.end(); fail(openError); return; }
@@ -455,7 +465,7 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
         // bounded date search when the mailbox was recreated or reset.
         const afterUid = readonlyCursorAfterUid(cursor, uidValidity);
         if (afterUid > 0 && typeof box.uidnext === "number" && box.uidnext <= afterUid + 1) {
-          imap.end();
+          finish();
           return;
         }
         const since = new Date(Date.now() - Math.max(1, Math.min(hours, 24 * 365)) * 60 * 60 * 1000);
@@ -464,7 +474,11 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
         // Once a cursor exists, UID is authoritative even after a multi-day
         // outage; SINCE would silently exclude mail that arrived before the
         // lookback window but has never been imported.
-        imap.search(afterUid > 0 ? [["UID", `${afterUid + 1}:*`]] : [["SINCE", sinceValue]], (searchError, found) => {
+        const criteria: any[] = afterUid > 0 ? [["UID", `${afterUid + 1}:*`]] : [["SINCE", sinceValue]];
+        // Preflight may constrain one thread; scheduled imports never pass this
+        // option and retain their authoritative UID cursor / full-mail behavior.
+        if(subjectFilter?.trim())criteria.push(['HEADER','SUBJECT',subjectFilter.trim()]);
+        imap.search(criteria, (searchError, found) => {
           if (searchError) { imap.end(); fail(searchError); return; }
           const limit = Math.max(1, Math.min(maxMessages, 250));
           // Some IMAP servers resolve the '*' range to the last existing UID
@@ -472,10 +486,16 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
           // Consume the oldest unseen UIDs first. Taking the newest N and then
           // advancing the cursor would permanently skip any earlier overflow.
           const uids = (found || []).filter(uid => uid > afterUid).sort((a, b) => a - b).slice(0, limit);
-          if (!uids.length) { imap.end(); return; }
-          let pending = uids.length;
+          if (!uids.length) { finish(); return; }
+          let pending=0,fetched=0,fetchEnded=false;
+          const closeAfterParse=()=>{
+            if(settled||!fetchEnded||pending!==0)return;
+            if(fetched!==uids.length||messages.length!==uids.length){fail(new Error(`readonly_folder_batch_incomplete:${folderName}`));return;}
+            finish();
+          };
           const fetch = imap.fetch(uids, { bodies: "", struct: true, markSeen: false });
           fetch.on("message", msg => {
+            pending+=1;fetched+=1;
             let uid = 0;
             let flags: string[] = [];
             const chunks: Buffer[] = [];
@@ -510,20 +530,19 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
                 fail(parseError instanceof Error ? parseError : new Error("Read-only IMAP parse failed"));
               } finally {
                 pending -= 1;
-                if (pending === 0) imap.end();
+                closeAfterParse();
               }
             });
           });
           fetch.once("error", error => { imap.end(); fail(error); });
+          fetch.once('end',()=>{fetchEnded=true;closeAfterParse();});
         });
       });
     });
     imap.once("error", fail);
     imap.once("end", () => {
       if (settled) return;
-      settled = true;
-      messages.sort((a, b) => b.date.getTime() - a.date.getTime());
-      resolve({ mailbox: getConfiguredMailboxAddress(), folderName, uidValidity, messages });
+      fail(new Error(`readonly_folder_connection_ended_before_completion:${folderName}`));
     });
     imap.connect();
   });
@@ -669,25 +688,38 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
       tlsOptions: { rejectUnauthorized: false },
       connTimeout: 15000,
       authTimeout: 10000,
+      socketTimeout: 90000,
+      keepalive: false,
     });
 
     let result: EmailMessage | null = null;
     let pendingParses = 0;
     let fetchEnded = false;
+    let settled = false;
+    // This is a finite I/O deadline, not a background scheduler. Connection
+    // authentication timeouts do not bound MIME fetch/parsing or logout.
+    const deadline = AbortSignal.timeout(180_000);
+    const onDeadline = () => fail(new Error(`readonly_uid_fetch_timeout:${folderName}:${targetUID}`));
+    const finish = (error?: Error) => {
+      if(settled)return;settled=true;deadline.removeEventListener('abort',onDeadline);
+      imap.destroy();if(error)reject(error);else resolve(result);
+    };
+    const fail = (error:Error) => finish(error);
+    deadline.addEventListener('abort',onDeadline,{once:true});
     const closeWhenParsed = () => {
-      if (fetchEnded && pendingParses === 0) imap.end();
+      if(settled)return;
+      if (fetchEnded && pendingParses === 0) finish();
     };
 
     imap.once("ready", () => {
       imap.openBox(folderName, true, (err, box) => {
-        if (err) { imap.end(); reject(err); return; }
+        if (err) { fail(err); return; }
         if (expectedUidValidity && String(box.uidvalidity ?? "0") !== expectedUidValidity) {
-          imap.end();
-          reject(new Error(`Mailbox UIDVALIDITY changed for ${folderName}; refresh the mailbox before linking this message`));
+          fail(new Error(`Mailbox UIDVALIDITY changed for ${folderName}; refresh the mailbox before linking this message`));
           return;
         }
 
-        const fetch = imap.fetch([targetUID], { bodies: "", struct: true });
+        const fetch = imap.fetch([targetUID], { bodies: "", struct: true, markSeen:false });
 
         fetch.on("message", (msg) => {
           pendingParses += 1;
@@ -723,6 +755,7 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
               };
             } catch (parseErr) {
               console.error("[EmailMonitor] Parse error for UID " + targetUID + ":", parseErr);
+              fail(parseErr instanceof Error?parseErr:new Error('readonly_uid_parse_failed'));
             } finally {
               pendingParses -= 1;
               closeWhenParsed();
@@ -730,15 +763,15 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
           });
         });
 
-        fetch.once("error", (err) => { console.error("[EmailMonitor] Fetch error:", err); imap.end(); });
+        fetch.once("error", (err) => { console.error("[EmailMonitor] Fetch error:", err); fail(err); });
         // MIME parsing (especially large attachments) can outlive the fetch
         // stream. Closing here used to resolve the promise with null first.
         fetch.once("end", () => { fetchEnded = true; closeWhenParsed(); });
       });
     });
 
-    imap.once("error", (err: Error) => reject(err));
-    imap.once("end", () => resolve(result));
+    imap.once("error", (err: Error) => fail(err));
+    imap.once("end", () => {if(!settled)fail(new Error('readonly_uid_connection_ended_before_completion'));});
 
     imap.connect();
   });

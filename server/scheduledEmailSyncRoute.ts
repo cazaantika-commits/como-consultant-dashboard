@@ -14,6 +14,7 @@ import { reconcileLifecycleResponseLanes } from "./services/comoLifecycleRespons
 import { retryKnownUndeliveredDispatches } from "./services/comoManusDispatch";
 import { ensureCurrentMailReviewWork, readMailExecutionHealth } from "./services/comoMailExecution";
 import { reconcileCurrentMailLinkage } from "./services/comoNextEmailInbox";
+import { ensureMailLinkageReviewWork } from "./services/comoMailLinkageReview";
 import { queueSystemManusAction, isInternalSystemActionEligible } from "./services/comoSystemActionDispatch";
 
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -70,6 +71,7 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // Future-only, narrow request/quotation watches are durable internal
           // records, not messages. Resolve inbound replies before considering work.
           const mailLinkage = await reconcileCurrentMailLinkage({userId:settings.userId,limit:5}).catch(()=>({error:"mail_linkage_failed" as const}));
+          const mailLinkageWork = await ensureMailLinkageReviewWork({userId:settings.userId,limit:10}).catch(()=>({error:"mail_linkage_work_failed" as const}));
           const mailReviewWork = await ensureCurrentMailReviewWork(settings.userId).catch(()=>({error:"mail_review_work_failed" as const}));
           const seededWatches = await seedConditionalSentWatches({ userId: settings.userId, limit: 3 });
           const conditionalWatches = await reconcileConditionalSentWatches({ userId: settings.userId, limit: 3 });
@@ -92,21 +94,26 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
               eq(comoNextActions.ownerType, "manus"), eq(comoNextActions.actionStatus, "open"),
               or(isNull(comoNextActions.attentionAt), lte(comoNextActions.attentionAt, nowSql())),
               notInArray(comoNextWorkFiles.workFileStatus, ["closed", "cancelled"]),
-              sql`(${comoNextWorkFiles.workFileStatus}<>'waiting' OR ${comoNextActions.sourceSystem}='como_mail_execution')`,
+              sql`(${comoNextWorkFiles.workFileStatus}<>'waiting' OR ${comoNextActions.sourceSystem} IN ('como_mail_execution','como_mail_linkage'))`,
               sql`NOT EXISTS (SELECT 1 FROM como_next_staged_directives dispatched
                   WHERE dispatched.user_id=${settings.userId}
                     AND dispatched.stage_key=CONCAT('system-manus-action:',${comoNextActions.id}))`,
-              sql`(${comoNextActions.sourceSystem}='como_mail_execution' OR NOT EXISTS (SELECT 1 FROM como_next_decisions gate
+              sql`(${comoNextActions.sourceSystem} IN ('como_mail_execution','como_mail_linkage') OR NOT EXISTS (SELECT 1 FROM como_next_decisions gate
                   WHERE gate.work_file_id = ${comoNextActions.workFileId}
                     AND (gate.decision_status = 'required' OR
                       (gate.decision_status = 'deferred' AND gate.due_at > UTC_TIMESTAMP()))))`))
             .orderBy(sql`CASE ${comoNextActions.priority} WHEN 'urgent' THEN 0 WHEN 'important' THEN 1 ELSE 2 END`,
               asc(comoNextActions.createdAt), asc(comoNextActions.id)).limit(20);
           const eligible = candidates.find(row => isInternalSystemActionEligible(row.title));
-          const systemWorkDispatch = eligible ? await queueSystemManusAction({ userId: settings.userId, actionId: Number(eligible.id) }) : null;
+          const selected = candidates.filter(row => isInternalSystemActionEligible(row.title)).slice(0,3);
+          // Bounded concurrent delivery uses the same durable locks and source
+          // keys. A backlog cannot wait one half-hour per item. Never retry an
+          // uncertain or already delivered item here.
+          const systemWorkDispatches = await Promise.all(selected.map(row => queueSystemManusAction({userId:settings.userId,actionId:Number(row.id)})));
+          const systemWorkDispatch = systemWorkDispatches[0] || null;
           // Real Manus receives the event; queueing is not completed execution.
           const executedActionIds:number[]=[];
-          if ("error" in mailLinkage || "error" in mailReviewWork || financeInvoices.status === "error" || "error" in financePayments || "error" in lifecycleResponses || "error" in manusDispatch) {
+          if ("error" in mailLinkage || "error" in mailLinkageWork || "error" in mailReviewWork || financeInvoices.status === "error" || "error" in financePayments || "error" in lifecycleResponses || "error" in manusDispatch) {
             throw new Error("finance_lane_failed_after_internal_work");
           }
           await db.update(comoNextEmailSyncSettings).set({
@@ -116,7 +123,7 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
           res.status(200).json({ ok: true, phase: "executive", selectedActionId: eligible ? Number(eligible.id) : null,
             executedActionIds: executedActionIds, seededWatches, conditionalWatches, mailLinkage, mailReviewWork, mailExecution:await readMailExecutionHealth(settings.userId),
-            financeInvoices, financePayments, lifecycleResponses, manusDispatch, systemWorkDispatch, externalSideEffects: false });
+            financeInvoices, financePayments, lifecycleResponses, manusDispatch, systemWorkDispatch, systemWorkDispatches, mailLinkageWork, externalSideEffects: false });
           return;
         }
         // Separate, retryable callback; analyses are keyed by message ID and

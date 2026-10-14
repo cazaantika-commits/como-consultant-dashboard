@@ -27,7 +27,8 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(imap).toContain('imap.openBox(folderName, true');
     expect(imap).toContain('markSeen: false');
     expect(imap).toContain('fail(parseError instanceof Error');
-    expect(imap).toContain('if (fetchEnded && pendingParses === 0) imap.end()');
+    expect(imap).toContain('if (fetchEnded && pendingParses === 0) finish()');
+    expect(imap).toContain('readonly_uid_connection_ended_before_completion');
     expect(imap).toContain('fetch.once("end", () => { fetchEnded = true; closeWhenParsed(); })');
   });
 

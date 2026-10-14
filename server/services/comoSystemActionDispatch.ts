@@ -7,9 +7,9 @@ export function isInternalSystemActionEligible(title:string){
  if(/^(?:مراجعة|تحليل|دراسة|تحضير|إعداد نقاط|قراءة|استخراج|Review|Analyze|Analyse|Prepare meeting)/i.test(title.trim()))return true;
  return !/إرسال|أرسل|ارسل|مراسلة|دفع|سداد|توقيع|تعيين|\bsend\b|\bpay\b|\bsign\b|\bappoint\w*/i.test(title);
 }
-export async function queueSystemManusAction(input:{userId:number;actionId:number}){
+export async function queueSystemManusAction(input:{userId:number;actionId:number;deliver?:boolean}){
  const db=await getDb();if(!db)throw new Error('database_unavailable');
- const [a]=rows(await db.execute(sql`SELECT a.*,wf.work_file_status FROM como_next_actions a JOIN como_next_work_files wf ON wf.id=a.work_file_id WHERE a.id=${input.actionId} AND a.user_id=${input.userId} AND a.owner_type='manus' AND a.action_status='open' AND wf.work_file_status NOT IN ('closed','cancelled') AND (wf.work_file_status<>'waiting' OR a.source_system='como_mail_execution') AND (a.source_system='como_mail_execution' OR NOT EXISTS (SELECT 1 FROM como_next_decisions g WHERE g.work_file_id=a.work_file_id AND (g.decision_status='required' OR (g.decision_status='deferred' AND g.due_at>UTC_TIMESTAMP())))) LIMIT 1`));
+ const [a]=rows(await db.execute(sql`SELECT a.*,wf.work_file_status FROM como_next_actions a JOIN como_next_work_files wf ON wf.id=a.work_file_id WHERE a.id=${input.actionId} AND a.user_id=${input.userId} AND a.owner_type='manus' AND a.action_status='open' AND wf.work_file_status NOT IN ('closed','cancelled') AND (wf.work_file_status<>'waiting' OR a.source_system IN ('como_mail_execution','como_mail_linkage')) AND (a.source_system IN ('como_mail_execution','como_mail_linkage') OR NOT EXISTS (SELECT 1 FROM como_next_decisions g WHERE g.work_file_id=a.work_file_id AND (g.decision_status='required' OR (g.decision_status='deferred' AND g.due_at>UTC_TIMESTAMP())))) LIMIT 1`));
  if(!a)return {queued:false,reason:'not_eligible_internal_action'};
  if(!isInternalSystemActionEligible(a.title))return {queued:false,reason:'outside_internal_action_authority'};
  const key=`system-manus-action:${a.id}`;
@@ -22,6 +22,8 @@ export async function queueSystemManusAction(input:{userId:number;actionId:numbe
   await appendEvent(tx,{userId:input.userId,projectId:Number(a.project_id),workFileId:Number(a.work_file_id),actionId:Number(a.id),actorType:'system',actorUserId:null,eventType:'system_manus_work_requested',summary:'طلب النظام تنفيذ عمل Manus الداخلي عبر قناة وصول فعلية؛ لم يُنجز بعد',payload:{directiveId:id,actionId:Number(a.id),externalSideEffect:false},idempotencyKey:`system-work-request:${a.id}`});return id;
  });
  const queue=await claimSubmittingAndQueueManusDispatch({userId:input.userId,workFileId:Number(a.work_file_id),directiveId});
- const dispatch=queue.shouldDeliver?await deliverQueuedManusDispatch({directiveId}):queue.dispatch;
+ // Only real Manus already working in the authorized current task may hold
+ // network delivery. The signed heartbeat never passes deliver:false.
+ const dispatch=queue.shouldDeliver&&input.deliver!==false?await deliverQueuedManusDispatch({directiveId}):queue.dispatch;
  return {queued:true,directiveId,dispatch,completed:dispatch?.status==='completed',externalSideEffects:false};
 }

@@ -1057,15 +1057,20 @@ export async function listEmailLinkingOptions(userId: number) {
   }));
 }
 
-async function storeEmailAttachments(email: typeof comoNextEmailMessages.$inferSelect) {
+async function storeEmailAttachments(email: typeof comoNextEmailMessages.$inferSelect, reviewedReadonlySource?: EmailMessage) {
   const db = await getDb();
   if (!db) databaseUnavailable();
   if (!email.attachmentCount) return [] as Array<{ ordinal: number; documentId: number; sha256: string }>;
-  const full = await fetchEmailByUID(email.imapUid, email.uidValidity, email.folderName);
+  // In-process Manus continuation may reuse the exact, read-only source it
+  // already downloaded and reviewed. No route accepts this parameter. It does
+  // not waive source identity/body checks or authorize a target project.
+  const full = reviewedReadonlySource || await fetchEmailByUID(email.imapUid, email.uidValidity, email.folderName);
   if (!full) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "تعذر استعادة الرسالة من صندوق البريد" });
   if (messageIdentitySha(full, email.uidValidity) !== email.messageIdSha256 || sha256(full.textBody.trim().slice(0, 1_000_000)) !== email.bodySha256) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هوية الرسالة أو محتواها لم تعد مطابقة؛ أعد المزامنة قبل الربط" });
   }
+  const metadata = await db.select().from(comoNextEmailAttachments).where(eq(comoNextEmailAttachments.emailMessageId,email.id)).orderBy(comoNextEmailAttachments.ordinal);
+  if(full.uid!==email.imapUid||full.attachments.length!==email.attachmentCount||metadata.length!==full.attachments.length||metadata.some((a,i)=>a.fileName!==full.attachments[i].filename||a.byteSize!==full.attachments[i].content?.byteLength))throw new TRPCError({code:'PRECONDITION_FAILED',message:'بنية المرفقات لا تطابق مصدر البريد؛ لا حفظ أو ربط تخميني'});
   const stored: Array<{ ordinal: number; documentId: number; sha256: string }> = [];
   for (const [ordinal, attachment] of full.attachments.entries()) {
     if (!attachment.content) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `تعذر قراءة المرفق ${attachment.filename}` });
@@ -1095,7 +1100,7 @@ async function storeEmailAttachments(email: typeof comoNextEmailMessages.$inferS
   return stored;
 }
 
-export async function linkEmailToWorkFileCommand(input: { userId: number; emailId: number; projectId: number; workFileId: number; projectPartyId?: number | null; suppressReplyDraft?: boolean }) {
+export async function linkEmailToWorkFileCommand(input: { userId: number; emailId: number; projectId: number; workFileId: number; projectPartyId?: number | null; suppressReplyDraft?: boolean; reviewedReadonlySource?: EmailMessage }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
   const [email] = await db.select().from(comoNextEmailMessages).where(and(eq(comoNextEmailMessages.id, input.emailId), eq(comoNextEmailMessages.userId, input.userId))).limit(1);
@@ -1114,7 +1119,7 @@ export async function linkEmailToWorkFileCommand(input: { userId: number; emailI
     const [party] = await db.select({ id: comoNextProjectParties.id }).from(comoNextProjectParties).where(and(eq(comoNextProjectParties.id, input.projectPartyId), eq(comoNextProjectParties.projectId, input.projectId))).limit(1);
     if (!party) throw new TRPCError({ code: "NOT_FOUND", message: "الطرف لا يتبع المشروع المختار" });
   }
-  const storedDocuments = await storeEmailAttachments(email);
+  const storedDocuments = await storeEmailAttachments(email,input.reviewedReadonlySource);
   const isSent = email.folderName !== "INBOX";
   const sourceRecordId = `imap:${email.mailboxKey.slice(0, 24)}:${email.folderName}:${email.uidValidity}:${email.imapUid}`;
   const linked = await db.transaction(async tx => {
