@@ -129,6 +129,10 @@ export function directiveRequestsCommunicationDraft(directiveText: string) {
   const explicitDraft = /(?:prepare|draft|write).{0,60}(?:reminder|email|message|reply)|(?:جه[ّ]?ز|حض[ّ]?ر|اكتب|أعد|اعد).{0,60}(?:رسالة|مسودة|تذكير|بريد)/i.test(normalized);
   const cancelDraft = /(?:لا|ما)\s*(?:تجهز|تحضر|تكتب|تعد)|(?:do not|don't)\s+(?:prepare|draft|write)|(?:ألغ|الغي|وقف).{0,25}(?:الطلب|التوجيه|المسودة)/i.test(normalized);
   if (cancelDraft) return false;
+  // A prohibition governs all coordinated verbs in the same sentence, e.g.
+  // "لا تغيّر قراراته أو سجّل سدادًا أو أرسل مراسلة". It is not a send request.
+  const prohibitedCoordinatedCommunication = /(?:^|[.\n؛])\s*لا\s+[^.\n؛]{0,180}(?:أو|او)\s+(?:أرسل|ارسل|راسل|جه[ّ]?ز|اكتب)\s+(?:مراسلة|رسالة|مسودة|بريد|تذكير)/i;
+  if (prohibitedCoordinatedCommunication.test(directiveText)) return false;
   if (explicitDraft) return true;
   // Negatives are instructions, not soft caveats. This protects interrupted phrases
   // such as "ذكّري وائل، خلي ما نرسل" from being turned into a mailbox draft.

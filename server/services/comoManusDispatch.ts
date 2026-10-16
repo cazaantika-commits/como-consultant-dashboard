@@ -78,6 +78,14 @@ export async function recoverDispatchFromAppliedReceipt(input:{directiveId:numbe
  await db.transaction(async tx=>{await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${Number(source.work_file_id)} FOR UPDATE`);await tx.execute(sql`UPDATE como_manus_dispatches SET state='completed',completed_at=UTC_TIMESTAMP(),last_progress_at=UTC_TIMESTAMP(),execution_summary=${receipt.executionSummary},result_json=${JSON.stringify(receipt)},update_id=${updateId},communication_draft_id=${receipt.communicationDraftId},mailbox_draft_ref=${receipt.mailboxDraftRef},work_product_id=${receipt.workProductId},next_action_id=${receipt.nextActionId},error=NULL WHERE directive_id=${input.directiveId} AND state IN ('running','failed','delivered','delivery_unknown')`);await tx.execute(sql`UPDATE como_next_staged_directives SET status='submitted',submitted_at=COALESCE(submitted_at,UTC_TIMESTAMP()),update_id=${updateId},communication_draft_id=${receipt.communicationDraftId},mailbox_draft_ref=${receipt.mailboxDraftRef},work_product_id=${receipt.workProductId},execution_summary=${receipt.executionSummary},result_json=${JSON.stringify(receipt)},failure_message=NULL WHERE id=${input.directiveId} AND user_id=${input.userId} AND status IN ('submitting','failed')`);await appendEvent(tx,{userId:input.userId,projectId:Number(source.project_id),workFileId:Number(source.work_file_id),actorType:'manus',actorUserId:null,eventType:'manus_directive_receipt_recovered',summary:'وصل الحدث إلى Manus؛ استعيد إيصال العمل المثبت دون تكرار المسودة أو إرسالها',payload:{directiveId:input.directiveId,updateId,mailboxDraftRef:receipt.mailboxDraftRef,nextActionId:receipt.nextActionId,completed:true,sent:false},idempotencyKey:`dispatch-recovered:${input.directiveId}`});});return readDispatchForDirective({directiveId:input.directiveId});
 }
 export async function recordManusDispatchProgress(input:{directiveId:number;summary:string}){const db=await getDb();if(!db)throw new Error('database_unavailable');const r=await loadWorkerRow(db,input.directiveId);if(!r||!isAuthoritativeOwner(r)||!r.claim_token?.startsWith('worker:')||!['running','delivered'].includes(r.state))throw new Error('dispatch_not_claimed');await db.transaction(async tx=>{await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${Number(r.work_file_id)} FOR UPDATE`);await tx.execute(sql`UPDATE como_manus_dispatches SET last_progress_at=UTC_TIMESTAMP(),execution_summary=${input.summary.slice(0,5000)} WHERE directive_id=${input.directiveId} AND claim_token=${r.claim_token}`);await appendEvent(tx,{userId:Number(r.user_id),projectId:Number(r.project_id),workFileId:Number(r.work_file_id),actorType:'manus',actorUserId:null,eventType:'manus_directive_progress',summary:input.summary.slice(0,950),payload:{directiveId:input.directiveId,completed:false}});});}
+/** Internal payment-status review is neither a payment instruction nor an email
+ * request. Route only the existing named review action, not generic invoices. */
+export function paymentStatusReviewInvoiceId(action:{source_system?:string;title?:string}){
+ if(action.source_system!=='como_next')return null;
+ const match=String(action.title||'').match(/^مراجعة حالة تنفيذ المالية لفاتورة\s+(?:أرتك|Artec)\s*(\d+)\s*$/i);
+ const id=match?Number(match[1]):0;
+ return Number.isSafeInteger(id)&&id>0?id:null;
+}
 /** Invoked only by real Manus after receiving event. Payload never grants authority. */
 export async function executeDispatchedDirectiveCommand(input:{directiveId:number}){
  const db=await getDb();if(!db)throw new Error('database_unavailable');const r=await loadWorkerRow(db,input.directiveId);if(!r)return {accepted:false,reason:'dispatch_not_found'};if(!isAuthoritativeOwner(r))return {accepted:false,reason:'directive_not_owner_approved'};
@@ -91,6 +99,11 @@ export async function executeDispatchedDirectiveCommand(input:{directiveId:numbe
     const [action]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_actions WHERE id=${Number(r.action_id)} AND work_file_id=${Number(r.work_file_id)} AND user_id=${Number(r.user_id)} AND owner_type='manus' AND action_status='open' LIMIT 1`));
     const {isInternalSystemActionEligible}=await import('./comoSystemActionDispatch');
     if(!action || !isInternalSystemActionEligible(action.title))throw new Error('system_action_no_longer_eligible');
+    const paymentInvoiceId=paymentStatusReviewInvoiceId(action);
+    if(paymentInvoiceId){
+      await recordManusDispatchProgress({directiveId:input.directiveId,summary:`الفلل — وصلت مراجعة تنفيذ المالية لفاتورة أرتك${paymentInvoiceId} إلى Manus. يجب قراءة أحدث خيط COMO وإثبات سبب بقاء الانتظار أو التأكيد الصريح؛ لا تحليل آلي أو طلب صرف أو مسودة أو تغيير سداد.`});
+      return {accepted:true,completed:false,fulfillment:'requires_agent_payment_status_review',invoiceNumber:paymentInvoiceId,workFileId:Number(r.work_file_id),dispatch:await readDispatchForDirective(input)};
+    }
     if(action.source_system==='como_mail_linkage'){
       const emailId=Number(String(action.source_record_id).match(/^mail-linkage:(\d+)$/)?.[1]||0);
       const [email]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_email_messages WHERE id=${emailId} AND user_id=${Number(r.user_id)} AND folder_name='INBOX' AND inbox_status<>'dismissed'`));
@@ -217,6 +230,45 @@ export async function completeDispatchedMailLinkageReview(input:{directiveId:num
  const {queueSystemManusAction}=await import('./comoSystemActionDispatch');
  const continuation=nextAction?await queueSystemManusAction({userId:Number(r.user_id),actionId:Number(nextAction.id),deliver:!input.continueInCurrentTask}):null;
  return {matchingReceipt:result,continuation};
+}
+
+/** Main-only receipt of a real mailbox inspection. Completion means the status
+ * check is done, never that the invoice has been paid. No mailbox or payment IO. */
+export async function completeDispatchedPaymentStatusReview(input:{directiveId:number;invoiceNumber:number;checkedAt:string;sourceProofs:{emailId:number;sha256:string}[];summary:string;workProductBody:string;nextActionId:number}){
+ const db=await getDb();if(!db)throw Error('database_unavailable');
+ const r=await loadWorkerRow(db,input.directiveId);
+ if(!r||!isAuthoritativeOwner(r)||r.source_member_id!=='system:manus-action')throw Error('payment_status_review_not_authorized');
+ if(r.state==='completed')return readDispatchForDirective({directiveId:input.directiveId});
+ if(r.state!=='running'||!r.claim_token?.startsWith('worker:')||r.directive_status!=='submitting')throw Error('payment_status_review_not_claimed');
+ const [action]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_actions WHERE id=${Number(r.action_id)} AND user_id=${Number(r.user_id)} AND work_file_id=${Number(r.work_file_id)} AND owner_type='manus' AND action_status='open'`));
+ if(paymentStatusReviewInvoiceId(action||{})!==input.invoiceNumber)throw Error('payment_status_review_action_changed');
+ const checked=Date.parse(input.checkedAt);
+ if(!Number.isFinite(checked)||checked>Date.now()+30_000||Date.now()-checked>15*60_000||input.sourceProofs.length<2||new Set(input.sourceProofs.map(p=>p.emailId)).size!==input.sourceProofs.length||input.summary.trim().length<40||input.workProductBody.trim().length<180)throw Error('payment_status_review_evidence_incomplete');
+ return db.transaction(async tx=>{
+  const [file]=rowsFrom<any>(await tx.execute(sql`SELECT work_file_status FROM como_next_work_files WHERE id=${Number(r.work_file_id)} AND user_id=${Number(r.user_id)} FOR UPDATE`));
+  if(!file||['closed','cancelled'].includes(file.work_file_status))throw Error('payment_status_review_file_closed');
+  const [live]=rowsFrom<any>(await tx.execute(sql`SELECT state,claim_token FROM como_manus_dispatches WHERE directive_id=${input.directiveId} FOR UPDATE`));
+  if(live?.state==='completed')return readDispatchForDirective({directiveId:input.directiveId});
+  if(live?.state!=='running'||live.claim_token!==r.claim_token)throw Error('payment_status_review_claim_lost');
+  const [currentAction]=rowsFrom<any>(await tx.execute(sql`SELECT source_system,title,action_status FROM como_next_actions WHERE id=${Number(r.action_id)} AND user_id=${Number(r.user_id)} AND work_file_id=${Number(r.work_file_id)} FOR UPDATE`));
+  if(currentAction?.action_status!=='open'||paymentStatusReviewInvoiceId(currentAction)!==input.invoiceNumber)throw Error('payment_status_review_action_changed');
+  for(const proof of input.sourceProofs){
+   const [email]=rowsFrom<any>(await tx.execute(sql`SELECT body_sha256,linked_work_file_id FROM como_next_email_messages WHERE id=${proof.emailId} AND user_id=${Number(r.user_id)} FOR UPDATE`));
+   if(!/^[a-f0-9]{64}$/.test(proof.sha256)||email?.body_sha256!==proof.sha256||Number(email.linked_work_file_id)!==Number(r.work_file_id))throw Error('payment_status_review_source_changed');
+  }
+  const [payment]=rowsFrom<any>(await tx.execute(sql`SELECT id FROM como_next_lifecycle_lanes WHERE user_id=${Number(r.user_id)} AND work_file_id=${Number(r.work_file_id)} AND lane_key=${`payment:${input.invoiceNumber}`} AND kind='payment' FOR UPDATE`));
+  const [waiting]=rowsFrom<any>(await tx.execute(sql`SELECT id FROM como_next_actions WHERE id=${input.nextActionId} AND user_id=${Number(r.user_id)} AND work_file_id=${Number(r.work_file_id)} AND action_status='waiting_external' FOR UPDATE`));
+  if(!payment||!waiting||input.nextActionId===Number(r.action_id))throw Error('payment_status_review_waiting_not_proven');
+  const m:any=await tx.execute(sql`INSERT INTO como_next_work_memory (project_id,work_file_id,memory_type,entry_type,title,body,source_status,source_system,source_record_id,is_current,occurred_at) VALUES (${Number(r.project_id)},${Number(r.work_file_id)},'work_product','payment_status_review',${`الفلل — نتيجة متابعة فاتورة أرتك${input.invoiceNumber}`},${input.workProductBody},'reviewed','como_payment_status_review',${`dispatch-payment-status:${input.directiveId}`},1,UTC_TIMESTAMP())`);
+  const workProductId=Number(m[0].insertId);
+  const receipt={directiveId:input.directiveId,workProductId,invoiceNumber:input.invoiceNumber,checkedAt:input.checkedAt,sourceProofs:input.sourceProofs,nextActionId:input.nextActionId,completedNow:true,reviewCompleted:true,paymentChanged:false,paymentRequestCreated:false,communicationDraftId:null,mailboxDraftRef:null,sent:false,executionSummary:input.summary};
+  const c=await tx.execute(sql`UPDATE como_next_actions SET action_status='verified',completed_at=UTC_TIMESTAMP(),verified_at=UTC_TIMESTAMP(),evidence_reference=${`إيصال فحص COMO #${workProductId}؛ الفحص انتهى ولا يعني إثبات سداد`} WHERE id=${Number(r.action_id)} AND user_id=${Number(r.user_id)} AND owner_type='manus' AND action_status='open'`);
+  if(!affectedRows(c))throw Error('payment_status_review_action_changed');
+  await tx.execute(sql`UPDATE como_manus_dispatches SET state='completed',work_product_id=${workProductId},execution_summary=${input.summary},result_json=${JSON.stringify(receipt)},next_action_id=${input.nextActionId},completed_at=UTC_TIMESTAMP(),last_progress_at=UTC_TIMESTAMP(),error=NULL WHERE directive_id=${input.directiveId} AND state='running' AND claim_token=${r.claim_token}`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET status='submitted',work_product_id=${workProductId},execution_summary=${input.summary},result_json=${JSON.stringify(receipt)},submitted_at=UTC_TIMESTAMP(),failure_message=NULL WHERE id=${input.directiveId} AND user_id=${Number(r.user_id)} AND status='submitting'`);
+  await appendEvent(tx,{userId:Number(r.user_id),projectId:Number(r.project_id),workFileId:Number(r.work_file_id),actionId:Number(r.action_id),actorType:'manus',actorUserId:null,eventType:'payment_status_review_completed',summary:input.summary,payload:{directiveId:input.directiveId,workProductId,invoiceNumber:input.invoiceNumber,nextActionId:input.nextActionId,reviewCompleted:true,paymentChanged:false,paymentRequestCreated:false,sent:false},idempotencyKey:`payment-status-review:${input.directiveId}`});
+  return receipt;
+ });
 }
 
 /** Real Manus source review, including recovery after the generic processor failed.

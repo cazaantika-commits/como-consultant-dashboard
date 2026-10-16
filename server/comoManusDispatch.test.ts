@@ -1,5 +1,6 @@
 import {describe,expect,it} from 'vitest';
-import {comoManusDispatchInternals} from './services/comoManusDispatch';
+import {comoManusDispatchInternals,paymentStatusReviewInvoiceId} from './services/comoManusDispatch';
+import {directiveRequestsCommunicationDraft} from './services/comoNextExecutiveDirectives';
 const {canClaimDispatchForWorker,canRetryKnownUndeliveredDispatch,delayFor,hasCompletedFulfillment,safeError}=comoManusDispatchInternals;
 describe('COMO durable dispatch',()=>{
  it('claims only approved submitted event once',()=>{
@@ -33,4 +34,18 @@ describe('COMO durable dispatch',()=>{
   expect(delayFor({state:'completed',queuedAt:old,lastProgressAt:null,startedAt:old})).toMatchObject({detected:false});
  });
  it('never exposes provider error or token',()=>{expect(safeError('provider token=secret')).toBe('dispatch_execution_failed')});
+ it('routes only the named internal Artec payment-status review',()=>{
+  expect(paymentStatusReviewInvoiceId({source_system:'como_next',title:'مراجعة حالة تنفيذ المالية لفاتورة أرتك5586'})).toBe(5586);
+  expect(paymentStatusReviewInvoiceId({source_system:'como_next',title:'مراجعة حالة تنفيذ المالية لفاتورة Artec 5586'})).toBe(5586);
+  expect(paymentStatusReviewInvoiceId({source_system:'finance_invoice_review',title:'مراجعة حالة تنفيذ المالية لفاتورة أرتك5586'})).toBeNull();
+  expect(paymentStatusReviewInvoiceId({source_system:'como_next',title:'مراجعة وإرسال طلب صرف فاتورة أرتك5586'})).toBeNull();
+  expect(paymentStatusReviewInvoiceId({source_system:'como_next',title:'مراجعة حالة تنفيذ المالية لفاتورة أرتك0'})).toBeNull();
+ });
+ it('does not turn coordinated negative verbs into a communication request',()=>{
+  expect(directiveRequestsCommunicationDraft('هذا ليس توجيهًا ماليًا جديدًا من عبد الرحمن. لا تغيّر قراراته أو سجّل سدادًا أو أرسل مراسلة.')).toBe(false);
+  expect(directiveRequestsCommunicationDraft('لا تغيّر قراراته أو سجّل سدادًا أو أرسل مراسلة.')).toBe(false);
+  expect(directiveRequestsCommunicationDraft('لا تغيّر حالة الملف أو جهّز مسودة.')).toBe(false);
+  expect(directiveRequestsCommunicationDraft('راجع الفاتورة. أرسل رسالة إلى وائل.')).toBe(true);
+  expect(directiveRequestsCommunicationDraft('جهّز مسودة ولا ترسلها إلى وائل الآن.')).toBe(true);
+ });
 });
