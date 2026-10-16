@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {comoManusDispatchInternals,paymentStatusReviewInvoiceId} from './services/comoManusDispatch';
+import {comoManusDispatchInternals,paymentStatusReviewInvoiceId,requiresManualEvidenceReconciliation} from './services/comoManusDispatch';
 import {directiveRequestsCommunicationDraft} from './services/comoNextExecutiveDirectives';
 const {canClaimDispatchForWorker,canRetryKnownUndeliveredDispatch,delayFor,hasCompletedFulfillment,safeError}=comoManusDispatchInternals;
 describe('COMO durable dispatch',()=>{
@@ -25,6 +25,17 @@ describe('COMO durable dispatch',()=>{
   expect(hasCompletedFulfillment({mailboxDraftRef:'Drafts UID 937'})).toBe(true);
   expect(hasCompletedFulfillment({completedNow:true})).toBe(true);
   expect(hasCompletedFulfillment({workProductId:99})).toBe(true);
+ });
+ it('an explicit partial receipt stays incomplete despite a report or draft',()=>{
+  expect(hasCompletedFulfillment({completedNow:false,workProductId:99})).toBe(false);
+  expect(hasCompletedFulfillment({completedNow:false,mailboxDraftRef:'Drafts UID 960'})).toBe(false);
+  expect(hasCompletedFulfillment({completedNow:true,workProductId:99})).toBe(true);
+ });
+ it('routes evidence reconciliation to real source review only',()=>{
+  expect(requiresManualEvidenceReconciliation({source_system:'evidence_reconciliation'})).toBe(true);
+  expect(requiresManualEvidenceReconciliation({source_system:'como_mail_execution'})).toBe(false);
+  expect(requiresManualEvidenceReconciliation({source_system:'owner_directive'})).toBe(false);
+  expect(requiresManualEvidenceReconciliation({})).toBe(false);
  });
  it('uses UTC or ISO progress time rather than treating fresh progress as delay',()=>{
   const old=new Date(Date.now()-121000).toISOString();

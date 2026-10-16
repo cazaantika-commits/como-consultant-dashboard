@@ -1,0 +1,83 @@
+import fs from 'node:fs';
+import {createHash} from 'node:crypto';
+import {sql} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {fetchEmailByUID,fetchReadonlyFolderSince,getConfiguredMailboxAddress} from '../server/emailMonitor';
+import {createReplyDraftFromEmailCommand} from '../server/services/comoNextEmailInbox';
+import {appendEvent,createActionCommand,requireProjectAccess} from '../server/services/comoNextCommands';
+import {DatabaseMailboxDraftLedger} from '../server/services/comoMailboxDraftLedger';
+import {completeDispatchedMailReview,readDispatchForDirective,recordManusDispatchProgress} from '../server/services/comoManusDispatch';
+import {readExecutiveWorkFile} from '../server/services/saraWorkFileReader';
+const root='/home/ubuntu/reports/como-directives-810001-810002-2026-10-16';
+const rows=(v:any)=>v[0] as any[];
+const norm=(v:any)=>String(v||'').replace(/\r\n?/g,'\n').trim();
+const sha=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const env=(v:any)=>[...new Set(String(v||'').toLowerCase().match(/[a-z0-9.!#$%&'*+\/?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/g)||[])].sort().join(',');
+const sameSubject=(a:string,b:string)=>a.replace(/^\s*(?:(?:re|fw|fwd)\s*:\s*)+/i,'').trim().toLowerCase()===b.replace(/^\s*(?:(?:re|fw|fwd)\s*:\s*)+/i,'').trim().toLowerCase();
+const sourceSha='1f65c04b933ff66e9b1425fe4f9778dab4cb44c96fa8a78fc132646af586aaa7';
+async function main(){
+ const db=await getDb();if(!db)throw Error('database_unavailable');await requireProjectAccess(db,6,1,'write');
+ if(getConfiguredMailboxAddress()!=='a.zaqout@comodevelopments.com')throw Error('como_only');
+ const d1=await readDispatchForDirective({directiveId:810001}),d2=await readDispatchForDirective({directiveId:810002});
+ if(d1?.state==='completed'&&d2?.state==='failed'&&d2.error==='dispatch_not_completed'){console.log(JSON.stringify({alreadyProcessed:true,d1,d2}));return;}
+ if(d1?.state!=='running'||d2?.state!=='running')throw Error('dispatches_not_claimed');
+ const [source]=rows(await db.execute(sql`SELECT * FROM como_next_email_messages WHERE id=1830001 AND user_id=1 AND linked_work_file_id=390001 AND inbox_status='linked'`));
+ const directives=rows(await db.execute(sql`SELECT * FROM como_next_staged_directives WHERE id IN (810001,810002) AND user_id=1 AND work_file_id=390001 AND source_member_id='system:manus-action' AND status='submitting'`));
+ if(!source||source.body_sha256!==sourceSha||directives.length!==2||directives.find(d=>d.id===810002)?.action_id!==1830001)throw Error('authority_or_source_changed');
+ const proof=JSON.parse(fs.readFileSync(`${root}/live-proof.json`,'utf8'));
+ const manifest=JSON.parse(fs.readFileSync(`${root}/attachment-manifest.json`,'utf8'));
+ const docs=rows(await db.execute(sql`SELECT * FROM como_next_email_attachments WHERE email_message_id=1830001 ORDER BY ordinal`));
+ if(proof.source.messageId!==source.message_id||sha(norm(proof.source.textBody))!==sourceSha||docs.length!==4)throw Error('source_proof_incomplete');
+ for(const a of docs){const m=manifest.find((m:any)=>m.id===Number(a.document_id));const l=proof.source.attachments.find((v:any)=>v.filename===a.file_name);if(!m||sha(fs.readFileSync(m.path))!==a.sha256||l?.contentSha256!==a.sha256||a.storage_status!=='stored')throw Error('document_proof_changed');}
+ const report=fs.readFileSync(`${root}/Artec_Meeting_Version_Comparison_AR.md`,'utf8');
+ const mailFile=fs.readFileSync(`${root}/Artec_Remaining_Clarification_Reply_EN.md`,'utf8');const body=norm(mailFile.split('\n---\n')[1]);
+ if(report.length<3000||!report.includes('810002')||!report.includes('1830001')||!body.startsWith('Dear Tedi,'))throw Error('output_incomplete');
+ const protectedSnapshot=async()=>({payments:rows(await db.execute(sql`SELECT * FROM como_next_lifecycle_lanes WHERE user_id=1 AND kind='payment' ORDER BY id`)),pending:rows(await db.execute(sql`SELECT * FROM como_next_staged_directives WHERE user_id=1 AND status='pending' ORDER BY id`)),cancelled:rows(await db.execute(sql`SELECT * FROM como_next_work_files WHERE user_id=1 AND work_file_status='cancelled' ORDER BY id`)),cancelledActions:rows(await db.execute(sql`SELECT * FROM como_next_actions WHERE user_id=1 AND action_status='cancelled' ORDER BY id`)),scenarios:rows(await db.execute(sql`SELECT * FROM cf_scenarios ORDER BY id`))});
+ const protectedBefore=await protectedSnapshot();fs.writeFileSync(`${root}/protected-before.json`,JSON.stringify(protectedBefore,null,2)+'\n');
+ const [sentBefore,draftsBefore]=await Promise.all([fetchReadonlyFolderSince('Sent',48,100,undefined,'6180578'),fetchReadonlyFolderSince('Drafts',168,100,undefined,'6180578')]);
+ const sent225=sentBefore.messages.find(m=>m.uid===225);const [prior]=rows(await db.execute(sql`SELECT * FROM como_next_communications WHERE id=2550001 AND user_id=1 AND work_file_id=390001`));const [priorLedger]=rows(await db.execute(sql`SELECT * FROM como_mailbox_draft_ledger WHERE communication_id=2550001 AND user_id=1 AND work_file_id=390001`));
+ if(!sent225||norm(sent225.textBody)!==norm(prior?.body)||sent225.messageId!=='<4CYCHBKWKUU4.P8RZ8HFB1VAE@mailcore-57c8fbd58d-ntqf6>'||env(sent225.to)!==env(prior.to_text)||env(sent225.cc)!==env(prior.cc_text)||draftsBefore.messages.some(m=>m.uid===957))throw Error('prior_sent_not_proven');
+ if(sentBefore.messages.some(m=>sameSubject(m.subject,source.subject)&&m.date.getTime()>new Date(proof.source.date).getTime()))throw Error('new_owner_reply_observed_no_duplicate');
+ const existingDrafts=draftsBefore.messages.filter(m=>sameSubject(m.subject,source.subject));
+ if(existingDrafts.length&&!source.reply_draft_communication_id)throw Error('untracked_existing_draft');
+ // Confirm a Sent observation in the durable ledger only; never edit Sent or re-append 957.
+ await new DatabaseMailboxDraftLedger().confirmMailboxObservation({id:Number(priorLedger.id),folder:'Sent',uid:225,sent:true});
+ await db.transaction(async tx=>{
+  const [file]=rows(await tx.execute(sql`SELECT work_file_status FROM como_next_work_files WHERE id=390001 AND user_id=1 FOR UPDATE`));if(!file||['closed','cancelled'].includes(file.work_file_status))throw Error('file_closed');
+  await tx.execute(sql`UPDATE como_next_communications SET communication_status='sent',sent_at=${sent225.date.toISOString().slice(0,19).replace('T',' ')},occurred_at=${sent225.date.toISOString().slice(0,19).replace('T',' ')},external_message_ref=${sent225.messageId},evidence_reference='إرسال عبد الرحمن مطابق حيًا — Sent UID225 / COMO1770002؛ لا إرسال من Manus' WHERE id=2550001 AND user_id=1 AND communication_status IN ('archived','sent')`);
+  await appendEvent(tx,{userId:1,projectId:6,workFileId:390001,actorType:'manus',actorUserId:null,eventType:'artec_clarification_sent_observed',summary:'الفلل — ثبت إرسال عبد الرحمن طلب المقاسات والسكيتشات سابقًا في Sent225؛957 لم تُعد إنشاؤها أو تعديلها.',payload:{sentEmailId:1770002,sentUid:225,priorDraftUid:957,communicationId:2550001,bodyMatched:true,envelopeMatched:true,manusSent:false},idempotencyKey:'artec-meeting:1830001:prior-sent-observed'});
+ });
+ const draft=await createReplyDraftFromEmailCommand({userId:1,emailId:1830001,body,ccText:'mzakout@artecint.com, wael@zooma.ae'});
+ const [communication]=rows(await db.execute(sql`SELECT * FROM como_next_communications WHERE id=${draft.id}`));
+ const [ledger]=rows(await db.execute(sql`SELECT * FROM como_mailbox_draft_ledger WHERE communication_id=${draft.id}`));
+ const uid=Number(ledger?.draft_uid||0);if(!uid||ledger?.state!=='draft_saved'||norm(communication?.body)!==body)throw Error('draft_not_proven');
+ const [live,allDrafts,sentAfter]=await Promise.all([fetchEmailByUID(uid,undefined,'Drafts'),fetchReadonlyFolderSince('Drafts',48,100,undefined,'6180578'),fetchReadonlyFolderSince('Sent',48,100,undefined,'6180578')]);
+ const matches=allDrafts.messages.filter(m=>sameSubject(m.subject,source.subject));const h=matches[0]?.headers||{};
+ if(!live||norm(live.textBody)!==body||live.subject!==source.subject||env(live.to)!=='tdimitrova@artecint.com'||env(live.cc)!=='mzakout@artecint.com,wael@zooma.ae'||matches.length!==1||matches[0].uid!==uid||String(h['in-reply-to']||'')!==source.message_id||!String(h.references||'').includes(source.message_id)||h['x-como-draft-key']!=='email-reply-draft:1830001'||sentAfter.messages.some(m=>norm(m.textBody)===body))throw Error('live_draft_verification_failed');
+ const ref=`Drafts UID ${uid}`;fs.writeFileSync(`${root}/saved-draft-proof.json`,JSON.stringify({communicationId:draft.id,uid,live,allDrafts,sentAfter},null,2)+'\n');
+ const human=await createActionCommand({userId:1,workFileId:390001,title:'الفلل الأربع — عبد الرحمن: مراجعة رد استلام نسخة الاجتماع وطلب استكمال التوضيح',description:`أرتك أرسلت نسخة الاجتماع فقط / COMO1830001. Manus فحصها وقارنها بالتحديث؛ المقاسات الحالية والمقاطع والسكيتشات ما زالت لدى أرتك بناءً على طلبك المرسل Sent225. ${ref}/المراسلة${draft.id}: شكر مختصر ومتابعة الناقص فقط، بلا ملاحظات تصميمية. لم تُرسل.`,acceptanceCriteria:'يراجع عبد الرحمن مسودة الرد ويقرر إرسالها من تطبيق البريد. لا اعتماد تصميم أو تقديم جهات؛ انتظار الرسومات مستند إلى الطلب السابق المرسل، لا إلى المسودة الجديدة.',ownerType:'human',priority:'important',idempotencyKey:'artec-meeting:1830001:reply-review',actorType:'manus',actorUserId:null});
+ const summary=`الفلل الأربع6180578 — وصلت نسخة اجتماع أرتك الأربعة وفُحصت وقورنت بالتحديث15أكتوبر. طلب عبد الرحمن السابق مرسل Sent225؛957 لا تُعاد. رد استلام ومتابعة الناقص ${ref}/مراسلة${draft.id} جاهز لعبد الرحمن، لم يُرسل. ما زلنا ننتظر أرتك للمقاسات الحالية والمقاطع والسكيتشات. لا تعليقات تصميمية أو اعتماد أو تغيير سداد.`;
+ await recordManusDispatchProgress({directiveId:810001,summary});
+ const result=await completeDispatchedMailReview({directiveId:810001,bodySha256:sourceSha,reviewedDocumentIds:docs.map(d=>Number(d.document_id)),summary,workProductBody:report+`\n\n## إيصال الرد الحالي\n${ref}؛ مراسلة${draft.id}؛ بطاقة عبد الرحمن${human.id}. فُحص النص والمستلمون ورؤوس الخيط والمفتاح حيًا، لا إرسال. انتظار أرتك قائم على Sent225.`,communicationDraftId:draft.id,responseHandling:{kind:'draft_saved',evidence:`${ref}/مراسلة${draft.id} مطابق حيًا؛To ثيودورا،CCماجد ووائل،In-Reply-To للمصدر1830001؛ لا رد جديد في Sent.957 مرسلة سابقًا Sent225 ولا إعادة لها.`,nextStep:`عبد الرحمن يراجع مسودة${ref}؛ أرتك تستكمل المقاسات الحالية والمقاطع والسكيتشات بناءً على طلب Sent225. Manus يفحص ما يصل لاحقًا؛ لا ملاحظات تصميمية الآن.`}});
+ await db.execute(sql`UPDATE como_manus_dispatches SET next_action_id=${human.id} WHERE directive_id=810001 AND state='completed'`);
+ const partialSummary='الفلل —810002 غير مكتمل: أُنجز فحص ملفات الاجتماع الأربعة والمقارنة والحزمة الداخلية ومسودة المتابعة. المقاسات الحالية والمقاطع والسكيتشات غير واردة؛ لا يمكن استخراجها كرسومات أرتك من المساقط القديمة.957 أرسلها عبد الرحمن فيSent225، ولن تُعدّل أو تُعاد. المتبقي انتظار أرتك دون موعد مخترع.';
+ const partial=await db.transaction(async tx=>{
+  const [file]=rows(await tx.execute(sql`SELECT work_file_status FROM como_next_work_files WHERE id=390001 AND user_id=1 FOR UPDATE`));if(!file||['closed','cancelled'].includes(file.work_file_status))throw Error('file_closed');
+  const [claim]=rows(await tx.execute(sql`SELECT * FROM como_manus_dispatches WHERE directive_id=810002 FOR UPDATE`));const [action]=rows(await tx.execute(sql`SELECT * FROM como_next_actions WHERE id=1830001 AND work_file_id=390001 AND user_id=1 FOR UPDATE`));const [current]=rows(await tx.execute(sql`SELECT body_sha256 FROM como_next_email_messages WHERE id=1830001 AND user_id=1 FOR UPDATE`));
+  if(claim?.state!=='running'||!claim.claim_token?.startsWith('worker:')||action?.source_system!=='evidence_reconciliation'||action.action_status!=='open'||current?.body_sha256!==sourceSha)throw Error('partial_scope_changed');
+  const memory:any=await tx.execute(sql`INSERT INTO como_next_work_memory (project_id,work_file_id,memory_type,entry_type,title,body,source_status,source_system,source_record_id,is_current,occurred_at) VALUES (6,390001,'work_product','evidence_reconciliation_partial','الفلل — المقارنة المتاحة وسبب عدم اكتمال810002',${report+'\n\n'+partialSummary},'reviewed','como_directive','evidence-partial:810002',1,UTC_TIMESTAMP())`);const workProductId=Number(memory[0].insertId);
+  const receipt={completedNow:false,internalReviewCompleted:true,workProductId,sourceEmailId:1830001,bodySha256:sourceSha,reviewedDocumentIds:docs.map(d=>Number(d.document_id)),communicationDraftId:draft.id,mailboxDraftRef:ref,ownerReviewActionId:human.id,nextActionId:1830001,awaiting:'artec_current_dimensioned_plans_and_sections',priorSentUid:225,priorDraft957Recreated:false,comparisonPackage:`${root}/Four_Villas_Original_and_Revised_Comparison.zip`,executionSummary:partialSummary,sent:false,designApproved:false,externalSideEffect:false};
+  await tx.execute(sql`UPDATE como_next_actions SET title='الفلل الأربع — انتظار أرتك: المقاسات الحالية والمقاطع والسكيتشات',action_status='waiting_external',waiting_project_party_id=90001,description=${partialSummary+'\nالمقارنة محفوظة؛ معيار التسليم الأصلي لم يُستوفَ ولا يُدّعى إتمامه. المصدر:COMO1830001 والطلبSent225.'},evidence_reference=${`مخرج جزئي Manus #${workProductId}؛ COMO1830001 / Sent225؛810002 غير مكتمل`} WHERE id=1830001 AND action_status='open'`);
+  await tx.execute(sql`UPDATE como_manus_dispatches SET state='failed',error='dispatch_not_completed',last_progress_at=UTC_TIMESTAMP(),completed_at=NULL,execution_summary=${partialSummary},result_json=${JSON.stringify(receipt)},work_product_id=${workProductId},communication_draft_id=${draft.id},mailbox_draft_ref=${ref},next_action_id=1830001 WHERE directive_id=810002 AND state='running' AND claim_token=${claim.claim_token}`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET status='failed',execution_summary=${partialSummary},result_json=${JSON.stringify(receipt)},work_product_id=${workProductId},communication_draft_id=${draft.id},mailbox_draft_ref=${ref},failure_message=${partialSummary} WHERE id=810002 AND user_id=1 AND status='submitting'`);
+  await tx.execute(sql`UPDATE como_next_work_files SET desired_outcome=${summary+' الفحص الداخلي اكتمل؛ توجيه810002 لم يكتمل بالكامل بسبب الرسومات الخارجية الناقصة.'} WHERE id=390001 AND user_id=1`);
+  await appendEvent(tx,{userId:1,projectId:6,workFileId:390001,actionId:1830001,actorType:'manus',actorUserId:null,eventType:'artec_evidence_review_partial',summary:partialSummary,payload:receipt,idempotencyKey:'artec-meeting:810002:partial-receipt'});
+  for(const memoryId of [workProductId,Number(result?.workProductId||0)].filter(Boolean))for(const docId of [...docs.map(d=>Number(d.document_id)),1470001,1470002,1470003,1470004,1470005,1470006,1470007,1470008])await tx.execute(sql`INSERT IGNORE INTO como_next_work_memory_documents (project_id,work_file_id,memory_id,document_id,relation_type,source_system,source_record_id) VALUES (6,390001,${memoryId},${docId},'source','como_mail_execution',${`artec-meeting:1830001:doc:${docId}`})`);
+  return receipt;
+ });
+ const protectedAfter=await protectedSnapshot();fs.writeFileSync(`${root}/protected-after.json`,JSON.stringify(protectedAfter,null,2)+'\n');if(JSON.stringify(protectedBefore)!==JSON.stringify(protectedAfter))throw Error('protected_records_changed');
+ const sara=await readExecutiveWorkFile({memberId:'abdulrahman',nameAr:'عبد الرحمن',role:'owner'},JSON.stringify({work_file_id:390001,focus:'overview'}));if(!JSON.stringify(sara).includes('1830001')||!JSON.stringify(sara).includes(ref))throw Error('sara_result_not_visible');
+ fs.writeFileSync(`${root}/sara-after.json`,JSON.stringify(sara,null,2)+'\n');
+ const final={review:result,partial,mailboxDraftRef:ref,communicationId:draft.id,ownerReviewActionId:human.id,sent:false,protectedRecordsUnchanged:true,checkedAt:new Date().toISOString()};fs.writeFileSync(`${root}/review-receipt.json`,JSON.stringify(final,null,2)+'\n');console.log(JSON.stringify(final,null,2));
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.message);process.exit(1)});
