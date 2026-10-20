@@ -66,6 +66,8 @@ export type FinanceThreadReply = {
   fromEmail: string;
   subject: string;
   bodyText: string;
+  /** Present when read from the mailbox projection; openFinanceReview re-reads it under lock. */
+  bodySha256?: string;
   receivedAt: string;
   linkedWorkFileId: number | null;
 };
@@ -106,7 +108,9 @@ export type FinancePaymentFollowupStore = {
   }): Promise<void>;
   ensureWatchIfAbsent(input: FinancePaymentPlan): Promise<{ action: FinancePaymentAction; replayed: boolean }>;
   findThreadReplies(input: FinancePaymentPlan): Promise<{ replies: FinanceThreadReply[]; complete: boolean }>;
-  openFinanceReview(input: { action: FinancePaymentAction; plan: FinancePaymentPlan; replies: FinanceThreadReply[] }): Promise<void>;
+  // Existing stores may return void after opening. A false result is the
+  // explicit replay signal: every supplied reply already has a trusted receipt.
+  openFinanceReview(input: { action: FinancePaymentAction; plan: FinancePaymentPlan; replies: FinanceThreadReply[] }): Promise<void | false>;
   saveThreadDraft(input: { plan: FinancePaymentPlan; sent: FinancePaymentSent; subject: string; body: string }): Promise<{ folder: string; uid: number | null; created: boolean }>;
   completeWatchAfterDraft(input: { action: FinancePaymentAction; plan: FinancePaymentPlan; evidenceReference: string }): Promise<void>;
 };
@@ -264,6 +268,163 @@ export function financePaymentFollowupDraft(input: { subject: string }) {
   };
 }
 
+type FinanceReviewOpenInput = {
+  action: FinancePaymentAction;
+  plan: FinancePaymentPlan;
+  replies: FinanceThreadReply[];
+};
+
+type JsonObject = Record<string, unknown>;
+
+function databaseRows<T>(result: unknown): T[] {
+  if (Array.isArray(result) && Array.isArray(result[0])) return result[0] as T[];
+  return Array.isArray(result) ? result as T[] : [];
+}
+
+function jsonObject(value: unknown): JsonObject | null {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as JsonObject;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as JsonObject : null;
+  } catch {
+    return null;
+  }
+}
+
+function positiveInteger(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+function sha256(value: unknown): string | null {
+  return typeof value === "string" && /^[a-f0-9]{64}$/.test(value) ? value : null;
+}
+
+type DispatchOutputRow = {
+  directiveId: number;
+  dispatchState: string;
+  workProductId: number | null;
+  userId: number;
+  projectId: number;
+  workFileId: number;
+  memoryId: number;
+  memoryProjectId: number;
+  memoryWorkFileId: number;
+  memorySourceSystem: string;
+  memorySourceRecordId: string | null;
+  memoryType: string;
+  memorySourceStatus: string;
+  resultJson?: unknown;
+  payloadJson?: unknown;
+};
+
+function hasTrustedDispatchOutput(input: {
+  row: DispatchOutputRow;
+  plan: FinancePaymentPlan;
+  sourceSystem: string;
+  sourceRecordPrefix: string;
+}) {
+  const directiveId = positiveInteger(input.row.directiveId);
+  return directiveId != null
+    && input.row.dispatchState === "completed"
+    && Number(input.row.workProductId) === Number(input.row.memoryId)
+    && Number(input.row.userId) === input.plan.userId
+    && Number(input.row.projectId) === input.plan.projectId
+    && Number(input.row.workFileId) === input.plan.workFileId
+    && Number(input.row.memoryProjectId) === input.plan.projectId
+    && Number(input.row.memoryWorkFileId) === input.plan.workFileId
+    && input.row.memorySourceSystem === input.sourceSystem
+    && input.row.memoryType === 'work_product'
+    && input.row.memorySourceStatus === 'reviewed'
+    && input.row.memorySourceRecordId === `${input.sourceRecordPrefix}${directiveId}`;
+}
+
+/**
+ * A prior review is suppressive only when it is anchored to a completed Manus
+ * dispatch and its persisted output on this exact user/project/work-file. The
+ * e-mail is locked and its current SHA-256 is compared below, so an edited or
+ * relinked source is always reviewable again.
+ */
+async function trustedFinanceReviewReplyIds(tx: { execute(query: unknown): Promise<unknown> }, input: FinanceReviewOpenInput) {
+  const replyIds = Array.from(new Set(input.replies.map(reply => reply.id).filter(id => Number.isSafeInteger(id) && id > 0)));
+  if (!replyIds.length) return new Set<number>();
+  const replyIdList = sql.join(replyIds.map(id => sql`${id}`), sql`, `);
+  const currentReplies = databaseRows<{ id: number; bodySha256: string; linkedWorkFileId: number | null }>(await tx.execute(sql`
+    SELECT id, body_sha256 AS bodySha256, linked_work_file_id AS linkedWorkFileId
+    FROM como_next_email_messages
+    WHERE user_id=${input.plan.userId} AND folder_name='INBOX' AND linked_work_file_id=${input.plan.workFileId} AND id IN (${replyIdList})
+    FOR UPDATE
+  `));
+  const currentShaByReplyId = new Map<number, string>();
+  for (const reply of currentReplies) {
+    const id = positiveInteger(Number(reply.id));
+    const bodySha = sha256(reply.bodySha256);
+    if (id != null && Number(reply.linkedWorkFileId) === input.plan.workFileId && bodySha) currentShaByReplyId.set(id, bodySha);
+  }
+  if (!currentShaByReplyId.size) return new Set<number>();
+
+  const completedMailReviews = databaseRows<DispatchOutputRow>(await tx.execute(sql`
+    SELECT d.directive_id AS directiveId, d.state AS dispatchState, d.work_product_id AS workProductId, d.result_json AS resultJson,
+      sd.user_id AS userId, sd.project_id AS projectId, sd.work_file_id AS workFileId,
+      m.id AS memoryId, m.project_id AS memoryProjectId, m.work_file_id AS memoryWorkFileId,
+      m.source_system AS memorySourceSystem, m.source_record_id AS memorySourceRecordId,
+      m.memory_type AS memoryType, m.source_status AS memorySourceStatus
+    FROM como_manus_dispatches d
+    INNER JOIN como_next_staged_directives sd ON sd.id=d.directive_id
+    INNER JOIN como_next_work_memory m ON m.id=d.work_product_id
+    WHERE d.state='completed' AND sd.user_id=${input.plan.userId} AND sd.project_id=${input.plan.projectId} AND sd.work_file_id=${input.plan.workFileId}
+      AND m.project_id=${input.plan.projectId} AND m.work_file_id=${input.plan.workFileId}
+      AND m.source_system='como_mail_execution' AND m.source_record_id=CONCAT('dispatch-review:', d.directive_id)
+  `));
+  const reviewedIds = new Set<number>();
+  for (const review of completedMailReviews) {
+    if (!hasTrustedDispatchOutput({ row: review, plan: input.plan, sourceSystem: "como_mail_execution", sourceRecordPrefix: "dispatch-review:" })) continue;
+    const receipt = jsonObject(review.resultJson);
+    const sourceEmailId = receipt ? positiveInteger(receipt.sourceEmailId) : null;
+    const receiptSha = receipt ? sha256(receipt.bodySha256) : null;
+    // responseHandling proves this was a completed handling of the inbound,
+    // not merely a dispatch that happened to preserve a work product.
+    const handling = jsonObject(receipt?.responseHandling);
+    if (receipt?.completedNow !== true || positiveInteger(receipt?.workProductId) !== Number(review.memoryId)
+      || !handling || !['draft_saved','already_replied','no_reply_needed'].includes(String(handling.kind))
+      || typeof handling.evidence !== 'string' || handling.evidence.length < 30
+      || typeof handling.nextStep !== 'string' || handling.nextStep.length < 30
+      || sourceEmailId == null || !receiptSha) continue;
+    if (currentShaByReplyId.get(sourceEmailId) === receiptSha) reviewedIds.add(sourceEmailId);
+  }
+
+  const completedFinanceReviewEvents = databaseRows<DispatchOutputRow>(await tx.execute(sql`
+    SELECT d.directive_id AS directiveId, d.state AS dispatchState, d.work_product_id AS workProductId,
+      sd.user_id AS userId, sd.project_id AS projectId, sd.work_file_id AS workFileId,
+      m.id AS memoryId, m.project_id AS memoryProjectId, m.work_file_id AS memoryWorkFileId,
+      m.source_system AS memorySourceSystem, m.source_record_id AS memorySourceRecordId,
+      m.memory_type AS memoryType, m.source_status AS memorySourceStatus,
+      e.payload_json AS payloadJson
+    FROM como_manus_dispatches d
+    INNER JOIN como_next_staged_directives sd ON sd.id=d.directive_id
+    INNER JOIN como_next_work_memory m ON m.id=d.work_product_id
+    INNER JOIN como_next_work_file_events e ON e.user_id=sd.user_id AND e.project_id=sd.project_id AND e.work_file_id=sd.work_file_id AND e.action_id=sd.action_id
+    WHERE d.state='completed' AND sd.user_id=${input.plan.userId} AND sd.project_id=${input.plan.projectId} AND sd.work_file_id=${input.plan.workFileId}
+      AND m.project_id=${input.plan.projectId} AND m.work_file_id=${input.plan.workFileId}
+      AND m.source_system='como_finance_payment_review' AND m.source_record_id=CONCAT('dispatch-finance-watch:', d.directive_id)
+      AND e.event_type='finance_payment_review_recorded'
+      AND e.actor_type='manus' AND e.idempotency_key=CONCAT('finance-payment-review-recorded:', d.directive_id)
+  `));
+  for (const review of completedFinanceReviewEvents) {
+    if (!hasTrustedDispatchOutput({ row: review, plan: input.plan, sourceSystem: "como_finance_payment_review", sourceRecordPrefix: "dispatch-finance-watch:" })) continue;
+    const payload = jsonObject(review.payloadJson);
+    if (positiveInteger(payload?.directiveId) !== Number(review.directiveId) || positiveInteger(payload?.workProductId) !== Number(review.memoryId)
+      || payload?.reviewCompleted !== true || positiveInteger(payload?.sentEmailId) !== input.plan.sentEmailId || !Array.isArray(payload?.reviewedReplies)) continue;
+    for (const reply of payload.reviewedReplies) {
+      const reviewedReply = jsonObject(reply);
+      const emailId = positiveInteger(reviewedReply?.emailId);
+      const bodySha = sha256(reviewedReply?.sha256);
+      if (emailId != null && bodySha && currentShaByReplyId.get(emailId) === bodySha) reviewedIds.add(emailId);
+    }
+  }
+  return reviewedIds;
+}
+
 export class FinancePaymentFollowupReconciler {
   constructor(private readonly store: FinancePaymentFollowupStore) {}
 
@@ -323,8 +484,11 @@ export class FinancePaymentFollowupReconciler {
       const responseScan = await this.store.findThreadReplies(plan);
       const replies = responseScan.replies.filter(reply => isHumanFinanceThreadReply({ sent, reply }));
       if (replies.length) {
-        await this.store.openFinanceReview({ action, plan, replies });
-        reviewOpened += 1;
+        const opened = await this.store.openFinanceReview({ action, plan, replies });
+        // false is deliberately distinct from legacy void stores. A reviewed
+        // reply is still a reply: leave the watch waiting and never fall
+        // through to the no-reply reminder path.
+        if (opened !== false) reviewOpened += 1;
         continue;
       }
       if (!responseScan.complete) {
@@ -628,7 +792,8 @@ export class DatabaseFinancePaymentFollowupStore implements FinancePaymentFollow
     if (!sentAt) throw new Error("invalid_sent_at");
     const rows = await db.select({
       id: comoNextEmailMessages.id, fromEmail: comoNextEmailMessages.fromEmail, subject: comoNextEmailMessages.subject,
-      bodyText: comoNextEmailMessages.bodyText, receivedAt: comoNextEmailMessages.receivedAt, linkedWorkFileId: comoNextEmailMessages.linkedWorkFileId,
+      bodyText: comoNextEmailMessages.bodyText, bodySha256: comoNextEmailMessages.bodySha256,
+      receivedAt: comoNextEmailMessages.receivedAt, linkedWorkFileId: comoNextEmailMessages.linkedWorkFileId,
     }).from(comoNextEmailMessages).where(and(
       eq(comoNextEmailMessages.userId, plan.userId), eq(comoNextEmailMessages.mailboxKey, FINANCE_PAYMENT_MAILBOX_KEY),
       eq(comoNextEmailMessages.folderName, "INBOX"), gt(comoNextEmailMessages.receivedAt, sentAt),
@@ -643,25 +808,48 @@ export class DatabaseFinancePaymentFollowupStore implements FinancePaymentFollow
   async openFinanceReview(input: { action: FinancePaymentAction; plan: FinancePaymentPlan; replies: FinanceThreadReply[] }) {
     const db = await getDb();
     if (!db) throw new Error("database_unavailable");
-    const refs = input.replies.slice(0, 10).map(reply => `INBOX #${reply.id} (${reply.fromEmail}, ${reply.receivedAt})`).join("؛ ");
-    await db.transaction(async tx => {
-      const [current] = await tx.select().from(comoNextActions).where(eq(comoNextActions.id, input.action.id)).limit(1);
-      if (!current || !OPEN_WATCH_STATUSES.includes(current.actionStatus as (typeof OPEN_WATCH_STATUSES)[number])) return;
+    if (!input.replies.length) return false;
+    return db.transaction(async tx => {
+      // Match the file-before-action lock order used by receipt completion.
+      await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=${input.plan.workFileId} AND user_id=${input.plan.userId} FOR UPDATE`);
+      // Lock the watch first. Besides serializing two monitor runs, the scope
+      // check makes a stale action object unable to affect another user's file.
+      const currentRows = databaseRows<{ actionStatus: string; evidenceReference: string | null; sourceSystem: string }>(await tx.execute(sql`
+        SELECT action_status AS actionStatus, evidence_reference AS evidenceReference, source_system AS sourceSystem
+        FROM como_next_actions
+        WHERE id=${input.action.id} AND user_id=${input.plan.userId} AND project_id=${input.plan.projectId} AND work_file_id=${input.plan.workFileId}
+        FOR UPDATE
+      `));
+      const current = currentRows[0];
+      if (!current
+        || current.sourceSystem !== FINANCE_PAYMENT_WATCH_SOURCE_SYSTEM
+        || !OPEN_WATCH_STATUSES.includes(current.actionStatus as (typeof OPEN_WATCH_STATUSES)[number])) return false;
       // A scheduler retry must leave an already-open finance review untouched:
       // the event key is unique and this review is intentionally never auto-closed.
-      if (current.actionStatus === "open" && String(current.evidenceReference || "").startsWith("finance_review:")) return;
+      if (current.actionStatus === "open" && String(current.evidenceReference || "").startsWith("finance_review:")) return false;
+
+      const reviewedReplyIds = await trustedFinanceReviewReplyIds(tx, input);
+      const unreviewedReplies = input.replies.filter(reply => !reviewedReplyIds.has(reply.id));
+      // Do not reinterpret a reviewed human reply as silence. Keeping the
+      // action waiting prevents a later reminder Draft while preserving the
+      // reply itself in the mailbox projection.
+      if (!unreviewedReplies.length) return false;
+
+      const refs = unreviewedReplies.slice(0, 10).map(reply => `INBOX #${reply.id} (${reply.fromEmail}, ${reply.receivedAt})`).join("؛ ");
       const evidenceReference = `finance_review: Sent #${input.plan.sentEmailId}; ${refs}`.slice(0, 5000);
-      await tx.update(comoNextActions).set({
-        title: `finance_review: طلب صرف إلى وائل (Sent #${input.plan.sentEmailId})`,
-        actionStatus: "open", attentionAt: null, followUpAt: null,
-        description: `توجد رسالة/تحديث بشري مناسب في خيط طلب الصرف. يلزم مراجعة مالية داخلية؛ لا تُعتبر دفعة ولا تُغلق المتابعة تلقائيًا. المراجع: ${refs}`.slice(0, 20_000),
-        acceptanceCriteria: "راجع الردود والمستندات يدويًا، ووثّق فقط التحقق الصريح من الحالة. لا تغلق الإجراء تلقائيًا.", evidenceReference,
-      }).where(eq(comoNextActions.id, input.action.id));
+      await tx.execute(sql`
+        UPDATE como_next_actions
+        SET title=${`finance_review: طلب صرف إلى وائل (Sent #${input.plan.sentEmailId})`}, action_status='open', attention_at=NULL, follow_up_at=NULL,
+          description=${`توجد رسالة/تحديث بشري مناسب في خيط طلب الصرف. يلزم مراجعة مالية داخلية؛ لا تُعتبر دفعة ولا تُغلق المتابعة تلقائيًا. المراجع: ${refs}`.slice(0, 20_000)},
+          acceptance_criteria=${"راجع الردود والمستندات يدويًا، ووثّق فقط التحقق الصريح من الحالة. لا تغلق الإجراء تلقائيًا."}, evidence_reference=${evidenceReference}
+        WHERE id=${input.action.id} AND user_id=${input.plan.userId} AND project_id=${input.plan.projectId} AND work_file_id=${input.plan.workFileId}
+          AND source_system=${FINANCE_PAYMENT_WATCH_SOURCE_SYSTEM} AND action_status IN ('open', 'waiting_external')
+      `);
       await appendEvent(tx, {
         userId: input.plan.userId, projectId: input.plan.projectId, workFileId: input.plan.workFileId, actionId: input.action.id,
         actorType: "system", actorUserId: null, eventType: "finance_payment_review_opened", summary: `فتح مراجعة مالية داخلية لرد على طلب صرف #${input.plan.sentEmailId}`,
-        payload: { sentEmailId: input.plan.sentEmailId, replyEmailId: input.replies[0]!.id, externalSideEffect: false },
-        idempotencyKey: `finance-payment-review:${input.plan.sentEmailId}:${input.replies[0]!.id}`,
+        payload: { sentEmailId: input.plan.sentEmailId, replyEmailId: unreviewedReplies[0]!.id, externalSideEffect: false },
+        idempotencyKey: `finance-payment-review:${input.plan.sentEmailId}:${unreviewedReplies[0]!.id}`,
       });
     });
   }

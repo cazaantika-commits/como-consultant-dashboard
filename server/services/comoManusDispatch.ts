@@ -89,6 +89,10 @@ export function paymentStatusReviewInvoiceId(action:{source_system?:string;title
 export function requiresManualEvidenceReconciliation(action:{source_system?:string}){
  return action.source_system==='evidence_reconciliation';
 }
+/** A watch reply review needs a real Manus receipt, never generic fulfillment. */
+export function requiresManualFinancePaymentWatchReview(action:{source_system?:string}){
+ return action.source_system==='finance_payment_watch';
+}
 /** Invoked only by real Manus after receiving event. Payload never grants authority. */
 export async function executeDispatchedDirectiveCommand(input:{directiveId:number}){
  const db=await getDb();if(!db)throw new Error('database_unavailable');const r=await loadWorkerRow(db,input.directiveId);if(!r)return {accepted:false,reason:'dispatch_not_found'};if(!isAuthoritativeOwner(r))return {accepted:false,reason:'directive_not_owner_approved'};
@@ -102,6 +106,10 @@ export async function executeDispatchedDirectiveCommand(input:{directiveId:numbe
     const [action]=rowsFrom<any>(await db.execute(sql`SELECT * FROM como_next_actions WHERE id=${Number(r.action_id)} AND work_file_id=${Number(r.work_file_id)} AND user_id=${Number(r.user_id)} AND owner_type='manus' AND action_status='open' LIMIT 1`));
     const {isInternalSystemActionEligible}=await import('./comoSystemActionDispatch');
     if(!action || !isInternalSystemActionEligible(action.title))throw new Error('system_action_no_longer_eligible');
+    if(requiresManualFinancePaymentWatchReview(action)){
+      await recordManusDispatchProgress({directiveId:input.directiveId,summary:'المشاريع — وصلت مراجعة رد مراقب الدفع إلى Manus. يلزم مطابقة البريد وبصمته مع إيصال الفحص السابق، ثم توثيق النتيجة أو الرد الجديد؛ لا تحليل عام أو مسودة أو طلب صرف أو تغيير سداد أو إغلاق الانتظار بلا دليل.'});
+      return {accepted:true,completed:false,fulfillment:'requires_agent_finance_payment_watch_review',workFileId:Number(r.work_file_id),actionId:Number(r.action_id),dispatch:await readDispatchForDirective(input)};
+    }
     if(requiresManualEvidenceReconciliation(action)){
       await recordManusDispatchProgress({directiveId:input.directiveId,summary:'المشاريع — وصلت مصالحة الأدلة إلى Manus. يجب فحص المصادر والمرفقات الفعلية ومصالحة Sent والمسودات قبل أي تعديل؛ لا يجوز الادعاء باستخراج مقاسات أو مقاطع غير موجودة أو اعتبار إنشاء خطوة إنجازًا.'});
       return {accepted:true,completed:false,fulfillment:'requires_agent_evidence_reconciliation',workFileId:Number(r.work_file_id),actionId:Number(r.action_id),dispatch:await readDispatchForDirective(input)};

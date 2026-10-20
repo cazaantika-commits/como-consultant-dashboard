@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {comoManusDispatchInternals,paymentStatusReviewInvoiceId,requiresManualEvidenceReconciliation} from './services/comoManusDispatch';
+import {comoManusDispatchInternals,paymentStatusReviewInvoiceId,requiresManualEvidenceReconciliation,requiresManualFinancePaymentWatchReview} from './services/comoManusDispatch';
 import {directiveRequestsCommunicationDraft} from './services/comoNextExecutiveDirectives';
 const {canClaimDispatchForWorker,canRetryKnownUndeliveredDispatch,delayFor,hasCompletedFulfillment,safeError}=comoManusDispatchInternals;
 describe('COMO durable dispatch',()=>{
@@ -36,6 +36,12 @@ describe('COMO durable dispatch',()=>{
   expect(requiresManualEvidenceReconciliation({source_system:'como_mail_execution'})).toBe(false);
   expect(requiresManualEvidenceReconciliation({source_system:'owner_directive'})).toBe(false);
   expect(requiresManualEvidenceReconciliation({})).toBe(false);
+ });
+ it('keeps payment-watch source reviews out of generic fulfillment',()=>{
+  expect(requiresManualFinancePaymentWatchReview({source_system:'finance_payment_watch'})).toBe(true);
+  expect(requiresManualFinancePaymentWatchReview({source_system:'finance_invoice_review'})).toBe(false);
+  expect(requiresManualFinancePaymentWatchReview({source_system:'owner_directive'})).toBe(false);
+  expect(requiresManualFinancePaymentWatchReview({})).toBe(false);
  });
  it('uses UTC or ISO progress time rather than treating fresh progress as delay',()=>{
   const old=new Date(Date.now()-121000).toISOString();
