@@ -74,6 +74,7 @@ import {
   submitStagedExecutiveDirectiveCommand,
   updateStagedExecutiveDirectiveCommand,
 } from "../services/comoNextStagedDirectives";
+import { filterCancelledKitchenEmailSuggestions, projectComoKitchenSendEvidence } from "../services/comoKitchenSendEvidence";
 
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
@@ -226,6 +227,7 @@ export const comoNextRouter = router({
     const todayResult = await db.execute(sql`
       SELECT
         a.id,
+        a.user_id AS userId,
         a.project_id AS projectId,
         p.name AS projectName,
         a.work_file_id AS workFileId,
@@ -361,6 +363,14 @@ export const comoNextRouter = router({
             ORDER BY analysis.id DESC
             LIMIT 1
           )`,
+          kitchenSuggestionCancelled: sql<number>`EXISTS (
+            SELECT 1
+            FROM como_next_work_memory cancelled_suggestion
+            WHERE cancelled_suggestion.entry_type = ${"cancelled_kitchen_suggestion"}
+              AND cancelled_suggestion.source_system = ${"owner_kitchen_review"}
+              AND cancelled_suggestion.source_record_id = CONCAT(${"cancelled-kitchen-email:"}, como_next_email_messages.id)
+              AND cancelled_suggestion.is_current = 1
+          )`,
         })
         .from(comoNextEmailMessages)
         .where(and(
@@ -396,9 +406,10 @@ export const comoNextRouter = router({
       nextActionId: row.nextActionId == null ? null : Number(row.nextActionId),
       openActionCount: Number(row.openActionCount ?? 0),
     }));
-    const unresolvedActions = getRows<ComoNextTodayRow>(todayResult).map(row => ({
+    const unresolvedActions = getRows<ComoNextTodayRow & { userId: number }>(todayResult).map(row => ({
       ...row,
       id: Number(row.id),
+      userId: Number(row.userId),
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
       ownerUserId: row.ownerUserId == null ? null : Number(row.ownerUserId),
@@ -409,16 +420,27 @@ export const comoNextRouter = router({
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
     }));
+    // This is a read-only, explicit-lineage guard. It never matches a title to
+    // a Draft/Sent message and never invokes the mailbox or reconciliation.
+    const sendEvidence = await projectComoKitchenSendEvidence({
+      userId: ctx.user.id,
+      actions: unresolvedActions,
+    });
     const nowMs = Date.now();
-    const todayRows = unresolvedActions.filter(row => actionNeedsAttentionNow(row, nowMs));
-    const queueActions = unresolvedActions;
+    const todayRows = sendEvidence.actions.filter(row => actionNeedsAttentionNow(row, nowMs));
+    const queueActions = sendEvidence.actions;
     const decisions = unresolvedDecisions.filter(row => decisionNeedsAttentionNow(row, nowMs));
+    const sendEvidenceConflictCommunicationIds = new Set(sendEvidence.diagnostics
+      .flatMap(item => item.communicationIds)
+      .filter((id): id is number => id != null));
+    // A ledger/Sent contradiction is Manus-owned. Do not leave the original
+    // Draft card in the owner-review lane while that contradiction is visible.
     const draftCommunications = getRows<any>(draftCommunicationsResult).map(row => ({
       ...row,
       id: Number(row.id),
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
-    }));
+    })).filter(row => !sendEvidenceConflictCommunicationIds.has(row.id));
     const meetingAttention = getRows<any>(meetingAttentionResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -429,7 +451,7 @@ export const comoNextRouter = router({
     }));
 
     const workFilesWithOperationalStep = new Set<number>([
-      ...unresolvedActions.map(row => row.workFileId),
+      ...sendEvidence.actions.map(row => row.workFileId),
       ...unresolvedDecisions.map(row => row.workFileId),
       ...draftCommunications.map(row => row.workFileId),
       ...meetingAttention.map(row => row.workFileId),
@@ -448,12 +470,13 @@ export const comoNextRouter = router({
       specialistAttention,
       workFiles,
       filesWithoutNextAction,
+      sendEvidenceDiagnostics: sendEvidence.diagnostics,
       executionQueue: buildExecutiveKitchenQueue({
         actions: queueActions,
         decisions,
         draftCommunications,
         meetings: meetingAttention,
-        emails: emailAttention,
+        emails: filterCancelledKitchenEmailSuggestions(emailAttention),
         intakeProposals,
         specialistReviews: specialistAttention,
         filesWithoutNextAction,

@@ -8,6 +8,7 @@ import { storageGet } from "../storage";
 import { resolveOwnerUserIdForSara } from "./comoNextIntake";
 import { listWorkFileStagedDirectives } from "./comoNextStagedDirectives";
 import { readWorkFileLifecycle } from "./comoWorkFileLifecycle";
+import { projectComoKitchenSendEvidence } from "./comoKitchenSendEvidence";
 import { presentSaraDubaiTimes } from "./saraDubaiTimes";
 
 export type SaraWorkFileFocus = "overview" | "analysis" | "meetings" | "communications" | "history" | "full";
@@ -230,7 +231,7 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
   if (!workFile) return { found: false, reason: "لم يُعثر على ملف الموضوع ضمن ملفات عبد الرحمن الحالية." };
 
   const [actionsResult, decisionsResult, updatesResult, memoryResult, documentsResult, meetingsResult, communicationsResult, eventsResult, lifecycleLanes, stagedDirectives] = await Promise.all([
-    db.execute(sql`SELECT id,title,description,acceptance_criteria AS acceptanceCriteria,action_status AS status,priority,owner_type AS ownerType,due_at AS dueAt,attention_at AS attentionAt,follow_up_at AS followUpAt,updated_at AS updatedAt FROM como_next_actions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 30`),
+    db.execute(sql`SELECT id,user_id AS userId,project_id AS projectId,work_file_id AS workFileId,title,description,acceptance_criteria AS acceptanceCriteria,action_status AS status,priority,owner_type AS ownerType,owner_user_id AS ownerUserId,due_at AS dueAt,attention_at AS attentionAt,follow_up_at AS followUpAt,updated_at AS updatedAt FROM como_next_actions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,title,question,context_summary AS contextSummary,recommendation,decision_status AS status,decision_authority AS authority,decision_text AS decisionText,evidence_reference AS evidenceReference,due_at AS dueAt,decided_at AS decidedAt,updated_at AS updatedAt FROM como_next_decisions WHERE work_file_id=${workFileId} ORDER BY updated_at DESC,id DESC LIMIT 25`),
     db.execute(sql`SELECT id,source_channel AS sourceChannel,update_text AS updateText,occurred_at AS occurredAt,analysis_status AS analysisStatus,analysis_summary AS analysisSummary,target_action_id AS targetActionId FROM como_next_work_file_updates WHERE work_file_id=${workFileId} ORDER BY occurred_at DESC,id DESC LIMIT 30`),
     db.execute(sql`SELECT id,memory_type AS memoryType,entry_type AS entryType,title,body,source_status AS sourceStatus,is_current AS isCurrent,occurred_at AS occurredAt,updated_at AS updatedAt FROM como_next_work_memory WHERE work_file_id=${workFileId} ORDER BY is_current DESC,occurred_at DESC,id DESC LIMIT 60`),
@@ -296,6 +297,20 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
   }
 
   const memory = rows<any>(memoryResult).map(item => ({ ...item, id: Number(item.id), isCurrent: Number(item.isCurrent) === 1, body: clean(item.body, focus === "analysis" || focus === "full" ? 20_000 : 6_000) }));
+  // Same explicit-lineage-only guard used by the executive kitchen. This is a
+  // projection: it reads ledger/Sent evidence but never syncs mail, writes a
+  // reconciliation, or turns unrelated Draft/Sent records into a match.
+  const sendEvidence = await projectComoKitchenSendEvidence({
+    userId: Number(userId),
+    actions: rows<any>(actionsResult).map(action => ({
+      ...action,
+      id: Number(action.id),
+      userId: Number(action.userId),
+      projectId: Number(action.projectId),
+      workFileId: Number(action.workFileId),
+      ownerUserId: action.ownerUserId == null ? null : Number(action.ownerUserId),
+    })),
+  });
   const base = {
     found: true,
     source: "COMO Next work-file dossier",
@@ -306,7 +321,8 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     // must never be silently displaced by an earlier unsigned template or analysis.
     recentDocumentaryEvidence: buildSaraRecentDocumentaryEvidence(memory, linkedDocuments),
     currentState: {
-      actions: rows<any>(actionsResult),
+      actions: sendEvidence.actions,
+      sendEvidenceDiagnostics: sendEvidence.diagnostics,
       decisions: rows<any>(decisionsResult),
       recentUpdates: rows<any>(updatesResult),
       lifecycleLanes: lifecycleLanes.map(lane => presentSaraLifecycleLane(lane as SaraLifecycleLane)),
