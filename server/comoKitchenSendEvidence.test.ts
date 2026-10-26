@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildComoKitchenSendEvidenceProjection, filterCancelledKitchenEmailSuggestions } from "./services/comoKitchenSendEvidence";
+import { buildComoKitchenSendEvidenceProjection, extractComoSendEvidenceEventLinks, filterCancelledKitchenEmailSuggestions } from "./services/comoKitchenSendEvidence";
 
 const sentCommunication = {
   id: 601,
@@ -191,5 +191,45 @@ describe("COMO kitchen/Sara send-evidence projection", () => {
     // The caller retains `emails` itself for the inbox/health surface.
     expect(emails).toHaveLength(2);
     expect(project({ actions: [payment] }).actions).toEqual([payment]);
+  });
+});
+
+describe("COMO permanent sender-action lineage compatibility", () => {
+  it("resolves communicationDraftId/humanActionId without attaching the finance audit action", () => {
+    const events = extractComoSendEvidenceEventLinks([{ eventActionId:900001, communicationDraftId:601, humanActionId:501 }]);
+    expect(events).toEqual([{ actionId:501, communicationId:601 }]);
+    const payment = sendAction({ id:900001, ownerType:"team", actionStatus:"waiting_external", title:"انتظار تأكيد5586" });
+    const result = project({ actions:[sendAction(),payment], events });
+    expect(result.actions[0]).toMatchObject({ ownerType:"manus", actionStatus:"waiting_external" });
+    expect(result.actions[1]).toEqual(payment);
+  });
+
+  it("keeps incompatible communication aliases as a Manus conflict, never a resend request", () => {
+    const events = extractComoSendEvidenceEventLinks([{ eventActionId:501, communicationId:601, communicationDraftId:602 }]);
+    const result = project({ events });
+    expect(result.actions[0]).toMatchObject({ ownerType:"manus", actionStatus:"in_progress" });
+    expect(result.diagnostics[0]).toMatchObject({ code:"ambiguous", communicationIds:[601,602], requiresOwnerResend:false });
+  });
+
+  it("does not choose silently between contradictory explicit sender targets", () => {
+    const events = extractComoSendEvidenceEventLinks([{ eventActionId:900001, communicationDraftId:601, humanActionId:501, nextActionId:502 }]);
+    const result = project({ events });
+    expect(result.actions[0]).toMatchObject({ ownerType:"manus", actionStatus:"in_progress" });
+    expect(result.diagnostics[0]).toMatchObject({ code:"ambiguous", requiresOwnerResend:false });
+  });
+
+  it("replaying the projection never returns a proven send to the owner lane", () => {
+    const events = extractComoSendEvidenceEventLinks([{ communicationDraftId:601, humanActionId:501 }]);
+    const first = project({ events });
+    const second = project({ events, actions:first.actions });
+    expect(second.actions[0]).toMatchObject({ ownerType:"manus", actionStatus:"waiting_external", sendEvidenceProjection:{ ownerPromptRemoved:true } });
+  });
+
+  it("preserves ordinary unsent drafts, terminal decisions, and invalid aliases", () => {
+    expect(extractComoSendEvidenceEventLinks([{ communicationDraftId:"not-an-id", humanActionId:501 }])).toEqual([]);
+    const events = extractComoSendEvidenceEventLinks([{ communicationDraftId:601, humanActionId:501 }]);
+    const finished = sendAction({ actionStatus:"verified" });
+    expect(project({ actions:[finished], events }).actions).toEqual([finished]);
+    expect(project({ events, communications:[{ ...sentCommunication, communicationStatus:"archived", evidenceReference:null, externalMessageRef:null }],ledgers:[{...sentLedger,state:"draft_saved",sentFolder:null,sentUid:null}] }).actions[0]).toMatchObject({ ownerType:"human", actionStatus:"open" });
   });
 });

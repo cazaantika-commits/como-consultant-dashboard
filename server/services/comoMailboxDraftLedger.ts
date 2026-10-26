@@ -355,7 +355,8 @@ export type ValidatedSentLineage =
 /**
  * Finds a work-file target only when the stored draft and the read-only Sent
  * message prove the same owner, exact envelope and authorized lineage.  The
- * stripped-header fallback is intentionally finance-only and exact/unique.
+ * stripped-header fallback is exact/unique and limited to registered finance
+ * drafts or registered email replies, never arbitrary communications.
  */
 export async function findValidatedSentLineage(input: {
   userId: number;
@@ -398,7 +399,10 @@ export async function findValidatedSentLineage(input: {
           AND finance_communication.channel = ${"email"}
           AND finance_communication.direction = ${"outbound"}
           AND finance_communication.source_system = ${"como_next"}
-          AND finance_communication.source_record_id LIKE ${"finance_invoice_draft:attachment:%"}
+          AND (
+            finance_communication.source_record_id LIKE ${"finance_invoice_draft:attachment:%"}
+            OR finance_communication.source_record_id LIKE ${"email-reply-draft:%"}
+          )
       )
     `);
     bindingKind = "fallback";
@@ -409,6 +413,10 @@ export async function findValidatedSentLineage(input: {
   const candidate = candidates[0]!;
   if (!candidate.userId || !candidate.projectId || !candidate.workFileId
     || candidate.userId !== input.userId
+    || (bindingKind === "fallback" && (
+      candidate.subjectSha256 !== sha256(normalizeText(input.message.subject))
+      || candidate.bodySha256 !== sha256(normalizeText(input.message.textBody))
+    ))
     || candidate.toEnvelopeSha256 !== sha256(normalizeEnvelope(input.message.to))
     || candidate.ccEnvelopeSha256 !== sha256(normalizeEnvelope(input.message.cc))
     || new Date(toSqlTimestamp(input.message.date).replace(" ", "T") + "Z").getTime() < new Date(candidate.createdAt.replace(" ", "T") + "Z").getTime()) {

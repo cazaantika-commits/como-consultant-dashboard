@@ -56,12 +56,22 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // Return as soon as the *read-only*, cursor-based import is durable.
           // No LLM, draft creation, or executive action runs before this ACK.
           const result = await syncReadonlyInboxCommand({ userId: settings.userId, hours: settings.lookbackHours, maxMessages: settings.maxMessages });
+          if (result.sentLineage.errors > 0) {
+            await db.update(comoNextEmailSyncSettings).set({
+              lastRunAt: nowSql(), lastStatus: "failed", lastError: "sent_review_failed_after_import",
+              lastScanned: result.scanned, lastImported: result.imported, lastDuplicates: result.duplicates,
+            }).where(eq(comoNextEmailSyncSettings.id, settings.id));
+            res.status(500).json({ error: "sent_review_failed_after_import", phase: "import", sentReview: result.sentLineage,
+              readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
+            return;
+          }
           await db.update(comoNextEmailSyncSettings).set({
             lastRunAt: nowSql(), lastSuccessAt: nowSql(), lastStatus: "success",
             lastScanned: result.scanned, lastImported: result.imported,
             lastDuplicates: result.duplicates, lastError: null,
           }).where(eq(comoNextEmailSyncSettings.id, settings.id));
-          res.status(200).json({ ok: true, phase: "import", scanned: result.scanned, imported: result.imported, duplicates: result.duplicates, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
+          res.status(200).json({ ok: true, phase: "import", scanned: result.scanned, imported: result.imported, duplicates: result.duplicates,
+            sentReview: result.sentLineage, readOnly: true, serverFlagsChanged: false, externalSideEffects: false });
           return;
         }
         if (mailboxKey === "owner-primary-executive") {
@@ -70,6 +80,10 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // Never auto-apply historical/owner-gated proposals from this heartbeat.
           // Future-only, narrow request/quotation watches are durable internal
           // records, not messages. Resolve inbound replies before considering work.
+          // Sender-state updates are a compulsory routine, before creating any
+          // new follow-up work. Its failure must never be reported as success.
+          const lifecycleResponses = await reconcileLifecycleResponseLanes({ userId: settings.userId, limit: 10 })
+            .catch(() => ({ error: "lifecycle_response_reconciliation_failed" as const }));
           const mailLinkage = await reconcileCurrentMailLinkage({userId:settings.userId,limit:5}).catch(()=>({error:"mail_linkage_failed" as const}));
           const mailLinkageWork = await ensureMailLinkageReviewWork({userId:settings.userId,limit:10}).catch(()=>({error:"mail_linkage_work_failed" as const}));
           const mailReviewWork = await ensureCurrentMailReviewWork(settings.userId).catch(()=>({error:"mail_review_work_failed" as const}));
@@ -83,8 +97,6 @@ function scheduledHandler(mailboxKey: "owner-primary" | "owner-primary-processin
           // unrelated internal work. Report failure only after those lanes run.
           const financePayments = await reconcileFinancePaymentFollowups({ userId: settings.userId, limit: 3 })
             .catch(() => ({ error: "finance_payment_followup_failed" as const }));
-          const lifecycleResponses = await reconcileLifecycleResponseLanes({ userId: settings.userId, limit: 10 })
-            .catch(() => ({ error: "lifecycle_response_reconciliation_failed" as const }));
           const manusDispatch = await retryKnownUndeliveredDispatches({ limit: 3, olderThanSeconds: 120 })
             .catch(() => ({ error: "manus_dispatch_reconciliation_failed" as const }));
           const candidates = await db.select({ id: comoNextActions.id, title: comoNextActions.title,

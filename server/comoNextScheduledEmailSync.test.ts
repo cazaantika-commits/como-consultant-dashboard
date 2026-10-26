@@ -43,6 +43,19 @@ describe("COMO read-only scheduled mail phases", () => {
     expect(inbox).toContain('knownUids.has(message.uid) || knownHashes.has(identitySha)');
   });
 
+  it("reports the Sent review routine and updates sender state before creating further work", () => {
+    const importBlock = route.slice(route.indexOf('if (mailboxKey === "owner-primary")'), route.indexOf('if (mailboxKey === "owner-primary-executive")'));
+    const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));
+    expect(importBlock).toContain('sentReview: result.sentLineage');
+    expect(importBlock).toContain('result.sentLineage.errors > 0');
+    expect(importBlock).toContain('lastStatus: "failed", lastError: "sent_review_failed_after_import"');
+    expect(importBlock).toContain('res.status(500).json');
+    expect(executive.indexOf('await reconcileLifecycleResponseLanes')).toBeLessThan(executive.indexOf('await seedConditionalSentWatches'));
+    expect(executive.indexOf('await reconcileLifecycleResponseLanes')).toBeLessThan(executive.indexOf('queueSystemManusAction'));
+    expect(executive).toContain('"error" in lifecycleResponses');
+    expect(importBlock).not.toMatch(/setInterval|node-cron|sendEmail|sendMail|appendDraft/);
+  });
+
   it("runs policy-gated finance Drafts only in the separate executive phase", () => {
     const importBlock = route.slice(route.indexOf('if (mailboxKey === "owner-primary")'), route.indexOf('if (mailboxKey === "owner-primary-executive")'));
     const executive = route.slice(route.indexOf('if (mailboxKey === "owner-primary-executive")'), route.indexOf('// Separate, retryable callback'));

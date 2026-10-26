@@ -29,6 +29,7 @@ export type SendEvidenceAction = {
 export type SendEvidenceEvent = {
   actionId: number;
   communicationId: number;
+  ambiguousActionTarget?: boolean;
 };
 
 export type SendEvidenceCommunication = {
@@ -114,6 +115,28 @@ function numberOrNull(value: unknown) {
 
 function textPresent(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/** Explicit IDs only. Legacy humanActionId denotes the sender action, not an
+ * audit/finance action_id on the receipt. Conflicting aliases remain conflicts. */
+export function extractComoSendEvidenceEventLinks(rows: Record<string, unknown>[]): SendEvidenceEvent[] {
+  const links: SendEvidenceEvent[] = [];
+  for (const row of rows) {
+    const communicationIds = Array.from(new Set([row.communicationId, row.communicationDraftId]
+      .map(numberOrNull).filter((id): id is number => id !== null)));
+    if (!communicationIds.length) continue;
+    const human = numberOrNull(row.humanActionId);
+    const next = numberOrNull(row.nextActionId);
+    const actionTargets = human
+      ? Array.from(new Set([human, next].filter((id): id is number => id !== null)))
+      : Array.from(new Set([row.eventActionId, row.payloadActionId, row.nextActionId]
+        .map(numberOrNull).filter((id): id is number => id !== null)));
+    const ambiguousActionTarget = Boolean(human && next && human !== next);
+    for (const actionId of actionTargets) {
+      for (const communicationId of communicationIds) links.push({ actionId, communicationId, ...(ambiguousActionTarget ? { ambiguousActionTarget:true } : {}) });
+    }
+  }
+  return links;
 }
 
 function actionStatus(action: SendEvidenceAction) {
@@ -206,10 +229,12 @@ function evidenceConflict<T extends SendEvidenceAction>(action: T, input: {
 export function buildComoKitchenSendEvidenceProjection<T extends SendEvidenceAction>(input: ProjectionSources & { actions: T[] }): ComoKitchenSendEvidenceProjection<T> {
   const nowMs = input.nowMs ?? Date.now();
   const communicationIdsByAction = new Map<number, Set<number>>();
+  const ambiguousActionIds = new Set<number>();
   for (const event of input.events) {
     const actionId = numberOrNull(event.actionId);
     const communicationId = numberOrNull(event.communicationId);
     if (!actionId || !communicationId) continue;
+    if (event.ambiguousActionTarget) ambiguousActionIds.add(actionId);
     const current = communicationIdsByAction.get(actionId) || new Set<number>();
     current.add(communicationId);
     communicationIdsByAction.set(actionId, current);
@@ -239,7 +264,7 @@ export function buildComoKitchenSendEvidenceProjection<T extends SendEvidenceAct
     const communicationIds = Array.from(communicationIdsByAction.get(Number(action.id)) || new Set<number>());
     // No explicit relation means no claim about Draft/Sent state and no change.
     if (!communicationIds.length) return action;
-    if (communicationIds.length !== 1) {
+    if (communicationIds.length !== 1 || ambiguousActionIds.has(Number(action.id))) {
       const conflict = evidenceConflict(action, { code: "ambiguous", communicationId: null });
       conflict.diagnostic.communicationIds = communicationIds;
       (conflict.action as SendEvidenceAction).sendEvidenceProjection = {
@@ -354,26 +379,25 @@ export async function projectComoKitchenSendEvidence<T extends SendEvidenceActio
       event_row.action_id AS eventActionId,
       JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.actionId')) AS payloadActionId,
       JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.nextActionId')) AS nextActionId,
-      JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationId')) AS communicationId
+      JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.humanActionId')) AS humanActionId,
+      JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationId')) AS communicationId,
+      JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationDraftId')) AS communicationDraftId
     FROM como_next_work_file_events event_row
     WHERE event_row.user_id = ${input.userId}
       AND JSON_VALID(COALESCE(event_row.payload_json, '{}'))
-      AND JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationId')) REGEXP '^[1-9][0-9]*$'
+      AND (
+        JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationId')) REGEXP '^[1-9][0-9]*$'
+        OR JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationDraftId')) REGEXP '^[1-9][0-9]*$'
+      )
       AND (
         event_row.action_id IN (${ids})
         OR JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.actionId')) REGEXP '^[1-9][0-9]*$'
         OR JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.nextActionId')) REGEXP '^[1-9][0-9]*$'
+        OR JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.humanActionId')) REGEXP '^[1-9][0-9]*$'
       )
   `);
-  const events: SendEvidenceEvent[] = [];
-  for (const row of rowsOf<Record<string, unknown>>(eventResult)) {
-    const communicationId = numberOrNull(row.communicationId);
-    if (!communicationId) continue;
-    for (const candidate of [row.eventActionId, row.payloadActionId, row.nextActionId]) {
-      const actionId = numberOrNull(candidate);
-      if (actionId && actionIds.includes(actionId)) events.push({ actionId, communicationId });
-    }
-  }
+  const events = extractComoSendEvidenceEventLinks(rowsOf<Record<string, unknown>>(eventResult))
+    .filter(event => actionIds.includes(event.actionId));
   const communicationIds = Array.from(new Set(events.map(item => item.communicationId)));
   if (!communicationIds.length) return buildComoKitchenSendEvidenceProjection({ ...input, events, communications: [], ledgers: [], sentMessages: [] });
   const communicationSqlIds = sql.join(communicationIds.map(id => sql`${id}`), sql`, `);

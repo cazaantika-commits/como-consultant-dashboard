@@ -35,7 +35,7 @@ import { createIntakeProposalsCommand, reviewIntakeProposalCommand, type IntakeP
 import { currentInboundEmailText, reconcileWorkFileEvidenceCommand } from "./comoNextActionReconciliation";
 import { runExecutiveControlLoopCommand } from "./comoNextExecutiveControl";
 import { createMeetingCommand } from "./comoNextMeetings";
-import { confirmSentLineageObservation, findValidatedSentLineage } from "./comoMailboxDraftLedger";
+import { findValidatedSentLineage, type SentLineageMessage, type ValidatedSentLineage as MailboxValidatedSentLineage } from "./comoMailboxDraftLedger";
 
 const EMAIL_ANALYSIS_MODEL = "gpt-5-mini";
 const rowsOf = <T>(result: unknown): T[] => Array.isArray(result) && Array.isArray(result[0]) ? result[0] as T[] : result as T[];
@@ -667,61 +667,465 @@ export async function importReadonlyBatch(userId: number, batch: ReadonlyMailbox
   return { imported, duplicates, suggested, unmatched, autoLinked, importedIds, readOnly: true as const, serverFlagsChanged: false as const, externalSideEffects: false as const };
 }
 
+type ValidatedSentLineage = Extract<MailboxValidatedSentLineage, { kind: "validated" }>;
+
+export type SentReviewEmail = {
+  id: number;
+  userId: number;
+  mailboxKey: string;
+  folderName: string;
+  uidValidity: string;
+  imapUid: number;
+  messageId: string | null;
+  fromEmail: string;
+  toText: string | null;
+  ccText: string | null;
+  subject: string;
+  bodyText: string;
+  bodySha256: string;
+  receivedAt: string;
+  inboxStatus: string;
+  linkedProjectId: number | null;
+  linkedWorkFileId: number | null;
+  communicationId: number | null;
+};
+
+export type SentReviewCounts = {
+  scanned: number;
+  linked: number;
+  replayed: number;
+  review: number;
+  none: number;
+  errors: number;
+  errorEmailIds: number[];
+};
+
+type SentReviewResult =
+  | { kind: "confirmed"; communicationId: number; replayed: boolean }
+  | { kind: "review"; reason: string };
+
+function rowNumber(value: unknown) {
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
+function sentLineageSenderMatches(fromEmail: string, ownerMailbox: string) {
+  const owner = normalizeEmail(ownerMailbox);
+  const extracted = extractEmails(fromEmail);
+  return extracted.length === 1 ? extracted[0] === owner : normalizeEmail(fromEmail) === owner;
+}
+
+function imapSentSourceRecordId(email: Pick<SentReviewEmail, "mailboxKey" | "folderName" | "uidValidity" | "imapUid">) {
+  return `imap:${email.mailboxKey.slice(0, 24)}:${email.folderName}:${email.uidValidity}:${email.imapUid}`;
+}
+
+function sentEvidenceReference(email: Pick<SentReviewEmail, "folderName" | "uidValidity" | "imapUid" | "bodySha256">) {
+  return `IMAP ${email.folderName}; UIDVALIDITY=${email.uidValidity}; UID=${email.imapUid}; SHA-256=${email.bodySha256}`;
+}
+
+function asSentReviewEmail(row: Record<string, unknown>): SentReviewEmail | null {
+  const id = rowNumber(row.id);
+  const userId = rowNumber(row.userId ?? row.user_id);
+  const imapUid = rowNumber(row.imapUid ?? row.imap_uid);
+  if (!id || !userId || imapUid == null) return null;
+  return {
+    id,
+    userId,
+    mailboxKey: String(row.mailboxKey ?? row.mailbox_key ?? ""),
+    folderName: String(row.folderName ?? row.folder_name ?? ""),
+    uidValidity: String(row.uidValidity ?? row.uid_validity ?? ""),
+    imapUid,
+    messageId: row.messageId == null && row.message_id == null ? null : String(row.messageId ?? row.message_id),
+    fromEmail: String(row.fromEmail ?? row.from_email ?? ""),
+    toText: row.toText == null && row.to_text == null ? null : String(row.toText ?? row.to_text),
+    ccText: row.ccText == null && row.cc_text == null ? null : String(row.ccText ?? row.cc_text),
+    subject: String(row.subject ?? ""),
+    bodyText: String(row.bodyText ?? row.body_text ?? ""),
+    bodySha256: String(row.bodySha256 ?? row.body_sha256 ?? ""),
+    receivedAt: String(row.receivedAt ?? row.received_at ?? ""),
+    inboxStatus: String(row.inboxStatus ?? row.inbox_status ?? ""),
+    linkedProjectId: rowNumber(row.linkedProjectId ?? row.linked_project_id),
+    linkedWorkFileId: rowNumber(row.linkedWorkFileId ?? row.linked_work_file_id),
+    communicationId: rowNumber(row.communicationId ?? row.communication_id),
+  };
+}
+
+/** Pure, pre-transaction boundary: no inferred target and no arbitrary rebinding. */
+export function planValidatedSentLineageConfirmation(input: {
+  userId: number;
+  mailboxKey: string;
+  ownerMailbox: string;
+  expectedUidValidity: string;
+  expectedUid: number;
+  email: SentReviewEmail;
+  lineage: ValidatedSentLineage | { communicationId: number | null; ledgerId: number; projectId: number; workFileId: number };
+}): { kind: "apply"; communicationId: number; evidenceReference: string } | { kind: "review"; reason: string } {
+  if (!input.lineage.communicationId) return { kind: "review", reason: "canonical_communication_missing" };
+  if (input.email.userId !== input.userId || input.email.mailboxKey !== input.mailboxKey
+    || input.email.folderName !== "Sent" || input.email.uidValidity !== input.expectedUidValidity
+    || input.email.imapUid !== input.expectedUid || input.expectedUid <= 0 || !input.expectedUidValidity.trim()) {
+    return { kind: "review", reason: "stored_sent_identity_mismatch" };
+  }
+  if (!sentLineageSenderMatches(input.email.fromEmail, input.ownerMailbox)) {
+    return { kind: "review", reason: "sent_sender_not_owner" };
+  }
+  const hasExistingTarget = input.email.linkedProjectId !== null || input.email.linkedWorkFileId !== null;
+  if (hasExistingTarget && (input.email.linkedProjectId !== input.lineage.projectId || input.email.linkedWorkFileId !== input.lineage.workFileId)) {
+    return { kind: "review", reason: "email_already_linked_elsewhere" };
+  }
+  return { kind: "apply", communicationId: input.lineage.communicationId, evidenceReference: sentEvidenceReference(input.email) };
+}
+
+function persistedSentLineageMessage(email: SentReviewEmail): SentLineageMessage {
+  // Durable inbox rows deliberately do not retain the full header map. The
+  // validator therefore receives only exact persisted values; it can use a
+  // stable Message-ID when present or its own explicitly registered fallback.
+  return {
+    uid: email.imapUid,
+    messageId: email.messageId || "",
+    from: email.fromEmail,
+    to: email.toText || "",
+    cc: email.ccText || "",
+    subject: email.subject,
+    textBody: email.bodyText,
+    date: parseStoredUtc(email.receivedAt),
+  };
+}
+
 /**
- * Sent mail is never suggestion-linked. It can only enter a work file through a
- * validated durable Draft ledger binding (custom header/Message-ID), or the
- * deliberately exact, unique finance fallback inside that validator. Replays
- * keep attempting this independently of a duplicate mailbox import.
+ * Atomically applies validator-approved Sent evidence to the original draft
+ * communication. It never creates a generic IMAP communication. A prior IMAP
+ * communication can be displaced only when its immutable source provenance is
+ * exactly the stored Sent row now being confirmed.
  */
-async function linkValidatedSentLineageFromBatch(input: { userId: number; batch: ReadonlyMailboxBatch }) {
-  if (input.batch.folderName !== "Sent" || !input.batch.messages.length) return { linked: 0, review: 0 };
+export async function confirmValidatedSentLineageCommand(input: {
+  userId: number;
+  mailboxKey: string;
+  ownerMailbox: string;
+  email: SentReviewEmail;
+  lineage: ValidatedSentLineage;
+}): Promise<SentReviewResult> {
+  const preliminary = planValidatedSentLineageConfirmation({
+    userId: input.userId,
+    mailboxKey: input.mailboxKey,
+    ownerMailbox: input.ownerMailbox,
+    expectedUidValidity: input.email.uidValidity,
+    expectedUid: input.email.imapUid,
+    email: input.email,
+    lineage: input.lineage,
+  });
+  if (preliminary.kind === "review") return preliminary;
   const db = await getDb();
   if (!db) databaseUnavailable();
+
+  return db.transaction(async tx => {
+    // Lock every mutable participant before accepting the pre-validation result.
+    const [lockedFileRaw] = rowsOf<Record<string, unknown>>(await tx.execute(sql`
+      SELECT id, user_id AS userId, project_id AS projectId, work_file_status AS workFileStatus
+      FROM como_next_work_files
+      WHERE id = ${input.lineage.workFileId} AND project_id = ${input.lineage.projectId}
+      FOR UPDATE
+    `));
+    const lockedFile = lockedFileRaw || null;
+    if (!lockedFile || rowNumber(lockedFile.userId) !== input.userId || ["closed", "cancelled"].includes(String(lockedFile.workFileStatus))) {
+      return { kind: "review", reason: "canonical_work_file_unavailable" };
+    }
+
+    const [lockedEmailRaw] = rowsOf<Record<string, unknown>>(await tx.execute(sql`
+      SELECT id, user_id AS userId, mailbox_key AS mailboxKey, folder_name AS folderName,
+        uid_validity AS uidValidity, imap_uid AS imapUid, message_id AS messageId,
+        from_email AS fromEmail, to_text AS toText, cc_text AS ccText, subject,
+        body_text AS bodyText, body_sha256 AS bodySha256, received_at AS receivedAt,
+        inbox_status AS inboxStatus, linked_project_id AS linkedProjectId,
+        linked_work_file_id AS linkedWorkFileId, communication_id AS communicationId
+      FROM como_next_email_messages
+      WHERE id = ${input.email.id} AND user_id = ${input.userId}
+      FOR UPDATE
+    `));
+    const lockedEmail = lockedEmailRaw ? asSentReviewEmail(lockedEmailRaw) : null;
+    if (!lockedEmail) return { kind: "review", reason: "stored_sent_email_missing" };
+    if (lockedEmail.bodySha256 !== input.email.bodySha256 || lockedEmail.bodyText !== input.email.bodyText
+      || lockedEmail.subject !== input.email.subject || lockedEmail.toText !== input.email.toText
+      || lockedEmail.ccText !== input.email.ccText || lockedEmail.receivedAt !== input.email.receivedAt
+      || lockedEmail.messageId !== input.email.messageId) {
+      return { kind: "review", reason: "stored_sent_source_changed_since_validation" };
+    }
+    const plan = planValidatedSentLineageConfirmation({
+      userId: input.userId,
+      mailboxKey: input.mailboxKey,
+      ownerMailbox: input.ownerMailbox,
+      expectedUidValidity: input.email.uidValidity,
+      expectedUid: input.email.imapUid,
+      email: lockedEmail,
+      lineage: input.lineage,
+    });
+    if (plan.kind === "review") return plan;
+
+    const [lockedLedgerRaw] = rowsOf<Record<string, unknown>>(await tx.execute(sql`
+      SELECT id, mailbox_key AS mailboxKey, user_id AS userId, project_id AS projectId,
+        work_file_id AS workFileId, communication_id AS communicationId, state,
+        sent_folder AS sentFolder, sent_uid AS sentUid
+      FROM como_mailbox_draft_ledger
+      WHERE id = ${input.lineage.ledgerId}
+      FOR UPDATE
+    `));
+    const lockedLedger = lockedLedgerRaw || null;
+    if (!lockedLedger
+      || String(lockedLedger.mailboxKey ?? "") !== input.mailboxKey
+      || rowNumber(lockedLedger.userId) !== input.userId
+      || rowNumber(lockedLedger.projectId) !== input.lineage.projectId
+      || rowNumber(lockedLedger.workFileId) !== input.lineage.workFileId
+      || rowNumber(lockedLedger.communicationId) !== plan.communicationId
+      || !["append_started", "draft_saved", "sent_confirmed"].includes(String(lockedLedger.state))) {
+      return { kind: "review", reason: "canonical_ledger_changed" };
+    }
+    if (String(lockedLedger.state) === "sent_confirmed"
+      && (String(lockedLedger.sentFolder || "") !== "Sent" || rowNumber(lockedLedger.sentUid) !== lockedEmail.imapUid)) {
+      return { kind: "review", reason: "ledger_sent_observation_conflicts" };
+    }
+
+    const [canonicalRaw] = rowsOf<Record<string, unknown>>(await tx.execute(sql`
+      SELECT id, user_id AS userId, project_id AS projectId, work_file_id AS workFileId,
+        channel, direction, communication_status AS communicationStatus,
+        source_system AS sourceSystem, source_record_id AS sourceRecordId
+      FROM como_next_communications
+      WHERE id = ${plan.communicationId}
+      FOR UPDATE
+    `));
+    const canonical = canonicalRaw || null;
+    if (!canonical
+      || rowNumber(canonical.userId) !== input.userId
+      || rowNumber(canonical.projectId) !== input.lineage.projectId
+      || rowNumber(canonical.workFileId) !== input.lineage.workFileId
+      || String(canonical.channel) !== "email" || String(canonical.direction) !== "outbound"
+      || String(canonical.sourceSystem) === "imap"
+      || ["closed", "cancelled"].includes(String(canonical.communicationStatus))) {
+      return { kind: "review", reason: "canonical_communication_unavailable" };
+    }
+
+    if (lockedEmail.communicationId !== null && lockedEmail.communicationId !== plan.communicationId) {
+      const [shadowRaw] = rowsOf<Record<string, unknown>>(await tx.execute(sql`
+        SELECT id, user_id AS userId, project_id AS projectId, work_file_id AS workFileId,
+          communication_status AS communicationStatus, source_system AS sourceSystem,
+          source_record_id AS sourceRecordId
+        FROM como_next_communications
+        WHERE id = ${lockedEmail.communicationId}
+        FOR UPDATE
+      `));
+      const shadow = shadowRaw || null;
+      if (!shadow
+        || rowNumber(shadow.userId) !== input.userId
+        || rowNumber(shadow.projectId) !== input.lineage.projectId
+        || rowNumber(shadow.workFileId) !== input.lineage.workFileId
+        || String(shadow.sourceSystem) !== "imap"
+        || String(shadow.sourceRecordId || "") !== imapSentSourceRecordId(lockedEmail)
+        || ["closed", "cancelled"].includes(String(shadow.communicationStatus))) {
+        return { kind: "review", reason: "legacy_imap_shadow_not_proven" };
+      }
+    }
+
+    const alreadyConfirmed = String(lockedLedger.state) === "sent_confirmed"
+      && String(lockedLedger.sentFolder || "") === "Sent"
+      && rowNumber(lockedLedger.sentUid) === lockedEmail.imapUid
+      && lockedEmail.communicationId === plan.communicationId
+      && lockedEmail.linkedProjectId === input.lineage.projectId
+      && lockedEmail.linkedWorkFileId === input.lineage.workFileId
+      && lockedEmail.inboxStatus === "linked"
+      && String(canonical.communicationStatus) === "sent";
+
+    if (!alreadyConfirmed) {
+      await tx.execute(sql`
+        UPDATE como_next_communications
+        SET communication_status = ${"sent"}, occurred_at = ${lockedEmail.receivedAt},
+          sent_at = ${lockedEmail.receivedAt}, evidence_reference = ${plan.evidenceReference},
+          external_message_ref = COALESCE(NULLIF(${lockedEmail.messageId || ""}, ""), external_message_ref)
+        WHERE id = ${plan.communicationId}
+      `);
+      await tx.execute(sql`
+        UPDATE como_next_email_messages
+        SET inbox_status = ${"linked"}, linked_project_id = ${input.lineage.projectId},
+          linked_work_file_id = ${input.lineage.workFileId}, communication_id = ${plan.communicationId},
+          linked_at = COALESCE(linked_at, received_at)
+        WHERE id = ${lockedEmail.id} AND user_id = ${input.userId}
+      `);
+      await tx.execute(sql`
+        UPDATE como_mailbox_draft_ledger
+        SET state = ${"sent_confirmed"}, sent_folder = ${"Sent"}, sent_uid = ${lockedEmail.imapUid},
+          confirmed_at = COALESCE(confirmed_at, ${lockedEmail.receivedAt}),
+          claim_token = NULL, claim_expires_at = NULL, updated_at = UTC_TIMESTAMP()
+        WHERE id = ${input.lineage.ledgerId}
+      `);
+    }
+    await appendEvent(tx, {
+      userId: input.userId,
+      projectId: input.lineage.projectId,
+      workFileId: input.lineage.workFileId,
+      actorType: "system",
+      actorUserId: null,
+      eventType: "email_sent_lineage_confirmed",
+      summary: `تأكيد إرسال بريد صادر: ${lockedEmail.subject}`,
+      payload: {
+        communicationId: plan.communicationId,
+        sentEmailId: lockedEmail.id,
+        sentUid: lockedEmail.imapUid,
+        uidValidity: lockedEmail.uidValidity,
+        sourceCanonical: true,
+        sourceSystem: "imap",
+        externalSideEffect: false,
+      },
+      idempotencyKey: `sent-lineage-confirmed:${plan.communicationId}:${lockedEmail.id}`,
+    });
+    return { kind: "confirmed", communicationId: plan.communicationId, replayed: alreadyConfirmed };
+  });
+}
+
+function emptySentReviewCounts(): SentReviewCounts {
+  return { scanned: 0, linked: 0, replayed: 0, review: 0, none: 0, errors: 0, errorEmailIds: [] };
+}
+
+async function reviewSentLineageRows(input: {
+  userId: number;
+  mailboxKey: string;
+  ownerMailbox: string;
+  rows: SentReviewEmail[];
+  messagesByEmailId?: Map<number, SentLineageMessage>;
+}) {
+  const counts = emptySentReviewCounts();
+  for (const email of input.rows) {
+    counts.scanned += 1;
+    const message = input.messagesByEmailId?.get(email.id) || persistedSentLineageMessage(email);
+    try {
+      const lineage = await findValidatedSentLineage({
+        userId: input.userId,
+        mailboxKey: input.mailboxKey,
+        ownerMailbox: input.ownerMailbox,
+        message,
+      });
+      if (lineage.kind === "none") { counts.none += 1; continue; }
+      if (lineage.kind === "review") { counts.review += 1; continue; }
+      const confirmed = await confirmValidatedSentLineageCommand({
+        userId: input.userId,
+        mailboxKey: input.mailboxKey,
+        ownerMailbox: input.ownerMailbox,
+        email,
+        lineage,
+      });
+      if (confirmed.kind === "review") { counts.review += 1; continue; }
+      if (confirmed.replayed) counts.replayed += 1;
+      else counts.linked += 1;
+    } catch {
+      counts.errors += 1;
+      counts.errorEmailIds.push(email.id);
+    }
+  }
+  return counts;
+}
+
+/**
+ * Sent mail is never suggestion-linked. It can only be confirmed against the
+ * validator's durable ledger binding, and confirmation updates that original
+ * communication rather than creating a competing IMAP communication.
+ */
+async function linkValidatedSentLineageFromBatch(input: { userId: number; batch: ReadonlyMailboxBatch }) {
+  if (input.batch.folderName !== "Sent" || !input.batch.messages.length) return emptySentReviewCounts();
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const mailboxKey = mailboxKeyFor(input.batch.mailbox);
   const byUid = new Map(input.batch.messages.map(message => [message.uid, message]));
   const rows = await db.select().from(comoNextEmailMessages).where(and(
     eq(comoNextEmailMessages.userId, input.userId),
-    eq(comoNextEmailMessages.mailboxKey, mailboxKeyFor(input.batch.mailbox)),
+    eq(comoNextEmailMessages.mailboxKey, mailboxKey),
     eq(comoNextEmailMessages.folderName, "Sent"),
     eq(comoNextEmailMessages.uidValidity, input.batch.uidValidity),
     inArray(comoNextEmailMessages.imapUid, input.batch.messages.map(message => message.uid)),
   ));
-  let linked = 0;
-  let review = 0;
-  for (const email of rows) {
-    const message = byUid.get(Number(email.imapUid));
-    if (!message) continue;
-    const lineage = await findValidatedSentLineage({
-      userId: input.userId,
-      mailboxKey: mailboxKeyFor(input.batch.mailbox),
-      ownerMailbox: getConfiguredMailboxAddress(),
-      message,
-    });
-    if (lineage.kind === "review") { review += 1; continue; }
-    if (lineage.kind !== "validated") continue;
-    // A source mismatch is an explicit stop, not permission to replace a
-    // manually/previously linked other project.
-    if (email.linkedProjectId && (Number(email.linkedProjectId) !== lineage.projectId || Number(email.linkedWorkFileId || 0) !== lineage.workFileId)) {
-      review += 1;
-      continue;
-    }
-    if (!email.communicationId) {
-      try {
-        await linkEmailToWorkFileCommand({
-          userId: input.userId,
-          emailId: Number(email.id),
-          projectId: lineage.projectId,
-          workFileId: lineage.workFileId,
-          suppressReplyDraft: true,
-        });
-      } catch {
-        review += 1;
-        continue;
-      }
-    }
-    await confirmSentLineageObservation({ ledgerId: lineage.ledgerId, folder: input.batch.folderName, uid: Number(email.imapUid) });
-    linked += 1;
+  const emails = rows.map(row => asSentReviewEmail(row as unknown as Record<string, unknown>)).filter((row): row is SentReviewEmail => Boolean(row));
+  const messagesByEmailId = new Map<number, SentLineageMessage>();
+  for (const email of emails) {
+    const message = byUid.get(email.imapUid);
+    if (message) messagesByEmailId.set(email.id, message);
   }
-  return { linked, review };
+  return reviewSentLineageRows({ userId: input.userId, mailboxKey, ownerMailbox: getConfiguredMailboxAddress(), rows: emails, messagesByEmailId });
+}
+
+/** Bounded replay makes an old durable Sent import reviewable after its IMAP
+ * cursor has advanced. It selects only unresolved or proven-legacy-shadow rows
+ * oldest first, so newly resolved messages cannot continually starve backlog. */
+async function replayCachedSentLineage(input: { userId: number; mailboxKey: string; limit?: number }) {
+  const db = await getDb();
+  if (!db) databaseUnavailable();
+  const limit = Math.max(1, Math.min(input.limit || 10, 10));
+  const raw = await db.execute(sql`
+    SELECT e.id, e.user_id AS userId, e.mailbox_key AS mailboxKey, e.folder_name AS folderName,
+      e.uid_validity AS uidValidity, e.imap_uid AS imapUid, e.message_id AS messageId,
+      e.from_email AS fromEmail, e.to_text AS toText, e.cc_text AS ccText, e.subject,
+      e.body_text AS bodyText, e.body_sha256 AS bodySha256, e.received_at AS receivedAt,
+      e.inbox_status AS inboxStatus, e.linked_project_id AS linkedProjectId,
+      e.linked_work_file_id AS linkedWorkFileId, e.communication_id AS communicationId
+    FROM como_next_email_messages e
+    WHERE e.user_id = ${input.userId}
+      AND e.mailbox_key = ${input.mailboxKey}
+      AND e.folder_name = ${"Sent"}
+      -- Do not let unrelated, permanently unlinked Sent mail consume every
+      -- replay slot. This is candidate selection only, never proof of sending.
+      AND EXISTS (
+        SELECT 1 FROM como_mailbox_draft_ledger pending_ledger
+        JOIN como_next_communications pending_draft ON pending_draft.id=pending_ledger.communication_id
+        WHERE pending_ledger.user_id=e.user_id AND pending_ledger.mailbox_key=e.mailbox_key
+          AND pending_draft.user_id=e.user_id AND pending_draft.project_id=pending_ledger.project_id
+          AND pending_draft.work_file_id=pending_ledger.work_file_id
+          AND pending_draft.channel='email' AND pending_draft.direction='outbound'
+          AND pending_draft.communication_status NOT IN ('cancelled','closed')
+          AND pending_ledger.state IN ('append_started','draft_saved','sent_confirmed')
+          AND pending_ledger.created_at<=e.received_at
+          AND (
+            pending_ledger.message_id=e.message_id
+            OR (
+              pending_draft.source_system='como_next'
+              AND (pending_draft.source_record_id LIKE 'finance_invoice_draft:attachment:%'
+                OR pending_draft.source_record_id LIKE 'email-reply-draft:%')
+              AND pending_ledger.subject_sha256=SHA2(TRIM(REPLACE(REPLACE(e.subject,CHAR(13,10),CHAR(10)),CHAR(13),CHAR(10))),256)
+              AND pending_ledger.body_sha256=SHA2(TRIM(REPLACE(REPLACE(e.body_text,CHAR(13,10),CHAR(10)),CHAR(13),CHAR(10))),256)
+            )
+          )
+      )
+      AND (
+        e.communication_id IS NULL
+        OR e.inbox_status <> ${"linked"}
+        OR EXISTS (
+          SELECT 1 FROM como_next_communications shadow
+          WHERE shadow.id = e.communication_id
+            AND shadow.source_system = ${"imap"}
+            AND shadow.source_record_id = CONCAT(${"imap:"}, LEFT(e.mailbox_key, 24), ${":Sent:"}, e.uid_validity, ${":"}, e.imap_uid)
+        )
+        OR NOT EXISTS (
+          SELECT 1
+          FROM como_mailbox_draft_ledger confirmed
+          JOIN como_next_communications canonical ON canonical.id = confirmed.communication_id
+          WHERE confirmed.mailbox_key = e.mailbox_key
+            AND confirmed.user_id = e.user_id
+            AND confirmed.project_id = e.linked_project_id
+            AND confirmed.work_file_id = e.linked_work_file_id
+            AND confirmed.communication_id = e.communication_id
+            AND confirmed.state = ${"sent_confirmed"}
+            AND confirmed.sent_folder = ${"Sent"}
+            AND confirmed.sent_uid = e.imap_uid
+            AND canonical.user_id = e.user_id
+            AND canonical.project_id = e.linked_project_id
+            AND canonical.work_file_id = e.linked_work_file_id
+            AND canonical.communication_status = ${"sent"}
+        )
+      )
+    ORDER BY e.imported_at ASC, e.id ASC
+    LIMIT ${limit}
+  `);
+  const rows = rowsOf<Record<string, unknown>>(raw).map(asSentReviewEmail).filter((row): row is SentReviewEmail => Boolean(row));
+  return reviewSentLineageRows({
+    userId: input.userId,
+    mailboxKey: input.mailboxKey,
+    ownerMailbox: getConfiguredMailboxAddress(),
+    rows,
+  });
 }
 
 export async function syncReadonlyInboxCommand(input: { userId: number; hours: number; maxMessages: number }) {
@@ -743,6 +1147,18 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
   const inbox = await importReadonlyBatch(input.userId, inboxBatch);
   const sent = await importReadonlyBatch(input.userId, sentBatch);
   const sentLineage = await linkValidatedSentLineageFromBatch({ userId: input.userId, batch: sentBatch });
+  const cachedSentLineage = await replayCachedSentLineage({ userId: input.userId, mailboxKey, limit: 10 });
+  const sentReview = {
+    scanned: sentLineage.scanned + cachedSentLineage.scanned,
+    linked: sentLineage.linked + cachedSentLineage.linked,
+    replayed: sentLineage.replayed + cachedSentLineage.replayed,
+    review: sentLineage.review + cachedSentLineage.review,
+    none: sentLineage.none + cachedSentLineage.none,
+    errors: sentLineage.errors + cachedSentLineage.errors,
+    errorEmailIds: [...sentLineage.errorEmailIds, ...cachedSentLineage.errorEmailIds],
+    fresh: sentLineage,
+    cached: cachedSentLineage,
+  };
   return {
     imported: inbox.imported + sent.imported,
     duplicates: inbox.duplicates + sent.duplicates,
@@ -753,7 +1169,8 @@ export async function syncReadonlyInboxCommand(input: { userId: number; hours: n
     scanned: inboxBatch.messages.length + sentBatch.messages.length,
     uidValidity: { inbox: inboxBatch.uidValidity, sent: sentBatch.uidValidity },
     folders: { inbox, sent },
-    sentLineage,
+    sentLineage: sentReview,
+    sentReview,
     readOnly: true as const,
     serverFlagsChanged: false as const,
     externalSideEffects: false as const,
