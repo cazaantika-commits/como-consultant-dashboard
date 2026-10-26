@@ -2,6 +2,7 @@ import { eq, and, inArray, or, like, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, projects, InsertProject, consultants, InsertConsultant, projectConsultants, InsertProjectConsultant, financialData, InsertFinancialData, evaluationScores, InsertEvaluationScore, evaluatorScores, InsertEvaluatorScore, committeeDecisions, InsertCommitteeDecision, consultantDetails, InsertConsultantDetail, aiAdvisoryScores, InsertAiAdvisoryScore, cpaProjects, cpaProjectConsultants, cpaEvaluationResults } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { describeComoOAuthFailure } from './services/comoOAuthDiagnostics';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -18,15 +19,20 @@ export async function getDb() {
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
+type AuthUserInput = Omit<InsertUser, "lastSignedIn"> & { lastSignedIn?: string | Date };
+
+function userTimestamp(value: string | Date): string {
+  return value instanceof Date ? value.toISOString().slice(0, 19).replace("T", " ") : value;
+}
+
+export async function upsertUser(user: AuthUserInput): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+    throw Object.assign(new Error("COMO database unavailable"), { code: "COMO_DATABASE_UNAVAILABLE" });
   }
 
   try {
@@ -49,8 +55,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     textFields.forEach(assignNullable);
 
     if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+      const signedInAt = userTimestamp(user.lastSignedIn);
+      values.lastSignedIn = signedInAt;
+      updateSet.lastSignedIn = signedInAt;
     }
     if (user.role !== undefined) {
       values.role = user.role;
@@ -61,18 +68,18 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
 
     if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
+      values.lastSignedIn = userTimestamp(new Date());
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
+      updateSet.lastSignedIn = values.lastSignedIn;
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    console.error("[Database] User persistence failed", describeComoOAuthFailure("user_persistence", error));
     throw error;
   }
 }

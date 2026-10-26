@@ -7,6 +7,7 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { describeComoOAuthFailure } from "../services/comoOAuthDiagnostics";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -302,8 +303,10 @@ class SDKServer {
 
     // If user not in DB, sync from OAuth server automatically
     if (!user) {
+      let syncStage: "user_info" | "user_persistence" = "user_info";
       try {
         const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+        syncStage = "user_persistence";
         await db.upsertUser({
           openId: userInfo.openId,
           name: userInfo.name || null,
@@ -313,7 +316,7 @@ class SDKServer {
         });
         user = await db.getUserByOpenId(userInfo.openId);
       } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
+        console.error("[Auth] User sync failed", describeComoOAuthFailure(syncStage, error));
         throw ForbiddenError("Failed to sync user info");
       }
     }
