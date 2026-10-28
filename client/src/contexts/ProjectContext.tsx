@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -63,14 +63,14 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [projects, projectsQuery.isLoading, selectedProjectId, user]);
 
-  function setSelectedProjectId(id: number | null) {
+  const setSelectedProjectId = useCallback((id: number | null) => {
     setSelectedProjectIdState(id);
     if (id !== null) {
       localStorage.setItem(STORAGE_KEY, String(id));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }
+  }, []);
 
   return (
     <ProjectContext.Provider value={{ selectedProjectId, setSelectedProjectId, projects, projectsLoading: projectsQuery.isLoading }}>

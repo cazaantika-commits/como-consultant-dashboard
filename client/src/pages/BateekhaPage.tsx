@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
 import { default as ClipboardList } from "lucide-react/dist/esm/icons/clipboard-list.js";
 import { default as HardHat } from "lucide-react/dist/esm/icons/hard-hat.js";
@@ -103,6 +103,7 @@ type BateekhaPageProps = {
 
 export default function BateekhaPage({ mode = "standard", testProjectId, testProjectName, testCpaProjectId, onExitTestProject }: BateekhaPageProps = {}) {
   const [location, navigate] = useLocation();
+  const search = useSearch();
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const { user } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProjectContext();
@@ -112,19 +113,28 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
   const effectiveProjectId = isTestMode ? testProjectId ?? null : selectedProjectId;
   const requestedProjectId = useMemo(() => {
     if (mode === "test") return null;
-    const value = Number(new URLSearchParams(window.location.search).get("projectId"));
+    const value = Number(new URLSearchParams(search).get("projectId"));
     return Number.isInteger(value) && value > 0 ? value : null;
-  }, [mode]);
+  }, [mode, search]);
   const projectQuery = trpc.projects.getById.useQuery(effectiveProjectId!, { enabled: !!effectiveProjectId && !!user });
   const financingScenario = (projectQuery.data as any)?.financingScenario;
   const projectType = financingScenario === "build_for_sale" || financingScenario === "build_for_rent" || financingScenario === "joint_venture_land_for_units" ? financingScenario : undefined;
   const isMajan = isMajanFinanceProject(effectiveProjectId, (projectQuery.data as any)?.plotNumber, isTestMode);
 
+  // Apply route changes, not every context change. The previous effect kept
+  // restoring the entry URL's project after the user chose a different project.
   useEffect(() => {
-    if (!isTestMode && requestedProjectId && requestedProjectId !== selectedProjectId) {
+    if (!isTestMode && requestedProjectId) {
       setSelectedProjectId(requestedProjectId);
     }
-  }, [isTestMode, requestedProjectId, selectedProjectId, setSelectedProjectId]);
+  }, [isTestMode, requestedProjectId, setSelectedProjectId]);
+
+  const handleProjectSelect = (id: number) => {
+    const params = new URLSearchParams(search);
+    params.set("projectId", String(id));
+    setSelectedProjectId(id);
+    navigate(`${location}?${params.toString()}${window.location.hash || ""}`);
+  };
 
   useEffect(() => {
     if (isTestMode && effectiveProjectId && selectedProjectId !== effectiveProjectId) {
@@ -138,7 +148,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
 
   useEffect(() => {
     const syncActiveTabFromUrl = () => {
-      const requestedTabParam = new URLSearchParams(window.location.search).get("tab");
+      const requestedTabParam = new URLSearchParams(search).get("tab");
       // Older Financial Studies links used "pricing" for Wael's unified sales and
       // marketing canvas. Keep these links valid when the page is reopened.
       const requestedTab = (requestedTabParam === "pricing" ? "sales" : requestedTabParam) as TabId | null;
@@ -150,9 +160,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
     };
 
     syncActiveTabFromUrl();
-    window.addEventListener("popstate", syncActiveTabFromUrl);
-    return () => window.removeEventListener("popstate", syncActiveTabFromUrl);
-  }, [projectType, isMajan]);
+  }, [search, projectType, isMajan]);
 
   // Portfolio reports are company-wide reports. They stay visible after choosing a
   // project so the project picker never makes the three consolidated reports vanish.
@@ -214,7 +222,7 @@ export default function BateekhaPage({ mode = "standard", testProjectId, testPro
                 <h2 className="mt-1 text-xl font-black text-slate-900">{isTestMode ? "جرّب كل بطاقات المشروع بأمان" : "اختر المشروع مرة واحدة"}</h2>
                 <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">{isTestMode ? "أي بيانات تدخلها هنا تبقى داخل المشروع التجريبي، ولا تظهر في قوائم المشاريع أو مركز القيادة أو المحافظ والتقارير المجمعة." : "بعدها تفتح كل بطاقات المشروع نفسه، وزر العودة يعيدك إلى الخطوة السابقة فعلًا."}</p>
               </div>
-              {isTestMode ? <span className="inline-flex w-fit items-center rounded-full border border-violet-200 bg-white px-4 py-2 text-xs font-black text-violet-700">غير رسمي · لا يدخل في التقارير</span> : <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={setSelectedProjectId} /></div>}
+              {isTestMode ? <span className="inline-flex w-fit items-center rounded-full border border-violet-200 bg-white px-4 py-2 text-xs font-black text-violet-700">غير رسمي · لا يدخل في التقارير</span> : <div className="w-full md:w-72"><ProjectSelector selectedId={selectedProjectId} onSelect={handleProjectSelect} /></div>}
             </div>
             {effectiveProjectId && projectQuery.data && <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-2.5 text-xs"><span className="font-bold text-slate-500">المشروع المختار</span><span className="rounded-full bg-white px-3 py-1 font-black text-slate-800 ring-1 ring-slate-200">{(projectQuery.data as any).name}</span><span className="rounded-full bg-teal-50 px-3 py-1 font-bold text-teal-700">{projectType === "joint_venture_land_for_units" ? "Joint Venture — أرض مقابل وحدات" : projectType === "build_for_sale" ? "بناء للبيع" : projectType === "build_for_rent" ? "بناء للتأجير" : "أوف بلان"}</span></div>}
           </section>
