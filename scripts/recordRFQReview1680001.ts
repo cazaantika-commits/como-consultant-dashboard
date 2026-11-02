@@ -1,0 +1,63 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {sql} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {requireProjectAccess,appendEvent} from '../server/services/comoNextCommands';
+import {readDispatchForDirective} from '../server/services/comoManusDispatch';
+import {readExecutiveWorkFile} from '../server/services/saraWorkFileReader';
+const root='/home/ubuntu/reports/como-directive-1680001-2026-11-03';
+const load=(n:string)=>JSON.parse(fs.readFileSync(root+'/'+n+'.json','utf8'));
+const save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+const hash=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const bodySha='e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+const summary='بريد COMO3030001: فُحص HTML والمرفقان؛ عطاء JANU AL MARJAN لا يطابق ملفًا مسجلًا. اختلاف المرسل ورابط .live يستدعي تحفظًا، لا اتهامًا مؤكدًا. بقي غير مربوط، لا رد أو مشاركة. Manus يتابع الدليل المعتمد؛ المراجعة تمت والمطابقة متعذرة.';
+const failure='تعذر ربط3030001: لا صلة معتمدة بمشروع COMO، وهوية المرسل وبوابة العطاء غير مثبتتين. لا ربط تخميني أو رد قبل التحقق.';
+const nextStep='Manus يحتفظ بالإجراء3450001 في انتظار دليل معتمد يثبت صلة المشروع بـCOMO وصحة هوية الجهة وقناة المستندات. لا استئناف عبر رابط البريد، ولا مشاركة أو رد أو موعد متابعة آلي جديد.';
+async function main(){
+ const db=await getDb();assert(db);await requireProjectAccess(db,1,1,'write');
+ const q=async(s:any)=>(await db.execute(s))[0]as any[];
+ const [existing]=await q(sql`SELECT * FROM como_manus_dispatches WHERE directive_id=1680001`);
+ if(existing?.state==='failed'&&existing.work_product_id){const receipt=JSON.parse(existing.result_json);assert.equal(receipt.sourceEmailId,3030001);save('receipt',receipt);console.log(JSON.stringify({replayed:true,receipt}));await(db as any).$client.end();return;}
+ const [authority]=await q(sql`SELECT * FROM como_next_staged_directives WHERE id=1680001 AND user_id=1 AND project_id=1 AND work_file_id=630001 AND action_id=3450001 AND status='submitting' AND source_member_id='system:manus-action'`);assert(authority);
+ assert(existing?.state==='running'&&String(existing.claim_token).startsWith('worker:'));
+ const source=load('source').source;const live=load('live-source-proof');const responses=load('response-proof');const before=load('protected-before');
+ assert.equal(live.sourceEmailId,3030001);assert.equal(live.sourceSha,bodySha);assert.equal(live.messageId,source.message_id);assert.equal(live.attachments.length,2);
+ assert.equal(live.htmlBodySha,hash(fs.readFileSync(root+'/email-body-html.txt','utf8').replace(/\n$/,'')));
+ assert.deepEqual(responses.related,{Sent:[],Drafts:[]});
+ for(const a of live.attachments){assert.equal(hash(fs.readFileSync(a.path)),a.sha256);assert.equal(fs.statSync(a.path).size,a.size);}
+ const pdf=load('decrypted-pdf-review');assert.equal(pdf.pages,2);assert(pdf.authenticatedLocally&&!pdf.networkAccess);assert(pdf.links.some((l:any)=>String(l.uri).includes('alsahelcontenderportal.live')));
+ const mapping=load('mapping-context');assert.equal(mapping.related.length,1);assert(!mapping.files.some((f:any)=>/janu|marjan|bmu|ascc/i.test(f.title)));
+ const report=fs.readFileSync(root+'/RFQ_Source_Review_AR.md','utf8');assert(report.length>1000&&report.includes('3030001'));
+ const receipt=await db.transaction(async tx=>{
+  await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=630001 AND user_id=1 FOR UPDATE`);
+  const rows=async(s:any)=>(await tx.execute(s))[0]as any[];
+  const [d]=await rows(sql`SELECT * FROM como_manus_dispatches WHERE directive_id=1680001 FOR UPDATE`);assert(d?.state==='running'&&d.claim_token===existing.claim_token);
+  const [s]=await rows(sql`SELECT * FROM como_next_email_messages WHERE id=3030001 AND user_id=1 FOR UPDATE`);
+  assert.equal(s.message_id,source.message_id);assert.equal(s.body_sha256,bodySha);assert.equal(s.inbox_status,'unmatched');assert.equal(s.linked_work_file_id,null);assert.equal(s.linked_project_id,null);
+  const [a]=await rows(sql`SELECT * FROM como_next_actions WHERE id=3450001 AND user_id=1 AND work_file_id=630001 AND source_system='como_mail_linkage' FOR UPDATE`);
+  assert(a?.action_status==='open'&&a.source_record_id==='mail-linkage:3030001');
+  const prior=await rows(sql`SELECT id FROM como_next_work_memory WHERE source_system='como_mail_linkage' AND source_record_id='dispatch-linkage-blocked:1680001'`);assert.equal(prior.length,0);
+  const inserted:any=await tx.execute(sql`INSERT INTO como_next_work_memory (project_id,work_file_id,memory_type,entry_type,title,body,source_status,source_system,source_record_id,is_current,occurred_at) VALUES (1,630001,'work_product','mail_linkage_blocked','المشاريع — مراجعة عطاء3030001 وعائق المطابقة',${report},'reviewed','como_mail_linkage','dispatch-linkage-blocked:1680001',1,UTC_TIMESTAMP())`);
+  const workProductId=Number(inserted[0].insertId);
+  const out={directiveId:1680001,workProductId,sourceEmailId:3030001,operationalWorkFileId:630001,bodySha256:bodySha,htmlBodySha:live.htmlBodySha,reviewCompleted:true,matchingCompleted:false,projectClassification:false,targetWorkFileId:null,attachmentProofs:live.attachments.map((v:any)=>({id:v.attachmentId,sha256:v.sha256,size:v.size,metadataVerified:true,storedAsProjectDocument:false})),responseHandling:{kind:'no_reply_needed',evidence:'الصادر والمسودات فُحصا. لا صلة مشروع أو قناة موثقة؛ لا شكر أو اعتذار أو مشاركة بناء على دعوة غير مثبتة.',nextStep},nextActionId:3450001,failureMessage:failure,executionSummary:summary,externalSideEffect:false,sent:false,mailboxChanged:false,communicationDraftId:null,mailboxDraftRef:null};
+  await tx.execute(sql`UPDATE como_next_actions SET action_status='waiting_external',description=${String(a.description)+'\n\n'+failure+'\n'+nextStep},evidence_reference=${`إيصال المراجعة#${workProductId} — البريد3030001؛ الربط غير مثبت ولا رد`} WHERE id=3450001 AND user_id=1 AND action_status='open'`);
+  await tx.execute(sql`UPDATE como_manus_dispatches SET state='failed',work_product_id=${workProductId},next_action_id=3450001,execution_summary=${summary},result_json=${JSON.stringify(out)},error=${failure},completed_at=UTC_TIMESTAMP(),last_progress_at=UTC_TIMESTAMP() WHERE directive_id=1680001 AND state='running' AND claim_token=${existing.claim_token}`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET status='failed',work_product_id=${workProductId},execution_summary=${summary},result_json=${JSON.stringify(out)},failure_message=${failure} WHERE id=1680001 AND user_id=1 AND status='submitting'`);
+  await appendEvent(tx,{userId:1,projectId:1,workFileId:630001,actionId:3450001,actorType:'manus',actorUserId:null,eventType:'mail_linkage_review_blocked',summary,payload:{directiveId:1680001,sourceEmailId:3030001,workProductId,reviewCompleted:true,matchingCompleted:false,targetWorkFileId:null,externalSideEffect:false,nextStep},idempotencyKey:'mail-linkage-blocked:1680001'});
+  return out;
+ });
+ save('receipt',receipt);
+ const after={projects:await q(sql`SELECT * FROM projects ORDER BY id`),files:await q(sql`SELECT * FROM como_next_work_files WHERE user_id=1 ORDER BY id`),lanes:await q(sql`SELECT * FROM como_next_lifecycle_lanes WHERE user_id=1 ORDER BY id`),pending:await q(sql`SELECT * FROM como_next_staged_directives WHERE user_id=1 AND status='pending' ORDER BY id`),actions:await q(sql`SELECT * FROM como_next_actions WHERE user_id=1 ORDER BY id`),communications:await q(sql`SELECT * FROM como_next_communications WHERE user_id=1 ORDER BY id`),ledgers:await q(sql`SELECT * FROM como_mailbox_draft_ledger WHERE user_id=1 ORDER BY id`),decisions:await q(sql`SELECT * FROM como_next_decisions WHERE user_id=1 ORDER BY id`)};
+ save('protected-after',after);
+ for(const key of ['projects','files','lanes','pending','communications','ledgers','decisions']as const)assert.deepEqual(after[key],before[key],key+' changed');
+ assert.deepEqual(after.actions.filter((a:any)=>a.id!==3450001),before.actions.filter((a:any)=>a.id!==3450001));
+ const clean=(a:any)=>Object.fromEntries(Object.entries(a).filter(([k])=>!['action_status','description','evidence_reference','updated_at'].includes(k)));
+ assert.deepEqual(clean(after.actions.find((a:any)=>a.id===3450001)),clean(before.actions.find((a:any)=>a.id===3450001)));
+ const sara:any=await readExecutiveWorkFile({memberId:'abdulrahman',nameAr:'عبد الرحمن',role:'owner'},JSON.stringify({work_file_id:630001,focus:'overview',question:'بريد3030001 غير مربوط: مراجعة العطاء تمت، المطابقة غير محسومة، ومسؤول المتابعة Manus، لا رد أو مشاركة'}));save('sara-after',sara);assert(sara.found&&JSON.stringify(sara).includes(String(receipt.workProductId)));
+ const [seen]=await q(sql`SELECT COUNT(*) count FROM como_next_work_memory WHERE source_system='como_mail_linkage' AND source_record_id='dispatch-linkage-blocked:1680001'`);assert.equal(Number(seen.count),1);
+ const dispatch=await readDispatchForDirective({directiveId:1680001});assert.equal(dispatch?.state,'failed');
+ save('final-verification',{protected:true,saraFound:true,receiptUnique:true,reviewCompleted:true,matchingCompleted:false,noMailCreated:true,dispatch,checkedAt:new Date().toISOString()});console.log(JSON.stringify({receipt,saraFound:true,protected:true}));
+ await(db as any).$client.end();
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
