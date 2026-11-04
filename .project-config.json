@@ -7,8 +7,8 @@
   ],
   "dev_command": "pnpm run dev",
   "env_vars": {
-    "DATABASE_URL": "mysql://4E8R6wFgxnBhGVF.1a403e654cd7:39n6YipyPL3QrCcDk81O@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/Q366eAYG4Q7iaM8VuAmmFX?ssl={\"rejectUnauthorized\":true}",
-    "DRIZZLE_DATABASE_URL": "mysql://4E8R6wFgxnBhGVF.1a403e654cd7:39n6YipyPL3QrCcDk81O@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/Q366eAYG4Q7iaM8VuAmmFX?ssl={\"rejectUnauthorized\":true}",
+    "DATABASE_URL": "mysql://4E8R6wFgxnBhGVF.1a403e654cd7:YsB3H4wfq58Yod0UK4tH@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/Q366eAYG4Q7iaM8VuAmmFX?ssl={\"rejectUnauthorized\":true}",
+    "DRIZZLE_DATABASE_URL": "mysql://4E8R6wFgxnBhGVF.1a403e654cd7:YsB3H4wfq58Yod0UK4tH@gateway02.us-east-1.prod.aws.tidbcloud.com:4000/Q366eAYG4Q7iaM8VuAmmFX?ssl={\"rejectUnauthorized\":true}",
     "MANUS_WEBDEV_PROJECT_ID": "Q366eAYG4Q7iaM8VuAmmFX"
   },
   "experiments": [
@@ -16,10 +16,10 @@
   ],
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663200809965/Q366eAYG4Q7iaM8VuAmmFX",
-    "access_key_id": "ASIAZV3A2ECZA3NEKUZB",
-    "secret_access_key": "9bbE+ltBXIAXuuCrBx60UiQy641QlrzzGOfTMn6S",
-    "session_token": "IQoJb3JpZ2luX2VjEDUaCXVzLWVhc3QtMSJHMEUCIQDcctZzuH70Px8PehilTJ1iIGOkKczkdZ8cXi6o0vIbvwIgUxCyybgU3pY9jNM39DC0WZEJbCUSXqYPKy1Dn/884lsq/wMI/v//////////ARAEGgw2NjUzODYwOTg4NjYiDB3zUPhXCA4kV97uzSrTAyMoI+sQbLWAHCDjV+XYSdDUEdpYGW3vWtm76Hc8L0zJwjIN+/nVZJWh4WnoXtmUl1V/zNF0vIE9EJe+Zo/nvaNhliH2lcHA6jCh9Mssbly7KWcAjiKAicy5DOKGylBGxTKvvvyB6CloQYip8uubyUKUdDR8AswxB21E829cIF8JKVPDh4H6TjRg2RTOR3aptgSmpefYbYRBKWDMJZfti23cdkVvvV09js45OXlu8EHhLds+T7GfJR1thMhMPbt3FooCvLzHg2e0I2MHZ/kOsamfZUPIseOU7q/bP9OTvltc0nGngEqxO6KlMELKidyCxidrqMNRhBq6gwX+0LGdtLJB/LDfgupe1nA6yAFMrkdobGOXbd71Tbd0ZprKo+oiGxAFyCCqxI5k/RwtGzTfOhuTuixyyxZwDUoXc8kd4QdP9mJyoYimIfP/3neFSq8NGW5dHOjUdwlEHHm5sla/fhl+gGYnfDnlL+lRLFFtcYJp/XqQ/DgNGGViye8v5Ce1YjPml3s+9Pu5ZeQNkffSeRM6aWw3o++kbrK2F9wK+EuH9VG6vm8Mb7yk07KgMSdtacFduDOKMUI/jCJIcAttkAnktxqJ3EUaJ7kySKOgeE+XlWJgMMaR3dUGOp0BvZPiMlJ59CYYG977o9TIxx6WRflUkpwnWo5PR2ks2fsfjBHSrz0siDxEdBzh5UaRSB5nH4z9D73XN7ONKOlBVrR9mCo3hDJjg56YQgT8uutRvJbdzWjD+2PfPvfI5VwzVHDZxPFhBIX/8PcmmbI6uFO5v9nNgrNL7W7pfD6ckSgOsyUpuveUr1uGzOjO/7FivTILHTi0sop0UVtO4w==",
-    "expiration": "2026-09-26T16:23:34.000Z",
+    "access_key_id": "ASIAZV3A2ECZHNXSCSGE",
+    "secret_access_key": "82hrNEN2vcuqJmHd33kkb7ZLw3AcqB+vmr6Md6NY",
+    "session_token": "IQoJb3JpZ2luX2VjEN3//////////wEaCXVzLWVhc3QtMSJIMEYCIQDuo2nYVi/ppbjw3UlXzYIBQrzgdZZ5WvQAsBvvOyQNIAIhAKI/hEVdoDzA2EjVCBlAWalVhoAiS6L1F5zMQWm4Y5niKv8DCKX//////////wEQBBoMNjY1Mzg2MDk4ODY2IgyjQHly52bF4rCBBvsq0wNH6IfUrx3YJVICoVXIw+1AyTN7FyaHkoC7Wvvkj/Cx0UtjDEjITVp6val5zaoSIH/S3JwLWfsTakxVDlpExhHsJ3ZIsKZkx1wOVUtkVznuqA00/d29WXJ6o1YxNMda9ND/zebBN6XqGKkIdkvAIwTW/pcIS0cKrEwQdmA8/0RUQDEoWah3XF1sM+FFJrIR5fzMosiMkkaXw0QcNMNjTPMsTyuxn6R31PvDjmy22cNsi9pqKVklYYAdYdXlnapm3gvOVdnF1AviCpWyxn4jCO2fNff5LQvES1ICjR62Y6MAkNXDx+AeTIHeNU/kKy9FQZsbQ7bbhgsjZwRQLf15sGIOQJF2106ddWp6NwUlupJHIBp7kDZfz8/07RMVbYEZ3K5M0HdQESEuXgjq9a3LlNmMU76fJcwlxboWUuNAV4CJx/U21kNdeNrUuAyzh2ZnWS8DvD3TmhF3//Kvwuu3q0bNITeDIaEiUiA/2RsHnk/x5E/JbfO+jj11xjdqP4oCl1DKncnFley0RvR6Nz7ICuH4FbpOW6dfMZKTDXzggUdBPAANeyU1ZGP+cUmdtmAjRq20rRdF6Qz5s6IE8tDwQyCx0NcMYlHoSFA0boeyfG8TMRk7hDDe76rXBjqcAZNNls2AWJi88zIB9yANO1SooTUhv80MjAIYrNfeKeAOH/irV1VIgZttodJPkKkwXWbtLxzP1HQQPv5n/X1vZ98SQy0LHXLlcelwAKfmIhC8phVx/dB2ORGfoLcOqz/jYi3+DOLU3Lh2pwIjalAuucwlAfmCcOPNduNpnFY6LaqLUfsoZ/x9+wVihO/bXYG2YUJPFS6+GQch+Yxt/w==",
+    "expiration": "2026-11-04T16:43:10.000Z",
     "backend": "GIT_BACKEND_S3"
   },
   "name": "como-consultant-dashboard",
@@ -30,7 +30,7 @@
     "ANTHROPIC_API_KEY": "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",
     "BUILT_IN_FORGE_API_KEY": "D66EeReRSesoEriCUfWesg",
     "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
-    "COMO_OPENAI_REALTIME_API_KEY": "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",
+    "COMO_OPENAI_REALTIME_API_KEY": "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",
     "EMAIL_HOST": "mail.privateemail.com",
     "EMAIL_PASSWORD": "Abed1234@NAME",
     "EMAIL_USER": "a.zaqout@comodevelopments.com",
