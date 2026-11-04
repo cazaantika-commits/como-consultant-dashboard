@@ -1,0 +1,13 @@
+import 'dotenv/config';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {getDb} from '../server/db';
+import {sql} from 'drizzle-orm';
+import {fetchEmailByUID,fetchReadonlyFolderSince} from '../server/emailMonitor';
+const root='/home/ubuntu/reports/como-directive-1830001-2026-11-04';
+const sha=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const norm=(s:any)=>String(s||'').replace(/\r\n?/g,'\n').trim();
+const save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+async function main(){const db=await getDb();assert(db);const q=async(s:any)=>(await db.execute(s))[0] as any[];const[source]=await q(sql`SELECT * FROM como_next_email_messages WHERE id=3180001 AND user_id=1`);const attachments=await q(sql`SELECT * FROM como_next_email_attachments WHERE email_message_id=3180001 ORDER BY ordinal`);assert.equal(source.body_sha256,'b14e72e2f4713e7b3d100bde4340a243ac7638ed891478d0ec5ee3fc608a8122');const live=await fetchEmailByUID(source.imap_uid,source.uid_validity,'INBOX');assert(live&&live.messageId===source.message_id);assert.equal(sha(norm(live.textBody)),source.body_sha256);assert.equal(live.attachments.length,9);fs.mkdirSync(root+'/attachments',{recursive:true});const manifest=live.attachments.map((v,i)=>{const a=attachments[i];assert(v.content&&a.storage_status==='stored'&&a.document_id);assert.equal(a.file_name,v.filename);assert.equal(a.byte_size,v.content.length);assert.equal(a.sha256,sha(v.content));const p=root+'/attachments/'+v.filename;fs.writeFileSync(p,v.content);return {ordinal:i,fileName:v.filename,path:p,mime:v.contentType,byteSize:v.content.length,sha256:sha(v.content),documentId:a.document_id,disposition:a.disposition};});save('attachment-proof',manifest);save('source-live',{...live,attachments:manifest});console.log('SOURCE_AND_9_ATTACHMENTS_MATCHED');const sent=await fetchReadonlyFolderSince('Sent',24*14,120);const drafts=await fetchReadonlyFolderSince('Drafts',24*365,100);save('reply-preflight',{checkedAt:new Date().toISOString(),sent,drafts});console.log(JSON.stringify({uid:live.uid,attachments:manifest,sentRelated:sent.messages.filter(v=>/survey|topograph|MES-INV-2026-10-224/i.test(v.subject+' '+v.textBody)).map(v=>({uid:v.uid,messageId:v.messageId,subject:v.subject,date:v.date,body:v.textBody})),draftsRelated:drafts.messages.filter(v=>/survey|topograph|MES-INV-2026-10-224/i.test(v.subject+' '+v.textBody)).map(v=>({uid:v.uid,messageId:v.messageId,subject:v.subject,date:v.date,body:v.textBody,headers:v.headers}))},null,2));await(db as any).$client.end();}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
