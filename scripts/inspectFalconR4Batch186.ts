@@ -1,0 +1,13 @@
+import 'dotenv/config';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {sql} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {fetchEmailByUID,fetchReadonlyFolderSince} from '../server/emailMonitor';
+const root='/home/ubuntu/reports/como-batch186000x-2026-11-06';
+const sha=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const norm=(v:any)=>String(v||'').replace(/\r\n?/g,'\n').trim();
+const save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+async function main(){const db=await getDb();assert(db);const q=async(s:any)=>(await db.execute(s))[0] as any[];const[s]=await q(sql`SELECT * FROM como_next_email_messages WHERE id=3210001 AND user_id=1 AND linked_work_file_id=390001`);assert.equal(s.body_sha256,'37a63a04b53f63458d9276a6f3f5b2eeeac46e1ee88818c62800d495ff911aa8');const a=await q(sql`SELECT * FROM como_next_email_attachments WHERE email_message_id=3210001 ORDER BY ordinal`);const live=await fetchEmailByUID(s.imap_uid,s.uid_validity,'INBOX');assert(live&&live.messageId===s.message_id&&sha(norm(live.textBody))===s.body_sha256);assert.equal(live.attachments.length,5);fs.mkdirSync(root+'/attachments',{recursive:true});const manifest=live.attachments.map((v,i)=>{const old=a[i];assert(v.content&&old.document_id&&old.storage_status==='stored');assert.equal(v.filename,old.file_name);assert.equal(v.content.length,old.byte_size);assert.equal(sha(v.content),old.sha256);const p=root+'/attachments/'+v.filename;fs.writeFileSync(p,v.content);return {ordinal:i,fileName:v.filename,path:p,documentId:old.document_id,sha256:old.sha256,byteSize:old.byte_size,mimeType:v.contentType,disposition:old.disposition};});save('attachment-proof',manifest);save('source-live',{...live,attachments:manifest});console.log('Source3210001 and5 attachments verified');const sent=await fetchReadonlyFolderSince('Sent',24*14,120);const drafts=await fetchReadonlyFolderSince('Drafts',24*365,100);save('reply-preflight',{checkedAt:new Date().toISOString(),sent,drafts});const related=(v:any)=>/Soil Works|Falcon|1924/i.test(v.subject+' '+v.textBody);console.log(JSON.stringify({sourceUid:live.uid,manifest,sentRelated:sent.messages.filter(related).map(v=>({uid:v.uid,messageId:v.messageId,date:v.date,to:v.to,cc:v.cc,subject:v.subject,body:v.textBody,headers:v.headers})),draftsRelated:drafts.messages.filter(related).map(v=>({uid:v.uid,messageId:v.messageId,date:v.date,subject:v.subject,body:v.textBody,headers:v.headers}))},null,2));await(db as any).$client.end();}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
