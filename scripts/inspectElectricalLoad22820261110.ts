@@ -1,0 +1,15 @@
+import 'dotenv/config';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {sql} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {fetchEmailByUID,fetchReadonlyFolderSince} from '../server/emailMonitor';
+const root='/home/ubuntu/reports/como-directive-2280001-2026-11-10';
+const norm=(v:any)=>String(v||'').replace(/\r\n?/g,'\n').trim();
+const sha=(v:string|Buffer)=>createHash('sha256').update(v).digest('hex');
+const save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+async function main(){const db=await getDb();assert(db);const q=async(s:any)=>(await db.execute(s))[0]as any[];const c=JSON.parse(fs.readFileSync(root+'/context.json','utf8')),s=c.source;const live=await fetchEmailByUID(s.imap_uid,s.uid_validity,'INBOX');assert(live&&live.messageId===s.message_id&&sha(norm(live.textBody))===s.body_sha256);assert.equal(live.attachments.length,c.attachments.length);fs.mkdirSync(root+'/attachments',{recursive:true});const proof:any[]=[];for(const [i,a]of live.attachments.entries()){const metadata=c.attachments.find((v:any)=>v.ordinal===i);assert(a.content&&metadata&&a.filename===metadata.file_name&&a.content.length===metadata.byte_size);const h=sha(a.content);assert.equal(h,metadata.sha256);const path=root+'/attachments/'+a.filename;fs.writeFileSync(path,a.content);proof.push({ordinal:i,path,fileName:a.filename,documentId:metadata.document_id,sha256:h,bytes:a.content.length});}save('attachment-proof',proof);save('source-live',{messageId:live.messageId,date:live.date,subject:live.subject,to:live.to,cc:live.cc,textBody:live.textBody});console.log('Source and four attachments matched live');
+const b:any={};for(const[k,query]of Object.entries({projects:sql`SELECT * FROM projects WHERE userId=1 ORDER BY id`,files:sql`SELECT * FROM como_next_work_files WHERE user_id=1 ORDER BY id`,actions:sql`SELECT * FROM como_next_actions WHERE user_id=1 ORDER BY id`,lanes:sql`SELECT * FROM como_next_lifecycle_lanes WHERE user_id=1 ORDER BY id`,decisions:sql`SELECT * FROM como_next_decisions WHERE user_id=1 ORDER BY id`,pending:sql`SELECT * FROM como_next_staged_directives WHERE user_id=1 AND status='pending' ORDER BY id`,communications:sql`SELECT * FROM como_next_communications WHERE user_id=1 ORDER BY id`,ledgers:sql`SELECT * FROM como_mailbox_draft_ledger WHERE user_id=1 ORDER BY id`,emails:sql`SELECT * FROM como_next_email_messages WHERE user_id=1 ORDER BY id`}))b[k]=await q(query);save('protected-before',b);
+const m:any={checkedAt:new Date().toISOString()};for(const f of['Sent','Drafts']){console.log('Reading '+f);m[f]=await fetchReadonlyFolderSince(f,f==='Sent'?24*14:24*365,250);assert(m[f].messages.length<250);save('mail-preflight',m);}for(const f of['Sent','Drafts'])console.log(f,m[f].messages.filter((v:any)=>/DEWA|Electrical Load/i.test(v.subject)).map((v:any)=>({uid:v.uid,date:v.date,subject:v.subject,to:v.to,cc:v.cc,key:v.headers?.['x-como-draft-key'],body:v.textBody})));await(db as any).$client.end();}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
