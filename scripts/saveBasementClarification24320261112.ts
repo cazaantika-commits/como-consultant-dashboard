@@ -1,0 +1,25 @@
+import 'dotenv/config';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {sql} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {requireProjectAccess,createActionCommand} from '../server/services/comoNextCommands';
+import {createReplyDraftFromEmailCommand} from '../server/services/comoNextEmailInbox';
+import {fetchReadonlyFolderSince,fetchEmailByUID} from '../server/emailMonitor';
+const root='/home/ubuntu/reports/como-directive-2430001-2026-11-12',key='email-reply-draft:4080001';
+const norm=(v:any)=>String(v||'').replace(/\r\n?/g,'\n').trim(),sha=(v:any)=>createHash('sha256').update(norm(v)).digest('hex'),save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+const env=(v:any)=>[...new Set(String(v||'').toLowerCase().match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/g)||[])].sort().join(',');
+async function main(){
+ const db=await getDb();assert(db);await requireProjectAccess(db,6,1,'write');const q=async(s:any)=>(await db.execute(s))[0]as any[],[s]=await q(sql`SELECT * FROM como_next_email_messages WHERE id=4080001 AND user_id=1`);assert(s&&s.body_sha256==='adc8243cf0a62556f60c23b4693bd350e7d33bff96320000234be81be43b08b5');
+ const[dispatch]=await q(sql`SELECT * FROM como_manus_dispatches WHERE directive_id=2430001`);assert(dispatch.state==='running'&&dispatch.claim_token?.startsWith('worker:'));
+ const live=await fetchEmailByUID(s.imap_uid,s.uid_validity,'INBOX');assert(live&&sha(live.textBody)===s.body_sha256&&live.messageId===s.message_id);const body=norm(fs.readFileSync(root+'/Reply_Clarifications_EN.txt','utf8'));assert(body.endsWith('Abdalrahman Zaqout')&&body.includes('27 m²')&&body.includes('26.17 m²')&&body.includes('internal door/partition'));
+ const sent=await fetchReadonlyFolderSince('Sent',24*5,250),drafts=await fetchReadonlyFolderSince('Drafts',24*365,250);assert(sent.messages.length<250&&drafts.messages.length<250);const matches=(v:any)=>v.headers?.['x-como-draft-key']===key||v.headers?.['in-reply-to']===s.message_id;assert(!sent.messages.some(matches),'Owner reply exists; no second reply');const ds=drafts.messages.filter(matches);assert(ds.length<=1);const[existing]=await q(sql`SELECT * FROM como_next_communications WHERE source_record_id=${key} AND user_id=1`);assert(!ds.length||existing);if(existing)assert.equal(norm(existing.body),body);
+ save('clarification-preflight',{checkedAt:new Date().toISOString(),Sent:sent,Drafts:drafts});
+ const made:any=await createReplyDraftFromEmailCommand({userId:1,emailId:4080001,body});save('clarification-save-result',made);const[c]=await q(sql`SELECT * FROM como_next_communications WHERE id=${made.id} AND user_id=1`),[l]=await q(sql`SELECT * FROM como_mailbox_draft_ledger WHERE communication_id=${made.id} AND user_id=1`);assert(c&&l&&l.state==='draft_saved'&&!l.sent_uid&&l.draft_key===key&&sha(c.body)===sha(body));assert.equal(env(c.to_text),'tdimitrova@artecint.com');assert.equal(env(c.cc_text),env('mzakout@artecint.com,wael@zooma.ae,Rawan@hightrendte.com'));
+ const after=await fetchReadonlyFolderSince('Drafts',24*365,250),ms=after.messages.filter(v=>v.messageId===l.message_id||v.headers?.['x-como-draft-key']===key);assert.equal(ms.length,1);const d=ms[0];assert(d.uid===l.draft_uid&&sha(d.textBody)===sha(body)&&d.subject===c.subject&&env(d.to)===env(c.to_text)&&env(d.cc)===env(c.cc_text)&&d.attachments.length===0&&d.headers?.['in-reply-to']===s.message_id&&String(d.headers?.references||'').includes(s.message_id));save('clarification-draft-proof',d);
+ const card:any=await createActionCommand({userId:1,workFileId:390001,title:'الفلل — مراجعة استيضاحات مطابقة سكيتش المطبخ مع المخططات',description:`مراجعة4080001/2730001 وA105/A107 كشفتفرقالبابالداخليعندنهايةالمدخلالمتدرج،و27م²علىالسكيتشمقابل26.17علىالمخططات،وتسميةKitchenStore/dumbwaiter ونطاق3/4للأربع. Drafts${d.uid}/${c.id}إلىثيودوراCCماجد/وائل/روان بلامرفقات،غيرمرسلة.لا إعادةاعتماد1025المرسلة266 ولااعتمادجديدأوتغيير450001 أوvoid.`,acceptanceCriteria:'المالك يراجع الاستيضاح ويرسلهإنوافق؛ManusيثبتSent ثم يتابعأرتكوروّان على1830001القائمة لحسمالفروقاتونطاقالفللالأربع وفتحDWG والتصورالداخلي. لايرسلManusولايفرضتعديلتصميمأويسحباعتمادالسكيتش،ولايغلقمتابعةCADمنCCأوادعاءالجاهزية.لاانتظارخارجيجديدولاموعدمخترع.',ownerType:'human',priority:'important',actorType:'manus',actorUserId:null,idempotencyKey:'basement-package:4080001:2430001:owner-review'});
+ const finalSent=await fetchReadonlyFolderSince('Sent',24*5,250);assert(!finalSent.messages.some(v=>v.messageId===l.message_id||v.headers?.['x-como-draft-key']===key||v.headers?.['in-reply-to']===s.message_id));
+ const r={sourceEmailId:4080001,communicationDraftId:Number(c.id),ledgerId:Number(l.id),draftUid:Number(d.uid),ownerReviewActionId:Number(card.id),workflowNextActionId:1830001,bodySha256:sha(body),to:c.to_text,cc:c.cc_text,subject:c.subject,attachments:0,sent:false,unique:true,checkedAt:new Date().toISOString()};save('clarification-result',r);console.log(JSON.stringify(r));await(db as any).$client.end();
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
