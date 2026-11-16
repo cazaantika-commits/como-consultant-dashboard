@@ -1,0 +1,80 @@
+import 'dotenv/config';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {sql,eq} from 'drizzle-orm';
+import {getDb} from '../server/db';
+import {users} from '../drizzle/schema';
+import {requireProjectAccess,appendEvent} from '../server/services/comoNextCommands';
+import {fetchEmailByUID,fetchReadonlyFolderSince} from '../server/emailMonitor';
+import {completeDispatchedMailReview,readDispatchForDirective,recordManusDispatchProgress} from '../server/services/comoManusDispatch';
+import {readExecutiveWorkFile} from '../server/services/saraWorkFileReader';
+import {comoNextRouter} from '../server/routers/comoNext';
+const root='/home/ubuntu/reports/como-directive-2610001-2026-11-16',key='benoy261:4260001';
+const load=(n:string)=>JSON.parse(fs.readFileSync(root+'/'+n+'.json','utf8'));
+const save=(n:string,v:any)=>fs.writeFileSync(root+'/'+n+'.json',JSON.stringify(v,null,2)+'\n');
+const norm=(v:any)=>String(v||'').replace(/\r\n?/g,'\n').trim();
+const sha=(v:any)=>createHash('sha256').update(norm(v)).digest('hex');
+const binarySha=(v:Buffer)=>createHash('sha256').update(v).digest('hex');
+const lines=(v:any)=>norm(v).split('\n').filter(x=>x.trim()).join('\n');
+const canon=(v:any)=>norm(v).replace(/^(?:(?:re|fw|fwd)\s*:\s*)+/i,'').toLowerCase();
+const env=(v:any)=>[...new Set(String(v||'').toLowerCase().match(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/g)||[])].sort().join(',');
+const omit=(v:any,ks:string[])=>Object.fromEntries(Object.entries(v).filter(([k])=>!ks.includes(k)));
+const queries={projects:'SELECT * FROM projects WHERE userId=1 ORDER BY id',files:'SELECT * FROM como_next_work_files WHERE user_id=1 ORDER BY id',actions:'SELECT * FROM como_next_actions WHERE user_id=1 ORDER BY id',communications:'SELECT * FROM como_next_communications WHERE user_id=1 ORDER BY id',ledgers:'SELECT * FROM como_mailbox_draft_ledger WHERE user_id=1 ORDER BY id',lanes:'SELECT * FROM como_next_lifecycle_lanes WHERE user_id=1 ORDER BY id',decisions:'SELECT * FROM como_next_decisions WHERE user_id=1 ORDER BY id',pending:"SELECT * FROM como_next_staged_directives WHERE user_id=1 AND status='pending' ORDER BY id",emails:'SELECT * FROM como_next_email_messages WHERE user_id=1 ORDER BY id'};
+async function main(){
+ const db=await getDb();assert(db);await requireProjectAccess(db,1,1,'write');
+ const q=async(s:any)=>(await db.execute(s))[0]as any[];
+ let dispatch:any=await readDispatchForDirective({directiveId:2610001});assert(dispatch);
+ if(fs.existsSync(root+'/receipt.json')){const r=load('receipt');assert(dispatch.state==='completed'&&dispatch.workProductId===r.workProductId&&dispatch.communicationDraftId===6120001);console.log(JSON.stringify({...r,replayed:true,mailboxWrite:false}));await(db as any).$client.end();return;}
+ const ctx=load('context'),b=load('protected-before'),s=ctx.source,draft=load('draft-result');
+ const body=norm(fs.readFileSync(root+'/Reply_To_Benoy_EN.txt','utf8')),report=fs.readFileSync(root+'/Review_AR.md','utf8'),independent=fs.readFileSync(root+'/Independent_Review_AR.md','utf8');
+ assert(s.id===4260001&&s.body_sha256==='6e059fca163beedc4d5e7ad015c207960a47740ba5790e04236ff9efc940b7d2'&&ctx.attachments.length===1);
+ assert(draft.communicationDraftId===6120001&&draft.ledgerId===2220001&&draft.draftUid===1033&&draft.ownerReviewActionId===5130001&&!draft.sent&&body.endsWith('Abdalrahman Zaqout'));
+ assert(b.decisions.find((v:any)=>v.id===90003).decision_status==='superseded');
+ const live=await fetchEmailByUID(s.imap_uid,s.uid_validity,'INBOX');assert(live&&live.messageId===s.message_id&&sha(live.textBody)===s.body_sha256&&env(live.to)===env(s.to_text)&&env(live.cc)===env(s.cc_text)&&live.attachments.length===1);
+ const a=ctx.attachments[0],la=live.attachments[0];assert(a.document_id===330001&&la.content&&la.filename===a.file_name&&la.content.length===a.byte_size&&binarySha(la.content)===a.sha256);
+ const old=ctx.thread.find((v:any)=>v.id===720007),oldc=b.communications.find((v:any)=>v.id===1200005);assert(old&&oldc&&oldc.communication_status==='sent'&&old.imap_uid===202);
+ const oldLive=await fetchEmailByUID(202,old.uid_validity,'Sent');assert(oldLive&&oldLive.messageId===old.message_id&&lines(oldLive.textBody)===lines(oldc.body)&&oldLive.subject===oldc.subject&&env(oldLive.to)===env(oldc.to_text)&&env(oldLive.cc)===env(oldc.cc_text)&&oldLive.attachments.length===0);
+ save('prior-sent202-proof',{emailId:720007,uid:202,canonicalCommunicationId:1200005,legacyDraftCommunicationId:1170001,legacyUid:928,sentAt:old.received_at,bodySha256:sha(oldLive.textBody),bodyNonemptyLinesMatch:true,alreadyCanonicalSent:true,recordsChanged:false,priorToSource:true,sentByManus:false});
+ async function verifyMail(name:string){
+  const m={checkedAt:new Date().toISOString(),Sent:await fetchReadonlyFolderSince('Sent',24*5,250),Drafts:await fetchReadonlyFolderSince('Drafts',24*365,250)};
+  assert(m.Sent.messages.length<250&&m.Drafts.messages.length<250);save(name,m);
+  const ds=m.Drafts.messages.filter(v=>v.messageId===draft.messageId||v.headers?.['x-como-draft-key']===draft.draftKey);assert(ds.length===1);
+  const d=ds[0];assert(d.uid===1033&&d.subject===s.subject&&norm(d.textBody)===body&&sha(d.textBody)===draft.bodySha256&&env(d.to)===env(draft.to)&&env(d.cc)===env(draft.cc)&&d.attachments.length===0&&d.headers?.['in-reply-to']===s.message_id&&String(d.headers?.references||'').includes(s.message_id));
+  assert(m.Drafts.messages.filter(v=>canon(v.subject)===canon(s.subject)).length===1);assert(!m.Drafts.messages.some(v=>v.uid===928));
+  assert(!m.Sent.messages.some(v=>v.messageId===draft.messageId||v.headers?.['x-como-draft-key']===draft.draftKey||canon(v.subject)===canon(s.subject)&&Date.parse(v.date)>Date.parse(s.received_at.replace(' ','T')+'Z')),'Later Sent exists: reconcile without a second draft');
+ }
+ await verifyMail('mail-verified');
+ const[c]=await q(sql`SELECT * FROM como_next_communications WHERE id=6120001 AND user_id=1`),[l]=await q(sql`SELECT * FROM como_mailbox_draft_ledger WHERE id=2220001 AND user_id=1`);
+ assert(c.communication_status==='archived'&&norm(c.body)===body&&l.state==='draft_saved'&&!l.sent_uid&&l.draft_uid===1033);
+ const summary='Benoy4260001/INBOX563،16نوفمبر09:10:21دبي:Neil يسأل عن تقدم مشروعماجان. المرفق330001 شعار فقط، لا عرض أو فاتورة أو عقد جديد. قُرئ الخيط وأثبتSent202 تحديث8أكتوبرالسابق،لا جواب على الرسالة الجديدة ولا مسودة منافسة.1033/6120001 مسودة واحدة إلىNeil CCالخيط بلا مرفقات وغيرمرسلة:لا حسم للخطوات التالية بعد،والعودة بالتعليقات مشروطة بوضوح الموجز وتنسيق النطاقات.لا موعد أو تعيين أو إحياء قرار90003.';
+ const next='الخطوة الحالية مراجعةالمالك للمسودة1033 علىالبطاقة5130001 وحسم توجيهه الحالي بخصوصBenoy.بعدالإرسالالمرصود يثبتManusسجلSent ثم يتابع وضوحالموجز ونطاقاتالاستشاريين والتوجيهالمحفوظ. لاانتظارخارجيجديدعلىمسودة،لاموعدمختلق ولاتذكيرأوإعادةتفاوض.يبقىالملف60020waiting ولايُنشأتابعشكلي؛لمتُحسمجاهزيةالمشروع أوالتعيين.5100002الماليةمستقلة وغيرمسلمة ولايمسهاهذاالتوجيه.';
+ if(dispatch.state==='running')await recordManusDispatchProgress({directiveId:2610001,summary:'طابقت4260001 وشعارها وخيطBenoy وSent202السابق.لا ردلاحق،حفظت1033/6120001غيرمرسلة وبطاقة5130001واحدة.المراجعةالمستقلة تؤيدردالانتظار دون تقدم أو تعيين أو موعد؛جارٍحفظالإيصال ومصدرسارةوسلوى.'});
+ const handling={kind:'draft_saved' as const,evidence:'مسودة1033/6120001/2220001 واحدة على4260001،إلىNeil CCFleur/Wael/John/Amy،بلامرفقات.المتن والمظارف والعنوان والخيط والتوقيع وعدمSentطابقتحيًا.رد علىطلبتحديث لا شكرمتأخرأوقبولعرض.202/720007 تحديث8أكتوبرالسابق وليس جواب16نوفمبر؛لاتعاد928التاريخية ولا90003superseded.',nextStep:next};
+ const done=await completeDispatchedMailReview({directiveId:2610001,bodySha256:s.body_sha256,reviewedDocumentIds:[330001],summary,workProductBody:report+'\n\nالمراجعة المستقلة:\n'+independent+'\n\nمسودة1033 غيرمرسلة:\n'+body+'\n\nالمصدر4260001:\n'+s.body_text,communicationDraftId:6120001,responseHandling:handling});save('review-completion',done);
+ dispatch=await readDispatchForDirective({directiveId:2610001});assert(dispatch.state==='completed'&&dispatch.workProductId&&dispatch.communicationDraftId===6120001);const wp=Number(dispatch.workProductId);let centerId=0;
+ const flags={ownerReviewActionId:5130001,currentNextStepOwner:'human',followupOwnerAfterObservedSend:'manus',externalWaitingCreated:false,newDraftUid:1033,newDraftCount:1,newActionCount:1,sourceAttachmentCount:1,sourceSubstantiveAttachmentCount:0,sourceIsNewFinancialDocument:false,priorSentEmailId:720007,priorSentUid:202,priorSendRecordsUnchanged:true,legacyDraft928NotRevived:true,decision90003SupersededPreserved:true,financialAction5100002Untouched:true,exactDeliveryDateConfirmed:false,projectProgressConfirmed:false,appointmentConfirmed:false,mailboxWriteDuringCompletion:false,sentByManus:false,paymentChanged:false,decisionsChanged:false};
+ await db.transaction(async tx=>{
+  const tr=async(s:any)=>(await tx.execute(s))[0]as any[];await tx.execute(sql`SELECT id FROM como_next_work_files WHERE id=60020 AND user_id=1 FOR UPDATE`);
+  const[seen]=await tr(sql`SELECT payload_json FROM como_next_work_file_events WHERE idempotency_key=${key+':status'}`);if(seen){centerId=JSON.parse(seen.payload_json).commandCenterItemId;return;}
+  const[d]=await tr(sql`SELECT result_json FROM como_manus_dispatches WHERE directive_id=2610001`);const result={...JSON.parse(d.result_json),...flags};
+  await tx.execute(sql`UPDATE como_manus_dispatches SET next_action_id=5130001,result_json=${JSON.stringify(result)} WHERE directive_id=2610001 AND state='completed'`);
+  await tx.execute(sql`UPDATE como_next_staged_directives SET result_json=${JSON.stringify(result)} WHERE id=2610001 AND user_id=1 AND status='submitted'`);
+  const center:any=await tx.execute(sql`INSERT INTO commandCenterItems(bubbleType,title,content,summary,itemPriority,itemStatus,createdByMemberId,targetMemberIds,requiresResponse,projectId) VALUES('reports','Benoy16نوفمبر — متابعةتقدمماجان ومسودةردانتظار',${'[تقريرManusمنمصدرCOMO،لاانتحاللسارةأوسلوى]\n'+summary+'\n'+next+'\nإيصال'+wp+'\n'+report},${summary},'important','active','manus','["abdulrahman"]',0,1)`);centerId=Number(center[0].insertId);
+  const[f]=await tr(sql`SELECT desired_outcome FROM como_next_work_files WHERE id=60020 AND user_id=1`);
+  await tx.execute(sql`UPDATE como_next_work_files SET desired_outcome=${'[Benoy4260001Latest]\n'+summary+'\n'+next+'\nإيصال'+wp+'ومصدرسارةوسلوى'+centerId+'\n\nالسجل السابق محفوظ:\n'+f.desired_outcome},updated_at=UTC_TIMESTAMP() WHERE id=60020 AND user_id=1`);
+  await appendEvent(tx,{userId:1,projectId:1,workFileId:60020,actionId:5130001,actorType:'manus',actorUserId:null,eventType:'benoy_followup_mail_review_saved',summary,payload:{directiveId:2610001,sourceEmailId:4260001,workProductId:wp,commandCenterItemId:centerId,responseHandling:'draft_saved',...flags,saraSourceSaved:true,salwaSourceSaved:true},idempotencyKey:key+':status'});
+ });
+ await verifyMail('mail-final');
+ const sara:any=await readExecutiveWorkFile({memberId:'abdulrahman',nameAr:'عبدالرحمن',role:'owner'},JSON.stringify({work_file_id:60020,focus:'overview',question:'4260001Benoyتسألالتقدم؛شعارفقطلاتسليمأوفاتورة.1033/6120001غيرمرسلة وبطاقة5130001للمالك؛لا موعدأوتعيينأوإحياء90003.202سابقلامعاد.إيصال'+wp+'ومصدر'+centerId+'؛Manusيتابع بعدSentوحسمالمالك،5100002مستقلةولاتمس.'}));save('sara-status-source',sara);assert(sara.found&&JSON.stringify(sara).includes(String(wp)));
+ const[user]=await db.select().from(users).where(eq(users.id,1));assert(user);const kitchen:any=await comoNextRouter.createCaller({user,req:{}as any,res:{}as any}).getOverview();save('kitchen-after',kitchen);assert(kitchen.actions.some((v:any)=>v.id===5130001&&v.ownerType==='human'&&v.actionStatus==='open'));assert(!kitchen.sendEvidenceDiagnostics?.some((v:any)=>v.actionId===5130001));
+ const after:any={};for(const[k,sq]of Object.entries(queries))after[k]=await q(sql.raw(sq));save('protected-after',after);
+ for(const k of['projects','lanes','decisions','pending'])assert.deepEqual(after[k],b[k],k);
+ for(const[k,ids]of Object.entries({files:[60020],actions:[5100001,5130001],communications:[6120001],ledgers:[2220001],emails:[4260001]}))assert.deepEqual(after[k].filter((v:any)=>!ids.includes(v.id)),b[k].filter((v:any)=>!ids.includes(v.id)),k);
+ assert.deepEqual(omit(after.files.find((v:any)=>v.id===60020),['desired_outcome','updated_at']),omit(b.files.find((v:any)=>v.id===60020),['desired_outcome','updated_at']));
+ assert.deepEqual(omit(after.emails.find((v:any)=>v.id===4260001),['reply_draft_communication_id','suggestion_reason','updated_at']),omit(s,['reply_draft_communication_id','suggestion_reason','updated_at']));
+ assert(after.actions.length===b.actions.length+1&&after.communications.length===b.communications.length+1&&after.ledgers.length===b.ledgers.length+1);
+ for(const sq of[sql`SELECT COUNT(*) n FROM como_next_work_memory WHERE source_record_id='dispatch-review:2610001'`,sql`SELECT COUNT(*) n FROM como_next_work_file_events WHERE idempotency_key='dispatch-started:2610001'`,sql`SELECT COUNT(*) n FROM como_next_work_file_events WHERE idempotency_key=${key+':status'}`,sql`SELECT COUNT(*) n FROM como_next_communications WHERE source_record_id='email-reply-draft:4260001'`,sql`SELECT COUNT(*) n FROM como_next_work_file_events WHERE idempotency_key='benoy261:4260001:owner-review'`])assert.equal(Number((await q(sq))[0].n),1);
+ const receipt={directiveId:2610001,dispatchId:2370001,workFileId:60020,sourceEmailId:4260001,sourceUid:563,workProductId:wp,commandCenterItemId:centerId,reviewedDocumentIds:[330001],responseHandling:'draft_saved',draftUid:1033,communicationDraftId:6120001,ledgerId:2220001,ownerReviewActionId:5130001,draftSent:false,unique:true,...flags,saraFound:true,salwaSourceSaved:true,protectedRecordsUnchanged:true,checkedAt:new Date().toISOString()};save('receipt',receipt);console.log(JSON.stringify(receipt));await(db as any).$client.end();
+}
+main().then(()=>process.exit(0)).catch(e=>{console.error(e.stack);process.exit(1)});
