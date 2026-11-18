@@ -12,6 +12,7 @@ import {
   groupCalendarAlignedPortfolio,
   type PortfolioProjectMonthlyNet,
 } from "@/lib/portfolioAggregation";
+import { calculateCalendarFundingPeak } from "@/lib/investorCashFlowEngine";
 import { formatFullNumber } from "@/lib/numberFormat";
 import type { FinancialTraceBreakdown, FinancialTraceLineItem } from "@/lib/financialTraceBreakdown";
 import { resolveReturnPath } from "@/lib/returnNavigation";
@@ -139,7 +140,8 @@ export default function V2CapitalPortfolio({ embedded = false, onBack, commandCe
   const monthlyPortfolio = useMemo(() => alignPortfolioMonthlyNetFlows(calendarSource), [calendarSource]);
   const groupedPortfolio = useMemo(() => groupCalendarAlignedPortfolio(monthlyPortfolio, groupSize), [monthlyPortfolio, groupSize]);
 
-  const totals = useMemo(() => selectedProjects.reduce((sum, project) => ({
+  const totals = useMemo(() => {
+    const sum = selectedProjects.reduce((sum, project) => ({
     revenue: sum.revenue + project.totalRevenue,
     cost: sum.cost + project.totalCosts,
     profit: sum.profit + project.grossProfitBeforeDeveloperShare,
@@ -147,7 +149,10 @@ export default function V2CapitalPortfolio({ embedded = false, onBack, commandCe
     capital: sum.capital + project.requiredCapital,
     paid: sum.paid + project.paidCapital,
     remaining: sum.remaining + project.remainingCapital,
-  }), { revenue: 0, cost: 0, profit: 0, feasibilityInvestorProfit: 0, capital: 0, paid: 0, remaining: 0 }), [selectedProjects]);
+    }), { revenue: 0, cost: 0, profit: 0, feasibilityInvestorProfit: 0, capital: 0, paid: 0, remaining: 0 });
+    const peak = calculateCalendarFundingPeak(monthlyPortfolio.totals, sum.paid);
+    return { ...sum, capital: peak.requiredCapital, remaining: peak.remainingCapital };
+  }, [selectedProjects, monthlyPortfolio.totals]);
   const investorProfitSummary = calculateCompleteInvestorCashFlowProfit(totals.paid, groupedPortfolio.totals);
   const investorProfitOnCost = calculateProfitPercentage(investorProfitSummary, totals.cost);
   const investorProfitOnCapital = calculateProfitPercentage(investorProfitSummary, totals.capital);
@@ -236,6 +241,10 @@ export default function V2CapitalPortfolio({ embedded = false, onBack, commandCe
   };
 
   if (portfolioQuery.isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">جاري تحميل محفظة رأس المال...</div>;
+  const missingFlows = selectedProjects.filter(project => !investorFlowProjects.some(flow => flow.projectId === project.projectId));
+  if (portfolioQuery.isError || investorFlowsQuery.isError) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">تعذر قراءة مصدر المحفظة؛ لا تُعرض القيم المفقودة كصفر.</div>;
+  if (investorFlowsQuery.isLoading) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">جاري تحميل التدفقات الشهرية...</div>;
+  if (missingFlows.length > 0) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">مصدر التدفق الشهري غير مكتمل لعدد {missingFlows.length} من المشاريع المختارة؛ لم تُحوّل بياناتها إلى صفر أو ربح محسوب.</div>;
   if (projects.length === 0) return <div className="min-h-screen bg-slate-50 flex items-center justify-center text-sm text-slate-500">لا توجد مشاريع استثمارية مؤهلة للعرض</div>;
 
   return (
@@ -255,7 +264,7 @@ export default function V2CapitalPortfolio({ embedded = false, onBack, commandCe
             <div className="fs-card fs-card-emerald rounded-md p-3"><p className="text-[10px] text-slate-500">إجمالي الإيرادات</p><p className="mt-1 text-lg font-extrabold text-slate-900"><FinancialSourceValue testId="capital-trace-summary-revenue" trace={{ report: "محفظة رأس المال", project: "المشاريع الاستثمارية الخمسة", row: "إجمالي الإيرادات", rule: "مجموع الإيرادات المعتمدة من محرك تدفق المستثمر للمشاريع المختارة.", value: totals.revenue, contributors: selectedProjects.map((project) => ({ name: project.name || "مشروع", value: project.totalRevenue })) }}>{formatAmount(totals.revenue)}</FinancialSourceValue></p><span className="text-[9px] text-slate-400">درهم</span></div>
             <div className="fs-card fs-card-orange rounded-md p-3"><p className="text-[10px] text-slate-500">إجمالي التكلفة</p><p className="mt-1 text-lg font-extrabold text-slate-900"><FinancialSourceValue testId="capital-trace-summary-cost" trace={{ report: "محفظة رأس المال", project: "المشاريع الاستثمارية الخمسة", row: "إجمالي التكلفة", rule: "مجموع صفوف التكلفة غير الإيرادية وغير التحويلية من تدفقات المستثمر الفردية.", value: totals.cost, contributors: selectedProjects.map((project) => ({ name: project.name || "مشروع", value: project.totalCosts })) }}>{formatAmount(totals.cost)}</FinancialSourceValue></p><span className="text-[9px] text-slate-400">درهم</span></div>
             <div className="fs-card fs-card-cyan rounded-md p-3"><p className="text-[10px] text-slate-500">الأرباح</p><p className="mt-1 text-lg font-extrabold text-slate-900"><FinancialSourceValue testId="capital-trace-summary-profit" trace={{ report: "محفظة رأس المال", project: "المشاريع الاستثمارية الخمسة", row: "صافي أرباح المستثمر", rule: "مدفوع سابقًا وجميع صافي الحركات الشهرية المنسوخة من تدفقات المستثمر؛ بعد حصة كومو.", value: investorProfitSummary, contributors: selectedProjects.map((project) => { const flowRow = groupedPortfolio.rows.find((row) => row.projectId === project.projectId); return { name: project.name || "مشروع", value: calculateCompleteInvestorCashFlowProfit(project.paidCapital, flowRow?.values || []) }; }) }}>{formatAmount(investorProfitSummary)}</FinancialSourceValue></p><div className="mt-1 flex gap-2 text-[9px]"><span className="text-cyan-700">من التكلفة {formatFullNumber(investorProfitOnCost, "2")}%</span><span className="text-violet-700">من رأس المال {formatFullNumber(investorProfitOnCapital, "2")}%</span></div></div>
-            <div className="fs-card fs-card-rose rounded-md p-3"><p className="text-[10px] text-slate-500">رأس المال الكلي</p><p className="mt-1 text-lg font-extrabold text-slate-900"><FinancialSourceValue testId="capital-trace-summary-required" trace={{ report: "محفظة رأس المال", project: "المشاريع الاستثمارية الخمسة", row: "رأس المال المطلوب", rule: "ذروة رأس المال الصافي لكل مشروع بعد العوائد، مجمعة للمشاريع المختارة.", value: totals.capital, contributors: selectedProjects.map((project) => ({ name: project.name || "مشروع", value: project.requiredCapital })) }}>{formatAmount(totals.capital)}</FinancialSourceValue></p><div className="mt-1 flex gap-2 text-[9px]"><span className="text-emerald-700">مدفوع {formatAmount(totals.paid)}</span><span className="text-rose-700">متبقٍ {formatAmount(totals.remaining)}</span></div></div>
+            <div className="fs-card fs-card-rose rounded-md p-3"><p className="text-[10px] text-slate-500">ذروة احتياج المحفظة</p><p className="mt-1 text-lg font-extrabold text-slate-900"><FinancialSourceValue testId="capital-trace-summary-required" trace={{ report: "محفظة رأس المال", project: "المشاريع الاستثمارية الخمسة", row: "رأس المال المطلوب", rule: "المدفوع المثبت في المصدر مع أكبر عجز تراكمي للصافي بعد جمع الأشهر المشتركة؛ ليس مجموع ذروات المشاريع.", value: totals.capital, contributors: selectedProjects.map((project) => ({ name: project.name || "مشروع", value: project.requiredCapital })) }}>{formatAmount(totals.capital)}</FinancialSourceValue></p><div className="mt-1 flex gap-2 text-[9px]"><span className="text-emerald-700">مدفوع {formatAmount(totals.paid)}</span><span className="text-rose-700">متبقٍ {formatAmount(totals.remaining)}</span></div></div>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">

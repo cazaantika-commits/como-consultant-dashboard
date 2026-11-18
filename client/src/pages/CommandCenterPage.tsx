@@ -3474,6 +3474,7 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
     setIsGettingRecommendation(true);
     try {
       const result = await recommendationMutation.mutateAsync({
+        projectId,
         projectName: reportData.project.name,
         projectBua: financialData.data?.project?.bua || 0,
         projectPricePerSqft: financialData.data?.project?.pricePerSqft || 0,
@@ -3490,6 +3491,7 @@ function CommitteeDecisionView({ token, projectId, memberId, onBack }: { token: 
     setIsAnalyzing(true);
     try {
       const result = await analyzeDecisionMutation.mutateAsync({
+        projectId,
         projectName: reportData.project.name,
         selectedConsultantName: selectedName,
         decisionType, decisionBasis,

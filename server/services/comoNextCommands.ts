@@ -15,6 +15,11 @@ import {
 import { getDb } from "../db";
 import { saveComoMailboxDraft } from "../emailMonitor";
 
+export type ComoNextDatabase = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+export type ComoNextTransaction = Parameters<Parameters<ComoNextDatabase["transaction"]>[0]>[0];
+type ComoNextExecutor = Pick<ComoNextDatabase, "select" | "execute" | "insert" | "update">;
+
+type CommandJson = string | number | boolean | null | CommandJson[] | { [key: string]: CommandJson };
 export type ComoNextAccessRole = "manager" | "contributor" | "viewer";
 export type ComoNextActionStatus =
   | "open"
@@ -34,7 +39,7 @@ const allowedTransitions: Record<ComoNextActionStatus, ReadonlySet<ComoNextActio
   waiting_external: new Set<ComoNextActionStatus>(["open", "in_progress", "completed_pending_verification", "cancelled"]),
   completed_pending_verification: new Set<ComoNextActionStatus>(["in_progress", "verified", "cancelled"]),
   verified: new Set<ComoNextActionStatus>(["in_progress"]),
-  cancelled: new Set<ComoNextActionStatus>(["open"]),
+  cancelled: new Set<ComoNextActionStatus>(),
 };
 
 function databaseUnavailable(): never {
@@ -55,14 +60,24 @@ export function deriveAttentionAt(dueAt?: string | null, followUpAt?: string | n
 }
 
 export function assertActionTransition(current: ComoNextActionStatus, next: ComoNextActionStatus) {
+  if (!Object.hasOwn(allowedTransitions, current) || !Object.hasOwn(allowedTransitions, next)) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "حالة الإجراء غير معروفة" });
+  }
   if (current === next) return;
   if (!allowedTransitions[current]?.has(next)) {
     throw new TRPCError({ code: "BAD_REQUEST", message: `لا يمكن نقل الإجراء من ${current} إلى ${next}` });
   }
 }
 
+export function requireOneCommandUpdate(result: unknown): void {
+  const header: unknown = Array.isArray(result) ? result[0] : result;
+  if (!header || typeof header !== "object" || !("affectedRows" in header) || Number(header.affectedRows) !== 1) {
+    throw new TRPCError({ code: "CONFLICT", message: "تغير السجل أثناء المراجعة؛ أعد قراءة حالته قبل المحاولة" });
+  }
+}
+
 export async function requireProjectAccess(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  db: ComoNextExecutor,
   projectId: number,
   userId: number,
   required: "read" | "write" = "read",
@@ -103,7 +118,7 @@ export async function appendEvent(
     actorUserId?: number | null;
     eventType: string;
     summary: string;
-    payload?: Record<string, string | number | boolean | null>;
+    payload?: Record<string, CommandJson>;
     idempotencyKey?: string | null;
   },
 ): Promise<void> {
@@ -203,8 +218,8 @@ export async function createActionCommand(input: {
   idempotencyKey?: string;
   actorType?: "human" | "manus" | "system";
   actorUserId?: number | null;
-}) {
-  const db = await getDb();
+}, transaction?: ComoNextTransaction) {
+  const db = transaction ?? await getDb();
   if (!db) databaseUnavailable();
   const [workFile] = await db
     .select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
@@ -221,7 +236,7 @@ export async function createActionCommand(input: {
   const followUpAt = toSqlUtcTimestamp(input.followUpAt);
   const attentionAt = followUpAt ?? dueAt;
 
-  return db.transaction(async tx => {
+  const create = async (tx: ComoNextTransaction) => {
     if (input.idempotencyKey) {
       const [existing] = await tx
         .select({ actionId: comoNextWorkFileEvents.actionId })
@@ -260,7 +275,8 @@ export async function createActionCommand(input: {
       idempotencyKey: input.idempotencyKey,
     });
     return { id, replayed: false as const };
-  });
+  };
+  return transaction ? create(transaction) : db.transaction(create);
 }
 
 export async function createDecisionCommand(input: {
@@ -275,8 +291,8 @@ export async function createDecisionCommand(input: {
   idempotencyKey?: string;
   actorType?: "human" | "manus" | "system";
   actorUserId?: number | null;
-}) {
-  const db = await getDb();
+}, transaction?: ComoNextTransaction) {
+  const db = transaction ?? await getDb();
   if (!db) databaseUnavailable();
   const [workFile] = await db
     .select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
@@ -289,7 +305,7 @@ export async function createDecisionCommand(input: {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إضافة قرار مطلوب إلى ملف مغلق" });
   }
 
-  return db.transaction(async tx => {
+  const create = async (tx: ComoNextTransaction) => {
     if (input.idempotencyKey) {
       const [existing] = await tx
         .select({ id: comoNextDecisions.id })
@@ -327,7 +343,8 @@ export async function createDecisionCommand(input: {
       idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
     });
     return { id, replayed: false as const };
-  });
+  };
+  return transaction ? create(transaction) : db.transaction(create);
 }
 
 export async function changeActionStatusCommand(input: {
@@ -340,21 +357,23 @@ export async function changeActionStatusCommand(input: {
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
-  const [action] = await db
-    .select()
-    .from(comoNextActions)
-    .where(eq(comoNextActions.id, input.actionId))
-    .limit(1);
-  if (!action) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الإجراء" });
-  await requireProjectAccess(db, action.projectId, input.userId, "write");
-  assertActionTransition(action.actionStatus, input.nextStatus);
-  if (input.nextStatus === "verified" && !input.evidenceReference?.trim()) {
-    throw new TRPCError({ code: "BAD_REQUEST", message: "التحقق يحتاج مرجع دليل واضح" });
-  }
-
-  const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {
-    await tx
+    const [action] = await tx.select().from(comoNextActions)
+      .where(eq(comoNextActions.id, input.actionId)).limit(1).for("update");
+    if (!action) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على الإجراء" });
+    await requireProjectAccess(tx, action.projectId, input.userId, "write");
+    assertActionTransition(action.actionStatus, input.nextStatus);
+    if (action.actionStatus === input.nextStatus) return { success: true, replayed: true };
+    const [workFile] = await tx.select({ status: comoNextWorkFiles.workFileStatus }).from(comoNextWorkFiles)
+      .where(and(eq(comoNextWorkFiles.id, action.workFileId), eq(comoNextWorkFiles.projectId, action.projectId))).limit(1).for("update");
+    if (!workFile || ["closed", "cancelled"].includes(workFile.status)) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن تغيير إجراء في ملف عمل مغلق" });
+    }
+    if (input.nextStatus === "verified" && !input.evidenceReference?.trim()) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "التحقق يحتاج مرجع دليل واضح" });
+    }
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+    const updated = await tx
       .update(comoNextActions)
       .set({
         actionStatus: input.nextStatus,
@@ -362,7 +381,8 @@ export async function changeActionStatusCommand(input: {
         completedAt: input.nextStatus === "completed_pending_verification" ? now : action.completedAt,
         verifiedAt: input.nextStatus === "verified" ? now : null,
       })
-      .where(eq(comoNextActions.id, input.actionId));
+      .where(and(eq(comoNextActions.id, input.actionId), eq(comoNextActions.projectId, action.projectId), eq(comoNextActions.actionStatus, action.actionStatus)));
+    requireOneCommandUpdate(updated);
 
     await appendEvent(tx, {
       userId: input.userId,
@@ -406,7 +426,7 @@ export async function resolveDecisionCommand(input: {
 
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {
-    await tx
+    const updated = await tx
       .update(comoNextDecisions)
       .set({
         decisionStatus: input.nextStatus,
@@ -417,7 +437,8 @@ export async function resolveDecisionCommand(input: {
         decidedByUserId: input.userId,
         decidedAt: now,
       })
-      .where(eq(comoNextDecisions.id, input.decisionId));
+      .where(and(eq(comoNextDecisions.id, input.decisionId), eq(comoNextDecisions.decisionStatus, decision.decisionStatus)));
+    requireOneCommandUpdate(updated);
 
     const statusLabel = input.nextStatus === "approved" ? "اعتماد" : input.nextStatus === "rejected" ? "رفض" : "تأجيل";
     await appendEvent(tx, {
@@ -448,8 +469,8 @@ export async function createCommunicationDraftCommand(input: {
   sourceEmailId?: number | null;
   idempotencyKey?: string;
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>;
-}) {
-  const db = await getDb();
+}, transaction?: ComoNextTransaction) {
+  const db = transaction ?? await getDb();
   if (!db) databaseUnavailable();
   const [workFile] = await db
     .select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
@@ -462,7 +483,7 @@ export async function createCommunicationDraftCommand(input: {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن إنشاء مسودة في ملف مغلق" });
   }
 
-  const draftRecord = await db.transaction(async tx => {
+  const create = async (tx: ComoNextTransaction) => {
     if (input.idempotencyKey) {
       const [existing] = await tx
         .select({
@@ -504,14 +525,17 @@ export async function createCommunicationDraftCommand(input: {
       idempotencyKey: input.idempotencyKey ? `event:${input.idempotencyKey}` : null,
     });
     return { id, communicationStatus: "draft" as const, externalMessageRef: null, evidenceReference: null, replayed: false as const };
-  });
+  };
+  const draftRecord = await (transaction ? create(transaction) : db.transaction(create));
 
   // An explicit owner cancellation is a terminal boundary for this draft key.
   // A producer replay must not silently restore what the owner rejected.
   if (draftRecord.replayed && draftRecord.communicationStatus === "cancelled") {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هذه المراسلة ملغاة بقرار محفوظ؛ لن تُعاد المسودة دون توجيه جديد." });
   }
-  if (input.channel !== "email") return draftRecord;
+  // Caller-owned transactions persist target + judgement only. Mailbox I/O
+  // must happen after that transaction commits, never while locks are held.
+  if (transaction || input.channel !== "email") return { ...draftRecord, mailboxDraft: null, mailboxWrite: false, sent: false, externalSideEffect: false };
 
   // A synced Sent message is the durable evidence boundary. Replaying the
   // producer must preserve it rather than re-archiving/re-saving a Draft.
@@ -519,6 +543,9 @@ export async function createCommunicationDraftCommand(input: {
     return {
       ...draftRecord,
       mailboxDraft: null,
+      mailboxWrite: false,
+      sent: false,
+      observedInSent: true,
       externalSideEffect: false as const,
     };
   }
@@ -549,7 +576,7 @@ export async function createCommunicationDraftCommand(input: {
   });
   const savedAt = new Date().toISOString().slice(0, 19).replace("T", " ");
   await db.transaction(async tx => {
-    await tx.update(comoNextCommunications).set({
+    const updated = await tx.update(comoNextCommunications).set({
       communicationStatus: mailboxDraft.observedInSent ? "sent" : "archived",
       approvalStatus: "not_required",
       externalMessageRef: mailboxDraft.uid ? `${mailboxDraft.folder} UID ${mailboxDraft.uid}` : mailboxDraft.folder,
@@ -563,7 +590,8 @@ export async function createCommunicationDraftCommand(input: {
         ? `المسودة محفوظة في بريد عبدالرحمن مع ${input.attachments.length} مرفق؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.`
         : "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
       occurredAt: savedAt,
-    }).where(eq(comoNextCommunications.id, draftRecord.id));
+    }).where(and(eq(comoNextCommunications.id, draftRecord.id), eq(comoNextCommunications.communicationStatus, draftRecord.communicationStatus)));
+    requireOneCommandUpdate(updated);
     await appendEvent(tx, {
       userId: input.userId,
       projectId: workFile.projectId,
@@ -580,6 +608,7 @@ export async function createCommunicationDraftCommand(input: {
         uid: mailboxDraft.uid,
         attachmentNames: input.attachments?.map(file => file.filename) || [],
         sent: Boolean(mailboxDraft.observedInSent),
+        mailboxWrite: Boolean(mailboxDraft.created),
       },
       idempotencyKey: `mailbox-draft:event:${draftRecord.id}`,
     });
@@ -587,6 +616,9 @@ export async function createCommunicationDraftCommand(input: {
   return {
     ...draftRecord,
     mailboxDraft: { folder: mailboxDraft.folder, uid: mailboxDraft.uid },
+    mailboxWrite: Boolean(mailboxDraft.created),
+    sent: false,
+    observedInSent: Boolean(mailboxDraft.observedInSent),
     externalSideEffect: false as const,
   };
 }
@@ -608,13 +640,14 @@ export async function reviewCommunicationDraftCommand(input: {
   const now = new Date().toISOString().slice(0, 19).replace("T", " ");
   const approved = input.decision === "approve";
   return db.transaction(async tx => {
-    await tx.update(comoNextCommunications).set({
+    const updated = await tx.update(comoNextCommunications).set({
       communicationStatus: approved ? "approved_for_send" : "cancelled",
       approvalStatus: approved ? "approved" : "rejected",
       reviewNote: input.reviewNote?.trim() || null,
       approvedByUserId: input.userId,
       approvedAt: now,
-    }).where(eq(comoNextCommunications.id, input.communicationId));
+    }).where(and(eq(comoNextCommunications.id, input.communicationId), eq(comoNextCommunications.communicationStatus, "draft"), eq(comoNextCommunications.approvalStatus, "pending")));
+    requireOneCommandUpdate(updated);
     await appendEvent(tx, {
       userId: input.userId,
       projectId: communication.projectId,
@@ -643,13 +676,14 @@ export async function updateCommunicationDraftCommand(input: {
   if (communication.communicationStatus !== "draft" || communication.approvalStatus !== "pending") {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تعديل هذه المراسلة بعد خروجها من حالة المسودة" });
   }
-  await db.update(comoNextCommunications).set({
+  const updated = await db.update(comoNextCommunications).set({
     subject: input.subject.trim(),
     body: input.body.trim(),
     toText: input.toText.trim(),
     ccText: input.ccText?.trim() || null,
-  }).where(eq(comoNextCommunications.id, input.communicationId));
-  if (communication.channel !== "email") return { success: true, externalSideEffect: false as const };
+  }).where(and(eq(comoNextCommunications.id, input.communicationId), eq(comoNextCommunications.communicationStatus, "draft"), eq(comoNextCommunications.approvalStatus, "pending")));
+  requireOneCommandUpdate(updated);
+  if (communication.channel !== "email") return { success: true, externalSideEffect: false as const, mailboxWrite: false, sent: false };
 
   const sourceEmailId = Number(String(communication.sourceRecordId || "").match(/^email-reply-draft:(\d+)$/)?.[1] || 0);
   let inReplyTo: string | undefined;
@@ -668,7 +702,7 @@ export async function updateCommunicationDraftCommand(input: {
     inReplyTo,
     draftKey: communication.sourceRecordId || `como-next-communication-${communication.id}`,
   });
-  await db.update(comoNextCommunications).set({
+  const observed = await db.update(comoNextCommunications).set({
     communicationStatus: "archived",
     approvalStatus: "not_required",
     externalMessageRef: mailboxDraft.uid ? `${mailboxDraft.folder} UID ${mailboxDraft.uid}` : mailboxDraft.folder,
@@ -676,8 +710,9 @@ export async function updateCommunicationDraftCommand(input: {
       ? `Private Email ${mailboxDraft.folder} · UID ${mailboxDraft.uid}`
       : `Private Email ${mailboxDraft.folder}`,
     reviewNote: "المسودة محفوظة في بريد عبدالرحمن؛ المراجعة والتعديل والإرسال تتم من تطبيق البريد.",
-  }).where(eq(comoNextCommunications.id, input.communicationId));
-  return { success: true, externalSideEffect: false as const, mailboxDraft };
+  }).where(and(eq(comoNextCommunications.id, input.communicationId), eq(comoNextCommunications.communicationStatus, "draft"), eq(comoNextCommunications.approvalStatus, "pending")));
+  requireOneCommandUpdate(observed);
+  return { success: true, externalSideEffect: false as const, mailboxDraft, mailboxWrite: Boolean(mailboxDraft.created), sent: false };
 }
 
 export async function recordCommunicationSentCommand(input: {
@@ -695,15 +730,17 @@ export async function recordCommunicationSentCommand(input: {
   if (communication.communicationStatus !== "approved_for_send" || communication.approvalStatus !== "approved") {
     throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تسجيل الإرسال قبل اعتماد المسودة" });
   }
+  if (!input.evidenceReference.trim()) throw new TRPCError({ code: "BAD_REQUEST", message: "تسجيل الإرسال يحتاج مرجع دليل" });
   const sentAt = toSqlUtcTimestamp(input.sentAt) ?? new Date().toISOString().slice(0, 19).replace("T", " ");
   return db.transaction(async tx => {
-    await tx.update(comoNextCommunications).set({
+    const updated = await tx.update(comoNextCommunications).set({
       communicationStatus: "sent",
       sentAt,
       occurredAt: sentAt,
       evidenceReference: input.evidenceReference.trim(),
       externalMessageRef: input.externalMessageRef?.trim() || null,
-    }).where(eq(comoNextCommunications.id, input.communicationId));
+    }).where(and(eq(comoNextCommunications.id, input.communicationId), eq(comoNextCommunications.communicationStatus, "approved_for_send"), eq(comoNextCommunications.approvalStatus, "approved")));
+    requireOneCommandUpdate(updated);
     await appendEvent(tx, {
       userId: input.userId,
       projectId: communication.projectId,

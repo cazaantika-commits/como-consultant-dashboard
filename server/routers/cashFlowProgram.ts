@@ -1,12 +1,14 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { cfProjects, cfCostItems, cfScenarios, cfFiles, projects, costsCashFlow, projectPhases, phaseActivities, phaseCostLinks, competitionPricing, marketOverview, projectCapitalSettings, projectPhaseDelays } from "../../drizzle/schema";
 import { DEFAULT_AVG_AREAS } from "../../shared/feasibilityUtils";
 import { calculateDualCashFlow, type CostItemInput, type ProjectInput } from './cashFlowEngine';
 import { computeProjectCapital, type FinancingScenario } from '../investorCashFlow';
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { storagePut } from "../storage";
+import { deriveAuthorizedProjectIds, requireLegacyProjectRead, requireLegacyProjectWrite } from "../services/comoLegacyProjectAccess";
+import { requireFinanceCfProject, requireFinancePhase } from "../services/financeAccess";
 
 // ═══════════════════════════════════════════════════════════════
 // Cash Flow Calculation Engine - محرك حسابات التدفق النقدي
@@ -384,7 +386,7 @@ const cfScenarioInput = z.object({
 
 export const cashFlowProgramRouter = router({
   // --- Projects CRUD ---
-  listProjects: publicProcedure.query(async ({ ctx }) => {
+  listProjects: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
@@ -402,7 +404,7 @@ export const cashFlowProgramRouter = router({
     return enriched;
   }),
 
-  getProject: publicProcedure
+  getProject: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return null;
@@ -413,7 +415,7 @@ export const cashFlowProgramRouter = router({
       return results[0] || null;
     }),
 
-  createProject: publicProcedure
+  createProject: protectedProcedure
     .input(cfProjectInput)
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -429,7 +431,7 @@ export const cashFlowProgramRouter = router({
         reraSetupMonths: input.reraSetupMonths,
         constructionMonths: input.constructionMonths,
         handoverMonths: input.handoverMonths,
-        salesEnabled: input.salesEnabled,
+        salesEnabled: input.salesEnabled ? 1 : 0,
         salesStartMonth: input.salesStartMonth ?? null,
         salesVelocityUnits: input.salesVelocityUnits ?? null,
         salesVelocityAed: input.salesVelocityAed ?? null,
@@ -443,7 +445,7 @@ export const cashFlowProgramRouter = router({
       return { id: Number(result[0].insertId) };
     }),
 
-  updateProject: publicProcedure
+  updateProject: protectedProcedure
     .input(z.object({
       id: z.number(),
       name: z.string().min(1).optional(),
@@ -524,7 +526,7 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  deleteProject: publicProcedure
+  deleteProject: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -536,7 +538,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Cost Items CRUD ---
-  getCostItems: publicProcedure
+  getCostItems: protectedProcedure
     .input(z.object({ cfProjectId: z.number() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return [];
@@ -547,7 +549,7 @@ export const cashFlowProgramRouter = router({
         .orderBy(cfCostItems.sortOrder);
     }),
 
-  saveCostItem: publicProcedure
+  saveCostItem: protectedProcedure
     .input(z.object({ id: z.number().optional() }).merge(cfCostItemInput))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -574,7 +576,7 @@ export const cashFlowProgramRouter = router({
       }
     }),
 
-  deleteCostItem: publicProcedure
+  deleteCostItem: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -585,7 +587,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Scenarios CRUD ---
-  getScenarios: publicProcedure
+  getScenarios: protectedProcedure
     .input(z.number()) // cfProjectId
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return [];
@@ -595,7 +597,7 @@ export const cashFlowProgramRouter = router({
         .where(eq(cfScenarios.cfProjectId, input));
     }),
 
-  saveScenario: publicProcedure
+  saveScenario: protectedProcedure
     .input(z.object({ id: z.number().optional() }).merge(cfScenarioInput))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -623,7 +625,7 @@ export const cashFlowProgramRouter = router({
       }
     }),
 
-  deleteScenario: publicProcedure
+  deleteScenario: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -634,7 +636,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Files CRUD ---
-  getFiles: publicProcedure
+  getFiles: protectedProcedure
     .input(z.number()) // cfProjectId
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return [];
@@ -645,7 +647,7 @@ export const cashFlowProgramRouter = router({
         .orderBy(desc(cfFiles.createdAt));
     }),
 
-  deleteFile: publicProcedure
+  deleteFile: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -656,7 +658,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Cash Flow Calculation ---
-  calculateCashFlow: publicProcedure
+  calculateCashFlow: protectedProcedure
     .input(z.object({
       cfProjectId: z.number(),
       scenarioId: z.number().nullable().optional(),
@@ -776,7 +778,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Portfolio View (Dual Engine) ---
-  getPortfolioCashFlow: publicProcedure.query(async ({ ctx }) => {
+  getPortfolioCashFlow: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
     const db = await getDb();
     if (!db) return null;
@@ -964,7 +966,7 @@ export const cashFlowProgramRouter = router({
   }),
 
   // --- Create Project from Project Data (auto-import costs) ---
-  createFromFeasibility: publicProcedure
+  createFromFeasibility: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       startDate: z.string(),
@@ -1102,7 +1104,7 @@ export const cashFlowProgramRouter = router({
         reraSetupMonths: input.reraSetupMonths,
         constructionMonths: input.constructionMonths,
         handoverMonths: input.handoverMonths,
-        salesEnabled: totalRevenue > 0,
+        salesEnabled: totalRevenue > 0 ? 1 : 0,
         salesStartMonth: input.designApprovalMonths + input.reraSetupMonths + 1,
         totalSalesRevenue: Math.round(totalRevenue) || null,
         buyerPlanBookingPct: "20",
@@ -1433,7 +1435,7 @@ export const cashFlowProgramRouter = router({
     }),
 
     // --- Import from Project (preview only) ---
-  importFromFeasibility: publicProcedure
+  importFromFeasibility: protectedProcedure
     .input(z.object({ projectId: z.number() }))
     .query(async ({ ctx, input }) => {
       if (!ctx.user) return null;
@@ -1674,10 +1676,10 @@ export const cashFlowProgramRouter = router({
       };
     }),
   // --- Flexible Phases Management ----
-  listPhases: publicProcedure
+  listPhases: protectedProcedure
     .input(z.number())
     .query(async ({ ctx, input: cfProjectId }) => {
-      if (!ctx.user) return [];
+      const scope = await requireFinanceCfProject(ctx.user, cfProjectId, "read");
       const db = await getDb();
       if (!db) return [];
       
@@ -1686,12 +1688,12 @@ export const cashFlowProgramRouter = router({
       if (!projectResults[0]) return [];
       
       const phases = await db.select().from(projectPhases)
-        .where(eq(projectPhases.projectId, cfProjectId))
+        .where(eq(projectPhases.projectId, scope.projectId))
         .orderBy(projectPhases.phaseNumber);
       return phases;
     }),
 
-  createPhase: publicProcedure
+  createPhase: protectedProcedure
     .input(z.object({
       cfProjectId: z.number(),
       phaseName: z.string(),
@@ -1700,7 +1702,7 @@ export const cashFlowProgramRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      const scope = await requireFinanceCfProject(ctx.user, input.cfProjectId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -1712,7 +1714,7 @@ export const cashFlowProgramRouter = router({
       // Get max phase number
       const maxPhaseResult = await db.select({ maxNum: projectPhases.phaseNumber })
         .from(projectPhases)
-        .where(eq(projectPhases.projectId, input.cfProjectId))
+        .where(eq(projectPhases.projectId, scope.projectId))
         .orderBy(desc(projectPhases.phaseNumber))
         .limit(1);
       const phaseNumber = (maxPhaseResult[0]?.maxNum || 0) + 1;
@@ -1728,7 +1730,7 @@ export const cashFlowProgramRouter = router({
       const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}`;
       
       const result = await db.insert(projectPhases).values({
-        projectId: input.cfProjectId,
+        projectId: scope.projectId,
         phaseNumber,
         phaseName: input.phaseName,
         startDate: input.startDate,
@@ -1740,7 +1742,7 @@ export const cashFlowProgramRouter = router({
       return { id: Number(result[0].insertId), phaseNumber, endDate };
     }),
 
-  updatePhase: publicProcedure
+  updatePhase: protectedProcedure
     .input(z.object({
       phaseId: z.number(),
       phaseName: z.string().optional(),
@@ -1749,7 +1751,7 @@ export const cashFlowProgramRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinancePhase(ctx.user, input.phaseId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -1758,10 +1760,6 @@ export const cashFlowProgramRouter = router({
       const phase = phaseResults[0];
       if (!phase) throw new Error("Phase not found");
       
-      // Verify project ownership
-      const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, phase.projectId)));
-      if (!projectResults[0]) throw new Error("Unauthorized");
       
       const startDate = input.startDate || phase.startDate;
       const durationMonths = input.durationMonths || phase.durationMonths;
@@ -1789,10 +1787,10 @@ export const cashFlowProgramRouter = router({
       return { success: true, endDate };
     }),
 
-  deletePhase: publicProcedure
+  deletePhase: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input: phaseId }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinancePhase(ctx.user, phaseId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -1801,17 +1799,13 @@ export const cashFlowProgramRouter = router({
       const phase = phaseResults[0];
       if (!phase) throw new Error("Phase not found");
       
-      // Verify project ownership
-      const projectResults = await db.select().from(cfProjects)
-        .where(and(eq(cfProjects.id, phase.projectId)));
-      if (!projectResults[0]) throw new Error("Unauthorized");
       
       await db.delete(projectPhases).where(eq(projectPhases.id, phaseId));
       return { success: true };
     }),
 
   // --- Export Cash Flow as Excel ---
-  exportCashFlowExcel: publicProcedure
+  exportCashFlowExcel: protectedProcedure
     .input(z.object({ cfProjectId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -1915,7 +1909,7 @@ export const cashFlowProgramRouter = router({
     }),
 
   // --- Sync existing CF project cost items from Feasibility ---
-  syncFromFeasibility: publicProcedure
+  syncFromFeasibility: protectedProcedure
     .input(z.object({ projectId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -2093,7 +2087,7 @@ export const cashFlowProgramRouter = router({
   // Portfolio Capital Planning Simulator
   // ═══════════════════════════════════════════════════════════════
 
-  getPortfolioSimulation: publicProcedure
+  getPortfolioSimulation: protectedProcedure
     .input(z.object({
       availableCapital: z.number().min(0).default(100_000_000),
       excludeProjectIds: z.array(z.number()).default([]),
@@ -2365,7 +2359,7 @@ export const cashFlowProgramRouter = router({
       };
     }),
 
-  importAllProjects: publicProcedure
+  importAllProjects: protectedProcedure
     .mutation(async ({ ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
       const db = await getDb();
@@ -2594,7 +2588,7 @@ export const cashFlowProgramRouter = router({
 
   // --- Capital Schedule Data for All Projects (used by CapitalSchedulingPage) ---
   // Returns monthly developer outflow per project from cf_cost_items via calculateDualCashFlow
-  getCapitalScheduleData: publicProcedure
+  getCapitalScheduleData: protectedProcedure
     .query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
@@ -2678,7 +2672,7 @@ export const cashFlowProgramRouter = router({
     return results;
   }),
     // --- Capital Summary for All Projects (used by CapitalSchedulingPage) ---
-  getCapitalSummaryAllProjects: publicProcedure.query(async ({ ctx }) => {
+  getCapitalSummaryAllProjects: protectedProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
     const db = await getDb();
     if (!db) return [];
@@ -2770,7 +2764,7 @@ export const cashFlowProgramRouter = router({
   }),
 
   // --- Update project schedule settings (writes to projects table - single source of truth) ---
-  updateProjectScheduleSettings: publicProcedure
+  updateProjectScheduleSettings: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       startDate: z.string().optional(),
@@ -2779,7 +2773,7 @@ export const cashFlowProgramRouter = router({
       handoverMonths: z.number().min(1).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectWrite(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -2813,11 +2807,11 @@ export const cashFlowProgramRouter = router({
     }),
 
   // ─── Phase Delay Persistence ─────────────────────────────────────
-  getPhaseDelays: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) return {};
+  getPhaseDelays: protectedProcedure.query(async ({ ctx }) => {
+    const authorizedIds = await deriveAuthorizedProjectIds(ctx.user);
     const db = await getDb();
     if (!db) return {};
-    const rows = await db.select().from(projectPhaseDelays);
+    const rows = await db.select().from(projectPhaseDelays).where(inArray(projectPhaseDelays.projectId, authorizedIds));
     const result: Record<number, { designDelay: number; offplanDelay: number; constructionDelay: number }> = {};
     for (const row of rows) {
       result[row.projectId] = {
@@ -2829,7 +2823,7 @@ export const cashFlowProgramRouter = router({
     return result;
   }),
 
-  setPhaseDelay: publicProcedure
+  setPhaseDelay: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       designDelay: z.number().min(0).default(0),
@@ -2837,7 +2831,7 @@ export const cashFlowProgramRouter = router({
       constructionDelay: z.number().min(0).default(0),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectWrite(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       // Upsert: check if row exists
@@ -2865,13 +2859,13 @@ export const cashFlowProgramRouter = router({
     }),
 
   // ─── Per-Project Financing Scenario ─────────────────────────────────────
-  updateProjectScenario: publicProcedure
+  updateProjectScenario: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       scenario: z.enum(['offplan_escrow', 'offplan_construction', 'no_offplan']),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectWrite(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.update(projects)
@@ -2880,13 +2874,13 @@ export const cashFlowProgramRouter = router({
       return { success: true };
     }),
 
-  getProjectScenarios: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) return {};
+  getProjectScenarios: protectedProcedure.query(async ({ ctx }) => {
+    const authorizedIds = await deriveAuthorizedProjectIds(ctx.user);
     const db = await getDb();
     if (!db) return {};
     const rows = await db.select({ id: projects.id, financingScenario: projects.financingScenario })
       .from(projects)
-      .where(eq(projects.isTestProject, 0));
+      .where(and(eq(projects.isTestProject, 0), inArray(projects.id, authorizedIds)));
     const result: Record<number, string> = {};
     for (const row of rows) {
       result[row.id] = row.financingScenario ?? 'offplan_escrow';

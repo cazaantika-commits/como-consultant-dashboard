@@ -1,11 +1,18 @@
 import type { Express } from "express";
 import { ENV } from "./env";
+import { isComoPublicStorageAsset } from "../services/comoSecurityPolicy";
 
 export function registerStorageProxy(app: Express) {
-  app.get("/manus-storage/*", async (req, res) => {
+  app.get<Record<string, string>>("/manus-storage/*", async (req, res) => {
     const key = req.params[0];
     if (!key) {
       res.status(400).send("Missing storage key");
+      return;
+    }
+    // Private documents/chunks must use their existing authorized document route.
+    // A known key, an authenticated admin or an upload prefix is not authority.
+    if (!isComoPublicStorageAsset(key)) {
+      res.status(404).send("Storage asset not found");
       return;
     }
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
@@ -22,8 +29,7 @@ export function registerStorageProxy(app: Express) {
         headers: { Authorization: `Bearer ${ENV.forgeApiKey}` },
       });
       if (!forgeResp.ok) {
-        const body = await forgeResp.text().catch(() => "");
-        console.error(`[StorageProxy] forge error: ${forgeResp.status} ${body}`);
+        console.error(`[StorageProxy] forge error: ${forgeResp.status}`);
         res.status(502).send("Storage backend error");
         return;
       }

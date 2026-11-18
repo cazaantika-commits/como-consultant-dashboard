@@ -1,66 +1,21 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { competitionPricing, marketOverview, feasibilityStudies, projects } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
+import { TRPCError } from "@trpc/server";
+import { requireLegacyProjectRead, requireLegacyProjectOwner, deriveAuthorizedProjectIds } from "../services/comoLegacyProjectAccess";
+import { joulePriceInput, assertJouleUnlocked, assertJouleSourceNotGenerated, joulePricePatch } from "../services/jouleInputPolicy";
 
-const pricingInput = z.object({
-  projectId: z.number(),
-  // السيناريو المتفائل
-  optStudioPrice: z.number().optional().nullable(),
-  opt1brPrice: z.number().optional().nullable(),
-  opt2brPrice: z.number().optional().nullable(),
-  opt3brPrice: z.number().optional().nullable(),
-  optRetailSmallPrice: z.number().optional().nullable(),
-  optRetailMediumPrice: z.number().optional().nullable(),
-  optRetailLargePrice: z.number().optional().nullable(),
-  optOfficeSmallPrice: z.number().optional().nullable(),
-  optOfficeMediumPrice: z.number().optional().nullable(),
-  optOfficeLargePrice: z.number().optional().nullable(),
-  // السيناريو الأساسي
-  baseStudioPrice: z.number().optional().nullable(),
-  base1brPrice: z.number().optional().nullable(),
-  base2brPrice: z.number().optional().nullable(),
-  base3brPrice: z.number().optional().nullable(),
-  baseRetailSmallPrice: z.number().optional().nullable(),
-  baseRetailMediumPrice: z.number().optional().nullable(),
-  baseRetailLargePrice: z.number().optional().nullable(),
-  baseOfficeSmallPrice: z.number().optional().nullable(),
-  baseOfficeMediumPrice: z.number().optional().nullable(),
-  baseOfficeLargePrice: z.number().optional().nullable(),
-  // السيناريو المتحفظ
-  consStudioPrice: z.number().optional().nullable(),
-  cons1brPrice: z.number().optional().nullable(),
-  cons2brPrice: z.number().optional().nullable(),
-  cons3brPrice: z.number().optional().nullable(),
-  consRetailSmallPrice: z.number().optional().nullable(),
-  consRetailMediumPrice: z.number().optional().nullable(),
-  consRetailLargePrice: z.number().optional().nullable(),
-  consOfficeSmallPrice: z.number().optional().nullable(),
-  consOfficeMediumPrice: z.number().optional().nullable(),
-  consOfficeLargePrice: z.number().optional().nullable(),
-  // خطة السداد
-  paymentBookingPct: z.number().optional().nullable(),
-  paymentBookingTiming: z.string().optional().nullable(),
-  paymentConstructionPct: z.number().optional().nullable(),
-  paymentConstructionTiming: z.string().optional().nullable(),
-  paymentHandoverPct: z.number().optional().nullable(),
-  paymentHandoverTiming: z.string().optional().nullable(),
-  paymentDeferredPct: z.number().optional().nullable(),
-  paymentDeferredTiming: z.string().optional().nullable(),
-  // السيناريو النشط
-  activeScenario: z.string().optional().nullable(),
-  // الإيراد المعتمد
-  approvedRevenue: z.number().optional().nullable(),
-});
+const pricingInput = joulePriceInput;
 
 export const competitionPricingRouter = router({
   // Get pricing data for a project
-  getByProject: publicProcedure
+  getByProject: protectedProcedure
     .input(z.number())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) return null;
+      await requireLegacyProjectRead(ctx.user, input);
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(competitionPricing)
@@ -69,74 +24,31 @@ export const competitionPricingRouter = router({
     }),
 
   // Get all competition pricing (shared across all users in the portal)
-  getAllByUser: publicProcedure
+  getAllByUser: protectedProcedure
     .query(async ({ ctx }) => {
-      if (!ctx.user) return [];
+      const ids = await deriveAuthorizedProjectIds(ctx.user);
+      if (!ids.length) return [];
       const db = await getDb();
       if (!db) return [];
-      const results = await db.select().from(competitionPricing);
+      const results = await db.select().from(competitionPricing).where(inArray(competitionPricing.projectId, ids));
       return results;
     }),
 
   // Save or update pricing data
-  save: publicProcedure
+  save: protectedProcedure
     .input(pricingInput)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(competitionPricing)
         .where(eq(competitionPricing.projectId, input.projectId));
 
-      const data: any = {
-        // السيناريو المتفائل
-        optStudioPrice: input.optStudioPrice ?? 0,
-        opt1brPrice: input.opt1brPrice ?? 0,
-        opt2brPrice: input.opt2brPrice ?? 0,
-        opt3brPrice: input.opt3brPrice ?? 0,
-        optRetailSmallPrice: input.optRetailSmallPrice ?? 0,
-        optRetailMediumPrice: input.optRetailMediumPrice ?? 0,
-        optRetailLargePrice: input.optRetailLargePrice ?? 0,
-        optOfficeSmallPrice: input.optOfficeSmallPrice ?? 0,
-        optOfficeMediumPrice: input.optOfficeMediumPrice ?? 0,
-        optOfficeLargePrice: input.optOfficeLargePrice ?? 0,
-        // السيناريو الأساسي
-        baseStudioPrice: input.baseStudioPrice ?? 0,
-        base1brPrice: input.base1brPrice ?? 0,
-        base2brPrice: input.base2brPrice ?? 0,
-        base3brPrice: input.base3brPrice ?? 0,
-        baseRetailSmallPrice: input.baseRetailSmallPrice ?? 0,
-        baseRetailMediumPrice: input.baseRetailMediumPrice ?? 0,
-        baseRetailLargePrice: input.baseRetailLargePrice ?? 0,
-        baseOfficeSmallPrice: input.baseOfficeSmallPrice ?? 0,
-        baseOfficeMediumPrice: input.baseOfficeMediumPrice ?? 0,
-        baseOfficeLargePrice: input.baseOfficeLargePrice ?? 0,
-        // السيناريو المتحفظ
-        consStudioPrice: input.consStudioPrice ?? 0,
-        cons1brPrice: input.cons1brPrice ?? 0,
-        cons2brPrice: input.cons2brPrice ?? 0,
-        cons3brPrice: input.cons3brPrice ?? 0,
-        consRetailSmallPrice: input.consRetailSmallPrice ?? 0,
-        consRetailMediumPrice: input.consRetailMediumPrice ?? 0,
-        consRetailLargePrice: input.consRetailLargePrice ?? 0,
-        consOfficeSmallPrice: input.consOfficeSmallPrice ?? 0,
-        consOfficeMediumPrice: input.consOfficeMediumPrice ?? 0,
-        consOfficeLargePrice: input.consOfficeLargePrice ?? 0,
-        // خطة السداد
-        paymentBookingPct: input.paymentBookingPct?.toString() ?? '10',
-        paymentBookingTiming: input.paymentBookingTiming ?? 'عند التوقيع',
-        paymentConstructionPct: input.paymentConstructionPct?.toString() ?? '60',
-        paymentConstructionTiming: input.paymentConstructionTiming ?? 'أثناء الإنشاء',
-        paymentHandoverPct: input.paymentHandoverPct?.toString() ?? '30',
-        paymentHandoverTiming: input.paymentHandoverTiming ?? 'عند التسليم',
-        paymentDeferredPct: input.paymentDeferredPct?.toString() ?? '0',
-        paymentDeferredTiming: input.paymentDeferredTiming ?? null,
-        // السيناريو النشط
-        activeScenario: input.activeScenario ?? 'base',
-        // الإيراد المعتمد
-        approvedRevenue: input.approvedRevenue ?? 0,
-      };
+      assertJouleUnlocked(existing[0]);
+      const [basis] = await db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1);
+      if (!basis) throw new TRPCError({code:"FORBIDDEN",message:"مصدر المشروع غير متاح"});
+      const data = joulePricePatch(input, basis);
 
       if (existing[0]) {
         await db.update(competitionPricing)
@@ -154,21 +66,22 @@ export const competitionPricingRouter = router({
     }),
 
   // Toggle approval
-  toggleApproval: publicProcedure
-    .input(z.object({ projectId: z.number(), approved: z.boolean() }))
+  toggleApproval: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), approved: z.boolean() }).strict())
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(competitionPricing)
         .where(eq(competitionPricing.projectId, input.projectId));
 
+      assertJouleUnlocked(existing[0]);
       if (existing[0]) {
         await db.update(competitionPricing)
           .set({
             isApproved: input.approved ? 1 : 0,
-            approvedAt: input.approved ? new Date() : null,
+            approvedAt: input.approved ? new Date().toISOString().slice(0,19).replace("T"," ") : null,
           })
           .where(eq(competitionPricing.id, existing[0].id));
       }
@@ -176,12 +89,16 @@ export const competitionPricingRouter = router({
     }),
 
   // Joel AI Smart Report - Generate pricing & competition report
-  generateSmartReport: publicProcedure
-    .input(z.number()) // projectId
+  generateSmartReport: protectedProcedure
+    .input(z.number().int().positive()) // projectId
     .mutation(async ({ ctx, input: projectId }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      const [source] = await db.select().from(competitionPricing).where(eq(competitionPricing.projectId, projectId)).limit(1);
+      assertJouleUnlocked(source);
+      assertJouleSourceNotGenerated(source);
 
       // Get project data (shared portal - no userId filter)
       const projectResults = await db.select().from(projects)
@@ -191,7 +108,7 @@ export const competitionPricingRouter = router({
 
       // Get feasibility study data
       const feasResults = await db.select().from(feasibilityStudies)
-        .where(eq(feasibilityStudies.projectId, projectId));
+        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
       const feasStudy = feasResults[0] || null;
 
       // Get market overview data (Tab 1)
@@ -211,10 +128,10 @@ export const competitionPricingRouter = router({
       const totalGFA = feasStudy 
         ? ((feasStudy.gfaResidential || 0) + (feasStudy.gfaRetail || 0) + (feasStudy.gfaOffices || 0))
         : parseFloat(String(project.gfaSqft || '0')) || 0;
-      const gfaRes = feasStudy?.gfaResidential || 0;
-      const gfaRet = feasStudy?.gfaRetail || 0;
-      const gfaOff = feasStudy?.gfaOffices || 0;
-      const buaFromFactSheet = project.bua || 0;
+      const gfaRes = Number(project.gfaResidentialSqft ?? 0);
+      const gfaRet = Number(project.gfaRetailSqft ?? 0);
+      const gfaOff = Number(project.gfaOfficesSqft ?? 0);
+      const buaFromFactSheet = Number(project.manualBuaSqft ?? 0);
       const permittedUse = project.permittedUse || feasStudy?.landUse || 'غير محدد';
       const community = feasStudy?.community || project.areaCode || 'غير محدد';
 
@@ -402,8 +319,10 @@ ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitType
           }),
         ]);
 
-        const smartReport = reportResponse.choices[0]?.message?.content || "لم يتم إنشاء التقرير";
-        const recsRaw = recsResponse.choices[0]?.message?.content || "{}";
+        const smartReport = reportResponse.choices[0]?.message?.content;
+        if (typeof smartReport !== "string" || !smartReport.trim()) throw new Error("استجابة التقرير غير صالحة");
+        const recsRaw = recsResponse.choices[0]?.message?.content;
+        if (typeof recsRaw !== "string") throw new Error("استجابة التوصيات غير صالحة");
         const cleanJson = recsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
         // Save to DB
@@ -415,7 +334,7 @@ ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitType
             .set({
               aiSmartReport: smartReport,
               aiRecommendationsJson: cleanJson,
-              aiReportGeneratedAt: new Date(),
+              aiReportGeneratedAt: new Date().toISOString().slice(0,19).replace("T"," "),
             })
             .where(eq(competitionPricing.id, existing[0].id));
         } else {
@@ -424,7 +343,7 @@ ${unitTypes.length > 0 ? `أنواع الوحدات المعتمدة: ${unitType
             projectId: projectId,
             aiSmartReport: smartReport,
             aiRecommendationsJson: cleanJson,
-            aiReportGeneratedAt: new Date(),
+            aiReportGeneratedAt: new Date().toISOString().slice(0,19).replace("T"," "),
           });
         }
 

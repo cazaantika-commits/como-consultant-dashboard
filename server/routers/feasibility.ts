@@ -1,12 +1,15 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { feasibilityStudies, projects } from "../../drizzle/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { feasibilityStudies, projects, marketOverview, competitionPricing } from "../../drizzle/schema";
+import { eq, and, desc, inArray, or, isNull } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
+import { TRPCError } from "@trpc/server";
+import { deriveAuthorizedProjectIds } from "../services/comoLegacyProjectAccess";
+import { requireFinanceProject, requireFinanceStudy } from "../services/financeAccess";
 
 const feasibilityInput = z.object({
-  projectId: z.number().optional().nullable(),
+  projectId: z.number().int().positive().optional().nullable(),
   scenarioName: z.string().optional().nullable(),
   projectName: z.string().min(1),
   community: z.string().optional().nullable(),
@@ -54,39 +57,35 @@ const feasibilityInput = z.object({
 });
 
 export const feasibilityRouter = router({
-  list: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) return [];
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const authorizedIds = await deriveAuthorizedProjectIds(ctx.user);
     const db = await getDb();
     if (!db) return [];
     return db.select().from(feasibilityStudies)
+      .where(and(eq(feasibilityStudies.userId, ctx.user.id),
+        or(isNull(feasibilityStudies.projectId), inArray(feasibilityStudies.projectId, authorizedIds))))
       .orderBy(desc(feasibilityStudies.updatedAt));
   }),
 
-  listByProject: publicProcedure
+  listByProject: protectedProcedure
     .input(z.number())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) return [];
+      await requireFinanceProject(ctx.user, input, "read");
       const db = await getDb();
       if (!db) return [];
       return db.select().from(feasibilityStudies)
-        .where(eq(feasibilityStudies.projectId, input))
+        .where(and(eq(feasibilityStudies.projectId, input), eq(feasibilityStudies.userId, ctx.user.id)))
         .orderBy(desc(feasibilityStudies.updatedAt));
     }),
 
-  getById: publicProcedure.input(z.number()).query(async ({ ctx, input }) => {
-    if (!ctx.user) throw new Error("Unauthorized");
-    const db = await getDb();
-    if (!db) return null;
-    const results = await db.select().from(feasibilityStudies).where(
-      eq(feasibilityStudies.id, input)
-    );
-    return results[0] || null;
+  getById: protectedProcedure.input(z.number().int().positive()).query(async ({ ctx, input }) => {
+    return requireFinanceStudy(ctx.user, input, "read");
   }),
 
-  create: publicProcedure
+  create: protectedProcedure
     .input(feasibilityInput)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      if (input.projectId != null) await requireFinanceProject(ctx.user, input.projectId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const result = await db.insert(feasibilityStudies).values({
@@ -96,10 +95,13 @@ export const feasibilityRouter = router({
       return { id: Number(result[0].insertId) };
     }),
 
-  update: publicProcedure
+  update: protectedProcedure
     .input(z.object({ id: z.number() }).merge(feasibilityInput.partial()))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      const original = await requireFinanceStudy(ctx.user, input.id, "write");
+      if (input.projectId !== undefined && input.projectId !== original.projectId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "لا يمكن تغيير مصدر ربط الدراسة؛ أنشئ سيناريو صريحًا" });
+      }
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const { id, ...data } = input;
@@ -109,10 +111,10 @@ export const feasibilityRouter = router({
       return { success: true };
     }),
 
-  delete: publicProcedure
+  delete: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       await db.delete(feasibilityStudies)
@@ -121,10 +123,10 @@ export const feasibilityRouter = router({
     }),
 
   // Joelle AI Analysis - Generate smart summary for a study
-  generateAiSummary: publicProcedure
+  generateAiSummary: protectedProcedure
     .input(z.number())
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -252,13 +254,13 @@ export const feasibilityRouter = router({
     }),
 
   // Joelle Market Analysis
-  generateMarketAnalysis: publicProcedure
+  generateMarketAnalysis: protectedProcedure
     .input(z.object({
       studyId: z.number(),
       community: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input.studyId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -326,13 +328,13 @@ export const feasibilityRouter = router({
     }),
 
   // Duplicate study as new scenario
-  duplicateAsScenario: publicProcedure
+  duplicateAsScenario: protectedProcedure
     .input(z.object({
       studyId: z.number(),
       scenarioName: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input.studyId, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -354,10 +356,10 @@ export const feasibilityRouter = router({
     }),
 
   // Generate comprehensive report
-  generateComprehensiveReport: publicProcedure
+  generateComprehensiveReport: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input.id, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -367,6 +369,7 @@ export const feasibilityRouter = router({
       if (!results[0]) throw new Error("Study not found");
       const study = results[0];
 
+      if (study.projectId === null) throw new TRPCError({code:"PRECONDITION_FAILED",message:"التقرير يتطلب ربط مشروع مثبت"});
       // Get project details
       const projectResults = await db.select().from(projects)
         .where(eq(projects.id, study.projectId));
@@ -470,10 +473,10 @@ ${mo ? `
     }),
 
   // Generate executive report for board
-  generateExecutiveReport: publicProcedure
+  generateExecutiveReport: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input.id, "write");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       
@@ -543,10 +546,10 @@ ${mo ? `
     }),
 
   // Get cash flow data for charts
-  getCashFlowData: publicProcedure
+  getCashFlowData: protectedProcedure
     .input(z.number())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireFinanceStudy(ctx.user, input, "read");
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       

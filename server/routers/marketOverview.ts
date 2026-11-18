@@ -1,55 +1,21 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { marketOverview, feasibilityStudies, projects, competitionPricing } from "../../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { invokeLLM } from "../_core/llm";
+import { TRPCError } from "@trpc/server";
+import { requireLegacyProjectRead, requireLegacyProjectOwner, deriveAuthorizedProjectIds } from "../services/comoLegacyProjectAccess";
+import { jouleMarketInput, assertJouleUnlocked, assertJouleSourceNotGenerated, jouleMarketPatch, jouleRecommendationPatch } from "../services/jouleInputPolicy";
 
-const marketOverviewInput = z.object({
-  projectId: z.number(),
-  // توزيع الوحدات السكنية
-  residentialStudioPct: z.number().optional().nullable(),
-  residentialStudioAvgArea: z.number().optional().nullable(),
-  residentialStudioCount: z.number().optional().nullable(),
-  residential1brPct: z.number().optional().nullable(),
-  residential1brAvgArea: z.number().optional().nullable(),
-  residential1brCount: z.number().optional().nullable(),
-  residential2brPct: z.number().optional().nullable(),
-  residential2brAvgArea: z.number().optional().nullable(),
-  residential2brCount: z.number().optional().nullable(),
-  residential3brPct: z.number().optional().nullable(),
-  residential3brAvgArea: z.number().optional().nullable(),
-  residential3brCount: z.number().optional().nullable(),
-  // توزيع المحلات
-  retailSmallPct: z.number().optional().nullable(),
-  retailSmallAvgArea: z.number().optional().nullable(),
-  retailSmallCount: z.number().optional().nullable(),
-  retailMediumPct: z.number().optional().nullable(),
-  retailMediumAvgArea: z.number().optional().nullable(),
-  retailMediumCount: z.number().optional().nullable(),
-  retailLargePct: z.number().optional().nullable(),
-  retailLargeAvgArea: z.number().optional().nullable(),
-  retailLargeCount: z.number().optional().nullable(),
-  // توزيع المكاتب
-  officeSmallPct: z.number().optional().nullable(),
-  officeSmallAvgArea: z.number().optional().nullable(),
-  officeSmallCount: z.number().optional().nullable(),
-  officeMediumPct: z.number().optional().nullable(),
-  officeMediumAvgArea: z.number().optional().nullable(),
-  officeMediumCount: z.number().optional().nullable(),
-  officeLargePct: z.number().optional().nullable(),
-  officeLargeAvgArea: z.number().optional().nullable(),
-  officeLargeCount: z.number().optional().nullable(),
-  // جودة التشطيب
-  finishingQuality: z.string().optional().nullable(),
-});
+const marketOverviewInput = jouleMarketInput;
 
 export const marketOverviewRouter = router({
   // Get market overview for a project (shared across all users in the portal)
-  getByProject: publicProcedure
+  getByProject: protectedProcedure
     .input(z.number())
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) return null;
+      await requireLegacyProjectRead(ctx.user, input);
       const db = await getDb();
       if (!db) return null;
       const results = await db.select().from(marketOverview)
@@ -58,59 +24,31 @@ export const marketOverviewRouter = router({
     }),
 
   // Get all market overviews (shared across all users in the portal)
-  getAllByUser: publicProcedure
+  getAllByUser: protectedProcedure
     .query(async ({ ctx }) => {
-      if (!ctx.user) return [];
+      const ids = await deriveAuthorizedProjectIds(ctx.user);
+      if (!ids.length) return [];
       const db = await getDb();
       if (!db) return [];
-      const results = await db.select().from(marketOverview);
+      const results = await db.select().from(marketOverview).where(inArray(marketOverview.projectId, ids));
       return results;
     }),
 
   // Save or update market overview
-  save: publicProcedure
+  save: protectedProcedure
     .input(marketOverviewInput)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(marketOverview)
         .where(eq(marketOverview.projectId, input.projectId));
 
-      const data: any = {
-        residentialStudioPct: input.residentialStudioPct?.toString() ?? '0',
-        residentialStudioAvgArea: input.residentialStudioAvgArea ?? 0,
-        residentialStudioCount: input.residentialStudioCount ?? 0,
-        residential1brPct: input.residential1brPct?.toString() ?? '0',
-        residential1brAvgArea: input.residential1brAvgArea ?? 0,
-        residential1brCount: input.residential1brCount ?? 0,
-        residential2brPct: input.residential2brPct?.toString() ?? '0',
-        residential2brAvgArea: input.residential2brAvgArea ?? 0,
-        residential2brCount: input.residential2brCount ?? 0,
-        residential3brPct: input.residential3brPct?.toString() ?? '0',
-        residential3brAvgArea: input.residential3brAvgArea ?? 0,
-        residential3brCount: input.residential3brCount ?? 0,
-        retailSmallPct: input.retailSmallPct?.toString() ?? '0',
-        retailSmallAvgArea: input.retailSmallAvgArea ?? 0,
-        retailSmallCount: input.retailSmallCount ?? 0,
-        retailMediumPct: input.retailMediumPct?.toString() ?? '0',
-        retailMediumAvgArea: input.retailMediumAvgArea ?? 0,
-        retailMediumCount: input.retailMediumCount ?? 0,
-        retailLargePct: input.retailLargePct?.toString() ?? '0',
-        retailLargeAvgArea: input.retailLargeAvgArea ?? 0,
-        retailLargeCount: input.retailLargeCount ?? 0,
-        officeSmallPct: input.officeSmallPct?.toString() ?? '0',
-        officeSmallAvgArea: input.officeSmallAvgArea ?? 0,
-        officeSmallCount: input.officeSmallCount ?? 0,
-        officeMediumPct: input.officeMediumPct?.toString() ?? '0',
-        officeMediumAvgArea: input.officeMediumAvgArea ?? 0,
-        officeMediumCount: input.officeMediumCount ?? 0,
-        officeLargePct: input.officeLargePct?.toString() ?? '0',
-        officeLargeAvgArea: input.officeLargeAvgArea ?? 0,
-        officeLargeCount: input.officeLargeCount ?? 0,
-        finishingQuality: input.finishingQuality ?? 'ممتاز',
-      };
+      assertJouleUnlocked(existing[0]);
+      const [basis] = await db.select().from(projects).where(eq(projects.id, input.projectId)).limit(1);
+      if (!basis) throw new TRPCError({code:"FORBIDDEN",message:"مصدر المشروع غير متاح"});
+      const data = jouleMarketPatch(input, existing[0], basis);
 
       if (existing[0]) {
         await db.update(marketOverview)
@@ -128,21 +66,22 @@ export const marketOverviewRouter = router({
     }),
 
   // Approve/unapprove the stage
-  toggleApproval: publicProcedure
-    .input(z.object({ projectId: z.number(), approved: z.boolean() }))
+  toggleApproval: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive(), approved: z.boolean() }).strict())
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
       const existing = await db.select().from(marketOverview)
         .where(eq(marketOverview.projectId, input.projectId));
 
+      assertJouleUnlocked(existing[0]);
       if (existing[0]) {
         await db.update(marketOverview)
           .set({
             isApproved: input.approved ? 1 : 0,
-            approvedAt: input.approved ? new Date() : null,
+            approvedAt: input.approved ? new Date().toISOString().slice(0,19).replace("T"," ") : null,
           })
           .where(eq(marketOverview.id, existing[0].id));
       }
@@ -150,12 +89,16 @@ export const marketOverviewRouter = router({
     }),
 
   // Joel AI Smart Report - Generate market overview report
-  generateSmartReport: publicProcedure
-    .input(z.number()) // projectId
+  generateSmartReport: protectedProcedure
+    .input(z.number().int().positive()) // projectId
     .mutation(async ({ ctx, input: projectId }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
+      await requireLegacyProjectOwner(ctx.user, projectId);
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      const [source] = await db.select().from(marketOverview).where(eq(marketOverview.projectId, projectId)).limit(1);
+      assertJouleUnlocked(source);
+      assertJouleSourceNotGenerated(source);
 
       // Get project data (shared portal - no userId filter)
       const projectResults = await db.select().from(projects)
@@ -165,7 +108,7 @@ export const marketOverviewRouter = router({
 
       // Get feasibility study data if exists
       const feasResults = await db.select().from(feasibilityStudies)
-        .where(eq(feasibilityStudies.projectId, projectId));
+        .where(and(eq(feasibilityStudies.projectId, projectId), eq(feasibilityStudies.userId, ctx.user.id)));
       const feasStudy = feasResults[0] || null;
 
       // Get competition pricing data if exists
@@ -181,10 +124,10 @@ export const marketOverviewRouter = router({
       const totalGFA = feasStudy 
         ? ((feasStudy.gfaResidential || 0) + (feasStudy.gfaRetail || 0) + (feasStudy.gfaOffices || 0))
         : parseFloat(String(project.gfaSqft || '0')) || 0;
-      const gfaRes = feasStudy?.gfaResidential || 0;
-      const gfaRet = feasStudy?.gfaRetail || 0;
-      const gfaOff = feasStudy?.gfaOffices || 0;
-      const buaFromFactSheet = project.bua || 0;
+      const gfaRes = Number(project.gfaResidentialSqft ?? 0);
+      const gfaRet = Number(project.gfaRetailSqft ?? 0);
+      const gfaOff = Number(project.gfaOfficesSqft ?? 0);
+      const buaFromFactSheet = Number(project.manualBuaSqft ?? 0);
       const permittedUse = project.permittedUse || feasStudy?.landUse || 'غير محدد';
       const community = feasStudy?.community || project.areaCode || 'غير محدد';
       const plotNumber = feasStudy?.plotNumber || project.plotNumber || 'غير محدد';
@@ -215,9 +158,9 @@ export const marketOverviewRouter = router({
 - سعر الشقة 1 غرفة: ${compPricing.base1brPrice || 'غير محدد'} درهم/قدم²
 - سعر الشقة 2 غرفة: ${compPricing.base2brPrice || 'غير محدد'} درهم/قدم²
 - سعر الشقة 3 غرف: ${compPricing.base3brPrice || 'غير محدد'} درهم/قدم²
-- سعر المحلات الصغيرة: ${compPricing.retailSmallPrice || 'غير محدد'} درهم/قدم²
-- سعر المحلات المتوسطة: ${compPricing.retailMediumPrice || 'غير محدد'} درهم/قدم²
-- سعر المحلات الكبيرة: ${compPricing.retailLargePrice || 'غير محدد'} درهم/قدم²` : '';
+- سعر المحلات الصغيرة: ${compPricing.baseRetailSmallPrice || 'غير محدد'} درهم/قدم²
+- سعر المحلات المتوسطة: ${compPricing.baseRetailMediumPrice || 'غير محدد'} درهم/قدم²
+- سعر المحلات الكبيرة: ${compPricing.baseRetailLargePrice || 'غير محدد'} درهم/قدم²` : '';
 
       const currentDate = new Date();
       const reportDate = `${currentDate.getDate()}/${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
@@ -345,11 +288,15 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
           }),
         ]);
 
-        const smartReport = reportResponse.choices[0]?.message?.content || "لم يتم إنشاء التقرير";
-        const recsRaw = recsResponse.choices[0]?.message?.content || "{}";
+        const smartReport = reportResponse.choices[0]?.message?.content;
+        if (typeof smartReport !== "string" || !smartReport.trim()) throw new Error("استجابة التقرير غير صالحة");
+        const recsRaw = recsResponse.choices[0]?.message?.content;
+        if (typeof recsRaw !== "string") throw new Error("استجابة التوصيات غير صالحة");
         
         // Clean JSON response (remove markdown code blocks if any)
         const cleanJson = recsRaw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+        jouleRecommendationPatch(cleanJson, source, project);
 
         // Ensure existing record or create one
         const existing = await db.select().from(marketOverview)
@@ -360,7 +307,7 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
             .set({
               aiSmartReport: smartReport,
               aiRecommendationsJson: cleanJson,
-              aiReportGeneratedAt: new Date(),
+              aiReportGeneratedAt: new Date().toISOString().slice(0,19).replace("T"," "),
             })
             .where(eq(marketOverview.id, existing[0].id));
         } else {
@@ -369,7 +316,7 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
             projectId: projectId,
             aiSmartReport: smartReport,
             aiRecommendationsJson: cleanJson,
-            aiReportGeneratedAt: new Date(),
+            aiReportGeneratedAt: new Date().toISOString().slice(0,19).replace("T"," "),
           });
         }
 
@@ -379,77 +326,20 @@ BUA: ${buaFromFactSheet > 0 ? buaFromFactSheet.toLocaleString() : 'غير محد
       }
     }),
 
-  // Apply Joel recommendations to fields
-  applyRecommendations: publicProcedure
-    .input(z.object({
-      projectId: z.number(),
-      recommendations: z.string(), // JSON string
-    }))
-    .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-
-      try {
-        const recs = JSON.parse(input.recommendations);
-        
-        const data: any = {};
-        
-        // Apply residential recommendations
-        if (recs.residential) {
-          data.residentialStudioPct = (recs.residential.studio?.recommended ? recs.residential.studio.pct : 0)?.toString() ?? '0';
-          data.residentialStudioAvgArea = recs.residential.studio?.recommended ? recs.residential.studio.avgArea : 0;
-          data.residential1brPct = (recs.residential.oneBr?.recommended ? recs.residential.oneBr.pct : 0)?.toString() ?? '0';
-          data.residential1brAvgArea = recs.residential.oneBr?.recommended ? recs.residential.oneBr.avgArea : 0;
-          data.residential2brPct = (recs.residential.twoBr?.recommended ? recs.residential.twoBr.pct : 0)?.toString() ?? '0';
-          data.residential2brAvgArea = recs.residential.twoBr?.recommended ? recs.residential.twoBr.avgArea : 0;
-          data.residential3brPct = (recs.residential.threeBr?.recommended ? recs.residential.threeBr.pct : 0)?.toString() ?? '0';
-          data.residential3brAvgArea = recs.residential.threeBr?.recommended ? recs.residential.threeBr.avgArea : 0;
-        }
-        
-        // Apply retail recommendations
-        if (recs.retail) {
-          data.retailSmallPct = (recs.retail.hasRetail ? recs.retail.small?.pct : 0)?.toString() ?? '0';
-          data.retailSmallAvgArea = recs.retail.hasRetail ? recs.retail.small?.avgArea : 0;
-          data.retailMediumPct = (recs.retail.hasRetail ? recs.retail.medium?.pct : 0)?.toString() ?? '0';
-          data.retailMediumAvgArea = recs.retail.hasRetail ? recs.retail.medium?.avgArea : 0;
-          data.retailLargePct = (recs.retail.hasRetail ? recs.retail.large?.pct : 0)?.toString() ?? '0';
-          data.retailLargeAvgArea = recs.retail.hasRetail ? recs.retail.large?.avgArea : 0;
-        }
-        
-        // Apply office recommendations
-        if (recs.offices) {
-          data.officeSmallPct = (recs.offices.hasOffices ? recs.offices.small?.pct : 0)?.toString() ?? '0';
-          data.officeSmallAvgArea = recs.offices.hasOffices ? recs.offices.small?.avgArea : 0;
-          data.officeMediumPct = (recs.offices.hasOffices ? recs.offices.medium?.pct : 0)?.toString() ?? '0';
-          data.officeMediumAvgArea = recs.offices.hasOffices ? recs.offices.medium?.avgArea : 0;
-          data.officeLargePct = (recs.offices.hasOffices ? recs.offices.large?.pct : 0)?.toString() ?? '0';
-          data.officeLargeAvgArea = recs.offices.hasOffices ? recs.offices.large?.avgArea : 0;
-        }
-        
-        // Apply finishing quality
-        if (recs.finishingQuality) {
-          data.finishingQuality = recs.finishingQuality;
-        }
-
-        const existing = await db.select().from(marketOverview)
-          .where(eq(marketOverview.projectId, input.projectId));
-
-        if (existing[0]) {
-          await db.update(marketOverview)
-            .set(data)
-            .where(eq(marketOverview.id, existing[0].id));
-        } else {
-          await db.insert(marketOverview).values({
-            userId: ctx.user.id,
-            projectId: input.projectId,
-            ...data,
-          });
-        }
-
-        return { success: true };
-      } catch (error: any) {
-        throw new Error(`فشل في تطبيق التوصيات: ${error.message}`);
-      }
+  // User edits only designated outputs; the generated report/source JSON stays pinned.
+  applyRecommendations: protectedProcedure
+    .input(z.object({projectId:z.number().int().positive(), recommendations:z.string().max(100000)}).strict())
+    .mutation(async ({ctx,input}) => {
+      await requireLegacyProjectOwner(ctx.user,input.projectId);
+      const db=await getDb();
+      if(!db) throw new TRPCError({code:"INTERNAL_SERVER_ERROR"});
+      const [existing]=await db.select().from(marketOverview).where(eq(marketOverview.projectId,input.projectId)).limit(1);
+      assertJouleUnlocked(existing);
+      const [basis]=await db.select().from(projects).where(eq(projects.id,input.projectId)).limit(1);
+      if(!basis) throw new TRPCError({code:"FORBIDDEN"});
+      const data=jouleRecommendationPatch(input.recommendations,existing,basis);
+      if(existing) await db.update(marketOverview).set(data).where(eq(marketOverview.id,existing.id));
+      else await db.insert(marketOverview).values({userId:ctx.user.id,projectId:input.projectId,...data});
+      return {success:true};
     }),
 });

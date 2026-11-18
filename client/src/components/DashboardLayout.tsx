@@ -30,10 +30,11 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { dashboardDestinations } from "../../../shared/comoPresentation";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, ...dashboardDestinations[0] },
+  { icon: Users, ...dashboardDestinations[1] },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

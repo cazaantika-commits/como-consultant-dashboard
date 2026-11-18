@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
+import { TECHNICAL_CRITERIA_DEFINITIONS, EVALUATORS, evaluatorMatrixStatus } from "@shared/consultantContracts";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,27 +11,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
-import { default as Trophy } from "lucide-react/dist/esm/icons/trophy.js";
-import { default as DollarSign } from "lucide-react/dist/esm/icons/dollar-sign.js";
-import { default as Scale } from "lucide-react/dist/esm/icons/scale.js";
-import { default as Brain } from "lucide-react/dist/esm/icons/brain.js";
-import { default as Shield } from "lucide-react/dist/esm/icons/shield.js";
-import { default as AlertTriangle } from "lucide-react/dist/esm/icons/triangle-alert.js";
-import { default as CheckCircle2 } from "lucide-react/dist/esm/icons/circle-check.js";
-import { default as ArrowLeft } from "lucide-react/dist/esm/icons/arrow-left.js";
-import { default as Gavel } from "lucide-react/dist/esm/icons/gavel.js";
-import { default as TrendingUp } from "lucide-react/dist/esm/icons/trending-up.js";
-import { default as TrendingDown } from "lucide-react/dist/esm/icons/trending-down.js";
-import { default as BarChart3 } from "lucide-react/dist/esm/icons/chart-column.js";
-import { default as FileText } from "lucide-react/dist/esm/icons/file-text.js";
-import { default as Sparkles } from "lucide-react/dist/esm/icons/sparkles.js";
-import { default as Crown } from "lucide-react/dist/esm/icons/crown.js";
-import { default as Target } from "lucide-react/dist/esm/icons/target.js";
-import { default as Minus } from "lucide-react/dist/esm/icons/minus.js";
-import { default as ChevronUp } from "lucide-react/dist/esm/icons/chevron-up.js";
-import { default as ChevronDown } from "lucide-react/dist/esm/icons/chevron-down.js";
-import { default as Info } from "lucide-react/dist/esm/icons/info.js";
-import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
+import { Trophy } from "lucide-react";
+import { DollarSign } from "lucide-react";
+import { Scale } from "lucide-react";
+import { Brain } from "lucide-react";
+import { Shield } from "lucide-react";
+import { TriangleAlert as AlertTriangle } from "lucide-react";
+import { CircleCheck as CheckCircle2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { Gavel } from "lucide-react";
+import { TrendingUp } from "lucide-react";
+import { TrendingDown } from "lucide-react";
+import { ChartColumn as BarChart3 } from "lucide-react";
+import { FileText } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { Crown } from "lucide-react";
+import { Target } from "lucide-react";
+import { Minus } from "lucide-react";
+import { ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { Info } from "lucide-react";
+import { LoaderCircle as Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { resolveReturnPath } from "@/lib/returnNavigation";
 
@@ -71,46 +72,40 @@ export default function CommitteeDecisionPage() {
   // Data queries
   const projectsQuery = trpc.projects.list.useQuery();
   const [selectedProjectId, setSelectedProjectId] = useState<string>(() => requestedProjectId && Number(requestedProjectId) > 0 ? requestedProjectId : "");
-  const consultantsQuery = trpc.projects.getConsultants.useQuery(
-    { projectId: Number(selectedProjectId) },
+  const consultantsQuery = trpc.projectConsultants.getByProject.useQuery(
+    Number(selectedProjectId),
     { enabled: !!selectedProjectId }
   );
   const scoresQuery = trpc.evaluatorScores.getByProject.useQuery(
-    { projectId: Number(selectedProjectId) },
+    Number(selectedProjectId),
     { enabled: !!selectedProjectId }
   );
-  const feesQuery = trpc.fees.getByProject.useQuery(
-    { projectId: Number(selectedProjectId) },
+  const feesQuery = trpc.commandCenter.getTrueCostReportData.useQuery(
+    { projectId: Number(selectedProjectId), token: "" },
     { enabled: !!selectedProjectId }
   );
-  const decisionQuery = trpc.committee.getDecision.useQuery(
-    { projectId: Number(selectedProjectId) },
+  const decisionQuery = trpc.committee.getByProject.useQuery(
+    Number(selectedProjectId),
     { enabled: !!selectedProjectId }
   );
-  const criteriaQuery = trpc.evaluatorScores.getCriteria.useQuery();
-  const feeDeviationQuery = trpc.committee.getFeeDeviation.useQuery(
-    { projectId: Number(selectedProjectId) },
-    { enabled: !!selectedProjectId }
-  );
-
   // Mutations
   const utils = trpc.useUtils();
-  const saveDecisionMut = trpc.committee.saveDecision.useMutation({
+  const saveDecisionMut = trpc.committee.upsert.useMutation({
     onSuccess: () => {
-      utils.committee.getDecision.invalidate({ projectId: Number(selectedProjectId) });
+      utils.committee.getByProject.invalidate(Number(selectedProjectId));
       toast.success("تم حفظ القرار بنجاح");
     },
     onError: (err) => toast.error(err.message || "خطأ"),
   });
   const confirmDecisionMut = trpc.committee.confirmDecision.useMutation({
     onSuccess: () => {
-      utils.committee.getDecision.invalidate({ projectId: Number(selectedProjectId) });
+      utils.committee.getByProject.invalidate(Number(selectedProjectId));
       toast.success("تم تأكيد القرار النهائي");
       setShowConfirmDialog(false);
     },
     onError: (err) => toast.error(err.message || "خطأ"),
   });
-  const aiAnalysisMut = trpc.committee.generateAiAnalysis.useMutation({
+  const aiAnalysisMut = trpc.committee.analyzeDecision.useMutation({
     onSuccess: (data) => {
       setAiAnalysis(data.analysis);
       toast.success("تم إنشاء التحليل الذكي");
@@ -138,16 +133,18 @@ export default function CommitteeDecisionPage() {
 
   // Computed data
   const projects = projectsQuery.data || [];
-  const consultants = consultantsQuery.data || [];
+  const consultants = (consultantsQuery.data ?? []).map(consultant => ({ consultantId: consultant.id, consultant }));
   const scores = scoresQuery.data || [];
-  const fees = feesQuery.data || [];
-  const criteria = criteriaQuery.data || [];
+  const fees = (feesQuery.data?.consultants ?? []).map(c => ({ consultantId: c.consultantId, totalFee: c.override?.totalTrueCost ?? c.calc.totalTrueCost }));
+  const criteria = TECHNICAL_CRITERIA_DEFINITIONS;
   const decision = decisionQuery.data;
-  const feeDeviation = feeDeviationQuery.data;
+  const feeValues = fees.map(fee => fee.totalFee).filter(fee => fee > 0);
+  const feeDeviation = { averageFee: feeValues.length ? feeValues.reduce((sum, fee) => sum + fee, 0) / feeValues.length : 0 };
 
   // Calculate technical rankings
   const rankings = useMemo(() => {
     if (!consultants.length || !scores.length || !criteria.length) return [];
+    if (!EVALUATORS.every(name => evaluatorMatrixStatus(scores, consultants.map(c => c.consultantId), name).isComplete)) return [];
 
     return consultants.map((c: any) => {
       const consultantScores = scores.filter((s: any) => s.consultantId === c.consultantId);
@@ -158,15 +155,7 @@ export default function CommitteeDecisionPage() {
       let totalWeight = 0;
 
       // Filter out fee-related criteria
-      const technicalCriteria = criteria.filter((cr: any) =>
-        !cr.name?.toLowerCase().includes("fee") &&
-        !cr.name?.toLowerCase().includes("أتعاب") &&
-        !cr.name?.toLowerCase().includes("سعر") &&
-        !cr.name?.toLowerCase().includes("price") &&
-        !cr.name?.toLowerCase().includes("cost") &&
-        !cr.name?.toLowerCase().includes("تكلفة")
-      );
-
+      const technicalCriteria = criteria;
       technicalCriteria.forEach((criterion: any) => {
         const criterionScores = consultantScores.filter((s: any) => s.criterionId === criterion.id);
         if (criterionScores.length > 0) {
@@ -177,7 +166,7 @@ export default function CommitteeDecisionPage() {
       });
 
       const technicalScore = totalWeight > 0 ? (totalWeightedScore / totalWeight) * 100 : 0;
-      const fee = consultantFee?.totalFee || consultantFee?.fee || 0;
+      const fee = consultantFee?.totalFee || 0;
 
       // Fee zone calculation
       const avgFee = feeDeviation?.averageFee || 0;
@@ -224,13 +213,13 @@ export default function CommitteeDecisionPage() {
   }, [rankings]);
 
   // Load existing decision data
-  useMemo(() => {
+  useEffect(() => {
     if (decision) {
       setSelectedConsultantId(decision.selectedConsultantId?.toString() || "");
       setDecisionBasis(decision.decisionBasis || "");
       setJustification(decision.justification || "");
-      setNegotiationNotes(decision.negotiationNotes || "");
-      setTargetFee(decision.targetFee?.toString() || "");
+      setNegotiationNotes(decision.negotiationConditions || "");
+      setTargetFee(decision.negotiationTarget?.toString() || "");
     }
   }, [decision]);
 
@@ -246,8 +235,9 @@ export default function CommitteeDecisionPage() {
       selectedConsultantId: Number(selectedConsultantId),
       decisionBasis,
       justification,
-      negotiationNotes,
-      targetFee: targetFee ? Number(targetFee) : undefined,
+      negotiationConditions: negotiationNotes,
+      negotiationTarget: targetFee || undefined,
+      decisionType: "selected",
     });
   };
 
@@ -258,12 +248,12 @@ export default function CommitteeDecisionPage() {
 
   const handleGenerateAiAnalysis = () => {
     if (!selectedProjectId) return;
-    aiAnalysisMut.mutate({ projectId: Number(selectedProjectId) });
+    aiAnalysisMut.mutate({ projectId: Number(selectedProjectId), projectName: projects.find(p => p.id === Number(selectedProjectId))?.name ?? "", selectedConsultantName: rankings.find(r => r.consultantId === Number(selectedConsultantId))?.consultantName ?? "", decisionType: "selected", decisionBasis, rankings: rankings.map((r, index) => ({ name: r.consultantName, rank: index + 1, technicalScore: r.technicalScore, totalFee: r.fee })), negotiationTarget: targetFee || undefined, negotiationConditions: negotiationNotes || undefined });
   };
 
   const handlePostDecisionAnalysis = () => {
     if (!selectedProjectId) return;
-    postDecisionAiMut.mutate({ projectId: Number(selectedProjectId) });
+    postDecisionAiMut.mutate({ projectId: Number(selectedProjectId), projectName: projects.find(p => p.id === Number(selectedProjectId))?.name ?? "", selectedConsultantName: rankings.find(r => r.consultantId === Number(selectedConsultantId))?.consultantName ?? "", decisionType: "selected", decisionBasis, justification, rankings: rankings.map((r, index) => ({ name: r.consultantName, rank: index + 1, technicalScore: r.technicalScore, totalFee: r.fee })), negotiationTarget: targetFee || undefined, negotiationConditions: negotiationNotes || undefined });
   };
 
   const selectedProject = projects.find((p: any) => p.id === Number(selectedProjectId));

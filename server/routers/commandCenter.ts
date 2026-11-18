@@ -1,6 +1,9 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { requireLegacyProjectRead, requireLegacyProjectOwner, deriveAuthorizedProjectIds } from "../services/comoLegacyProjectAccess";
+import { requireSessionEvaluator, assertEvaluatorUnlocked, assertCommitteeUnlocked, assertLinkedOffice, assertThreeEvaluatorsReady } from "../services/consultantAccess";
+import { TECHNICAL_CRITERIA, evaluatorMatrixStatus, threeEvaluatorMatrixReady } from "../../shared/consultantContracts";
 import {
   commandCenterMembers,
   commandCenterItems,
@@ -1562,13 +1565,14 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
 
   // ═══ Project-based Evaluation for Command Center ═══
   
-  getProjectsForEvaluation: publicProcedure
+  getProjectsForEvaluation: protectedProcedure
     .input(z.object({ token: z.string() }))
-    .query(async ({ input }) => {
-      await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      const allowedProjectIds = await deriveAuthorizedProjectIds(ctx.user);
+      if (!allowedProjectIds.length) return [];
       const db = await getDb();
       if (!db) return [];
-      const allProjects = await db.select().from(projects).where(eq(projects.isTestProject, 0));
+      const allProjects = await db.select().from(projects).where(and(eq(projects.isTestProject, 0), inArray(projects.id, allowedProjectIds)));
       const allCpaProjects = await db.select().from(cpaProjects);
       const allPc = await db.select().from(projectConsultants);
       const allConsultants = await db.select().from(consultants);
@@ -1586,8 +1590,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const totalCriteria = 9;
         const totalNeeded = pConsultants.length * totalCriteria;
         const evaluatorStatus = evaluatorNames.map(name => {
-          const evScores = projectScores.filter(s => s.evaluatorName === name && s.score !== null);
-          return { name, completed: evScores.length, total: totalNeeded, isComplete: evScores.length >= totalNeeded && totalNeeded > 0 };
+          const matrix = evaluatorMatrixStatus(projectScores, pConsultants.map(c => c.id), name);
+          return { name, completed: matrix.completed, total: matrix.total, isComplete: matrix.isComplete };
         });
         const allEvaluatorsComplete = evaluatorStatus.every(e => e.isComplete);
         const anyEvaluatorStarted = evaluatorStatus.some(e => e.completed > 0);
@@ -1596,14 +1600,14 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         if (decision?.isConfirmed === 1) status = 'decided';
         else if (allEvaluatorsComplete) status = 'evaluation_complete';
         else if (anyEvaluatorStarted || hasFinancial) status = 'in_progress';
-        return { id: p.id, cpaProjectId: cpaProject?.id || null, name: p.name, description: p.description, consultantCount: pConsultants.length, consultants: pConsultants.map(c => ({ id: c.id, name: c.name, nameAr: c.nameAr })), status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
+        return { id: p.id, cpaProjectId: cpaProject?.id || null, name: p.name, description: p.description, consultantCount: pConsultants.length, consultants: pConsultants.map(c => ({ id: c.id, name: c.name, nameAr: c.name })), status, hasFinancial, evaluatorStatus, allEvaluatorsComplete, hasDecision: !!decision, isDecisionConfirmed: decision?.isConfirmed === 1 };
       });
     }),
 
-  getProjectFinancialEvaluation: publicProcedure
+  getProjectFinancialEvaluation: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) return { consultants: [], project: null };
       const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
@@ -1618,14 +1622,6 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const cpaGapMap = new Map<number, number>();
       const cpaSupervisionGapMap = new Map<number, number>();
       try {
-        // Auto-trigger recalculation so any settings change reflects immediately
-        const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
-        const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
-        if (cpaProjectArr && cpaProjectArr.length > 0) {
-          const cpaProjectId = Number(cpaProjectArr[0].id);
-          const { runCalculationEngine } = await import('./cpa');
-          await runCalculationEngine(cpaProjectId).catch(() => {});
-        }
         const gapRows = await db.execute(sql`
           SELECT cpc.consultant_id as consultantId,
                  cer.design_scope_gap_cost as designGapCost,
@@ -1636,8 +1632,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           WHERE cp.project_id = ${input.projectId}
         `);
         const gapArr = Array.isArray(gapRows) ? gapRows[0] : gapRows;
-        if (gapArr && (gapArr as any[]).length > 0) {
-          for (const row of gapArr as any[]) {
+        if (gapArr && (gapArr as unknown as { consultantId: number; designGapCost: number | null; supervisionGapCost: number | null }[]).length > 0) {
+          for (const row of gapArr as unknown as Record<string, unknown>[]) {
             cpaGapMap.set(Number(row.consultantId), Number(row.designGapCost) || 0);
             cpaSupervisionGapMap.set(Number(row.consultantId), Number(row.supervisionGapCost) || 0);
           }
@@ -1676,10 +1672,11 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { project: { id: project.id, name: project.name, bua: project.bua, pricePerSqft: project.pricePerSqft, constructionCost }, consultants: consultantData };
     }),
 
-  getProjectTechnicalEvaluation: publicProcedure
+  getProjectTechnicalEvaluation: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      const member = await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
+      const evaluatorNameFromSession = "UNASSIGNED";
       const db = await getDb();
       if (!db) return null;
       const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
@@ -1691,10 +1688,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
       const totalCriteria = 9;
       const totalNeeded = pcs.length * totalCriteria;
-      const myEvaluatorName = member.memberId;
+      const myEvaluatorName = evaluatorNameFromSession;
       const evaluatorStatus = evaluatorNames.map(name => {
-        const evScores = allScores.filter(s => s.evaluatorName === name && s.score !== null);
-        return { name, nameAr: name === 'sheikh_issa' ? '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' : name === 'wael' ? '\u0648\u0627\u0626\u0644' : '\u0639\u0628\u062f\u0627\u0644\u0631\u062d\u0645\u0646', completed: evScores.length, total: totalNeeded, isComplete: evScores.length >= totalNeeded && totalNeeded > 0 };
+        const matrix = evaluatorMatrixStatus(allScores, pcs.map(pc => pc.consultantId), name);
+        return { name, nameAr: name === 'sheikh_issa' ? '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' : name === 'wael' ? '\u0648\u0627\u0626\u0644' : '\u0639\u0628\u062f\u0627\u0644\u0631\u062d\u0645\u0646', completed: matrix.completed, total: matrix.total, isComplete: matrix.isComplete };
       });
       const allComplete = evaluatorStatus.every(e => e.isComplete);
       const myStatus = evaluatorStatus.find(e => e.name === myEvaluatorName);
@@ -1724,13 +1721,17 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     }),
 
   // اعتماد التقييم الفني - بعد الاعتماد لا يمكن التعديل
-  approveTechnicalEvaluation: publicProcedure
+  approveTechnicalEvaluation: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
+    .mutation(async ({ ctx, input }) => {
+      const evaluatorNameFromSession = await requireSessionEvaluator(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-      const evaluatorName = member.memberId;
+      const evaluatorName = evaluatorNameFromSession;
+      await assertEvaluatorUnlocked(input.projectId, evaluatorName);
+      const offices = await db.select().from(projectConsultants).where(eq(projectConsultants.projectId, input.projectId));
+      const cells = await db.select().from(evaluatorScores).where(eq(evaluatorScores.projectId, input.projectId));
+      if (!evaluatorMatrixStatus(cells, offices.map(row => row.consultantId), evaluatorName).isComplete) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "خلايا التقييم غير مكتملة أو مكررة" });
       // Check if already approved
       const existing = await db.select().from(evaluationApprovals)
         .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)))
@@ -1739,21 +1740,24 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'التقييم معتمد بالفعل ولا يمكن تعديله' });
       }
       if (existing.length > 0) {
-        await db.update(evaluationApprovals).set({ isApproved: 1, approvedAt: new Date() })
+        await db.update(evaluationApprovals).set({ isApproved: 1, approvedAt: new Date().toISOString().slice(0, 19).replace("T", " ") })
           .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)));
       } else {
-        await db.insert(evaluationApprovals).values({ projectId: input.projectId, evaluatorName, isApproved: 1, approvedAt: new Date() });
+        await db.insert(evaluationApprovals).values({ projectId: input.projectId, evaluatorName, isApproved: 1, approvedAt: new Date().toISOString().slice(0, 19).replace("T", " ") });
       }
       return { success: true };
     }),
 
-  submitTechnicalScore: publicProcedure
+  submitTechnicalScore: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number(), consultantId: z.number(), criterionId: z.number(), score: z.number().min(0).max(100) }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
+    .mutation(async ({ ctx, input }) => {
+      const evaluatorNameFromSession = await requireSessionEvaluator(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-      const evaluatorName = member.memberId;
+      const evaluatorName = evaluatorNameFromSession;
+      if (!TECHNICAL_CRITERIA.some(id => id === input.criterionId) || !Number.isInteger(input.score)) throw new TRPCError({ code: "BAD_REQUEST", message: "درجة أو معيار غير صحيح" });
+      await assertLinkedOffice(input.projectId, input.consultantId);
+      await assertEvaluatorUnlocked(input.projectId, evaluatorName);
       // التحقق من الاعتماد - إذا معتمد لا يمكن التعديل
       const approvalCheck = await db.select().from(evaluationApprovals)
         .where(and(eq(evaluationApprovals.projectId, input.projectId), eq(evaluationApprovals.evaluatorName, evaluatorName)))
@@ -1773,10 +1777,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { success: true };
     }),
 
-  getComprehensiveReport: publicProcedure
+  getComprehensiveReport: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) return null;
       const [project] = await db.select().from(projects).where(eq(projects.id, input.projectId));
@@ -1789,10 +1793,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const evaluatorNames = ['sheikh_issa', 'wael', 'abdulrahman'];
       const totalCriteria = 9;
       const totalNeeded = pcs.length * totalCriteria;
-      const allComplete = evaluatorNames.every(name => {
-        const evScores = allScores.filter(s => s.evaluatorName === name && s.score !== null);
-        return evScores.length >= totalNeeded && totalNeeded > 0;
-      });
+      const approvals = await db.select().from(evaluationApprovals).where(eq(evaluationApprovals.projectId, input.projectId));
+      const allComplete = threeEvaluatorMatrixReady(allScores, pcs.map(row => row.consultantId), approvals);
       if (!allComplete) return { isReady: false, project: { id: project.id, name: project.name } };
       const constructionCost = (project.bua || 0) * (project.pricePerSqft || 0);
 
@@ -1800,14 +1802,6 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const comprehensiveDesignGapMap = new Map<number, number>();
       const comprehensiveSupervisionGapMap = new Map<number, number>();
       try {
-        // Auto-trigger recalculation so any settings change reflects immediately
-        const cpaProjectRowsComp = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
-        const cpaProjectArrComp = Array.isArray(cpaProjectRowsComp) ? (cpaProjectRowsComp[0] as any[]) : (cpaProjectRowsComp as any[]);
-        if (cpaProjectArrComp && cpaProjectArrComp.length > 0) {
-          const cpaProjectIdComp = Number(cpaProjectArrComp[0].id);
-          const { runCalculationEngine } = await import('./cpa');
-          await runCalculationEngine(cpaProjectIdComp).catch(() => {});
-        }
         const gapRows2 = await db.execute(sql`
           SELECT cpc.consultant_id as consultantId,
                  cer.design_scope_gap_cost as designGapCost,
@@ -1818,8 +1812,8 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           WHERE cp.project_id = ${input.projectId}
         `);
         const gapArr2 = Array.isArray(gapRows2) ? gapRows2[0] : gapRows2;
-        if (gapArr2 && (gapArr2 as any[]).length > 0) {
-          for (const row of gapArr2 as any[]) {
+        if (gapArr2 && (gapArr2 as unknown as { consultantId: number; designGapCost: number | null; supervisionGapCost: number | null }[]).length > 0) {
+          for (const row of gapArr2 as unknown as Record<string, unknown>[]) {
             comprehensiveDesignGapMap.set(Number(row.consultantId), Number(row.designGapCost) || 0);
             comprehensiveSupervisionGapMap.set(Number(row.consultantId), Number(row.supervisionGapCost) || 0);
           }
@@ -1872,10 +1866,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { isReady: true, project: { id: project.id, name: project.name }, results };
     }),
 
-  getProjectCommitteeDecision: publicProcedure
+  getProjectCommitteeDecision: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) return null;
       const [decision] = await db.select().from(committeeDecisions).where(eq(committeeDecisions.projectId, input.projectId));
@@ -1883,10 +1877,13 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { decision: decision || null, aiScores };
     }),
 
-  saveCommitteeDecision: publicProcedure
+  saveCommitteeDecision: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number(), selectedConsultantId: z.number().optional(), decisionType: z.string(), decisionBasis: z.string().optional(), justification: z.string().optional(), committeeNotes: z.string().optional(), negotiationTarget: z.string().optional(), negotiationConditions: z.string().optional(), aiAnalysis: z.string().optional(), aiRecommendation: z.string().optional() }))
-    .mutation(async ({ input }) => {
-      await verifyToken(input.token);
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
+      await assertCommitteeUnlocked(input.projectId);
+      if (input.selectedConsultantId !== undefined) await assertLinkedOffice(input.projectId, input.selectedConsultantId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
       const updateData: any = { selectedConsultantId: input.selectedConsultantId || null, decisionType: input.decisionType, justification: input.justification || null, committeeNotes: input.committeeNotes || null };
@@ -1904,15 +1901,17 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { success: true };
     }),
 
-  confirmDecision: publicProcedure
+  confirmDecision: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (member.memberId !== 'sheikh_issa') throw new TRPCError({ code: "FORBIDDEN", message: "\u0641\u0642\u0637 \u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649 \u064a\u0645\u0643\u0646\u0647 \u062a\u0623\u0643\u064a\u062f \u0627\u0644\u0642\u0631\u0627\u0631" });
+    .mutation(async ({ ctx, input }) => {
+      const evaluator = await requireSessionEvaluator(ctx.user, input.projectId);
+      if (evaluator !== "sheikh_issa") throw new TRPCError({ code: "FORBIDDEN", message: "تأكيد هذا المسار يتطلب هوية الشيخ عيسى المعينة" });
+      await assertCommitteeUnlocked(input.projectId);
+      await assertThreeEvaluatorsReady(input.projectId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      await db.update(committeeDecisions).set({ isConfirmed: 1, confirmedAt: new Date(), confirmedBy: '\u0627\u0644\u0634\u064a\u062e \u0639\u064a\u0633\u0649' }).where(eq(committeeDecisions.projectId, input.projectId));
-      await db.insert(commandCenterNotifications).values(['abdulrahman', 'wael', 'sheikh_issa'].map(m => ({ memberId: m, title: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u0644\u0644\u062c\u0646\u0629', message: '\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0642\u0631\u0627\u0631 \u0627\u062e\u062a\u064a\u0627\u0631 \u0627\u0644\u0627\u0633\u062a\u0634\u0627\u0631\u064a \u0644\u0644\u0645\u0634\u0631\u0648\u0639', type: 'evaluation' as const })));
+      await db.update(committeeDecisions).set({ isConfirmed: 1, confirmedAt: new Date().toISOString().slice(0, 19).replace("T", " "), confirmedBy: `session:${ctx.user.id}:${evaluator}` }).where(eq(committeeDecisions.projectId, input.projectId));
+      await db.insert(commandCenterNotifications).values(['abdulrahman', 'wael', 'sheikh_issa'].map(memberId => ({ memberId, title: 'تم حفظ قرار اللجنة', notificationType: 'evaluation' as const })));
       return { success: true };
     }),
 
@@ -1977,16 +1976,16 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       return { sent };
     }),
 
-  getDesignScopeReport: publicProcedure
+  getDesignScopeReport: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      await verifyToken(input.token);
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
       // 1. Find CPA project
       const cpaProjectRows = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
-      const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as any[]) : (cpaProjectRows as any[]);
+      const cpaProjectArr = Array.isArray(cpaProjectRows) ? (cpaProjectRows[0] as unknown as Record<string, unknown>[]) : (cpaProjectRows as unknown as Record<string, unknown>[]);
       if (!cpaProjectArr || cpaProjectArr.length === 0) {
         return { scopeItems: [], consultants: [], itemGaps: {}, designFees: {}, designGaps: {}, coverageStatus: {} };
       }
@@ -1996,12 +1995,10 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         WHERE project_id = ${input.projectId} AND status IN ('DRAFT', 'APPROVED')
         ORDER BY revision_no DESC, id DESC LIMIT 1
       `);
-      const requirementSetArr = Array.isArray(requirementSetRows) ? (requirementSetRows[0] as any[]) : (requirementSetRows as any[]);
+      const requirementSetArr = Array.isArray(requirementSetRows) ? (requirementSetRows[0] as unknown as Record<string, unknown>[]) : (requirementSetRows as unknown as Record<string, unknown>[]);
       const requirementSetId = requirementSetArr?.[0]?.id ? Number(requirementSetArr[0].id) : null;
 
       // 2. Re-run calculation engine so data is fresh
-      const { runCalculationEngine } = await import('./cpa');
-      await runCalculationEngine(cpaProjectId).catch(() => {});
 
       // 3. Design items selected for this project's independent scope.
       const scopeRows = await db.execute(sql`
@@ -2018,7 +2015,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
           AND (ss.code IS NULL OR ss.code != 'CONTRACT')
         ORDER BY si.item_number ASC, si.sort_order ASC
       `);
-      const scopeArr = Array.isArray(scopeRows) ? (scopeRows[0] as any[]) : (scopeRows as any[]);
+      const scopeArr = Array.isArray(scopeRows) ? (scopeRows[0] as unknown as Record<string, unknown>[]) : (scopeRows as unknown as Record<string, unknown>[]);
 
       // 4. Consultants with their evaluation results (calculationNotes has per-item gap costs)
       const consultantRows = await db.execute(sql`
@@ -2031,7 +2028,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         WHERE pc.cpa_project_id = ${cpaProjectId}
         ORDER BY cm.legal_name ASC
       `);
-      const consultantArr = Array.isArray(consultantRows) ? (consultantRows[0] as any[]) : (consultantRows as any[]);
+      const consultantArr = Array.isArray(consultantRows) ? (consultantRows[0] as unknown as Record<string, unknown>[]) : (consultantRows as unknown as Record<string, unknown>[]);
 
       // 5. Coverage status per consultant per item
       const coverageRows = await db.execute(sql`
@@ -2040,7 +2037,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         JOIN cpa_project_consultants pc ON pc.id = csc.project_consultant_id
         WHERE pc.cpa_project_id = ${cpaProjectId}
       `);
-      const coverageArr = Array.isArray(coverageRows) ? (coverageRows[0] as any[]) : (coverageRows as any[]);
+      const coverageArr = Array.isArray(coverageRows) ? (coverageRows[0] as unknown as Record<string, unknown>[]) : (coverageRows as unknown as Record<string, unknown>[]);
 
       // Build coverage map: pcId -> scopeItemId -> status
       const coverageMap: Record<number, Record<number, string>> = {};
@@ -2048,7 +2045,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         const pcId = Number(row.project_consultant_id);
         const siId = Number(row.scope_item_id);
         if (!coverageMap[pcId]) coverageMap[pcId] = {};
-        coverageMap[pcId][siId] = row.coverage_status;
+        coverageMap[pcId][siId] = String(row.coverage_status);
       }
 
       // Build per-item gap cost map from calculationNotes.scopeGaps
@@ -2069,7 +2066,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         // Parse calculationNotes to get per-item gap costs
         if (c.calculation_notes) {
           try {
-            const notes = JSON.parse(c.calculation_notes);
+            const notes = JSON.parse(String(c.calculation_notes));
             for (const gap of (notes.scopeGaps || [])) {
               itemGapsByCode[consultantId][gap.itemCode] = Number(gap.gapCost) || 0;
             }
@@ -2097,7 +2094,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
             itemGaps[consultantId][siId] = null; // null = included (show ✓)
           } else {
             // Try to get gap cost from calculationNotes first, then reference_cost
-            const fromNotes = itemGapsByCode[consultantId][item.code];
+            const fromNotes = itemGapsByCode[consultantId][String(item.code)];
             const fromRef = Number(item.reference_cost) || 0;
             itemGaps[consultantId][siId] = fromNotes !== undefined ? fromNotes : fromRef;
           }
@@ -2126,11 +2123,11 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     }),
 
   // ─── Supervision Scope Report ───────────────────────────────────────────
-  getSupervisionScopeReport: publicProcedure
+  getSupervisionScopeReport: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const { token, projectId } = input;
-      await verifyToken(token);
+      await requireLegacyProjectRead(ctx.user, projectId);
       const db = await getDb();
       if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database not available' });
 
@@ -2151,8 +2148,6 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
       const requirementSetId = requirementSets[0]?.id ? Number(requirementSets[0].id) : null;
 
       // Re-run calculation engine so data is fresh
-      const { runCalculationEngine } = await import('./cpa');
-      await runCalculationEngine(cpaProjectId).catch(() => {});
 
       // 2. Get supervision roles selected for this project's independent scope.
       const rolesArr = toRows(await db.execute(
@@ -2191,7 +2186,7 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
         roleGaps[cid] = {};
 
         if (c.calculation_notes) {
-          const cn = typeof c.calculation_notes === 'string' ? JSON.parse(c.calculation_notes) : c.calculation_notes;
+          const cn = typeof c.calculation_notes === 'string' ? JSON.parse(String(c.calculation_notes)) : c.calculation_notes;
           const gaps: any[] = cn.supervisionGaps || [];
           const gapMap: Record<string, number> = {};
           for (const g of gaps) {
@@ -2224,256 +2219,36 @@ ${recentItems.map(i => `- [${i.bubbleType}] ${i.title}`).join("\n")}
     }),
 
   // ═══ TRUE COST REPORT — EDITABLE ═══
-  getTrueCostReportData: publicProcedure
+  getTrueCostReportData: protectedProcedure
     .input(z.object({ token: z.string(), projectId: z.number() }))
-    .query(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-
-      // Get CPA project
-      const [cpaProjects] = await db.execute(sql`SELECT * FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`) as any[];
-      if (!cpaProjects || cpaProjects.length === 0) return null;
-      const cpaProject = cpaProjects[0];
-      const cpaProjectId = Number(cpaProject.id);
-      const totalCC = Number(cpaProject.bua_sqft || 0) * Number(cpaProject.construction_cost_per_sqft || 0);
-      const durationMonths = Number(cpaProject.duration_months || 0);
-
-      const [requirementSetRows] = await db.execute(sql`
-        SELECT id, title FROM project_consultant_requirement_sets
-        WHERE project_id = ${input.projectId} AND status IN ('DRAFT', 'APPROVED')
-        ORDER BY revision_no DESC, id DESC LIMIT 1
-      `) as any[];
-      const requirementSetId = requirementSetRows?.[0]?.id ? Number(requirementSetRows[0].id) : null;
-      const scopeSourceLabel = requirementSetRows?.[0]?.title || 'نطاق خاص بالمشروع';
-
-      // Get evaluation results with consultant info (deduplicated - latest per consultant)
-      const [results] = await db.execute(sql`
-        SELECT er.*, er.eval_rank as result_rank,
-               pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
-               pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage,
-               pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_fee_percentage,
-               pc.supervision_stated_duration_months, pc.supervision_submitted,
-               pc.proposal_reference, pc.proposal_date, pc.id as pc_id
-        FROM cpa_evaluation_results er
-        INNER JOIN (
-          SELECT project_consultant_id, MAX(id) as max_id
-          FROM cpa_evaluation_results
-          GROUP BY project_consultant_id
-        ) latest ON er.id = latest.max_id
-        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
-        JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
-        WHERE pc.cpa_project_id = ${cpaProjectId}
-        ORDER BY COALESCE(er.eval_rank, 999), er.total_true_cost
-      `) as any[];
-
-      // Get overrides
-      const [overrides] = await db.execute(sql`
-        SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${cpaProjectId}
-      `) as any[];
-      const overrideMap: Record<number, any> = {};
-      for (const o of (overrides || [])) {
-        overrideMap[Number(o.project_consultant_id)] = o;
-      }
-
-      // Get approval status
-      const [approvalRows] = await db.execute(sql`
-        SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${cpaProjectId} LIMIT 1
-      `) as any[];
-      const approval = approvalRows?.[0] || null;
-
-      // Get the supervision baseline selected for this project only.
-      const [baselineRows] = await db.execute(sql`
-        SELECT sr.id as supervision_role_id,
-               COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct,
-               sr.code, sr.label,
-               COALESCE(pcr.gap_value_aed, sr.monthly_rate_aed) as monthly_rate_aed
-        FROM project_consultant_requirements pcr
-        JOIN consultant_requirement_reference_items ref
-          ON ref.id = pcr.reference_item_id AND ref.source_type = 'LEGACY_SUPERVISION'
-        JOIN cpa_supervision_roles sr ON sr.id = ref.legacy_supervision_role_id
-        WHERE pcr.requirement_set_id = ${requirementSetId}
-          AND pcr.is_required = 1 AND sr.is_active = 1
-        ORDER BY pcr.sort_order, pcr.id
-      `) as any[];
-
-      // Build consultant data
-      const consultants = (results || []).map((r: any) => {
-        const pcId = Number(r.pc_id);
-        const override = overrideMap[pcId];
-        return {
-          pcId,
-          consultantId: Number(r.consultant_id),
-          name: r.trade_name || r.legal_name,
-          code: r.consultant_code,
-          designMethod: r.design_fee_method,
-          designPct: Number(r.design_fee_percentage) || 0,
-          supervisionMethod: r.supervision_fee_method,
-          supervisionPct: Number(r.supervision_fee_percentage) || 0,
-          supervisionSubmitted: !!r.supervision_submitted,
-          statedDuration: r.supervision_stated_duration_months ? Number(r.supervision_stated_duration_months) : null,
-          canRank: r.can_rank === 1,
-          resultRank: r.result_rank,
-          // Calculated values
-          calc: {
-            quotedDesignFee: Number(r.quoted_design_fee) || 0,
-            designScopeGap: Number(r.design_scope_gap_cost) || 0,
-            trueDesignFee: Number(r.true_design_fee) || 0,
-            quotedSupervisionFee: Number(r.quoted_supervision_fee) || 0,
-            supervisionGap: Number(r.supervision_gap_cost) || 0,
-            adjustedSupervisionFee: Number(r.adjusted_supervision_fee) || 0,
-            totalTrueCost: Number(r.total_true_cost) || 0,
-          },
-          // Override values (null = use calculated)
-          override: override ? {
-            quotedDesignFee: override.quoted_design_fee_override != null ? Number(override.quoted_design_fee_override) : null,
-            designScopeGap: override.design_scope_gap_override != null ? Number(override.design_scope_gap_override) : null,
-            trueDesignFee: override.true_design_fee_override != null ? Number(override.true_design_fee_override) : null,
-            quotedSupervisionFee: override.quoted_supervision_fee_override != null ? Number(override.quoted_supervision_fee_override) : null,
-            supervisionGap: override.supervision_gap_override != null ? Number(override.supervision_gap_override) : null,
-            adjustedSupervisionFee: override.adjusted_supervision_fee_override != null ? Number(override.adjusted_supervision_fee_override) : null,
-            totalTrueCost: override.total_true_cost_override != null ? Number(override.total_true_cost_override) : null,
-            notes: override.notes || null,
-          } : null,
-        };
-      });
-
-      return {
-        cpaProjectId,
-        projectName: cpaProject.name,
-        bua: Number(cpaProject.bua_sqft) || 0,
-        constructionCost: totalCC,
-        durationMonths,
-        category: scopeSourceLabel,
-        consultants,
-        supervisionBaseline: (baselineRows || []).map((b: any) => ({
-          roleId: Number(b.supervision_role_id),
-          code: b.code,
-          label: b.label,
-          monthlyRate: Number(b.monthly_rate_aed) || 0,
-          requiredPct: Number(b.required_allocation_pct) || 0,
-        })),
-        approval: approval ? {
-          isApproved: !!approval.is_approved,
-          approvedBy: approval.approved_by,
-          approvedAt: approval.approved_at,
-          notes: approval.approval_notes,
-        } : null,
-      };
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const result = await db.execute(sql`SELECT id FROM cpa_projects WHERE project_id = ${input.projectId} LIMIT 1`);
+      const rows = result[0] as unknown as { id: number }[];
+      if (!rows[0]) return null;
+      const { cpaRouter } = await import("./cpa");
+      return cpaRouter.createCaller(ctx).evaluation.getFullReport({ cpaProjectId: rows[0].id });
     }),
 
-  saveTrueCostOverride: publicProcedure
-    .input(z.object({
-      token: z.string(),
-      cpaProjectId: z.number(),
-      projectConsultantId: z.number(),
-      field: z.enum(['quotedDesignFee', 'designScopeGap', 'trueDesignFee', 'quotedSupervisionFee', 'supervisionGap', 'adjustedSupervisionFee', 'totalTrueCost']),
-      value: z.number().nullable(),
-      notes: z.string().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-
-      // Check if report is already approved
-      const [approvalRows] = await db.execute(sql`
-        SELECT is_approved FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1
-      `) as any[];
-      if (approvalRows?.[0]?.is_approved) {
-        throw new TRPCError({ code: 'FORBIDDEN', message: 'التقرير معتمد ولا يمكن تعديله' });
-      }
-
-      const fieldMap: Record<string, string> = {
-        quotedDesignFee: 'quoted_design_fee_override',
-        designScopeGap: 'design_scope_gap_override',
-        trueDesignFee: 'true_design_fee_override',
-        quotedSupervisionFee: 'quoted_supervision_fee_override',
-        supervisionGap: 'supervision_gap_override',
-        adjustedSupervisionFee: 'adjusted_supervision_fee_override',
-        totalTrueCost: 'total_true_cost_override',
-      };
-      const col = fieldMap[input.field];
-      if (!col) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid field' });
-
-      // Upsert override
-      const [existing] = await db.execute(sql`
-        SELECT id FROM cpa_true_cost_report_overrides
-        WHERE cpa_project_id = ${input.cpaProjectId} AND project_consultant_id = ${input.projectConsultantId}
-        LIMIT 1
-      `) as any[];
-
-      if (existing && existing.length > 0) {
-        // Dynamic column update using raw SQL with safe interpolation
-        await db.execute(sql`UPDATE cpa_true_cost_report_overrides SET ${sql.raw(col)} = ${input.value} WHERE id = ${existing[0].id}`);
-      } else {
-        await db.execute(sql`INSERT INTO cpa_true_cost_report_overrides (cpa_project_id, project_consultant_id, ${sql.raw(col)}) VALUES (${input.cpaProjectId}, ${input.projectConsultantId}, ${input.value})`);
-      }
-      return { success: true };
+  saveTrueCostOverride: protectedProcedure
+    .input(z.object({ token: z.string(), cpaProjectId: z.number(), projectConsultantId: z.number(), field: z.enum(['quotedDesignFee', 'designScopeGap', 'trueDesignFee', 'quotedSupervisionFee', 'supervisionGap', 'adjustedSupervisionFee', 'totalTrueCost']), value: z.number().nullable(), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const { cpaRouter } = await import("./cpa");
+      return cpaRouter.createCaller(ctx).evaluation.saveOverride(input);
     }),
-
-  approveTrueCostReport: publicProcedure
-    .input(z.object({
-      token: z.string(),
-      cpaProjectId: z.number(),
-      approvedBy: z.string(),
-      notes: z.string().optional(),
-    }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-
-      // Build snapshot of current report data
-      const [results] = await db.execute(sql`
-        SELECT er.*, pc.consultant_id, cm.trade_name, cm.legal_name, cm.code as consultant_code
-        FROM cpa_evaluation_results er
-        JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
-        JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
-        WHERE pc.cpa_project_id = ${input.cpaProjectId}
-        ORDER BY COALESCE(er.eval_rank, 999)
-      `) as any[];
-      const [overrides] = await db.execute(sql`
-        SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}
-      `) as any[];
-
-      const snapshot = JSON.stringify({ results, overrides, approvedAt: new Date().toISOString() });
-
-      // Upsert approval
-      const [existing] = await db.execute(sql`
-        SELECT id FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1
-      `) as any[];
-
-      if (existing && existing.length > 0) {
-        await db.execute(sql`
-          UPDATE cpa_true_cost_report_approval
-          SET is_approved = 1, approved_by = ${input.approvedBy}, approved_at = NOW(),
-              approval_notes = ${input.notes || null}, report_snapshot = ${snapshot}
-          WHERE id = ${existing[0].id}
-        `);
-      } else {
-        await db.execute(sql`
-          INSERT INTO cpa_true_cost_report_approval (cpa_project_id, is_approved, approved_by, approved_at, approval_notes, report_snapshot)
-          VALUES (${input.cpaProjectId}, 1, ${input.approvedBy}, NOW(), ${input.notes || null}, ${snapshot})
-        `);
-      }
-      return { success: true };
+  approveTrueCostReport: protectedProcedure
+    .input(z.object({ token: z.string(), cpaProjectId: z.number(), approvedBy: z.string(), notes: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      const { cpaRouter } = await import("./cpa");
+      return cpaRouter.createCaller(ctx).evaluation.approveReport(input);
     }),
-
-  revokeTrueCostApproval: publicProcedure
+  revokeTrueCostApproval: protectedProcedure
     .input(z.object({ token: z.string(), cpaProjectId: z.number() }))
-    .mutation(async ({ input }) => {
-      const member = await verifyToken(input.token);
-      if (!member) throw new TRPCError({ code: 'UNAUTHORIZED' });
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB unavailable' });
-      await db.execute(sql`
-        UPDATE cpa_true_cost_report_approval SET is_approved = 0, approved_at = NULL WHERE cpa_project_id = ${input.cpaProjectId}
-      `);
-      return { success: true };
+    .mutation(async ({ ctx, input }) => {
+      const { cpaRouter } = await import("./cpa");
+      return cpaRouter.createCaller(ctx).evaluation.revokeApproval(input);
     }),
   getApprovedProjectChanges: publicProcedure
     .input(z.object({ token: z.string() }))

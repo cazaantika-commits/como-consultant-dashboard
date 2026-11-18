@@ -47,6 +47,12 @@ function parseBusinessDate(value: unknown): number | null {
 }
 
 export async function getProjectExecutiveFile(input: { userId: number; projectId: number }) {
+  if (!Number.isSafeInteger(input.userId) || input.userId <= 0) {
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "تسجيل الدخول مطلوب" });
+  }
+  if (!Number.isSafeInteger(input.projectId) || input.projectId <= 0) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "معرّف المشروع غير صحيح" });
+  }
   const db = await getDb();
   if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
   const access = await requireProjectAccess(db, input.projectId, input.userId, "read");
@@ -59,6 +65,7 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
     decisionsResult,
     communicationsResult,
     meetingsResult,
+    correspondenceTotalsResult,
     partiesResult,
     partyContactsResult,
     partyWorkFilesResult,
@@ -138,7 +145,9 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
         c.from_text AS fromText, c.to_text AS toText, c.occurred_at AS occurredAt
       FROM como_next_communications c
       JOIN como_next_work_files wf ON wf.id = c.work_file_id AND wf.project_id = c.project_id
+      LEFT JOIN como_next_import_batches b ON b.batch_id = wf.import_batch_id
       WHERE c.project_id = ${input.projectId}
+        AND (wf.import_batch_id IS NULL OR b.batch_status = 'promoted')
       ORDER BY c.occurred_at DESC, c.id DESC LIMIT 12
     `),
     db.execute(sql`
@@ -149,8 +158,23 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
         (SELECT minutes.minutes_status FROM como_next_meeting_minutes minutes WHERE minutes.meeting_id = m.id ORDER BY minutes.version DESC LIMIT 1) AS latestMinutesStatus
       FROM como_next_meetings m
       JOIN como_next_work_files wf ON wf.id = m.work_file_id AND wf.project_id = m.project_id
+      LEFT JOIN como_next_import_batches b ON b.batch_id = wf.import_batch_id
       WHERE m.project_id = ${input.projectId}
+        AND (wf.import_batch_id IS NULL OR b.batch_status = 'promoted')
       ORDER BY m.starts_at DESC, m.id DESC LIMIT 12
+    `),
+    db.execute(sql`
+      SELECT
+        (SELECT COUNT(*) FROM como_next_communications c
+          JOIN como_next_work_files wf ON wf.id = c.work_file_id AND wf.project_id = c.project_id
+          LEFT JOIN como_next_import_batches b ON b.batch_id = wf.import_batch_id
+          WHERE c.project_id = ${input.projectId}
+            AND (wf.import_batch_id IS NULL OR b.batch_status = 'promoted')) AS communicationTotal,
+        (SELECT COUNT(*) FROM como_next_meetings m
+          JOIN como_next_work_files wf ON wf.id = m.work_file_id AND wf.project_id = m.project_id
+          LEFT JOIN como_next_import_batches b ON b.batch_id = wf.import_batch_id
+          WHERE m.project_id = ${input.projectId}
+            AND (wf.import_batch_id IS NULL OR b.batch_status = 'promoted')) AS meetingTotal
     `),
     db.execute(sql`
       SELECT party.id, pp.id AS projectPartyId, party.display_name AS displayName,
@@ -328,6 +352,9 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
   const actions = rows<any>(actionsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId) }));
   const decisions = rows<any>(decisionsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId) }));
   const communications = rows<any>(communicationsResult).map(row => ({ ...row, id: asNumber(row.id), workFileId: asNumber(row.workFileId), projectPartyId: row.projectPartyId ? asNumber(row.projectPartyId) : null }));
+  const totals = rows<{ communicationTotal: unknown; meetingTotal: unknown }>(correspondenceTotalsResult)[0];
+  const communicationTotal = asNumber(totals?.communicationTotal);
+  const meetingTotal = asNumber(totals?.meetingTotal);
   const meetings = rows<any>(meetingsResult).map(row => ({
     ...row,
     id: asNumber(row.id),
@@ -486,13 +513,18 @@ export async function getProjectExecutiveFile(input: { userId: number; projectId
       activeWorkFiles: activeWorkFiles.length,
       openActions: actions.length,
       pendingDecisions: decisions.filter(row => ["required", "deferred"].includes(row.decisionStatus)).length,
-      communications: communications.length,
-      meetings: meetings.length,
+      communications: communicationTotal,
+      meetings: meetingTotal,
       reviewedMemory: reviewedMemory.length,
       activeParties: parties.filter(row => row.relationshipStatus === "active").length,
       contracts: contracts.length,
       deliverableExceptions: deliverables.filter(row => row.isException).length,
-      lifecycleExceptions: scheduleExceptions.length,
+      lifecycleExceptions: lifecycleServices.filter(row => row.isException).length,
+    },
+    recentWindow: {
+      limit: 12,
+      communications: { returned: communications.length, total: communicationTotal, hasMore: communicationTotal > communications.length },
+      meetings: { returned: meetings.length, total: meetingTotal, hasMore: meetingTotal > meetings.length },
     },
     workFiles,
     actions,

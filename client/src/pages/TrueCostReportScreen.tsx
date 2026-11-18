@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
-import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
-import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
-import { default as Check } from "lucide-react/dist/esm/icons/check.js";
-import { default as X } from "lucide-react/dist/esm/icons/x.js";
-import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
-import { default as Lock } from "lucide-react/dist/esm/icons/lock.js";
-import { default as Unlock } from "lucide-react/dist/esm/icons/lock-open.js";
-import { default as FileBarChart2 } from "lucide-react/dist/esm/icons/file-chart-column.js";
-import { default as Save } from "lucide-react/dist/esm/icons/save.js";
-import { default as Printer } from "lucide-react/dist/esm/icons/printer.js";
+import { ArrowRight } from "lucide-react";
+import { LoaderCircle as Loader2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { Check } from "lucide-react";
+import { X } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
+import { LockOpen as Unlock } from "lucide-react";
+import { FileChartColumn as FileBarChart2 } from "lucide-react";
+import { Save } from "lucide-react";
+import { Printer } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -111,12 +111,13 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
 
   const report = reportQuery.data;
   const isApproved = report.approval?.isApproved;
-  const calculatedConstructionCost = dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
+  const calculatedConstructionCost = isApproved ? report.constructionCost : dynamicBUA && dynamicPricePerSqft ? dynamicBUA * dynamicPricePerSqft : report.constructionCost;
 
   // Helper: Calculate value based on method and dynamic construction cost
   // RULE: For PERCENTAGE-based consultants, ALL fee fields are recomputed from
   //       calculatedConstructionCost. Overrides are completely ignored for these fields.
   const calculateDynamicValue = (c: typeof report.consultants[0], field: FieldKey): number => {
+    if (isApproved) return c.override?.[field] ?? c.calc[field];
     const isDesignPct = c.designMethod === 'PERCENTAGE';
     const isSupPct = c.supervisionMethod === 'PERCENTAGE';
 
@@ -164,6 +165,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
 
   // Recalculate totals based on effective values
   const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
+    if (isApproved) return c.override?.totalTrueCost ?? c.calc.totalTrueCost;
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
     // For PERCENTAGE-based consultants: ALWAYS recompute total from dynamic values
@@ -317,7 +319,7 @@ export default function TrueCostReportScreen({ projectId, onBack }: { projectId:
         <div data-hide-print className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-4">
           <div className="flex items-center gap-2 mb-3">
             <Save className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-semibold text-blue-900">متغيرات ديناميكية — عدّل القيم وستتحدث الأرقام تلقائياً</h3>
+            <h3 className="text-sm font-semibold text-blue-900">سيناريو مسودة محلي — لا يغير المصدر أو لقطة التقرير المعتمد</h3>
           </div>
           <div className="grid grid-cols-4 gap-3">
             <div>

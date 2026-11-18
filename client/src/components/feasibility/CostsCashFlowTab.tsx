@@ -291,21 +291,34 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
   const updateAvg = useCallback((key: string, val: number) => { setAvgAreas(prev => ({ ...prev, [key]: val })); setDirty(true); }, []);
   const updatePrice = useCallback((key: string, val: number) => { setBasePrices(prev => ({ ...prev, [key]: val })); setDirty(true); }, []);
 
-  const handleSave = () => {
-    if (!projectId) return;
-    const moPayload: any = { projectId, finishingQuality: "standard" };
-    UNIT_ROWS.forEach(row => {
-      const count = unitCounts[row.key] || 0;
-      const avg = avgAreas[row.key] || DEFAULT_AVG_AREAS[row.pctKey]?.defaultArea || 0;
-      const sellable = getSellable(row.cat);
-      const pct = sellable > 0 ? ((count * avg) / sellable) * 100 : 0;
-      moPayload[row.pctKey] = pct;
-      moPayload[row.avgKey] = avg;
-      moPayload[row.countKey] = count; // Save count directly to avoid round-trip precision loss
-    });
-    moSaveMutation.mutate(moPayload);
+  const handleSave = async () => {
+    if (!projectId || !project || moQuery.isError || cpQuery.isError) return;
+    if (moQuery.data?.isApproved === 1 || cpQuery.data?.isApproved === 1) {
+      toast.error("المصدر المعتمد مقفل ولا يجوز تعديله"); return;
+    }
+    const moPayload: Parameters<typeof moSaveMutation.mutate>[0] = { projectId };
+    // Do not invent or overwrite quality while saving another designated output.
+    const quality = moQuery.data?.finishingQuality;
+    if (quality === "ممتاز" || quality === "جيد" || quality === "عادي") moPayload.finishingQuality = quality;
+    for (const cat of CATS) {
+      const sellable = getSellable(cat.key);
+      const rows = rowResults.filter(row => row.cat === cat.key);
+      const total = rows.reduce((sum, row) => sum + row.pct, 0);
+      if (sellable > 0 && Math.abs(total - 100) > 0.000001) {
+        toast.error("أكمل نسب الأنواع المناسبة إلى 100% قبل الحفظ"); return;
+      }
+      for (const row of rows) {
+        Object.assign(moPayload, {
+          [row.pctKey]: sellable > 0 ? row.pct : 0,
+          [row.avgKey]: sellable > 0 && row.count > 0 ? row.effectiveAvg : 0,
+          [row.countKey]: sellable > 0 ? row.count : 0,
+        });
+      }
+    }
+    try {
+      await moSaveMutation.mutateAsync(moPayload);
     const bp = basePrices;
-    cpSaveMutation.mutate({
+    await cpSaveMutation.mutateAsync({
       projectId,
       baseStudioPrice: bp.studio || 0, base1brPrice: bp["1br"] || 0, base2brPrice: bp["2br"] || 0, base3brPrice: bp["3br"] || 0,
       baseRetailSmallPrice: bp.retSmall || 0, baseRetailMediumPrice: bp.retMedium || 0, baseRetailLargePrice: bp.retLarge || 0,
@@ -316,14 +329,9 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
       consStudioPrice: Math.round((bp.studio || 0) * 0.9), cons1brPrice: Math.round((bp["1br"] || 0) * 0.9), cons2brPrice: Math.round((bp["2br"] || 0) * 0.9), cons3brPrice: Math.round((bp["3br"] || 0) * 0.9),
       consRetailSmallPrice: Math.round((bp.retSmall || 0) * 0.9), consRetailMediumPrice: Math.round((bp.retMedium || 0) * 0.9), consRetailLargePrice: Math.round((bp.retLarge || 0) * 0.9),
       consOfficeSmallPrice: Math.round((bp.offSmall || 0) * 0.9), consOfficeMediumPrice: Math.round((bp.offMedium || 0) * 0.9), consOfficeLargePrice: Math.round((bp.offLarge || 0) * 0.9),
-      activeScenario,
-      approvedRevenue: approvedScenario ? Math.round(revenueByScenario[approvedScenario]) : 0,
-      paymentBookingPct: 10, paymentBookingTiming: "عند التوقيع",
-      paymentConstructionPct: 60, paymentConstructionTiming: "أثناء الإنشاء",
-      paymentHandoverPct: 30, paymentHandoverTiming: "عند التسليم",
-      paymentDeferredPct: 0, paymentDeferredTiming: "",
     });
-    setDirty(false);
+      setDirty(false);
+    } catch { /* Mutation callbacks expose failure; keep unsaved inputs visible. */ }
   };
 
 
@@ -607,10 +615,8 @@ export default function CostsCashFlowTab({ projectId }: CostsCashFlowTabProps) {
             return (
               <button key={sc}
                 onClick={() => {
-                  setApprovedScenario(sc);
                   setActiveScenario(sc);
-                  setDirty(true);
-                  toast.success(`تم اعتماد السيناريو ${cfg.label} — اضغط حفظ لتأكيد الإيراد المعتمد`);
+                  toast.success(`عرض السيناريو ${cfg.label} للمقارنة فقط — لا يغير الإيراد المعتمد`);
                 }}
                 className={`px-3 py-2.5 text-center border-l first:border-l-0 border-gray-200 transition-all cursor-pointer hover:shadow-md relative
                   ${isApproved ? `${activeBg} ring-2 ${approvedRing} ring-inset shadow-inner` : isActive ? activeBg : "bg-gray-50/50 hover:bg-gray-100/60"}`}>

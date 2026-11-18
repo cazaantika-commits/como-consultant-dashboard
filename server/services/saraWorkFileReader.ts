@@ -60,6 +60,16 @@ function clean(value: unknown, max = 20_000) {
   return String(value || "").replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").trim().slice(0, max);
 }
 
+export function presentSaraWorkFileGoal<T extends { desiredOutcome?: unknown; desiredOutcomeCharacters?: unknown }>(file: T) {
+  const original = String(file.desiredOutcome ?? "");
+  const sourceCharacters = Number(file.desiredOutcomeCharacters ?? original.length);
+  return {
+    ...file, desiredOutcome: original.slice(0, 4_000),
+    desiredOutcomeView: { maxCharacters: 4_000, sourceCharacters, truncated: sourceCharacters > 4_000,
+      sourceUnchanged: true, historicalContext: "التاريخ مستقل في ذاكرة الملف وأحداثه؛ النص المختصر ليس إيصال إنجاز أو موافقة." },
+  };
+}
+
 /** Keep ownership, waiting state, and time boundaries distinct for a spoken status. */
 export function presentSaraLifecycleLane(lane: SaraLifecycleLane) {
   return {
@@ -218,12 +228,13 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
   const userId = await resolveOwnerUserIdForSara(member.memberId);
   const workFileResult = await db.execute(sql`
     SELECT wf.id AS workFileId, wf.project_id AS projectId, p.name AS project, wf.title,
-      wf.governing_question AS governingQuestion, wf.desired_outcome AS desiredOutcome,
+      wf.governing_question AS governingQuestion, LEFT(wf.desired_outcome, 4000) AS desiredOutcome,
+      CHAR_LENGTH(wf.desired_outcome) AS desiredOutcomeCharacters,
       wf.work_file_status AS status, wf.priority, wf.updated_at AS updatedAt
     FROM como_next_work_files wf
     JOIN projects p ON p.id=wf.project_id AND p.is_test_project=0
     LEFT JOIN como_next_import_batches batch ON batch.batch_id=wf.import_batch_id
-    WHERE wf.id=${workFileId} AND wf.user_id=${userId}
+    WHERE wf.id=${workFileId} AND wf.user_id=${userId} AND p.userId=${userId}
       AND (wf.import_batch_id IS NULL OR batch.batch_status='promoted')
     LIMIT 1
   `);
@@ -316,7 +327,7 @@ export async function readExecutiveWorkFile(member: SaraReaderMember, rawArgumen
     source: "COMO Next work-file dossier",
     generatedAt: new Date().toISOString(),
     question,
-    workFile,
+    workFile: presentSaraWorkFileGoal(workFile),
     // Place fresh source evidence before historical summaries. A recent signed attachment
     // must never be silently displaced by an earlier unsigned template or analysis.
     recentDocumentaryEvidence: buildSaraRecentDocumentaryEvidence(memory, linkedDocuments),

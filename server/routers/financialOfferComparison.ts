@@ -2,6 +2,10 @@ import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { TRPCError } from "@trpc/server";
+import { requireLegacyProjectRead } from "../services/comoLegacyProjectAccess";
+import { requireConsultantProject, requireConsultantLink, assertCostReportUnlocked } from "../services/consultantAccess";
+import { offerGapState, feePercentagePoints } from "../../shared/consultantContracts";
 
 async function qRows<T = Record<string, unknown>>(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, query: ReturnType<typeof sql>): Promise<T[]> {
   const result = await db.execute(query);
@@ -17,7 +21,8 @@ function parseExtraction(raw: unknown) {
 export const financialOfferComparisonRouter = router({
   getEvidenceStatus: protectedProcedure
     .input(z.object({ systemProjectId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.systemProjectId);
       const db = await getDb();
       if (!db) return { linked: false, cpaProjectId: null, approved: false, revisionNo: null, reviewed: 0, total: 0 };
       const cpaProjects = await qRows<any>(db, sql`SELECT id FROM cpa_projects WHERE project_id = ${input.systemProjectId} ORDER BY id DESC LIMIT 1`);
@@ -33,7 +38,10 @@ export const financialOfferComparisonRouter = router({
 
   getReport: protectedProcedure
     .input(z.object({ cpaProjectId: z.number(), systemProjectId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.systemProjectId);
+      const projectId = await requireConsultantProject(ctx.user, input.cpaProjectId);
+      if (projectId !== input.systemProjectId) throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return { requirementSet: null, requirements: [], consultants: [], readiness: { reviewed: 0, total: 0 } };
       const sets = await qRows<any>(db, sql`SELECT * FROM project_consultant_requirement_sets WHERE project_id = ${input.systemProjectId} AND status = 'APPROVED' ORDER BY revision_no DESC LIMIT 1`);
@@ -64,14 +72,13 @@ export const financialOfferComparisonRouter = router({
           const reading = coverageMap.get(Number(requirement.id));
           const override = overrideMap.get(`${consultant.project_consultant_id}:${requirement.id}`);
           const status = reading?.status ?? "NOT_REVIEWED";
-          const needsGap = status === "EXCLUDED" || status === "PARTIAL";
-          const rawGap = override?.gap_value_aed ?? (needsGap ? requirement.gap_value_aed : null);
-          const gapValue = rawGap === null || rawGap === undefined ? null : Number(rawGap);
-          return { requirementId: Number(requirement.id), status, evidence: reading?.evidence ?? "", confidence: reading?.confidence ?? null, gapValue, hasOverride: Boolean(override), needsGap };
+          const gap = offerGapState(status, requirement.gap_value_aed, override?.gap_value_aed);
+          const { needsGap, gapValue, unresolved } = gap;
+          return { requirementId: Number(requirement.id), status, evidence: reading?.evidence ?? "", confidence: reading?.confidence ?? null, gapValue, hasOverride: Boolean(override), needsGap, unresolved };
         });
         const designAmount = Number(extracted.design_fee?.amount);
         const quotedDesignFee = Number.isFinite(designAmount) && designAmount > 0 ? designAmount : null;
-        const unresolvedGaps = items.filter((item) => item.needsGap && item.gapValue === null).length;
+        const unresolvedGaps = items.filter((item) => item.unresolved).length;
         const gapTotal = items.reduce((sum, item) => sum + (item.needsGap && item.gapValue !== null ? item.gapValue : 0), 0);
         return {
           id: Number(consultant.project_consultant_id),
@@ -79,6 +86,9 @@ export const financialOfferComparisonRouter = router({
           code: consultant.consultant_code,
           reviewedReadingId: consultant.reviewed_reading_id ? Number(consultant.reviewed_reading_id) : null,
           quotedDesignFee,
+          quotedDesignPercentage: extracted.design_fee?.method === "PERCENTAGE" ? feePercentagePoints(extracted.design_fee?.percentage, "FRACTION") : null,
+          missingFee: quotedDesignFee === null,
+          feeAmountBasis: extracted.design_fee?.method === "PERCENTAGE" ? "APPROVED_CONSTRUCTION_COST_REQUIRED" : "SOURCE_AMOUNT",
           gapTotal,
           unresolvedGaps,
           adjustedDesignFee: quotedDesignFee === null || unresolvedGaps > 0 ? null : quotedDesignFee + gapTotal,
@@ -90,7 +100,10 @@ export const financialOfferComparisonRouter = router({
 
   getSupervisionReport: protectedProcedure
     .input(z.object({ cpaProjectId: z.number(), systemProjectId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.systemProjectId);
+      const projectId = await requireConsultantProject(ctx.user, input.cpaProjectId);
+      if (projectId !== input.systemProjectId) throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return { requirementSet: null, requirements: [], consultants: [] };
       const sets = await qRows<any>(db, sql`SELECT * FROM project_consultant_requirement_sets WHERE project_id = ${input.systemProjectId} AND status = 'APPROVED' ORDER BY revision_no DESC LIMIT 1`);
@@ -108,19 +121,17 @@ export const financialOfferComparisonRouter = router({
       const overrideMap = new Map(overrides.map((row: any) => [`${row.project_consultant_id}:${row.project_requirement_id}`, row]));
       const consultants = consultantRows.map((consultant: any) => {
         const extracted = parseExtraction(consultant.extraction_json);
-        const coverageMap = new Map((Array.isArray(extracted.coverage) ? extracted.coverage : []).map((item: Coverage) => [Number(item.requirement_id), item]));
+        const coverageMap = new Map<number, Coverage>((Array.isArray(extracted.coverage) ? extracted.coverage as Coverage[] : []).map((item: Coverage) => [Number(item.requirement_id), item]));
         const items = requirements.map((requirement: any) => {
           const reading = coverageMap.get(Number(requirement.id));
           const status = reading?.status ?? "NOT_REVIEWED";
-          const needsGap = status === "EXCLUDED" || status === "PARTIAL";
           const override = overrideMap.get(`${consultant.project_consultant_id}:${requirement.id}`);
-          const rawGap = override?.gap_value_aed ?? (needsGap ? requirement.gap_value_aed : null);
-          const gapValue = rawGap === null || rawGap === undefined ? null : Number(rawGap);
-          return { requirementId: Number(requirement.id), status, evidence: reading?.evidence ?? "", gapValue, needsGap };
+          const { needsGap, gapValue, unresolved } = offerGapState(status, requirement.gap_value_aed, override?.gap_value_aed);
+          return { requirementId: Number(requirement.id), status, evidence: reading?.evidence ?? "", gapValue, needsGap, unresolved };
         });
         const submitted = Number(extracted.supervision_fee?.amount);
         const quotedSupervisionFee = Number.isFinite(submitted) && submitted > 0 ? submitted : null;
-        const unresolvedGaps = items.filter((item) => item.needsGap && item.gapValue === null).length;
+        const unresolvedGaps = items.filter((item) => item.unresolved).length;
         const gapTotal = items.reduce((sum, item) => sum + (item.needsGap && item.gapValue !== null ? item.gapValue : 0), 0);
         return { id: Number(consultant.project_consultant_id), name: consultant.trade_name || consultant.legal_name || "استشاري", reviewedReadingId: consultant.reviewed_reading_id ? Number(consultant.reviewed_reading_id) : null, quotedSupervisionFee, gapTotal, unresolvedGaps, adjustedSupervisionFee: quotedSupervisionFee === null || unresolvedGaps > 0 ? null : quotedSupervisionFee + gapTotal, items };
       });
@@ -129,10 +140,15 @@ export const financialOfferComparisonRouter = router({
 
   setGapOverride: protectedProcedure
     .input(z.object({ projectConsultantId: z.number(), projectRequirementSetId: z.number(), projectRequirementId: z.number(), gapValueAed: z.number().min(0).nullable(), note: z.string().trim().max(2000).nullable().optional() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
-      const setRows = await qRows<any>(db, sql`SELECT status FROM project_consultant_requirement_sets WHERE id = ${input.projectRequirementSetId} LIMIT 1`);
+      const setRows = await qRows<{ status: string; project_id: number }>(db, sql`SELECT status, project_id FROM project_consultant_requirement_sets WHERE id = ${input.projectRequirementSetId} LIMIT 1`);
+      const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "write");
+      if (Number(setRows[0]?.project_id) !== link.projectId) throw new TRPCError({ code: "FORBIDDEN" });
+      await assertCostReportUnlocked(link.cpaProjectId);
+      const requirement = await qRows<{ id: number }>(db, sql`SELECT id FROM project_consultant_requirements WHERE id = ${input.projectRequirementId} AND requirement_set_id = ${input.projectRequirementSetId} LIMIT 1`);
+      if (!requirement.length) throw new TRPCError({ code: "FORBIDDEN" });
       if (!setRows[0] || setRows[0].status !== 'APPROVED') throw new Error("اعتمد متطلبات المشروع أولًا قبل تعديل قيمة فجوة العرض");
       await db.execute(sql`
         INSERT INTO consultant_offer_gap_overrides (project_consultant_id, project_requirement_set_id, project_requirement_id, gap_value_aed, note)

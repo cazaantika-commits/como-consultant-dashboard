@@ -4,17 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { default as ArrowRight } from "lucide-react/dist/esm/icons/arrow-right.js";
-import { default as Loader2 } from "lucide-react/dist/esm/icons/loader-circle.js";
-import { default as Pencil } from "lucide-react/dist/esm/icons/pencil.js";
-import { default as Check } from "lucide-react/dist/esm/icons/check.js";
-import { default as X } from "lucide-react/dist/esm/icons/x.js";
-import { default as ShieldCheck } from "lucide-react/dist/esm/icons/shield-check.js";
-import { default as Lock } from "lucide-react/dist/esm/icons/lock.js";
-import { default as Unlock } from "lucide-react/dist/esm/icons/lock-open.js";
-import { default as FileBarChart2 } from "lucide-react/dist/esm/icons/file-chart-column.js";
-import { default as Save } from "lucide-react/dist/esm/icons/save.js";
-import { default as Printer } from "lucide-react/dist/esm/icons/printer.js";
+import { ArrowRight } from "lucide-react";
+import { LoaderCircle as Loader2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { Check } from "lucide-react";
+import { X } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
+import { LockOpen as Unlock } from "lucide-react";
+import { FileChartColumn as FileBarChart2 } from "lucide-react";
+import { Save } from "lucide-react";
+import { Printer } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,6 +106,7 @@ export default function TrueCostReportView({ token, projectId, onBack }: { token
 
   // Recalculate totals based on effective values
   const getEffectiveTotal = (c: typeof report.consultants[0]): number => {
+    if (isApproved) return c.override?.totalTrueCost ?? c.calc.totalTrueCost;
     const trueDesign = getVal(c, 'trueDesignFee');
     const adjSupervision = getVal(c, 'adjustedSupervisionFee');
     // If totalTrueCost has override, use it

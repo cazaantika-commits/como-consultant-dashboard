@@ -109,19 +109,70 @@ function rowsOf<T>(result: unknown): T[] {
 }
 
 function numberOrNull(value: unknown) {
-  const number = value == null || String(value).trim() === "" ? NaN : Number(value);
-  return Number.isInteger(number) && number > 0 ? number : null;
+  if (typeof value !== "number" && (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value))) return null;
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number > 0 ? number : null;
 }
 
 function textPresent(value: unknown) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+// Exact event names, not title/text matching or generic completed/approved.
+// Historic source-specific send reconciliation is still two-source evidence:
+// this allowlist grants no send authority and cannot replace ledger + Sent.
+const acceptedSendLinkEventTypes = [
+  "communication_draft_revised", "communication_sent_source_reconciled",
+  "report_followup_draft_prepared", "owner_reported_sent_recorded",
+  "owner_sent_request_reconciled", "survey_forward_sent_observed",
+  "artec_bank_letter_updated_owner_ack_sent", "colliers_sent_display_reconciled",
+  "ka_owner_sent_manually_verified", "neb_owner_sent_manually_verified",
+  "colliers_owner_sent_verified", "artec_clarification_sent_observed",
+  "artec_dimensioned_package_sent_observed", "colliers_firm_followup_sent_verified",
+  "colliers_documents_request_sent_manual_verified", "wael_confirmation_sent_specific_reconciled",
+  "artec_design_sent_specific_reconciled", "artec_meeting_sent_specific_reconciled",
+  "falcon_owner_approval_sent_specific_reconciled", "batch198_sent_reconciled",
+  "soil_noc_finance_sent_confirmed", "kitchen_owner_send_observed",
+  "kitchen_sent_reply_followup_reconciled", "dcm_prior_owner_send_observed",
+  "owner_send_review_already_sent_confirmed", "kate_owner_send_observed",
+] as const;
+// These documented receipts have a finance/review action_id. Only their explicit
+// humanActionId identifies the sender; their review completion is NOT a send.
+const historicalSenderLinkEventTypes = [
+  "artec_concept_package_reviewed", "artec_mobilisation_inquiry_followup_reconciled",
+  "bank_debit_advice_reviewed", "artec_sketch_status_saved",
+  "artec_payment_documents_draft_ready", "artec_payment_documents_received_reviewed",
+  "colliers_invitation_reviewed", "colliers_revision_acknowledgement_reviewed",
+  "colliers_v4_delivery_reviewed", "colliers_reply_substantive_review",
+  "colliers_review_status_saved", "electrical_load_latest_draft_reviewed",
+  "falcon_revised_offer_reviewed", "falcon_r5_draft_review_saved",
+  "kate_wael_approval_draft_saved", "tedi_signed_application_draft_saved",
+  "approved_basement_sketch_draft_saved", "rawan_bathrooms_void_draft_saved",
+  "rawan_coordination_draft_saved", "soil_noc_finance_request_saved",
+  "soil_quotes_reviewed_owner_step", "survey_invoice_reminder_reviewed",
+  "wael_artec_plan_review_draft_saved", "wael_kitchen_sketch_draft_saved",
+  "wael_community_charges_draft_saved", "wael_issa_notes_draft_saved",
+] as const;
+
+/** Raw DB events must pass this gate before normalized link extraction. */
+export function selectAcceptedComoSendEvidenceRows(rows: Record<string, unknown>[]) {
+  return rows.filter(row => {
+    const type = typeof row.eventType === "string" ? row.eventType : "";
+    return (acceptedSendLinkEventTypes as readonly string[]).includes(type)
+      || ((historicalSenderLinkEventTypes as readonly string[]).includes(type) && numberOrNull(row.humanActionId) !== null);
+  });
+}
+
 /** Explicit IDs only. Legacy humanActionId denotes the sender action, not an
- * audit/finance action_id on the receipt. Conflicting aliases remain conflicts. */
+ * audit/finance action_id on the receipt. These are normalized accepted rows,
+ * not raw events; DB callers must use selectAcceptedComoSendEvidenceRows first.
+ * Conflicting aliases remain conflicts. */
 export function extractComoSendEvidenceEventLinks(rows: Record<string, unknown>[]): SendEvidenceEvent[] {
   const links: SendEvidenceEvent[] = [];
   for (const row of rows) {
+    if ("eventType" in row && !selectAcceptedComoSendEvidenceRows([row]).length) continue;
+    const aliases = [row.communicationId, row.communicationDraftId, row.payloadActionId, row.nextActionId, row.humanActionId];
+    if (aliases.some(value => value != null && value !== "" && numberOrNull(value) === null)) continue;
     const communicationIds = Array.from(new Set([row.communicationId, row.communicationDraftId]
       .map(numberOrNull).filter((id): id is number => id !== null)));
     if (!communicationIds.length) continue;
@@ -129,6 +180,8 @@ export function extractComoSendEvidenceEventLinks(rows: Record<string, unknown>[
     const next = numberOrNull(row.nextActionId);
     const actionTargets = human
       ? Array.from(new Set([human, next].filter((id): id is number => id !== null)))
+      : row.eventType === "report_followup_draft_prepared"
+        ? (next ? [next] : [])
       : Array.from(new Set([row.eventActionId, row.payloadActionId, row.nextActionId]
         .map(numberOrNull).filter((id): id is number => id !== null)));
     const ambiguousActionTarget = Boolean(human && next && human !== next);
@@ -282,6 +335,7 @@ export function buildComoKitchenSendEvidenceProjection<T extends SendEvidenceAct
     if (!communication
       || communication.channel !== "email"
       || communication.direction !== "outbound"
+      || !numberOrNull(action.userId) || !numberOrNull(action.projectId) || !numberOrNull(action.workFileId)
       || Number(communication.userId) !== Number(action.userId)
       || Number(communication.projectId) !== Number(action.projectId)
       || Number(communication.workFileId) !== Number(action.workFileId)) {
@@ -376,6 +430,7 @@ export async function projectComoKitchenSendEvidence<T extends SendEvidenceActio
 
   const eventResult = await db.execute(sql`
     SELECT
+      event_row.event_type AS eventType,
       event_row.action_id AS eventActionId,
       JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.actionId')) AS payloadActionId,
       JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.nextActionId')) AS nextActionId,
@@ -384,6 +439,7 @@ export async function projectComoKitchenSendEvidence<T extends SendEvidenceActio
       JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationDraftId')) AS communicationDraftId
     FROM como_next_work_file_events event_row
     WHERE event_row.user_id = ${input.userId}
+      AND event_row.event_type IN (${sql.join([...acceptedSendLinkEventTypes, ...historicalSenderLinkEventTypes].map(type => sql`${type}`), sql`, `)})
       AND JSON_VALID(COALESCE(event_row.payload_json, '{}'))
       AND (
         JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.communicationId')) REGEXP '^[1-9][0-9]*$'
@@ -396,7 +452,7 @@ export async function projectComoKitchenSendEvidence<T extends SendEvidenceActio
         OR JSON_UNQUOTE(JSON_EXTRACT(event_row.payload_json, '$.humanActionId')) REGEXP '^[1-9][0-9]*$'
       )
   `);
-  const events = extractComoSendEvidenceEventLinks(rowsOf<Record<string, unknown>>(eventResult))
+  const events = extractComoSendEvidenceEventLinks(selectAcceptedComoSendEvidenceRows(rowsOf<Record<string, unknown>>(eventResult)))
     .filter(event => actionIds.includes(event.actionId));
   const communicationIds = Array.from(new Set(events.map(item => item.communicationId)));
   if (!communicationIds.length) return buildComoKitchenSendEvidenceProjection({ ...input, events, communications: [], ledgers: [], sentMessages: [] });

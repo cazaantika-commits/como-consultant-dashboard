@@ -27,8 +27,15 @@ async function verifyCCToken(ccToken: string): Promise<string> {
     .select()
     .from(commandCenterMembers)
     .where(and(eq(commandCenterMembers.accessToken, ccToken), eq(commandCenterMembers.isActive, 1)));
-  if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "رمز الدخول غير صحيح" });
+  if (!member || !["abdulrahman", "wael", "sheikh_issa"].includes(member.memberId)) throw new TRPCError({ code: "UNAUTHORIZED", message: "رمز الدخول غير صحيح" });
   return member.memberId;
+}
+
+/** Member identity is exclusively verified from the active token, never payload. */
+export function messageMemberPredicate(member: string, view: "inbox" | "sent" | "all" = "all") {
+  if (view === "inbox") return sql`to_member = ${member}`;
+  if (view === "sent") return sql`from_member = ${member}`;
+  return sql`(from_member = ${member} OR to_member = ${member})`;
 }
 
 export const internalMessagesRouter = router({
@@ -36,7 +43,7 @@ export const internalMessagesRouter = router({
   getProjects: publicProcedure
     .input(z.object({ ccToken: z.string() }))
     .query(async ({ input }) => {
-      await verifyCCToken(input.ccToken);
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return [];
       try {
@@ -69,7 +76,9 @@ export const internalMessagesRouter = router({
       try {
         const archivedVal = input.isArchived ? 1 : 0;
         const result = await db.execute(
-          sql`SELECT * FROM internal_messages WHERE is_archived = ${archivedVal} ORDER BY created_at DESC`
+          sql`SELECT * FROM internal_messages WHERE is_archived = ${archivedVal}
+            AND ${messageMemberPredicate(currentMember, input.view)}
+            ORDER BY created_at DESC`
         );
         let rows = (result[0] as unknown as any[]) || [];
 
@@ -140,12 +149,12 @@ export const internalMessagesRouter = router({
   getById: publicProcedure
     .input(z.object({ ccToken: z.string(), id: z.number() }))
     .query(async ({ input }) => {
-      await verifyCCToken(input.ccToken);
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return [];
       try {
         const result = await db.execute(
-          sql`SELECT * FROM internal_messages WHERE id = ${input.id} OR parent_message_id = ${input.id} ORDER BY created_at ASC`
+          sql`SELECT * FROM internal_messages WHERE (id = ${input.id} OR parent_message_id = ${input.id}) AND ${messageMemberPredicate(currentMember)} ORDER BY created_at ASC`
         );
         const rows = (result[0] as unknown as any[]) || [];
         return rows.map((r: any) => ({
@@ -216,6 +225,13 @@ export const internalMessagesRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      if (input.parentMessageId !== undefined) {
+        const parentResult = await db.execute(sql`SELECT id FROM internal_messages WHERE id = ${input.parentMessageId}
+          AND ${messageMemberPredicate(fromMember)} AND ${messageMemberPredicate(input.toMember)} LIMIT 1`);
+        const parents = parentResult[0] as unknown as unknown[];
+        if (!Array.isArray(parents) || !parents.length) throw new TRPCError({ code: "NOT_FOUND", message: "خيط الرسالة غير متاح" });
+      }
+
       const messageNumber = generateMessageNumber();
       const attachmentsJson = JSON.stringify(input.attachments);
       const parentId = input.parentMessageId ?? null;
@@ -247,12 +263,15 @@ export const internalMessagesRouter = router({
   markRead: publicProcedure
     .input(z.object({ ccToken: z.string(), id: z.number() }))
     .mutation(async ({ input }) => {
-      await verifyCCToken(input.ccToken);
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
+      const allowed = await db.execute(sql`SELECT id FROM internal_messages WHERE id = ${input.id} AND ${sql`to_member = ${currentMember}`} LIMIT 1`);
+      const allowedRows = allowed[0] as unknown as unknown[];
+      if (!Array.isArray(allowedRows) || !allowedRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "الرسالة غير متاحة" });
       try {
         await db.execute(
-          sql`UPDATE internal_messages SET is_read = 1, read_at = NOW() WHERE id = ${input.id}`
+          sql`UPDATE internal_messages SET is_read = 1, read_at = NOW() WHERE id = ${input.id} AND to_member = ${currentMember}`
         );
         return { success: true };
       } catch {
@@ -264,17 +283,20 @@ export const internalMessagesRouter = router({
   archive: publicProcedure
     .input(z.object({ ccToken: z.string(), id: z.number(), archive: z.boolean() }))
     .mutation(async ({ input }) => {
-      await verifyCCToken(input.ccToken);
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
+      const allowed = await db.execute(sql`SELECT id FROM internal_messages WHERE id = ${input.id} AND ${messageMemberPredicate(currentMember)} LIMIT 1`);
+      const allowedRows = allowed[0] as unknown as unknown[];
+      if (!Array.isArray(allowedRows) || !allowedRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "الرسالة غير متاحة" });
       try {
         if (input.archive) {
           await db.execute(
-            sql`UPDATE internal_messages SET is_archived = 1, archived_at = NOW() WHERE id = ${input.id}`
+            sql`UPDATE internal_messages SET is_archived = 1, archived_at = NOW() WHERE id = ${input.id} AND ${messageMemberPredicate(currentMember)}`
           );
         } else {
           await db.execute(
-            sql`UPDATE internal_messages SET is_archived = 0, archived_at = NULL WHERE id = ${input.id}`
+            sql`UPDATE internal_messages SET is_archived = 0, archived_at = NULL WHERE id = ${input.id} AND ${messageMemberPredicate(currentMember)}`
           );
         }
         return { success: true };
@@ -302,12 +324,15 @@ export const internalMessagesRouter = router({
   delete: publicProcedure
     .input(z.object({ ccToken: z.string(), id: z.number() }))
     .mutation(async ({ input }) => {
-      await verifyCCToken(input.ccToken);
+      const currentMember = await verifyCCToken(input.ccToken);
       const db = await getDb();
       if (!db) return { success: false };
+      const allowed = await db.execute(sql`SELECT id FROM internal_messages WHERE id = ${input.id} AND ${messageMemberPredicate(currentMember)} LIMIT 1`);
+      const allowedRows = allowed[0] as unknown as unknown[];
+      if (!Array.isArray(allowedRows) || !allowedRows.length) throw new TRPCError({ code: "NOT_FOUND", message: "الرسالة غير متاحة" });
       try {
         await db.execute(
-          sql`DELETE FROM internal_messages WHERE id = ${input.id} OR parent_message_id = ${input.id}`
+          sql`DELETE FROM internal_messages WHERE (id = ${input.id} OR parent_message_id = ${input.id}) AND ${messageMemberPredicate(currentMember)}`
         );
         return { success: true };
       } catch {

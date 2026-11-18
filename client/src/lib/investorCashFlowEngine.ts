@@ -424,6 +424,26 @@ export function calculateInvestorCapitalSummary(cashFlow: CashFlowResult): Inves
   };
 }
 
+/** Portfolio peak must follow the shared MONTHLY calendar, not the sum of project peaks.
+ * Grouping months for display must not change this calculation.
+ */
+export function calculateCalendarFundingPeak(monthlyNet: readonly number[], paidCapital = 0) {
+  if (!Number.isFinite(paidCapital) || paidCapital < 0 || monthlyNet.some(value => !Number.isFinite(value))) {
+    throw new RangeError("Missing or invalid calendar funding source");
+  }
+  let balance = 0;
+  let minimum = 0;
+  let peakMonthIndex: number | null = null;
+  monthlyNet.forEach((net, month) => {
+    balance += net;
+    if (balance < minimum) {
+      minimum = balance;
+      peakMonthIndex = month;
+    }
+  });
+  return { requiredCapital: paidCapital - minimum, remainingCapital: -minimum, paidCapital, peakMonthIndex };
+}
+
 // ═══════════════════════════════════════════
 // DISTRIBUTION HELPERS
 // ═══════════════════════════════════════════
@@ -780,15 +800,17 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       });
     }
   } else {
+    // The card supplies estimates, not disbursement evidence. Neither cost type
+    // nor an elapsed date establishes paid; retain these amounts in month 1.
     rows.push({
       label: "سعر الأرض",
       totalCost: landPrice,
       investorAmount: landPrice,
-      paid: landPrice,
-      unpaid: 0,
+      paid: 0,
+      unpaid: landPrice,
       funder: "investor",
       section: "الأرض",
-      designMonths: emptyDesign(),
+      designMonths: emptyDesign().map((_, month) => month === 0 ? landPrice : 0),
       constructionMonths: emptyConstruction(),
       postConstructionMonths: emptyPost(),
     });
@@ -797,11 +819,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       label: "رسوم تسجيل الأرض",
       totalCost: landRegistration,
       investorAmount: landRegistration,
-      paid: landRegistration,
-      unpaid: 0,
+      paid: 0,
+      unpaid: landRegistration,
       funder: "investor",
       section: "الأرض",
-      designMonths: emptyDesign(),
+      designMonths: emptyDesign().map((_, month) => month === 0 ? landRegistration : 0),
       constructionMonths: emptyConstruction(),
       postConstructionMonths: emptyPost(),
     });
@@ -810,11 +832,11 @@ export function computeInvestorCashFlow(projectData: any, scenario: Scenario, ti
       label: "عمولة وسيط الأرض",
       totalCost: landBroker,
       investorAmount: landBroker,
-      paid: landBroker,
-      unpaid: 0,
+      paid: 0,
+      unpaid: landBroker,
       funder: "investor",
       section: "الأرض",
-      designMonths: emptyDesign(),
+      designMonths: emptyDesign().map((_, month) => month === 0 ? landBroker : 0),
       constructionMonths: emptyConstruction(),
       postConstructionMonths: emptyPost(),
     });

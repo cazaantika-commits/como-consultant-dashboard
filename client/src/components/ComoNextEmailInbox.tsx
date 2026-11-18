@@ -27,7 +27,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-type InboxFilter = "attention" | "sent" | "linked" | "dismissed";
+import { comoInboxFilter, matchesComoInboxFilter, type ComoInboxFilter as InboxFilter } from "@shared/comoPresentation";
 
 const statusMeta: Record<string, { label: string; className: string }> = {
   unmatched: { label: "غير مطابق", className: "border-slate-200 bg-slate-100 text-slate-700" },
@@ -44,7 +44,7 @@ const importanceMeta: Record<string, { label: string; className: string }> = {
 };
 
 function MailCard({ item, onOpen }: { item: any; onOpen: (id: number) => void }) {
-  const isSent = item.folderName !== "INBOX";
+  const isSent = item.folderName === "Sent";
   return (
     <button type="button" onClick={() => onOpen(item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-[#8fb7c2] hover:shadow-md">
       <div className="min-w-0 flex-1"><Badge variant="outline" className={`mb-1 rounded-full text-[9px] ${isSent ? "border-sky-100 bg-sky-50 text-sky-700" : "border-emerald-100 bg-emerald-50 text-emerald-700"}`}>{isSent ? "صادر" : "وارد"}</Badge><p className="truncate text-sm font-black text-slate-900">{item.subject}</p></div>
@@ -186,23 +186,20 @@ function MessageDialog({ emailId, open, onOpenChange, onChanged }: { emailId: nu
   );
 }
 
-export function ComoNextEmailInbox({ onOverviewChanged }: { onOverviewChanged: () => Promise<void> }) {
-  const [filter, setFilter] = useState<InboxFilter>("attention");
+export function ComoNextEmailInbox({ onOverviewChanged, requestedFilter }: { onOverviewChanged: () => Promise<void>; requestedFilter?: string | null }) {
+  const [filter, setFilter] = useState<InboxFilter>(() => comoInboxFilter(requestedFilter));
+  useEffect(() => { setFilter(comoInboxFilter(requestedFilter)); setSelectedId(null); }, [requestedFilter]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const listQuery = trpc.comoNextEmail.list.useQuery(undefined, { staleTime: 15_000 });
   const scheduledStatusQuery = trpc.comoNextEmail.scheduledStatus.useQuery(undefined, { staleTime: 30_000 });
   const syncMutation = trpc.comoNextEmail.syncReadonly.useMutation();
   const items = listQuery.data || [];
-  const filtered = items.filter((item: any) => filter === "attention"
-    ? item.folderName === "INBOX" && ["unmatched", "suggested"].includes(item.inboxStatus)
-    : filter === "sent"
-      ? item.folderName !== "INBOX" && item.inboxStatus !== "dismissed"
-      : item.inboxStatus === filter);
+  const filtered = items.filter(item => matchesComoInboxFilter(item, filter));
   const counts = {
-    attention: items.filter((item: any) => item.folderName === "INBOX" && ["unmatched", "suggested"].includes(item.inboxStatus)).length,
-    sent: items.filter((item: any) => item.folderName !== "INBOX" && item.inboxStatus !== "dismissed").length,
-    linked: items.filter((item: any) => item.inboxStatus === "linked").length,
-    dismissed: items.filter((item: any) => item.inboxStatus === "dismissed").length,
+    attention: items.filter(item => matchesComoInboxFilter(item, "attention")).length,
+    sent: items.filter(item => matchesComoInboxFilter(item, "sent")).length,
+    linked: items.filter(item => matchesComoInboxFilter(item, "linked")).length,
+    dismissed: items.filter(item => matchesComoInboxFilter(item, "dismissed")).length,
   };
   const refresh = async () => { await listQuery.refetch(); await onOverviewChanged(); };
   const sync = async () => {

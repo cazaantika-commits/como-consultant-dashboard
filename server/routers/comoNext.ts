@@ -76,6 +76,8 @@ import {
 } from "../services/comoNextStagedDirectives";
 import { filterCancelledKitchenEmailSuggestions, projectComoKitchenSendEvidence } from "../services/comoKitchenSendEvidence";
 
+import { projectSavedMailboxDrafts } from "../services/comoSavedDraftProjection";
+import { isPendingCommunication } from "../../shared/comoPresentation";
 function assertComoNextEnabled() {
   if (process.env.COMO_NEXT_ENABLED === "false") {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "المكتب التنفيذي متوقف مؤقتًا" });
@@ -291,7 +293,7 @@ export const comoNextRouter = router({
 
     const draftCommunicationsResult = await db.execute(sql`
       SELECT communication.id, communication.project_id AS projectId,
-        communication.work_file_id AS workFileId, p.name AS projectName,
+        communication.work_file_id AS workFileId, communication.user_id AS userId, communication.direction, communication.sent_at AS sentAt, p.name AS projectName,
         wf.title AS workFileTitle, communication.channel,
         communication.subject, communication.to_text AS toText,
         communication.communication_status AS communicationStatus,
@@ -303,7 +305,7 @@ export const comoNextRouter = router({
       LEFT JOIN como_next_project_access access_row
         ON access_row.project_id = p.id AND access_row.user_id = ${ctx.user.id}
       WHERE (p.userId = ${ctx.user.id} OR access_row.user_id = ${ctx.user.id})
-        AND communication.communication_status IN ('draft','approved_for_send')
+        AND communication.communication_status IN ('draft','approved_for_send','archived')
         AND wf.work_file_status NOT IN ('closed','cancelled')
       ORDER BY communication.created_at ASC, communication.id ASC
     `);
@@ -435,12 +437,13 @@ export const comoNextRouter = router({
       .filter((id): id is number => id != null));
     // A ledger/Sent contradiction is Manus-owned. Do not leave the original
     // Draft card in the owner-review lane while that contradiction is visible.
-    const draftCommunications = getRows<any>(draftCommunicationsResult).map(row => ({
+    const draftRows = getRows<{id:number;userId:number;projectId:number;workFileId:number;channel:string;direction:string;communicationStatus:string;sentAt:string|null;projectName:string;workFileTitle:string;subject:string;toText:string|null;approvalStatus:string;createdAt:string}>(draftCommunicationsResult);
+    const draftCommunications = (await projectSavedMailboxDrafts(db, draftRows)).map(row => ({
       ...row,
       id: Number(row.id),
       projectId: Number(row.projectId),
       workFileId: Number(row.workFileId),
-    })).filter(row => !sendEvidenceConflictCommunicationIds.has(row.id));
+    })).filter(row => isPendingCommunication(row) && !sendEvidenceConflictCommunicationIds.has(row.id));
     const meetingAttention = getRows<any>(meetingAttentionResult).map(row => ({
       ...row,
       id: Number(row.id),
@@ -474,7 +477,7 @@ export const comoNextRouter = router({
       executionQueue: buildExecutiveKitchenQueue({
         actions: queueActions,
         decisions,
-        draftCommunications,
+        draftCommunications: draftCommunications.filter(row => row.communicationStatus !== "archived"),
         meetings: meetingAttention,
         emails: filterCancelledKitchenEmailSuggestions(emailAttention),
         intakeProposals,
@@ -698,11 +701,12 @@ export const comoNextRouter = router({
         WHERE wfp.work_file_id = ${input.workFileId}
         ORDER BY party.display_name
       `);
-      const communications = await db
+      const communicationRows = await db
         .select()
         .from(comoNextCommunications)
         .where(eq(comoNextCommunications.workFileId, input.workFileId))
         .orderBy(desc(comoNextCommunications.occurredAt), desc(comoNextCommunications.id));
+      const communications = await projectSavedMailboxDrafts(db, communicationRows);
       const intakeProposals = await listPendingIntakeProposals(ctx.user.id, input.workFileId);
       const updates = await listWorkFileUpdates(ctx.user.id, input.workFileId);
       const lifecycleLanes = await readWorkFileLifecycle(input.workFileId);
@@ -893,8 +897,8 @@ export const comoNextRouter = router({
     .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
       const result = await reviewIntakeProposalCommand({ userId: ctx.user.id, ...input });
-      const executiveControl = input.decision === "apply" && result.targetId
-        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "proposal_review", actionIds: [Number(result.targetId)], maxItems: 4 })
+      const executiveControl = input.decision === "apply" && result.targetKind === "action" && result.actionIds.length
+        ? await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "proposal_review", actionIds: result.actionIds, maxItems: 4 })
         : null;
       return { ...result, executiveControl };
     }),
@@ -1113,7 +1117,7 @@ export const comoNextRouter = router({
     .mutation(async ({ ctx, input }) => {
       assertComoNextEnabled();
       const result = await importMeetingTranscriptCommand({ userId: ctx.user.id, ...input });
-      const sourceId = "sourceId" in result ? Number(result.sourceId) : Number(result.id);
+      const sourceId = Number(result.sourceId);
       const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "meeting_source", meetingSourceIds: [sourceId], maxItems: 4 });
       return { ...result, executiveControl };
     }),

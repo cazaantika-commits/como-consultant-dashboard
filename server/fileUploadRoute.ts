@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
-import { storagePut } from "./storage";
+import { authenticateComoRest, comoRestActor, sendComoRestError } from "./services/comoSecurityGuards";
+import { positiveUploadId, storePrivateCommandCenterAttachment } from "./services/comoPrivateUpload";
 
 const router = Router();
 
@@ -30,31 +31,27 @@ const upload = multer({
 });
 
 // POST /api/upload/command-center
-router.post("/command-center", upload.single("file"), async (req, res) => {
+router.post("/command-center", authenticateComoRest, upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       res.status(400).json({ error: "لم يتم إرسال أي ملف" });
       return;
     }
 
-    const { bubbleType = "general" } = req.body;
-
-    const timestamp = Date.now();
-    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._\u0600-\u06FF-]/g, "_");
-    const fileKey = `command-center/${bubbleType}/${timestamp}-${safeName}`;
-
-    const { url } = await storagePut(fileKey, req.file.buffer, req.file.mimetype);
-
+    const attachment = await storePrivateCommandCenterAttachment({
+      actor: comoRestActor(res),
+      projectId: positiveUploadId(req.body.projectId),
+      memoryId: positiveUploadId(req.body.memoryId),
+      fileName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      bytes: req.file.buffer,
+    });
     res.json({
       success: true,
-      url,
-      name: req.file.originalname,
-      size: req.file.size,
-      type: req.file.mimetype,
+      ...attachment,
     });
-  } catch (err: any) {
-    console.error("[FileUpload] Error:", err);
-    res.status(500).json({ error: err.message || "خطأ في رفع الملف" });
+  } catch (err) {
+    sendComoRestError(res, err);
   }
 });
 

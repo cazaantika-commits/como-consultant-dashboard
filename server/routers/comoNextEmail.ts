@@ -18,15 +18,13 @@ import { updateReplyDraftFromEmailCommand } from "../services/comoNextEmailOutbo
 import { readMailExecutionHealth } from "../services/comoMailExecution";
 import { runExecutiveControlLoopCommand } from "../services/comoNextExecutiveControl";
 
-function assertOwner(role?: string) {
-  if (role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "صندوق بريد عبد الرحمن متاح للمالك فقط" });
-}
+import { requireProvisionedComoOwner } from "../services/comoSecurityGuards";
 
 const statusSchema = z.enum(["unmatched", "suggested", "linked", "dismissed"]);
 
 export const comoNextEmailRouter = router({
   scheduledStatus: protectedProcedure.query(async ({ ctx }) => {
-    assertOwner(ctx.user.role);
+    await requireProvisionedComoOwner(ctx.user);
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "قاعدة البيانات غير متاحة" });
     const settingsRows = await db.select({
@@ -64,27 +62,27 @@ export const comoNextEmailRouter = router({
 
   list: protectedProcedure
     .input(z.object({ status: statusSchema.optional() }).optional())
-    .query(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .query(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return listEmailInbox(ctx.user.id, input?.status);
     }),
 
   get: protectedProcedure
     .input(z.object({ emailId: z.number().int().positive() }))
-    .query(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .query(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return getEmailMessage(input.emailId, ctx.user.id);
     }),
 
-  linkingOptions: protectedProcedure.query(({ ctx }) => {
-    assertOwner(ctx.user.role);
+  linkingOptions: protectedProcedure.query(async ({ ctx }) => {
+    await requireProvisionedComoOwner(ctx.user);
     return listEmailLinkingOptions(ctx.user.id);
   }),
 
   syncReadonly: protectedProcedure
     .input(z.object({ hours: z.number().int().min(1).max(8760).default(168), maxMessages: z.number().int().min(1).max(250).default(100) }))
-    .mutation(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return syncAndAnalyzeReadonlyMailboxCommand({ userId: ctx.user.id, ...input, analysisLimit: 10 });
     }),
 
@@ -95,15 +93,15 @@ export const comoNextEmailRouter = router({
       workFileId: z.number().int().positive(),
       projectPartyId: z.number().int().positive().optional().nullable(),
     }))
-    .mutation(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return linkEmailToWorkFileCommand({ userId: ctx.user.id, ...input });
     }),
 
   analyze: protectedProcedure
     .input(z.object({ emailId: z.number().int().positive(), requestKey: z.string().trim().min(8).max(128) }))
     .mutation(async ({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+      await requireProvisionedComoOwner(ctx.user);
       const result = await analyzeEmailCommand({ userId: ctx.user.id, ...input });
       const executiveControl = await runExecutiveControlLoopCommand({ userId: ctx.user.id, trigger: "email_sync", scanPending: true, maxItems: 2 });
       return { ...result, executiveControl };
@@ -111,8 +109,8 @@ export const comoNextEmailRouter = router({
 
   createReplyDraft: protectedProcedure
     .input(z.object({ emailId: z.number().int().positive(), body: z.string().trim().min(3).max(100_000), ccText: z.string().trim().max(5000).optional().nullable() }))
-    .mutation(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return createReplyDraftFromEmailCommand({ userId: ctx.user.id, ...input });
     }),
 
@@ -124,15 +122,15 @@ export const comoNextEmailRouter = router({
       toText: z.string().trim().min(3).max(5000),
       ccText: z.string().trim().max(5000).optional().nullable(),
     }))
-    .mutation(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return updateReplyDraftFromEmailCommand({ userId: ctx.user.id, ...input });
     }),
 
   dismiss: protectedProcedure
     .input(z.object({ emailId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => {
-      assertOwner(ctx.user.role);
+    .mutation(async ({ ctx, input }) => {
+      await requireProvisionedComoOwner(ctx.user);
       return dismissEmailCommand({ userId: ctx.user.id, ...input });
     }),
 });

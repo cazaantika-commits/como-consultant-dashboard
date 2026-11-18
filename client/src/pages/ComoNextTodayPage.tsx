@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { buildKitchenBoard, kitchenProjectLabel } from "../../../shared/comoKitchenBoard";
+import { communicationPresentationLabel, filterKitchenProjectRecords, isPendingCommunication } from "../../../shared/comoPresentation";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -978,7 +979,7 @@ function FocusedRecordView({ kind, item, workFileId, updates = [], isClosed, onB
         {!isClosed && ["required", "deferred"].includes(item.decisionStatus) ? <div className="mt-6 space-y-4 border-t border-slate-100 pt-5"><WorkFileUpdateComposer workFileId={workFileId} currentDecisionId={item.id} updates={updates.filter((update: any) => !update.actionId)} onChanged={onUpdated} /><div className="flex justify-end"><ResolveDecisionDialog decision={item} onUpdated={onUpdated} /></div></div> : null}
       </> : null}
       {kind === "communication" ? <>
-        <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).className}`}>{(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div>
+        <div className="flex flex-wrap items-center gap-2"><Badge variant="outline" className={`rounded-full ${(communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).className}`}>{communicationPresentationLabel(item) || (communicationStatusMeta[item.communicationStatus] || communicationStatusMeta.archived).label}</Badge><Badge variant="outline" className="rounded-full bg-white">{communicationChannelLabel[item.channel as CommunicationChannel]}</Badge></div>
         <h2 className="mt-5 text-2xl font-black leading-10 text-slate-950">{item.subject}</h2>
         {item.toText ? <p className="mt-3 text-xs text-slate-500">إلى: <bdi dir="ltr">{item.toText}</bdi></p> : null}
         {item.fromText ? <p className="mt-1 text-xs text-slate-500">من: <bdi dir="ltr">{item.fromText}</bdi></p> : null}
@@ -1087,7 +1088,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const data = detailQuery.data;
   const hasOpenActions = data?.actions.some((action: any) => !["verified", "cancelled"].includes(action.actionStatus)) ?? false;
   const hasPendingDecisions = data?.decisions.some((decision: any) => ["required", "deferred"].includes(decision.decisionStatus)) ?? false;
-  const hasPendingCommunications = data?.communications.some((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) ?? false;
+  const hasPendingCommunications = data?.communications.some(isPendingCommunication) ?? false;
   const hasPendingMeetings = data?.meetings.some((meeting: any) => ["planned", "confirmed"].includes(meeting.meetingStatus) || meeting.pendingProposalCount > 0 || meeting.latestMinutesStatus === "draft") ?? false;
   const activeIntakeProposals = (data?.intakeProposals || []).filter((proposal: any) => proposal.proposalKind !== "note");
   const hasPendingIntake = activeIntakeProposals.length > 0;
@@ -1113,9 +1114,9 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
   const selectedMemory = selectedMemoryId ? data?.memory.find((entry: any) => entry.id === selectedMemoryId) : null;
   const pendingDecisions = data?.decisions.filter(decisionNeedsAttentionNow) || [];
   const historicalDecisions = data?.decisions.filter((decision: any) => !["required", "deferred"].includes(decision.decisionStatus)) || [];
-  const activeCommunications = data?.communications.filter((communication: any) => ["draft", "approved_for_send"].includes(communication.communicationStatus)) || [];
+  const activeCommunications = data?.communications.filter(isPendingCommunication) || [];
   const ownerCommunication = activeCommunications[0];
-  const historicalCommunications = data?.communications.filter((communication: any) => !["draft", "approved_for_send", "received"].includes(communication.communicationStatus)) || [];
+  const historicalCommunications = data?.communications.filter((communication: any) => !isPendingCommunication(communication) && communication.communicationStatus !== "received") || [];
   const ownerAction = attentionActions.find((action: any) => action.ownerType === "human" && action.actionStatus !== "waiting_external");
   const activeMeeting = data?.meetings.find((meeting: any) => meeting.startsAt && ["planned", "confirmed"].includes(meeting.meetingStatus) && !(data?.updates || []).some((update: any) =>
     update.sourceChannel === "meeting"
@@ -1207,7 +1208,7 @@ function WorkFileSheet({ workFileId, focusKind, focusId, open, onOpenChange, onA
             </section> : null}
 
             {selectedStage === "outputs" ? <section>
-              {selectedMemory ? <><button type="button" onClick={() => setSelectedMemoryId(null)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />عناوين المخرجات</button><WorkOutputCard entry={selectedMemory} /></> : <><div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black text-violet-700">قراءة تنفيذية لا حقول خام</p><h2 className="mt-1 text-2xl font-black text-slate-950">التحليل والمخرجات</h2><p className="mt-1 max-w-2xl text-sm leading-7 text-slate-500">افتح مخرجاً واحداً لقراءته كوثيقة. المقترح أو المسودة لا يعنيان قراراً أو إرسالاً.</p></div>{!isClosed ? <NewCommunicationDraftDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div><div className="space-y-2">{outputEntries.map((entry: any) => { const lifecycle = memoryLifecycleMeta(entry); return <WorkFileTitleRow key={`output-${entry.id}`} title={entry.title} eyebrow={lifecycle.label} meta={`${entry.entryType || "تقرير"} · ${formatDateTime(entry.occurredAt)}`} tone={lifecycle.current ? "violet" : "slate"} onClick={() => setSelectedMemoryId(entry.id)} />; })}{activeCommunications.map((communication: any) => <WorkFileTitleRow key={`draft-${communication.id}`} title={communication.subject} eyebrow={communication.communicationStatus === "draft" ? "مسودة تحتاج مراجعة" : "معتمدة — لم تُرسل"} meta={formatDateTime(communication.occurredAt)} tone="amber" onClick={() => onRecordChange("communication", communication.id)} />)}</div>{data.intakeProposals.length ? <div className="mt-6 border-t border-slate-200 pt-6"><p className="mb-3 text-sm font-black text-slate-950">مقترحات Manus المرتبطة بالموضوع</p><ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={onChanged} title="مقترحات مرتبطة بهذا الملف" /></div> : null}{!outputEntries.length && !activeCommunications.length && !data.intakeProposals.length ? <EmptyState title="لا يوجد مخرج تحليلي بعد" description="يبقى المصدر في مرحلة الدليل حتى ينتج عنه تحليل أو تقرير أو مسودة مراجعة." /> : null}</>}
+              {selectedMemory ? <><button type="button" onClick={() => setSelectedMemoryId(null)} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" />عناوين المخرجات</button><WorkOutputCard entry={selectedMemory} /></> : <><div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black text-violet-700">قراءة تنفيذية لا حقول خام</p><h2 className="mt-1 text-2xl font-black text-slate-950">التحليل والمخرجات</h2><p className="mt-1 max-w-2xl text-sm leading-7 text-slate-500">افتح مخرجاً واحداً لقراءته كوثيقة. المقترح أو المسودة لا يعنيان قراراً أو إرسالاً.</p></div>{!isClosed ? <NewCommunicationDraftDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div><div className="space-y-2">{outputEntries.map((entry: any) => { const lifecycle = memoryLifecycleMeta(entry); return <WorkFileTitleRow key={`output-${entry.id}`} title={entry.title} eyebrow={lifecycle.label} meta={`${entry.entryType || "تقرير"} · ${formatDateTime(entry.occurredAt)}`} tone={lifecycle.current ? "violet" : "slate"} onClick={() => setSelectedMemoryId(entry.id)} />; })}{activeCommunications.map((communication: any) => <WorkFileTitleRow key={`draft-${communication.id}`} title={communication.subject} eyebrow={communicationPresentationLabel(communication) || (communication.communicationStatus === "draft" ? "مسودة تحتاج مراجعة" : "معتمدة — لم تُرسل")} meta={formatDateTime(communication.occurredAt)} tone="amber" onClick={() => onRecordChange("communication", communication.id)} />)}</div>{data.intakeProposals.length ? <div className="mt-6 border-t border-slate-200 pt-6"><p className="mb-3 text-sm font-black text-slate-950">مقترحات Manus المرتبطة بالموضوع</p><ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={onChanged} title="مقترحات مرتبطة بهذا الملف" /></div> : null}{!outputEntries.length && !activeCommunications.length && !data.intakeProposals.length ? <EmptyState title="لا يوجد مخرج تحليلي بعد" description="يبقى المصدر في مرحلة الدليل حتى ينتج عنه تحليل أو تقرير أو مسودة مراجعة." /> : null}</>}
             </section> : null}
 
             {selectedStage === "decisions" ? <section><div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[11px] font-black text-rose-700">التحليل لا يساوي قراراً</p><h2 className="mt-1 text-2xl font-black text-slate-950">الحسم</h2><p className="mt-1 text-sm leading-7 text-slate-500">السؤال، صاحب الصلاحية، الأدلة، والنتيجة المسجلة في مكان واحد.</p></div>{!isClosed ? <NewDecisionDialog workFileId={data.workFile.id} onCreated={onChanged} /> : null}</div><div className="space-y-2">{data.decisions.map((decision: any) => <WorkFileTitleRow key={decision.id} title={decision.title} eyebrow={decisionStatusMeta[decision.decisionStatus as DecisionStatus]?.label || decision.decisionStatus} meta={`${decisionAuthorityMeta[decision.decisionAuthority as DecisionAuthority]}${decision.dueAt ? ` · ${formatDateTime(decision.dueAt)}` : ""}`} tone={["required", "deferred"].includes(decision.decisionStatus) ? "rose" : "slate"} onClick={() => onRecordChange("decision", decision.id)} />)}{!data.decisions.length ? <EmptyState title="لا يوجد قرار في هذا الموضوع" description="يُفتح القرار فقط عندما يحتاج الموضوع حسمًا من صاحب الصلاحية." /> : null}</div></section> : null}
@@ -1325,7 +1326,25 @@ export default function ComoNextTodayPage() {
   const overviewQuery = trpc.comoNext.getOverview.useQuery(undefined, { enabled: isAuthenticated, refetchInterval: 60_000 });
   const projectsQuery = trpc.comoNext.listProjects.useQuery(undefined, { enabled: isAuthenticated, staleTime: 60_000 });
   const importReviewQuery = trpc.comoNext.getImportReview.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin", staleTime: 60_000 });
-  const data = overviewQuery.data;
+  const requestedProject = Number(requestParams?.get("projectId"));
+  const projectFilter = requestParams?.has("projectId") ? requestedProject : null;
+  const rawData = overviewQuery.data;
+  const data = useMemo(() => rawData ? {
+    ...rawData,
+    actions: filterKitchenProjectRecords(rawData.actions, projectFilter),
+    decisions: filterKitchenProjectRecords(rawData.decisions, projectFilter),
+    draftCommunications: filterKitchenProjectRecords(rawData.draftCommunications, projectFilter),
+    meetingAttention: filterKitchenProjectRecords(rawData.meetingAttention, projectFilter),
+    workFiles: filterKitchenProjectRecords(rawData.workFiles, projectFilter),
+    specialistAttention: filterKitchenProjectRecords(rawData.specialistAttention, projectFilter),
+    intakeProposals: filterKitchenProjectRecords(rawData.intakeProposals, projectFilter),
+    executionQueue: filterKitchenProjectRecords(rawData.executionQueue, projectFilter),
+  } : rawData, [rawData, projectFilter]);
+  const visibleActions = data?.actions || [];
+  const visibleDecisions = data?.decisions || [];
+  const visibleDrafts = data?.draftCommunications || [];
+  const visibleMeetings = data?.meetingAttention || [];
+  const visibleWorkFiles = data?.workFiles || [];
 
   const openSection = (next: ExecutiveSection) => {
     setSelectedSection(next);
@@ -1446,16 +1465,16 @@ export default function ComoNextTodayPage() {
   };
   const leaveFocusedRecord = () => selectedSection && selectedSection !== "work-files" ? closeWorkFile() : changeFocusedAction(null);
   const sectionCards = useMemo(() => data ? [
-    { key: "actions" as const, title: "الإجراءات والمتابعات", count: data.actions.length, icon: CheckCheck, tone: "bg-slate-100 text-slate-700" },
-    { key: "decisions" as const, title: "القرارات المطلوبة", count: data.decisions.length, icon: Scale, tone: "bg-rose-50 text-rose-700" },
-    { key: "communications" as const, title: "المراسلات والمسودات", count: data.draftCommunications.length, icon: Mail, tone: "bg-sky-50 text-sky-700" },
-    { key: "meetings" as const, title: "الاجتماعات", count: data.meetingAttention.length, icon: CalendarDays, tone: "bg-teal-50 text-teal-700" },
+    { key: "actions" as const, title: "الإجراءات والمتابعات", count: visibleActions.length, icon: CheckCheck, tone: "bg-slate-100 text-slate-700" },
+    { key: "decisions" as const, title: "القرارات المطلوبة", count: visibleDecisions.length, icon: Scale, tone: "bg-rose-50 text-rose-700" },
+    { key: "communications" as const, title: "المراسلات والمسودات", count: visibleDrafts.length, icon: Mail, tone: "bg-sky-50 text-sky-700" },
+    { key: "meetings" as const, title: "الاجتماعات", count: visibleMeetings.length, icon: CalendarDays, tone: "bg-teal-50 text-teal-700" },
     { key: "email" as const, title: "المراسلات البريدية", count: data.emailAttention.length, icon: Inbox, tone: "bg-amber-50 text-amber-700", adminOnly: true },
     { key: "intake" as const, title: "مقترحات المراجعة", count: data.intakeProposals.length, icon: Sparkles, tone: "bg-violet-50 text-violet-700" },
     { key: "specialists" as const, title: "المراجعات التخصصية", count: data.specialistAttention.length, icon: BriefcaseBusiness, tone: "bg-emerald-50 text-emerald-700" },
-    { key: "work-files" as const, title: "ملفات العمل", count: data.workFiles.length, icon: FileStack, tone: "bg-cyan-50 text-cyan-800" },
-  ].filter(item => !item.adminOnly || user?.role === "admin") : [], [data, user?.role]);
-  const kitchenBoard = useMemo(() => buildKitchenBoard(data?.executionQueue || [], data?.workFiles || []), [data?.executionQueue, data?.workFiles]);
+    { key: "work-files" as const, title: "ملفات العمل", count: visibleWorkFiles.length, icon: FileStack, tone: "bg-cyan-50 text-cyan-800" },
+  ].filter(item => !item.adminOnly || user?.role === "admin") : [], [data, user?.role, projectFilter]);
+  const kitchenBoard = useMemo(() => buildKitchenBoard(filterKitchenProjectRecords(data?.executionQueue || [], projectFilter), filterKitchenProjectRecords(data?.workFiles || [], projectFilter)), [data?.executionQueue, data?.workFiles, projectFilter]);
   const visibleWaiting = kitchenBoard.waiting.filter(item => !receiptConfirmedActionIds.includes(Number(item.recordId)));
 
   if (loading) return <PageSkeleton />;
@@ -1505,7 +1524,7 @@ export default function ComoNextTodayPage() {
             {selectedSection === "decisions" ? <div className="space-y-2">{data.decisions.length ? data.decisions.map((item: any) => <TodayDecisionCard key={item.id} item={item} onOpen={(workFileId, decisionId) => openFocusedRecord(workFileId, "decision", decisionId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد قرارات مطلوبة</div>}</div> : null}
             {selectedSection === "communications" ? <div className="space-y-2">{data.draftCommunications.length ? data.draftCommunications.map((item: any) => <TodayCommunicationCard key={item.id} item={item} onOpen={(workFileId, communicationId) => openFocusedRecord(workFileId, "communication", communicationId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مسودات تنتظر المراجعة</div>}</div> : null}
             {selectedSection === "meetings" ? <div className="space-y-2">{data.meetingAttention.length ? data.meetingAttention.map((item: any) => <TodayMeetingCard key={item.id} item={item} onOpen={(workFileId, meetingId) => openFocusedRecord(workFileId, "meeting", meetingId)} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد اجتماعات تحتاج انتباهك</div>}</div> : null}
-            {selectedSection === "email" && user.role === "admin" ? <ComoNextEmailInbox onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} /> : null}
+            {selectedSection === "email" && user.role === "admin" ? <ComoNextEmailInbox requestedFilter={requestParams?.get("mailFilter")} onOverviewChanged={async () => { await utils.comoNext.getOverview.invalidate(); }} /> : null}
             {selectedSection === "intake" ? <ComoNextIntakeProposals proposals={data.intakeProposals || []} onChanged={refresh} onOpenWorkFile={openWorkFile} selectedProposalId={selectedFocusKind === "proposal" ? selectedFocusId : null} onSelectedProposalChange={changeFocusedProposal} /> : null}
             {selectedSection === "specialists" ? <div><PreservedCapabilityGallery /><div className="mt-5 space-y-2">{data.specialistAttention.length ? data.specialistAttention.map((item: any) => <button key={item.id} type="button" onClick={() => navigate(`/como-next/projects/${item.projectId}`)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm hover:border-emerald-200"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.executiveSummary || item.requestText}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-emerald-700" /></button>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد مراجعات تخصصية معلقة الآن</div>}</div></div> : null}
             {selectedSection === "work-files" ? <div className="space-y-2">{data.workFiles.length ? data.workFiles.map((file: any) => <WorkFileCard key={file.id} file={file} onOpen={openWorkFile} />) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm font-bold text-slate-500">لا توجد ملفات عمل نشطة</div>}</div> : null}

@@ -1,16 +1,23 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getCommitteeDecision, upsertCommitteeDecision, getAiAdvisoryScores, upsertAiAdvisoryScore } from "../db";
 import { invokeLLM } from "../_core/llm";
+import { TRPCError } from "@trpc/server";
+import { requireLegacyProjectRead, requireLegacyProjectOwner } from "../services/comoLegacyProjectAccess";
+import { assertCommitteeUnlocked, assertLinkedOffice, assertThreeEvaluatorsReady } from "../services/consultantAccess";
 
+function advisoryText(content: Awaited<ReturnType<typeof invokeLLM>>["choices"][number]["message"]["content"]) {
+  return typeof content === "string" ? content : (content ?? []).filter(part => part.type === "text").map(part => "text" in part ? part.text : "").join("\n");
+}
 export const committeeRouter = router({
-  getByProject: publicProcedure
+  getByProject: protectedProcedure
     .input(z.number())
-    .query(({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input);
       return getCommitteeDecision(input);
     }),
 
-  upsert: publicProcedure
+  upsert: protectedProcedure
     .input(
       z.object({
         projectId: z.number(),
@@ -24,37 +31,46 @@ export const committeeRouter = router({
         aiAnalysis: z.string().optional(),
         aiRecommendation: z.string().optional(),
         aiPostDecisionAnalysis: z.string().optional(),
-        isConfirmed: z.number().optional(),
-        confirmedBy: z.string().optional(),
-      })
+      }).strict()
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
+      await assertCommitteeUnlocked(input.projectId);
+      if (input.selectedConsultantId !== undefined) await assertLinkedOffice(input.projectId, input.selectedConsultantId);
       const { projectId, ...data } = input;
       return upsertCommitteeDecision(projectId, data);
     }),
 
   // Confirm committee decision (locks it)
-  confirmDecision: publicProcedure
+  confirmDecision: protectedProcedure
     .input(z.object({
       projectId: z.number(),
-      confirmedBy: z.string(),
+      confirmedBy: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
+      await assertCommitteeUnlocked(input.projectId);
+      await assertThreeEvaluatorsReady(input.projectId);
+      const decision = await getCommitteeDecision(input.projectId);
+      if (!decision?.selectedConsultantId) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "احفظ قرار اللجنة أولًا" });
+      await assertLinkedOffice(input.projectId, decision.selectedConsultantId);
       return upsertCommitteeDecision(input.projectId, {
         isConfirmed: 1,
-        confirmedBy: input.confirmedBy,
+        confirmedAt: new Date().toISOString().slice(0, 19).replace("T", " "),
+        confirmedBy: `owner_binding:${ctx.user.id}`,
       });
     }),
 
   // Get AI advisory scores for a project
-  getAiAdvisory: publicProcedure
+  getAiAdvisory: protectedProcedure
     .input(z.number())
-    .query(({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input);
       return getAiAdvisoryScores(input);
     }),
 
   // Generate AI advisory scores for all consultants on a criterion
-  generateAiAdvisory: publicProcedure
+  generateAiAdvisory: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       projectName: z.string(),
@@ -69,7 +85,11 @@ export const committeeRouter = router({
         profile: z.string().optional(),
       })),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
+      await requireLegacyProjectOwner(ctx.user, input.projectId);
+      await assertCommitteeUnlocked(input.projectId);
+      for (const consultant of input.consultants) await assertLinkedOffice(input.projectId, consultant.id);
       const consultantsInfo = input.consultants
         .map(c => `- ${c.name}: ${c.profile || 'لا تتوفر معلومات إضافية'}`)
         .join('\n');
@@ -100,7 +120,7 @@ ${consultantsInfo}
           ],
         });
 
-        const content = response.choices[0]?.message?.content || "[]";
+        const content = advisoryText(response.choices[0]?.message?.content) || "[]";
         // Extract JSON from response
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         if (!jsonMatch) return { scores: [] };
@@ -125,7 +145,7 @@ ${consultantsInfo}
     }),
 
   // Fee deviation analysis
-  analyzeFeeDeviation: publicProcedure
+  analyzeFeeDeviation: protectedProcedure
     .input(z.object({
       consultants: z.array(z.object({
         id: z.number(),
@@ -133,7 +153,7 @@ ${consultantsInfo}
         totalFee: z.number(),
       })),
     }))
-    .query(({ input }) => {
+    .query(async ({ ctx, input }) => {
       const fees = input.consultants.map(c => c.totalFee).filter(f => f > 0);
       if (fees.length === 0) return { average: 0, consultants: [] };
 
@@ -178,9 +198,10 @@ ${consultantsInfo}
     }),
 
   // AI analysis for committee decision (pre-decision)
-  analyzeDecision: publicProcedure
+  analyzeDecision: protectedProcedure
     .input(
       z.object({
+        projectId: z.number().int().positive(),
         projectName: z.string(),
         projectType: z.string().optional(),
         selectedConsultantName: z.string(),
@@ -198,7 +219,8 @@ ${consultantsInfo}
         negotiationConditions: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const rankingsText = input.rankings
         .map(r => `المركز ${r.rank}: ${r.name} (التقييم الفني: ${r.technicalScore.toFixed(1)}/100، الأتعاب: ${r.totalFee.toLocaleString()} AED${r.feeDeviation ? `، انحراف: ${r.feeDeviation > 0 ? '+' : ''}${r.feeDeviation.toFixed(1)}%` : ''}${r.feeZone ? ` [${r.feeZone}]` : ''})`)
         .join('\n');
@@ -243,14 +265,14 @@ ${input.negotiationConditions ? `شروط التفاوض: ${input.negotiationCon
             { role: "user", content: prompt },
           ],
         });
-        return { analysis: response.choices[0]?.message?.content || "لم يتم التحليل" };
+        return { analysis: advisoryText(response.choices[0]?.message?.content) || "لم يتم التحليل" };
       } catch (error) {
         return { analysis: "حدث خطأ في التحليل. يرجى المحاولة لاحقاً." };
       }
     }),
 
   // AI post-decision analysis (after confirmation)
-  postDecisionAnalysis: publicProcedure
+  postDecisionAnalysis: protectedProcedure
     .input(z.object({
       projectId: z.number(),
       projectName: z.string(),
@@ -267,7 +289,8 @@ ${input.negotiationConditions ? `شروط التفاوض: ${input.negotiationCon
       negotiationTarget: z.string().optional(),
       negotiationConditions: z.string().optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const rankingsText = input.rankings
         .map(r => `${r.name}: فني ${r.technicalScore.toFixed(1)}/100، أتعاب ${r.totalFee.toLocaleString()} AED`)
         .join('\n');
@@ -300,13 +323,9 @@ ${rankingsText}
           ],
         });
 
-        const analysis = response.choices[0]?.message?.content || "لم يتم التحليل";
+        const analysis = advisoryText(response.choices[0]?.message?.content) || "لم يتم التحليل";
 
-        // Save the post-decision analysis
-        await upsertCommitteeDecision(input.projectId, {
-          aiPostDecisionAnalysis: analysis,
-        });
-
+        // Advisory output only: never edit the confirmed decision.
         return { analysis };
       } catch (error) {
         return { analysis: "حدث خطأ في التحليل. يرجى المحاولة لاحقاً." };
@@ -314,9 +333,10 @@ ${rankingsText}
     }),
 
   // AI recommendation for project (enhanced with fee deviation awareness)
-  getRecommendation: publicProcedure
+  getRecommendation: protectedProcedure
     .input(
       z.object({
+        projectId: z.number().int().positive(),
         projectName: z.string(),
         projectBua: z.number().optional(),
         projectPricePerSqft: z.number().optional(),
@@ -331,7 +351,8 @@ ${rankingsText}
         })),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requireLegacyProjectRead(ctx.user, input.projectId);
       const consultantsText = input.consultants
         .map(c => `- ${c.name}: التقييم الفني ${c.technicalScore.toFixed(1)}/100، الأتعاب ${c.totalFee.toLocaleString()} AED${c.feeDeviation ? ` (انحراف ${c.feeDeviation > 0 ? '+' : ''}${c.feeDeviation.toFixed(1)}% - ${c.feeZone || ''})` : ''}`)
         .join('\n');
@@ -369,7 +390,7 @@ ${consultantsText}
             { role: "user", content: prompt },
           ],
         });
-        return { recommendation: response.choices[0]?.message?.content || "لم يتم التوصية" };
+        return { recommendation: advisoryText(response.choices[0]?.message?.content) || "لم يتم التوصية" };
       } catch (error) {
         return { recommendation: "حدث خطأ في التوصية. يرجى المحاولة لاحقاً." };
       }

@@ -1,20 +1,24 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
+  comoAppOwnerIdentity,
   comoNextIntakeProposals,
   comoNextWorkFiles,
   comoNextWorkMemory,
   users,
 } from "../../drizzle/schema";
-import { ENV } from "../_core/env";
 import { getDb } from "../db";
+import { matchesAuthenticatedAppOwner, type AppOwnerBinding } from "./comoAppOwner";
 import {
   appendEvent,
   createActionCommand,
   createCommunicationDraftCommand,
   createDecisionCommand,
   requireProjectAccess,
+  requireOneCommandUpdate,
   toSqlUtcTimestamp,
+  type ComoNextDatabase,
+  type ComoNextTransaction,
 } from "./comoNextCommands";
 
 export type IntakeProposalKind = "action" | "decision" | "communication_draft" | "note";
@@ -50,7 +54,7 @@ export function normalizeIntakeProposalDraft(proposal: IntakeProposalDraft) {
     ...proposal,
     kind: ["action", "decision", "communication_draft", "note"].includes(String(proposal.kind)) ? proposal.kind : null,
     ownerType: proposal.kind === "note" ? null : ["human", "manus", "team"].includes(String(proposal.ownerType)) ? proposal.ownerType : null,
-    priority: ["normal", "important", "urgent"].includes(String(proposal.priority)) ? proposal.priority : "normal" as const,
+    priority: proposal.priority === "important" || proposal.priority === "urgent" ? proposal.priority : "normal" as const,
     dueAt: proposal.dueAt && !Number.isNaN(Date.parse(proposal.dueAt)) ? toSqlUtcTimestamp(proposal.dueAt) : null,
     channel: ["email", "whatsapp", "letter", "phone_note", "internal"].includes(String(proposal.channel)) ? proposal.channel : null,
   };
@@ -61,12 +65,13 @@ export function assertReviewOnlyIntake(input: { sourceKind: string; reviewStatus
   if (input.reviewStatus !== "pending" || input.targetId) throw new Error("New intake proposals must remain review-only");
 }
 
-async function requireWorkFile(db: any, input: { userId: number; projectId: number; workFileId: number; required?: "read" | "write" }) {
+async function requireWorkFile(db: ComoNextDatabase | ComoNextTransaction, input: { userId: number; projectId: number; workFileId: number; required?: "read" | "write" }) {
   await requireProjectAccess(db, input.projectId, input.userId, input.required || "write");
-  const [workFile] = await db.select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
+  const query = db.select({ id: comoNextWorkFiles.id, projectId: comoNextWorkFiles.projectId, status: comoNextWorkFiles.workFileStatus })
     .from(comoNextWorkFiles)
     .where(and(eq(comoNextWorkFiles.id, input.workFileId), eq(comoNextWorkFiles.projectId, input.projectId)))
     .limit(1);
+  const [workFile] = await ("rollback" in db ? query.for("update") : query);
   if (!workFile) throw new TRPCError({ code: "NOT_FOUND", message: "ملف العمل لا يتبع المشروع المختار" });
   if (["closed", "cancelled"].includes(workFile.status)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "لا يمكن إضافة مقترح إلى ملف عمل مغلق" });
   return workFile;
@@ -110,9 +115,14 @@ export async function createIntakeProposalsCommand(input: {
     let duplicates = 0;
     for (const proposal of candidates) {
       const sourceRecordId = `${input.sourcePrefix}:${proposal.ordinal}`.slice(0, 255);
-      const [existing] = await tx.select({ id: comoNextIntakeProposals.id }).from(comoNextIntakeProposals)
+      const [existing] = await tx.select({ id: comoNextIntakeProposals.id, userId: comoNextIntakeProposals.userId, projectId: comoNextIntakeProposals.projectId, workFileId: comoNextIntakeProposals.workFileId }).from(comoNextIntakeProposals)
         .where(and(eq(comoNextIntakeProposals.sourceKind, input.sourceKind), eq(comoNextIntakeProposals.sourceRecordId, sourceRecordId))).limit(1);
-      if (existing) { ids.push(Number(existing.id)); duplicates += 1; continue; }
+      if (existing) {
+        if (existing.userId !== input.userId || existing.projectId !== input.projectId || existing.workFileId !== input.workFileId) {
+          throw new TRPCError({ code: "CONFLICT", message: "المصدر مرتبط بمرساة مختلفة؛ لا يعاد استعماله لهذا الملف" });
+        }
+        ids.push(Number(existing.id)); duplicates += 1; continue;
+      }
       assertReviewOnlyIntake({ sourceKind: input.sourceKind, reviewStatus: "pending", targetId: null });
       const result = await tx.insert(comoNextIntakeProposals).values({
         userId: input.userId,
@@ -201,10 +211,19 @@ export async function resolveOwnerUserIdForSara(memberId: string) {
   if (memberId !== "abdulrahman") throw new TRPCError({ code: "FORBIDDEN", message: "سجل المقترحات من سارة متاح لعبد الرحمن فقط" });
   const db = await getDb();
   if (!db) databaseUnavailable();
-  const adminUsers = await db.select({ id: users.id, openId: users.openId })
-    .from(users)
-    .where(eq(users.role, "admin"));
-  return selectSaraOwnerUserId({ configuredOpenId: ENV.ownerOpenId, adminUsers });
+  const [binding] = await db.select({ userId: comoAppOwnerIdentity.userId, openId: comoAppOwnerIdentity.openId, isActive: comoAppOwnerIdentity.isActive })
+    .from(comoAppOwnerIdentity).where(eq(comoAppOwnerIdentity.id, 1)).limit(1);
+  if (!binding || binding.isActive !== 1) return requireBoundSaraOwnerUserId(null, null);
+  const [user] = await db.select({ id: users.id, openId: users.openId, role: users.role })
+    .from(users).where(eq(users.id, binding.userId)).limit(1);
+  return requireBoundSaraOwnerUserId(binding, user ?? null);
+}
+
+export function requireBoundSaraOwnerUserId(binding: AppOwnerBinding | null, user: { id: number; openId: string; role: string } | null) {
+  if (!binding || !user || !matchesAuthenticatedAppOwner(user, binding, "")) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "هوية مالك COMO المثبتة غير متاحة لسارة؛ لا يُستعمل حساب إدارة بديل" });
+  }
+  return user.id;
 }
 
 export async function createSaraIntakeProposalCommand(input: {
@@ -267,84 +286,100 @@ export async function reviewIntakeProposalCommand(input: {
 }) {
   const db = await getDb();
   if (!db) databaseUnavailable();
-  const [proposal] = await db.select().from(comoNextIntakeProposals).where(eq(comoNextIntakeProposals.id, input.proposalId)).limit(1);
-  if (!proposal || proposal.userId !== input.userId) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المقترح" });
-  await requireWorkFile(db, { userId: input.userId, projectId: proposal.projectId, workFileId: proposal.workFileId });
-  if (proposal.reviewStatus !== "pending") return { targetId: proposal.targetId ? Number(proposal.targetId) : null, replayed: true as const, externalSideEffect: false as const };
+  const reviewed = await db.transaction(async tx => {
+    const [proposal] = await tx.select().from(comoNextIntakeProposals)
+      .where(eq(comoNextIntakeProposals.id, input.proposalId)).limit(1).for("update");
+    if (!proposal || proposal.userId !== input.userId) throw new TRPCError({ code: "NOT_FOUND", message: "لم يُعثر على المقترح" });
+    await requireWorkFile(tx, { userId: input.userId, projectId: proposal.projectId, workFileId: proposal.workFileId });
+    if (proposal.reviewStatus !== "pending") {
+      return { proposal, replayed: true };
+    }
 
-  const title = clean(input.title || proposal.title, 1000);
-  const content = clean(input.content ?? proposal.content, 100_000);
-  const acceptanceCriteria = clean(input.acceptanceCriteria ?? proposal.acceptanceCriteria, 5_000);
-  const ownerType = input.ownerType || proposal.ownerType || "human";
-  const priority = input.priority || proposal.priority;
-  const dueAt = input.dueAt ?? proposal.dueAt;
-  const channel = input.channel || proposal.channel || "internal";
-  const toText = clean(input.toText ?? proposal.toText, 5_000) || null;
-  const idempotencyKey = `intake-proposal:${proposal.id}`;
-  const appliedByManus = String(input.reviewNote || "").startsWith("AUTO_MANUS:");
-  let targetId: number | null = null;
+    const title = clean(input.title || proposal.title, 1000);
+    const content = clean(input.content ?? proposal.content, 100_000);
+    const acceptanceCriteria = clean(input.acceptanceCriteria ?? proposal.acceptanceCriteria, 5_000);
+    const ownerType = input.ownerType || proposal.ownerType || "human";
+    const priority = input.priority || proposal.priority;
+    const dueAt = input.dueAt ?? proposal.dueAt;
+    const channel = input.channel || proposal.channel || "internal";
+    const toText = clean(input.toText ?? proposal.toText, 5_000) || null;
+    const idempotencyKey = `intake-proposal:${proposal.id}`;
+    const appliedByManus = String(input.reviewNote || "").startsWith("AUTO_MANUS:");
+    let targetId: number | null = null;
 
-  if (input.decision === "apply") {
-    if (proposal.proposalKind === "action") {
-      if (!acceptanceCriteria) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اعتماد الإجراء يحتاج معيار قبول واضح" });
-      const result = await createActionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, description: content || undefined, acceptanceCriteria, ownerType, priority, dueAt, idempotencyKey, actorType: appliedByManus ? "manus" : "human", actorUserId: appliedByManus ? null : input.userId });
-      targetId = Number(result.id);
-    } else if (proposal.proposalKind === "decision") {
-      const result = await createDecisionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, question: content || title, contextSummary: `مقترح من ${proposal.sourceKind === "email" ? "تحليل بريد" : "محادثة سارة"}. الدليل: ${proposal.evidenceExcerpt}`, decisionAuthority: "abdulrahman", dueAt, idempotencyKey });
-      targetId = Number(result.id);
-    } else if (proposal.proposalKind === "communication_draft") {
-      if (!content) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اعتماد مسودة المراسلة يحتاج نصًا" });
-      const result = await createCommunicationDraftCommand({ userId: input.userId, workFileId: proposal.workFileId, channel, subject: title, body: content, toText, idempotencyKey });
-      targetId = Number(result.id);
-    } else {
-      const [existing] = await db.select({ id: comoNextWorkMemory.id }).from(comoNextWorkMemory)
-        .where(and(eq(comoNextWorkMemory.sourceSystem, "como_next_intake"), eq(comoNextWorkMemory.sourceRecordId, idempotencyKey))).limit(1);
-      if (existing) targetId = Number(existing.id);
-      else {
-        const result = await db.insert(comoNextWorkMemory).values({
-          projectId: proposal.projectId,
-          workFileId: proposal.workFileId,
-          memoryType: "note",
-          entryType: "reviewed_intake_note",
-          title,
-          body: `${content || ""}\n\nالدليل: ${proposal.evidenceExcerpt}`.trim(),
-          sourceStatus: "reviewed",
-          sourceSystem: "como_next_intake",
-          sourceRecordId: idempotencyKey,
-          occurredAt: nowSql(),
-        });
-        targetId = Number(result[0].insertId);
+    if (input.decision === "apply") {
+      if (proposal.proposalKind === "action") {
+        if (!acceptanceCriteria) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اعتماد الإجراء يحتاج معيار قبول واضح" });
+        const result = await createActionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, description: content || undefined, acceptanceCriteria, ownerType, priority, dueAt, idempotencyKey, actorType: appliedByManus ? "manus" : "human", actorUserId: appliedByManus ? null : input.userId }, tx);
+        targetId = Number(result.id);
+      } else if (proposal.proposalKind === "decision") {
+        const result = await createDecisionCommand({ userId: input.userId, workFileId: proposal.workFileId, title, question: content || title, contextSummary: `مقترح من ${proposal.sourceKind === "email" ? "تحليل بريد" : "محادثة سارة"}. الدليل: ${proposal.evidenceExcerpt}`, decisionAuthority: "abdulrahman", dueAt, idempotencyKey }, tx);
+        targetId = Number(result.id);
+      } else if (proposal.proposalKind === "communication_draft") {
+        if (!content) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "اعتماد مسودة المراسلة يحتاج نصًا" });
+        const result = await createCommunicationDraftCommand({ userId: input.userId, workFileId: proposal.workFileId, channel, subject: title, body: content, toText, idempotencyKey }, tx);
+        targetId = Number(result.id);
+      } else if (proposal.proposalKind === "note") {
+        const [existing] = await tx.select({ id: comoNextWorkMemory.id }).from(comoNextWorkMemory)
+          .where(and(eq(comoNextWorkMemory.sourceSystem, "como_next_intake"), eq(comoNextWorkMemory.sourceRecordId, idempotencyKey))).limit(1);
+        if (existing) targetId = Number(existing.id);
+        else {
+          const result = await tx.insert(comoNextWorkMemory).values({
+            projectId: proposal.projectId, workFileId: proposal.workFileId,
+            memoryType: "note", entryType: "reviewed_intake_note", title,
+            body: `${content || ""}\n\nالدليل: ${proposal.evidenceExcerpt}`.trim(),
+            sourceStatus: "reviewed", sourceSystem: "como_next_intake",
+            sourceRecordId: idempotencyKey, occurredAt: nowSql(),
+          });
+          targetId = Number(result[0].insertId);
+        }
+      } else {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "نوع المقترح غير معروف" });
       }
     }
-  }
 
-  return db.transaction(async tx => {
-    await tx.update(comoNextIntakeProposals).set({
-      reviewStatus: input.decision === "apply" ? "applied" : "dismissed",
-      targetId,
-      reviewNote: clean(input.reviewNote, 5_000) || null,
-      reviewedByUserId: input.userId,
-      reviewedAt: nowSql(),
-      title,
-      content: content || null,
-      acceptanceCriteria: acceptanceCriteria || null,
-      ownerType,
-      priority,
-      dueAt: dueAt ? toSqlUtcTimestamp(String(dueAt)) : null,
-      channel,
-      toText,
-    }).where(eq(comoNextIntakeProposals.id, proposal.id));
+    const changes = {
+      reviewStatus: input.decision === "apply" ? "applied" as const : "dismissed" as const,
+      targetId, reviewNote: clean(input.reviewNote, 5_000) || null,
+      reviewedByUserId: input.userId, reviewedAt: nowSql(), title,
+      content: content || null, acceptanceCriteria: acceptanceCriteria || null,
+      ownerType, priority, dueAt: dueAt ? toSqlUtcTimestamp(String(dueAt)) : null,
+      channel, toText,
+    };
+    const updated = await tx.update(comoNextIntakeProposals).set(changes)
+      .where(and(eq(comoNextIntakeProposals.id, proposal.id), eq(comoNextIntakeProposals.reviewStatus, "pending")));
+    requireOneCommandUpdate(updated);
     await appendEvent(tx, {
-      userId: input.userId,
-      projectId: proposal.projectId,
-      workFileId: proposal.workFileId,
-      actorType: appliedByManus ? "manus" : "human",
-      actorUserId: appliedByManus ? null : input.userId,
+      userId: input.userId, projectId: proposal.projectId, workFileId: proposal.workFileId,
+      actorType: appliedByManus ? "manus" : "human", actorUserId: appliedByManus ? null : input.userId,
       eventType: input.decision === "apply" ? "intake_proposal_applied" : "intake_proposal_dismissed",
       summary: `${input.decision === "apply" ? "اعتماد وتحويل" : "استبعاد"} المقترح: ${title}`,
-      payload: { proposalId: Number(proposal.id), proposalKind: proposal.proposalKind, targetId, externalSideEffect: false },
+      payload: { proposalId: Number(proposal.id), proposalKind: proposal.proposalKind, targetId, externalSideEffect: false, mailboxWrite: false, sent: false },
       idempotencyKey: `event:intake-review:${proposal.id}`,
     });
-    return { targetId, replayed: false as const, externalSideEffect: false as const };
+    return { proposal: { ...proposal, ...changes }, replayed: false };
   });
+  const proposal = reviewed.proposal;
+  const target = proposal.reviewStatus === "applied" && proposal.targetId
+    ? { kind: proposal.proposalKind, id: Number(proposal.targetId), projectId: proposal.projectId, workFileId: proposal.workFileId }
+    : null;
+  const result = {
+    target,
+    targetKind: target?.kind ?? null,
+    // Legacy consumers treated this as actionIds. Fail closed for other kinds;
+    // the actual persisted target remains available in the typed target above.
+    targetId: target?.kind === "action" && !reviewed.replayed ? target.id : null,
+    actionIds: target?.kind === "action" && !reviewed.replayed ? [target.id] : [],
+    replayed: reviewed.replayed, externalSideEffect: false,
+    mailboxWrite: false, sent: false,
+  };
+  if (input.decision !== "apply" || target?.kind !== "communication_draft" || proposal.channel !== "email") return result;
+  // Existing exactly-once mailbox service resumes after the atomic DB commit.
+  // A retry uses the persisted judgement/text, never overwrites it from payload.
+  const draft = await createCommunicationDraftCommand({
+    userId: input.userId, workFileId: proposal.workFileId, channel: "email",
+    subject: proposal.title, body: proposal.content || "", toText: proposal.toText,
+    idempotencyKey: `intake-proposal:${proposal.id}`,
+  });
+  return { ...result, mailboxWrite: draft.mailboxWrite, mailboxDraft: draft.mailboxDraft };
 }

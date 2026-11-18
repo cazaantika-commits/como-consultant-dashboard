@@ -57,15 +57,15 @@ export const meetingsRouter = router({
   list: protectedProcedure
     .input(z.object({
       status: z.enum(["preparing", "in_progress", "completed", "cancelled"]).optional(),
-      limit: z.number().optional().default(20),
+      limit: z.number().int().min(1).max(100).optional().default(20),
     }).optional())
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return [];
 
-      const conditions = [];
+      const conditions = [eq(meetings.userId, ctx.user.id)];
       if (input?.status) {
-        conditions.push(eq(meetings.status, input.status));
+        conditions.push(eq(meetings.meetingStatus, input.status));
       }
 
       const meetingList = await db.select().from(meetings)
@@ -117,7 +117,7 @@ export const meetingsRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
 
       const [meeting] = await db.select().from(meetings)
-        .where(and(eq(meetings.id, meetingId)));
+        .where(and(eq(meetings.id, meetingId), eq(meetings.userId, ctx.user.id)));
 
       if (!meeting) throw new TRPCError({ code: "NOT_FOUND", message: "الاجتماع غير موجود" });
 

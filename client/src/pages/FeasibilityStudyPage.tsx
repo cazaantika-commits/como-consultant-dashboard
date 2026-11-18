@@ -366,7 +366,6 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
   const [activeTab, setActiveTab] = useState("tab5");
   const [form, setForm] = useState<Record<string, any>>({});
   const [isDirty, setIsDirty] = useState(false);
-  const [autoCreating, setAutoCreating] = useState(false);
 
   // Projects query
   const projectsQuery = trpc.projects.list.useQuery(undefined, { enabled: isAuthenticated });
@@ -401,35 +400,30 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
     return calculateProjectCosts(selectedProject, moQuery.data, cpQuery.data);
   }, [selectedProject, moQuery.data, cpQuery.data]);
 
-  // Auto-load or auto-create study when project is selected
+  // Opening a project is a read: never create a study from an effect.
   useEffect(() => {
-    if (!selectedProjectId || studiesByProjectQuery.isLoading) return;
-    const studies = studiesByProjectQuery.data || [];
-    if (studies.length > 0) {
-      setSelectedStudyId(studies[0].id);
-      setAutoCreating(false);
-    } else if (!autoCreating) {
-      const project = (projectsQuery.data || []).find((p: any) => p.id === selectedProjectId);
-      if (project) {
-        setAutoCreating(true);
-        createMutation.mutate({
-          projectName: project.name,
-          projectId: selectedProjectId,
-          separationFeePerM2: project.separationFeePerSqft ? parseFloat(project.separationFeePerSqft) : 40,
-          landPrice: project.landPrice ? parseFloat(project.landPrice) : null,
-          agentCommissionLandPct: project.agentCommissionLandPct ? parseFloat(project.agentCommissionLandPct) : null,
-          estimatedBua: project.manualBuaSqft ? parseFloat(project.manualBuaSqft) : null,
-          constructionCostPerSqft: project.estimatedConstructionPricePerSqft ? parseFloat(project.estimatedConstructionPricePerSqft) : null,
-        });
-      }
-    }
-  }, [selectedProjectId, studiesByProjectQuery.data, studiesByProjectQuery.isLoading]);
+    setSelectedStudyId(studiesByProjectQuery.data?.[0]?.id ?? null);
+    setForm({});
+    setIsDirty(false);
+  }, [selectedProjectId, studiesByProjectQuery.data]);
 
-  // Mutations
   const createMutation = trpc.feasibility.create.useMutation({
-    onSuccess: (data) => { studiesByProjectQuery.refetch(); setSelectedStudyId(data.id); setAutoCreating(false); toast.success("تم إنشاء الدراسة بنجاح"); },
-    onError: () => { setAutoCreating(false); toast.error("خطأ في إنشاء الدراسة"); },
+    onSuccess: (data) => { studiesByProjectQuery.refetch(); setSelectedStudyId(data.id); toast.success("تم إنشاء الدراسة بنجاح"); },
+    onError: () => toast.error("خطأ في إنشاء الدراسة"),
   });
+  const createStudyExplicitly = () => {
+    if (isReadOnly || !selectedProjectId || !selectedProject || createMutation.isPending ||
+        studiesByProjectQuery.isLoading || studiesByProjectQuery.isError || studiesByProjectQuery.data?.length) return;
+    createMutation.mutate({
+      projectName: selectedProject.name,
+      projectId: selectedProjectId,
+      separationFeePerM2: selectedProject.separationFeePerSqft == null ? 40 : Number(selectedProject.separationFeePerSqft),
+      landPrice: selectedProject.landPrice == null ? null : Number(selectedProject.landPrice),
+      agentCommissionLandPct: selectedProject.agentCommissionLandPct == null ? null : Number(selectedProject.agentCommissionLandPct),
+      estimatedBua: selectedProject.manualBuaSqft == null ? null : Number(selectedProject.manualBuaSqft),
+      constructionCostPerSqft: selectedProject.estimatedConstructionPricePerSqft == null ? null : Number(selectedProject.estimatedConstructionPricePerSqft),
+    });
+  };
   const updateMutation = trpc.feasibility.update.useMutation({
     onSuccess: () => { studiesByProjectQuery.refetch(); studyQuery.refetch(); setIsDirty(false); toast.success("تم حفظ التغييرات"); },
     onError: () => toast.error("خطأ في الحفظ"),
@@ -440,7 +434,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
 
   // Load study data into form
   const loadedStudyId = studyQuery.data?.id;
-  useMemo(() => {
+  useEffect(() => {
     if (studyQuery.data && studyQuery.data.id === selectedStudyId) {
       setForm({ ...studyQuery.data });
       setIsDirty(false);
@@ -519,7 +513,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
 
   // Save handler
   const handleSave = () => {
-    if (!selectedStudyId) return;
+    if (!selectedStudyId || isReadOnly) return;
     const { id, createdAt, updatedAt, userId, ...data } = form;
     updateMutation.mutate({ id: selectedStudyId, ...data });
   };
@@ -544,7 +538,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
             {!embedded && <p className="text-sm text-muted-foreground">تحليل شامل لجدوى المشاريع العقارية</p>}
           </div>
           <div className="flex items-center gap-2">
-            {isDirty && selectedStudyId && (
+            {isDirty && selectedStudyId && !isReadOnly && (
               <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2">
                 {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 حفظ التغييرات
@@ -583,7 +577,7 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
                     ))}
                   </select>
                 </div>
-                {autoCreating && (
+                {createMutation.isPending && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     جاري إنشاء الدراسة...
@@ -615,7 +609,12 @@ export default function FeasibilityStudyPage({ embedded, initialProjectId }: { e
             <p className="text-xs text-muted-foreground/70">أو اطّلع على ملخص المحفظة أعلاه</p>
           </div>
         ) : !selectedStudyId ? (
-          <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="mt-3 text-sm text-muted-foreground">جاري تحميل الدراسة...</p></div>
+          <div className="text-center py-20">
+            {studiesByProjectQuery.isLoading ? <><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /><p className="mt-3 text-sm text-muted-foreground">جاري تحميل الدراسة...</p></>
+              : studiesByProjectQuery.isError ? <p className="text-sm text-muted-foreground">تعذر قراءة الدراسة؛ لا يمكن اعتبار فشل المصدر نموذجًا فارغًا.</p>
+              : <><p className="text-sm text-muted-foreground">لا توجد دراسة لهذا المشروع. النموذج الفارغ للقراءة فقط ويحتاج إنشاءً صريحًا.</p>
+                {!isReadOnly && <Button className="mt-3 gap-2" onClick={createStudyExplicitly} disabled={createMutation.isPending || !selectedProject}><Plus className="w-4 h-4" />إنشاء دراسة تقديرية</Button>}</>}
+          </div>
         ) : studyQuery.isLoading ? (
           <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>
         ) : (

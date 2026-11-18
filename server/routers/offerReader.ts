@@ -3,6 +3,9 @@ import { sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { invokeLLM } from "../_core/llm";
+import { TRPCError } from "@trpc/server";
+import { feePercentagePoints } from "../../shared/consultantContracts";
+import { requireConsultantLink, assertCostReportUnlocked } from "../services/consultantAccess";
 
 const OFFER_READER_MODEL = "gemini-3.1-pro-preview";
 const coverageStatusSchema = z.enum(["INCLUDED", "PARTIAL", "EXCLUDED", "NOT_MENTIONED"]);
@@ -115,13 +118,14 @@ async function applyReviewedDesignInput(db: NonNullable<Awaited<ReturnType<typeo
   const snapshot = JSON.parse(String(source.input_snapshot || "{}"));
   const requirements = Array.isArray(snapshot.requirements) ? snapshot.requirements : [];
   const validIds = new Set(requirements.map((item: any) => Number(item.id)));
-  if (extraction.coverage.length !== requirements.length || extraction.coverage.some((item) => !validIds.has(Number(item.requirement_id)))) {
+  const submittedIds = new Set(extraction.coverage.map(item => item.requirement_id));
+  if (submittedIds.size !== extraction.coverage.length || extraction.coverage.length !== requirements.length || extraction.coverage.some((item) => !validIds.has(Number(item.requirement_id)))) {
     throw new Error("مراجعة العرض لا تطابق نطاق التصميم المعتمد للمشروع");
   }
   if (extraction.design_fee.method === "NOT_STATED") throw new Error("لا يمكن إرسال العرض للتقييم قبل تحديد أتعاب التصميم من مصدر واضح");
 
   const designAmount = extraction.design_fee.method === "LUMP_SUM" ? extraction.design_fee.amount : null;
-  const designPercentage = extraction.design_fee.method === "PERCENTAGE" ? extraction.design_fee.percentage : null;
+  const designPercentage = extraction.design_fee.method === "PERCENTAGE" ? feePercentagePoints(extraction.design_fee.percentage, "FRACTION") : null;
   if (designAmount === null && designPercentage === null) throw new Error("قيمة أتعاب التصميم غير مكتملة");
 
   await db.execute(sql`
@@ -171,7 +175,8 @@ async function applyReviewedDesignInput(db: NonNullable<Awaited<ReturnType<typeo
 export const offerReaderRouter = router({
   getUploadContext: protectedProcedure
     .input(z.object({ cpaProjectId: z.number(), projectConsultantId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireConsultantLink(ctx.user, input.projectConsultantId, "read", input.cpaProjectId);
       const db = await getDb();
       if (!db) return null;
       const rows = await qRows<any>(db, sql`
@@ -186,7 +191,9 @@ export const offerReaderRouter = router({
 
   listSources: protectedProcedure
     .input(z.object({ systemProjectId: z.number(), projectConsultantId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const link = await requireConsultantLink(ctx.user, input.projectConsultantId);
+      if (link.projectId !== input.systemProjectId) throw new TRPCError({ code: "FORBIDDEN" });
       const db = await getDb();
       if (!db) return [];
       const consultantRows = await qRows<any>(db, sql`SELECT consultant_id FROM cpa_project_consultants WHERE id = ${input.projectConsultantId} LIMIT 1`);
@@ -202,7 +209,8 @@ export const offerReaderRouter = router({
 
   listReadings: protectedProcedure
     .input(z.object({ projectConsultantId: z.number() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      await requireConsultantLink(ctx.user, input.projectConsultantId);
       const db = await getDb();
       if (!db) return [];
       return qRows(db, sql`SELECT * FROM consultant_offer_readings WHERE project_consultant_id = ${input.projectConsultantId} ORDER BY created_at DESC`);
@@ -210,7 +218,10 @@ export const offerReaderRouter = router({
 
   analyzeProposal: protectedProcedure
     .input(z.object({ cpaProjectId: z.number(), projectConsultantId: z.number(), systemProjectId: z.number(), proposalId: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "write", input.cpaProjectId);
+      if (link.projectId !== input.systemProjectId) throw new TRPCError({ code: "FORBIDDEN" });
+      await assertCostReportUnlocked(link.cpaProjectId);
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const requirementSets = await qRows<any>(db, sql`SELECT * FROM project_consultant_requirement_sets WHERE project_id = ${input.systemProjectId} AND status = 'APPROVED' AND notes LIKE 'DESIGN_SCOPE_ENCYCLOPEDIA_V1%' ORDER BY revision_no DESC LIMIT 1`);
@@ -225,7 +236,7 @@ export const offerReaderRouter = router({
       if (proposal.mimeType !== "application/pdf") throw new Error("تحليل المساعد في هذه المرحلة يقبل ملف PDF الأصلي فقط");
       const requirements = await qRows<any>(db, sql`SELECT id, code, label, description, requirement_group, sort_order FROM project_consultant_requirements WHERE requirement_set_id = ${set.id} AND is_required = 1 AND workstream = 'DESIGN' ORDER BY sort_order, id`);
       if (!requirements.length) throw new Error("لا توجد بنود تصميم مطلوبة في نطاق المشروع المعتمد");
-      const snapshot = { requirementSetId: set.id, projectConsultantId: input.projectConsultantId, proposal: { id: proposal.id, title: proposal.title, fileName: proposal.fileName }, requirements };
+      const snapshot = { percentageUnit: "FRACTION", requirementSetId: set.id, projectConsultantId: input.projectConsultantId, proposal: { id: proposal.id, title: proposal.title, fileName: proposal.fileName }, requirements };
       await db.execute(sql`UPDATE consultant_offer_readings SET status = 'SUPERSEDED' WHERE project_consultant_id = ${input.projectConsultantId} AND project_requirement_set_id = ${set.id} AND status = 'DRAFT'`);
       const insertResult = await db.execute(sql`INSERT INTO consultant_offer_readings (project_consultant_id, project_requirement_set_id, source_proposal_id, status, model_id, input_snapshot) VALUES (${input.projectConsultantId}, ${set.id}, ${proposal.id}, 'DRAFT', ${OFFER_READER_MODEL}, ${JSON.stringify(snapshot)})`);
       const readingId = Number((insertResult[0] as any).insertId);
@@ -252,12 +263,16 @@ export const offerReaderRouter = router({
 
   approveForEvaluation: protectedProcedure
     .input(z.object({ readingId: z.number(), extraction: reviewedExtractionSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const rows = await qRows<any>(db, sql`SELECT * FROM consultant_offer_readings WHERE id = ${input.readingId} AND status = 'DRAFT' AND extraction_json IS NOT NULL LIMIT 1`);
       const source = rows[0];
       if (!source) throw new Error("لا توجد نتيجة تحليل جاهزة للمراجعة والاعتماد");
+      const link = await requireConsultantLink(ctx.user, Number(source.project_consultant_id), "owner");
+      await assertCostReportUnlocked(link.cpaProjectId);
+      const current = await qRows<{ id: number }>(db, sql`SELECT id FROM project_consultant_requirement_sets WHERE project_id = ${link.projectId} AND status = 'APPROVED' ORDER BY revision_no DESC, id DESC LIMIT 1`);
+      if (Number(current[0]?.id) !== Number(source.project_requirement_set_id)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "قراءة العرض لا تتبع نطاق التصميم المعتمد الحالي" });
       const extraction = reviewedExtractionSchema.parse(input.extraction);
       await applyReviewedDesignInput(db, source, extraction);
       await db.execute(sql`UPDATE consultant_offer_readings SET status = 'REVIEWED', extraction_json = ${JSON.stringify(extraction)} WHERE id = ${input.readingId} AND status = 'DRAFT'`);
@@ -266,12 +281,16 @@ export const offerReaderRouter = router({
 
   saveOwnerCorrection: protectedProcedure
     .input(z.object({ readingId: z.number(), extraction: reviewedExtractionSchema }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new Error("DB unavailable");
       const rows = await qRows<any>(db, sql`SELECT * FROM consultant_offer_readings WHERE id = ${input.readingId} AND status = 'REVIEWED' LIMIT 1`);
       const source = rows[0];
       if (!source) throw new Error("لا توجد مراجعة مكتملة قابلة لتصحيح المالك");
+      const link = await requireConsultantLink(ctx.user, Number(source.project_consultant_id), "owner");
+      await assertCostReportUnlocked(link.cpaProjectId);
+      const current = await qRows<{ id: number }>(db, sql`SELECT id FROM project_consultant_requirement_sets WHERE project_id = ${link.projectId} AND status = 'APPROVED' ORDER BY revision_no DESC, id DESC LIMIT 1`);
+      if (Number(current[0]?.id) !== Number(source.project_requirement_set_id)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "قراءة العرض لا تتبع نطاق التصميم المعتمد الحالي" });
       const extraction = reviewedExtractionSchema.parse(input.extraction);
       await applyReviewedDesignInput(db, source, extraction);
       await db.execute(sql`INSERT INTO consultant_offer_readings (project_consultant_id, project_requirement_set_id, source_proposal_id, status, model_id, input_snapshot, extraction_json) VALUES (${source.project_consultant_id}, ${source.project_requirement_set_id}, ${source.source_proposal_id}, 'REVIEWED', 'OWNER_CORRECTION', ${source.input_snapshot}, ${JSON.stringify(extraction)})`);

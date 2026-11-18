@@ -9,6 +9,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { sql } from "drizzle-orm";
 import { requireProjectAccess } from "../services/comoNextCommands";
+import { requireConsultantProject, requireConsultantLink, assertCostReportUnlocked } from "../services/consultantAccess";
+import { importedFeePercentage, storedDesignPercentage, readApprovedCostSnapshot, offerGapState } from "../../shared/consultantContracts";
 
 // ---- Helpers ---------------------------------------------------------------
 
@@ -105,6 +107,8 @@ export async function runCalculationEngine(cpaProjectId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
+  await assertCostReportUnlocked(cpaProjectId);
+
   // Step 1: Get cpa_project
   const projects = await qRows<any>(
     db,
@@ -129,7 +133,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
     ? await qRows<any>(
         db,
         sql`SELECT si.id, pcr.code, pcr.label, si.item_number,
-                   COALESCE(pcr.gap_value_aed, 0) as ref_cost,
+                   pcr.gap_value_aed as ref_cost,
                    ss.code as section_code
             FROM project_consultant_requirements pcr
             JOIN consultant_requirement_reference_items ref ON ref.id = pcr.reference_item_id
@@ -177,7 +181,8 @@ export async function runCalculationEngine(cpaProjectId: number) {
   // Step 4: All consultants (including DRAFT)
   const consultants = await qRows<any>(
     db,
-    sql`SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code
+    sql`SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+               (SELECT cor.extraction_json FROM consultant_offer_readings cor WHERE cor.project_consultant_id = pc.id AND cor.status = 'REVIEWED' ORDER BY cor.id DESC LIMIT 1) as reviewed_extraction
         FROM cpa_project_consultants pc
         JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
         WHERE pc.cpa_project_id = ${cpaProjectId}
@@ -188,7 +193,9 @@ export async function runCalculationEngine(cpaProjectId: number) {
 
   for (const consultant of consultants) {
     const pcId = consultant.id;
-    const notes: any = { scopeGaps: [], supervisionGaps: [] };
+    const notes: { scopeGaps: { itemCode: string; itemLabel: string; status: string; gapCost: number | null; unresolved: boolean }[]; supervisionGaps: unknown[]; missingFees: string[]; durationWarning?: { statedMonths: number; projectMonths: number; adjustmentFactor: number; originalFee: number; message: string } } = { scopeGaps: [], supervisionGaps: [], missingFees: [] };
+    if (!consultant.design_fee_method || (consultant.design_fee_method === "PERCENTAGE" ? consultant.design_fee_percentage == null : consultant.design_fee_amount == null)) notes.missingFees.push("DESIGN_FEE_NOT_STATED");
+    if (consultant.supervision_submitted && (consultant.supervision_fee_method === "PERCENTAGE" ? consultant.supervision_fee_percentage == null : consultant.supervision_fee_method === "LUMP_SUM" ? consultant.supervision_fee_amount == null : !consultant.supervision_fee_method)) notes.missingFees.push("SUPERVISION_FEE_NOT_STATED");
 
     // Design fee
     let quotedDesignFee = 0;
@@ -196,7 +203,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
       quotedDesignFee = toNum(consultant.design_fee_amount);
     } else if (consultant.design_fee_method === "PERCENTAGE") {
       quotedDesignFee =
-        (totalConstructionCost * toNum(consultant.design_fee_percentage)) / 100;
+        (totalConstructionCost * (storedDesignPercentage(consultant.design_fee_percentage, consultant.reviewed_extraction) ?? 0)) / 100;
     } else if (consultant.design_fee_method === "MONTHLY_RATE") {
       quotedDesignFee = toNum(consultant.design_fee_amount);
     }
@@ -220,22 +227,15 @@ export async function runCalculationEngine(cpaProjectId: number) {
       // Core items (1-11) are always included implicitly — never a gap
       // (Already filtered in SQL, but double-check here)
       if (item.item_number && item.item_number <= 11) continue;
-      const gap = toNum(item.ref_cost);
-      designScopeGapCost += gap;
-      if (gap > 0) {
-        notes.scopeGaps.push({
-          itemCode: item.code,
-          itemLabel: item.label,
-          status,
-          gapCost: gap,
-        });
-      }
+      const gap = offerGapState(status, item.ref_cost);
+      if (gap.gapValue !== null) designScopeGapCost += gap.gapValue;
+      notes.scopeGaps.push({ itemCode: String(item.code), itemLabel: String(item.label), status, gapCost: gap.gapValue, unresolved: gap.unresolved });
     }
 
      // Supervision
     let quotedSupervisionFee = 0;
     let originalSupervisionFeeBeforeAdj = 0;
-    let canRank = 1;
+    let canRank = notes.missingFees.length === 0 && !notes.scopeGaps.some(gap => gap.unresolved) ? 1 : 0;
 
     // Duration warning + adjustment (ملاحظة 3)
     const statedDuration = consultant.supervision_stated_duration_months
@@ -247,7 +247,7 @@ export async function runCalculationEngine(cpaProjectId: number) {
         : 1;
     if (durationAdjustmentFactor > 1) {
       notes.durationWarning = {
-        statedMonths: statedDuration,
+        statedMonths: statedDuration ?? 0,
         projectMonths: durationMonths,
         adjustmentFactor: durationAdjustmentFactor,
         originalFee: originalSupervisionFeeBeforeAdj,
@@ -1050,6 +1050,7 @@ export const cpaRouter = router({
         if (!db) throw new Error("DB unavailable");
         const { id, ...fields } = input;
         await requireCpaProjectAccess(db, id, ctx.user.id, "write");
+        await assertCostReportUnlocked(id);
         // Build dynamic update using individual field checks
         if (fields.plotNumber !== undefined)
           await db.execute(sql`UPDATE cpa_projects SET plot_number=${fields.plotNumber} WHERE id=${id}`);
@@ -1073,6 +1074,7 @@ export const cpaRouter = router({
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         await requireCpaProjectAccess(db, input.id, ctx.user.id, "write");
+        await assertCostReportUnlocked(input.id);
         // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
         // cpa_evaluation_results uses project_consultant_id, not cpa_project_id
         await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.id})`);
@@ -1090,10 +1092,11 @@ export const cpaRouter = router({
   consultants: router({
     listByProject: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId);
         const db = await getDb();
         if (!db) return [];
-        return qRows(
+        const rows = await qRows<Record<string, unknown>>(
           db,
           sql`WITH latest_er AS (
                 SELECT er2.id, er2.project_consultant_id, er2.total_true_cost, er2.eval_rank,
@@ -1107,6 +1110,7 @@ export const cpaRouter = router({
                 ) mx ON er2.id = mx.max_id
               )
               SELECT pc.*, cm.legal_name, cm.trade_name, cm.code as consultant_code,
+                     (SELECT cor.extraction_json FROM consultant_offer_readings cor WHERE cor.project_consultant_id = pc.id AND cor.status = 'REVIEWED' ORDER BY cor.id DESC LIMIT 1) as reviewed_extraction,
                      ler.total_true_cost, ler.eval_rank as result_rank, ler.can_rank, ler.quoted_design_fee,
                      ler.design_scope_gap_cost, ler.true_design_fee,
                      ler.quoted_supervision_fee, ler.supervision_gap_cost, ler.adjusted_supervision_fee
@@ -1116,6 +1120,7 @@ export const cpaRouter = router({
               WHERE pc.cpa_project_id = ${input.cpaProjectId}
               ORDER BY COALESCE(ler.eval_rank, 999), pc.created_at`
         );
+        return rows.map(row => ({ ...row, design_fee_percentage: storedDesignPercentage(row.design_fee_percentage, row.reviewed_extraction) }));
       }),
 
     addConsultant: protectedProcedure
@@ -1125,7 +1130,9 @@ export const cpaRouter = router({
           consultantId: z.number(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId, "write");
+        await assertCostReportUnlocked(input.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const r = await db.execute(
@@ -1137,7 +1144,9 @@ export const cpaRouter = router({
 
     removeConsultant: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.id, "write");
+        await assertCostReportUnlocked(link.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         await db.execute(
@@ -1154,16 +1163,18 @@ export const cpaRouter = router({
           proposalReference: z.string().optional(),
           designFeeAmount: z.number().nullable().optional(),
           designFeeMethod: z.enum(["LUMP_SUM", "PERCENTAGE", "MONTHLY_RATE"]).optional(),
-          designFeePercentage: z.number().nullable().optional(),
+          designFeePercentage: z.number().min(0).max(100).nullable().optional(),
           supervisionFeeAmount: z.number().nullable().optional(),
           supervisionFeeMethod: z.enum(["LUMP_SUM", "PERCENTAGE", "MONTHLY_RATE"]).nullable().optional(),
-          supervisionFeePercentage: z.number().nullable().optional(),
+          supervisionFeePercentage: z.number().min(0).max(100).nullable().optional(),
           supervisionStatedDurationMonths: z.number().nullable().optional(),
           supervisionSubmitted: z.number().optional(),
           status: z.enum(["DRAFT", "CONFIRMED", "EVALUATED"]).optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.id, "write");
+        await assertCostReportUnlocked(link.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const { id, ...f } = input;
@@ -1199,7 +1210,9 @@ export const cpaRouter = router({
           jsonText: z.string(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId, "write");
+        await assertCostReportUnlocked(input.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         let parsed: any;
@@ -1232,11 +1245,11 @@ export const cpaRouter = router({
           : null;
         const supSubmitted = parsed.supervision_fee?.submitted ? 1 : 0;
         // ملاحظة 2: عند PERCENTAGE يتجاهل النظام amount ويعيد الحساب من النسبة
-        // Normalize percentage: Claude may send 0.018 (decimal) or 1.8 (percent) — normalize to percent value
+        // Legacy JSON defaults to percentage points; fractional inputs must declare percentage_unit.
         const rawDesignPct = parsed.design_fee.percentage ?? null;
-        const normalizedDesignPct = rawDesignPct !== null ? (rawDesignPct < 1 ? rawDesignPct * 100 : rawDesignPct) : null;
+        const normalizedDesignPct = importedFeePercentage(rawDesignPct, parsed.design_fee.percentage_unit);
         const rawSupPct = parsed.supervision_fee?.percentage ?? null;
-        const normalizedSupPct = rawSupPct !== null ? (rawSupPct < 1 ? rawSupPct * 100 : rawSupPct) : null;
+        const normalizedSupPct = importedFeePercentage(rawSupPct, parsed.supervision_fee?.percentage_unit);
         const designFeeAmount = designMethod === "PERCENTAGE" ? null : (parsed.design_fee.amount ?? null);
         const supFeeAmount = supMethod === "PERCENTAGE" ? null : (parsed.supervision_fee?.amount ?? null);
 
@@ -1377,7 +1390,8 @@ export const cpaRouter = router({
 
     getScopeCoverage: protectedProcedure
       .input(z.object({ projectConsultantId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "read");
         const db = await getDb();
         if (!db) return [];
         return qRows(
@@ -1416,7 +1430,9 @@ export const cpaRouter = router({
           notes: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "write");
+        await assertCostReportUnlocked(link.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const selected = await qRows<any>(
@@ -1454,7 +1470,8 @@ export const cpaRouter = router({
 
     getSupervisionTeam: protectedProcedure
       .input(z.object({ projectConsultantId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "read");
         const db = await getDb();
         if (!db) return [];
         return qRows(
@@ -1477,7 +1494,9 @@ export const cpaRouter = router({
           proposedMonthlyRate: z.number().nullable().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        const link = await requireConsultantLink(ctx.user, input.projectConsultantId, "write");
+        await assertCostReportUnlocked(link.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         await db.execute(
@@ -1497,18 +1516,20 @@ export const cpaRouter = router({
   evaluation: router({
     runEvaluation: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId, "write");
         return runCalculationEngine(input.cpaProjectId);
       }),
 
     recalculateAll: protectedProcedure
-      .mutation(async () => {
+      .mutation(async ({ ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("DB unavailable");
         const projects = await qRows<any>(db, sql`SELECT id FROM cpa_projects`);
         const results: { id: number; ok: boolean; error?: string }[] = [];
         for (const p of projects) {
           try {
+            await requireConsultantProject(ctx.user, Number(p.id), "write");
             await runCalculationEngine(p.id);
             results.push({ id: p.id, ok: true });
           } catch (e: any) {
@@ -1520,15 +1541,13 @@ export const cpaRouter = router({
 
     getResults: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) return [];
-        // Always re-run calculation engine so results reflect latest settings
-        try {
-          await runCalculationEngine(input.cpaProjectId);
-        } catch (e) {
-          // If engine fails (e.g. no consultants yet), fall through to return whatever is stored
-          console.warn('[getResults] calculation engine skipped:', e);
+        await requireConsultantProject(ctx.user, input.cpaProjectId);
+        const approvedRows = await qRows<{ is_approved: number; report_snapshot: unknown }>(db, sql`SELECT is_approved, report_snapshot FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
+        if (Number(approvedRows[0]?.is_approved) === 1) {
+          return readApprovedCostSnapshot(approvedRows[0].report_snapshot).results.map(row => ({ ...row, result_rank: row.eval_rank, supervisionTeam: [], calculationNotes: row.calculation_notes ? JSON.parse(String(row.calculation_notes)) : null }));
         }
         const rows = await qRows<any>(
           db,
@@ -1580,17 +1599,19 @@ export const cpaRouter = router({
     // ---- True Cost Report ----
     getFullReport: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
 
-        // Re-run calculation engine
-        try { await runCalculationEngine(input.cpaProjectId); } catch (e) { console.warn('[getFullReport] calc skipped:', e); }
+        await requireConsultantProject(ctx.user, input.cpaProjectId);
+        const approvalRows = await qRows<{ is_approved: number; report_snapshot: unknown; approved_by: string | null; approved_at: string | null; approval_notes: string | null }>(db, sql`SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
+        const approval = approvalRows[0] || null;
+        const approvedSnapshot = Number(approval?.is_approved) === 1 ? readApprovedCostSnapshot(approval?.report_snapshot) : null;
 
         // Get CPA project
         const projects = await qRows<any>(db, sql`SELECT * FROM cpa_projects WHERE id = ${input.cpaProjectId}`);
         if (!projects[0]) throw new Error('Project not found');
-        const proj = projects[0];
+        const proj = approvedSnapshot ? (approvedSnapshot.project ?? { project_id: projects[0].project_id, description: "لقطة معتمدة قديمة — المساحة والتكلفة المرجعية غير مثبتتين" }) : projects[0];
         const totalCC = toNum(proj.bua_sqft) * toNum(proj.construction_cost_per_sqft);
         const durationMonths = toNum(proj.duration_months);
 
@@ -1608,12 +1629,13 @@ export const cpaRouter = router({
         const scopeSourceLabel = requirementSetRows[0]?.title || 'نطاق خاص بالمشروع';
 
         // Get evaluation results with consultant info (deduplicated - latest per consultant)
-        const results = await qRows<any>(db, sql`
+        const results = approvedSnapshot ? approvedSnapshot.results : await qRows<any>(db, sql`
           SELECT er.*, er.eval_rank as result_rank,
                  pc.consultant_id, cm.legal_name, cm.trade_name, cm.code as consultant_code,
                  pc.design_fee_method, pc.design_fee_amount, pc.design_fee_percentage,
                  pc.supervision_fee_method, pc.supervision_fee_amount, pc.supervision_fee_percentage,
                  pc.supervision_stated_duration_months, pc.supervision_submitted,
+                 (SELECT cor.extraction_json FROM consultant_offer_readings cor WHERE cor.project_consultant_id = pc.id AND cor.status = 'REVIEWED' ORDER BY cor.id DESC LIMIT 1) as reviewed_extraction,
                  pc.proposal_reference, pc.proposal_date, pc.id as pc_id
           FROM cpa_evaluation_results er
           INNER JOIN (
@@ -1628,16 +1650,12 @@ export const cpaRouter = router({
         `);
 
         // Get overrides
-        const overrides = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}`);
+        const overrides = approvedSnapshot ? approvedSnapshot.overrides : await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}`);
         const overrideMap: Record<number, any> = {};
         for (const o of overrides) { overrideMap[Number(o.project_consultant_id)] = o; }
 
-        // Get approval status
-        const approvalRows = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
-        const approval = approvalRows[0] || null;
-
         // Get supervision roles selected for this project's independent scope.
-        const baselineRows = await qRows<any>(db, sql`
+        const baselineRows = approvedSnapshot ? (approvedSnapshot.supervisionBaseline ?? []) : await qRows<any>(db, sql`
           SELECT sr.id as supervision_role_id,
                  COALESCE(NULLIF(pcr.allocation_pct, 0), 100) as required_allocation_pct,
                  sr.code, sr.label,
@@ -1654,7 +1672,7 @@ export const cpaRouter = router({
         // Get scope gaps per consultant
         const scopeGapsMap: Record<number, any[]> = {};
         for (const r of results) {
-          const pcId = Number(r.pc_id);
+          const pcId = Number(r.pc_id ?? r.project_consultant_id);
           try {
             const notes = r.calculation_notes ? JSON.parse(r.calculation_notes) : {};
             scopeGapsMap[pcId] = notes.scopeGaps || [];
@@ -1664,8 +1682,8 @@ export const cpaRouter = router({
         // Get contractual coverage per consultant (section_code = 'CONTRACT')
         const contractualCoverageMap: Record<number, any[]> = {};
         for (const r of results) {
-          const pcId = Number(r.pc_id);
-          const contractRows = await qRows<any>(
+          const pcId = Number(r.pc_id ?? r.project_consultant_id);
+          const contractRows = approvedSnapshot ? [] : await qRows<any>(
             db,
             sql`SELECT csc.scope_item_id, csc.coverage_status, csc.notes,
                        si.code as item_code, si.label as item_label, si.item_number
@@ -1688,8 +1706,8 @@ export const cpaRouter = router({
         // Get supervision team per consultant
         const supTeamMap: Record<number, any[]> = {};
         for (const r of results) {
-          const pcId = Number(r.pc_id);
-          const teamRows = await qRows<any>(
+          const pcId = Number(r.pc_id ?? r.project_consultant_id);
+          const teamRows = approvedSnapshot ? [] : await qRows<any>(
             db,
             sql`SELECT cst.supervision_role_id, cst.proposed_allocation_pct, cst.proposed_monthly_rate,
                        sr.code, sr.label, sr.monthly_rate_aed
@@ -1709,7 +1727,7 @@ export const cpaRouter = router({
         }
         // Build consultant data
         const consultants = results.map((r: any) => {
-          const pcId = Number(r.pc_id);
+          const pcId = Number(r.pc_id ?? r.project_consultant_id);
           const override = overrideMap[pcId];
           return {
             pcId,
@@ -1717,13 +1735,13 @@ export const cpaRouter = router({
             name: r.trade_name || r.legal_name,
             code: r.consultant_code,
             designMethod: r.design_fee_method,
-            designPct: Number(r.design_fee_percentage) || 0,
+            designPct: approvedSnapshot ? (Number(r.design_fee_percentage) || 0) : (storedDesignPercentage(r.design_fee_percentage, r.reviewed_extraction) ?? 0),
             supervisionMethod: r.supervision_fee_method,
             supervisionPct: Number(r.supervision_fee_percentage) || 0,
             supervisionSubmitted: !!r.supervision_submitted,
             statedDuration: r.supervision_stated_duration_months ? Number(r.supervision_stated_duration_months) : null,
             canRank: r.can_rank === 1,
-            resultRank: r.result_rank,
+            resultRank: r.result_rank ?? r.eval_rank,
             scopeGaps: scopeGapsMap[pcId] || [],
             contractualCoverage: contractualCoverageMap[pcId] || [],
             supervisionTeam: supTeamMap[pcId] || [],
@@ -1755,7 +1773,8 @@ export const cpaRouter = router({
           bua: toNum(proj.bua_sqft),
           constructionCost: totalCC,
           durationMonths,
-          category: scopeSourceLabel,
+          category: approvedSnapshot?.scopeSourceLabel ?? (approvedSnapshot ? "لقطة معتمدة قديمة — بيانات النطاق الوصفية غير مثبتة" : scopeSourceLabel),
+          sourceMode: approvedSnapshot ? "APPROVED_SNAPSHOT" as const : "SAVED_DRAFT" as const,
           consultants,
           supervisionBaseline: baselineRows.map((b: any) => ({
             roleId: Number(b.supervision_role_id),
@@ -1765,7 +1784,7 @@ export const cpaRouter = router({
             requiredPct: Number(b.required_allocation_pct) || 0,
           })),
           approval: approval ? {
-            isApproved: !!approval.is_approved,
+            isApproved: Number(approval.is_approved) === 1,
             approvedBy: approval.approved_by,
             approvedAt: approval.approved_at,
             notes: approval.approval_notes,
@@ -1780,7 +1799,9 @@ export const cpaRouter = router({
         field: z.enum(['quotedDesignFee', 'designScopeGap', 'trueDesignFee', 'quotedSupervisionFee', 'supervisionGap', 'adjustedSupervisionFee', 'totalTrueCost']),
         value: z.number().nullable(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantLink(ctx.user, input.projectConsultantId, "write", input.cpaProjectId);
+        await assertCostReportUnlocked(input.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
 
@@ -1815,13 +1836,17 @@ export const cpaRouter = router({
         approvedBy: z.string(),
         notes: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId, "owner");
+        await assertCostReportUnlocked(input.cpaProjectId);
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
 
         // Build snapshot
         const results = await qRows<any>(db, sql`
-          SELECT er.*, pc.consultant_id, cm.trade_name, cm.legal_name, cm.code as consultant_code
+          SELECT er.*, pc.consultant_id, pc.id as pc_id, pc.design_fee_method, pc.design_fee_percentage,
+                 pc.supervision_fee_method, pc.supervision_fee_percentage, pc.supervision_submitted,
+                 pc.supervision_stated_duration_months, cm.trade_name, cm.legal_name, cm.code as consultant_code
           FROM cpa_evaluation_results er
           JOIN cpa_project_consultants pc ON pc.id = er.project_consultant_id
           JOIN cpa_consultants_master cm ON cm.id = pc.consultant_id
@@ -1829,20 +1854,23 @@ export const cpaRouter = router({
           ORDER BY COALESCE(er.eval_rank, 999)
         `);
         const overrides = await qRows<any>(db, sql`SELECT * FROM cpa_true_cost_report_overrides WHERE cpa_project_id = ${input.cpaProjectId}`);
-        const snapshot = JSON.stringify({ results, overrides, approvedAt: new Date().toISOString() });
+        const projectRows = await qRows<DbRow>(db, sql`SELECT * FROM cpa_projects WHERE id = ${input.cpaProjectId} LIMIT 1`);
+        const snapshot = JSON.stringify({ results, overrides, project: projectRows[0], approvedAt: new Date().toISOString() });
+        readApprovedCostSnapshot(snapshot);
 
         const existing = await qRows<any>(db, sql`SELECT id FROM cpa_true_cost_report_approval WHERE cpa_project_id = ${input.cpaProjectId} LIMIT 1`);
         if (existing.length > 0) {
-          await db.execute(sql`UPDATE cpa_true_cost_report_approval SET is_approved = 1, approved_by = ${input.approvedBy}, approved_at = NOW(), approval_notes = ${input.notes || null}, report_snapshot = ${snapshot} WHERE id = ${existing[0].id}`);
+          await db.execute(sql`UPDATE cpa_true_cost_report_approval SET is_approved = 1, approved_by = ${`owner_binding:${ctx.user.id}`}, approved_at = NOW(), approval_notes = ${input.notes || null}, report_snapshot = ${snapshot} WHERE id = ${existing[0].id}`);
         } else {
-          await db.execute(sql`INSERT INTO cpa_true_cost_report_approval (cpa_project_id, is_approved, approved_by, approved_at, approval_notes, report_snapshot) VALUES (${input.cpaProjectId}, 1, ${input.approvedBy}, NOW(), ${input.notes || null}, ${snapshot})`);
+          await db.execute(sql`INSERT INTO cpa_true_cost_report_approval (cpa_project_id, is_approved, approved_by, approved_at, approval_notes, report_snapshot) VALUES (${input.cpaProjectId}, 1, ${`owner_binding:${ctx.user.id}`}, NOW(), ${input.notes || null}, ${snapshot})`);
         }
         return { success: true };
       }),
 
     revokeApproval: protectedProcedure
       .input(z.object({ cpaProjectId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        await requireConsultantProject(ctx.user, input.cpaProjectId, "owner");
         const db = await getDb();
         if (!db) throw new Error('DB unavailable');
         await db.execute(sql`UPDATE cpa_true_cost_report_approval SET is_approved = 0, approved_at = NULL WHERE cpa_project_id = ${input.cpaProjectId}`);
@@ -1857,6 +1885,7 @@ export const cpaRouter = router({
       const db = await getDb();
       if (!db) throw new Error('DB unavailable');
       await requireCpaProjectAccess(db, input.cpaProjectId, ctx.user.id, "write");
+      await assertCostReportUnlocked(input.cpaProjectId);
       // Cascade delete: evaluation results → supervision team → scope coverage → project consultants → project
       await db.execute(sql`DELETE FROM cpa_evaluation_results WHERE project_consultant_id IN (SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId})`);
       const pcs = await qRows<any>(db, sql`SELECT id FROM cpa_project_consultants WHERE cpa_project_id = ${input.cpaProjectId}`);

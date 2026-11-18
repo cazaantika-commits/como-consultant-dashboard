@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useProjectContext } from "@/contexts/ProjectContext";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
@@ -79,10 +80,15 @@ function PageLoading() {
   return <div dir="rtl" className="min-h-screen bg-[#f4f6f4] p-6"><div className="mx-auto max-w-7xl space-y-5"><Skeleton className="h-64 rounded-[34px]" /><div className="grid gap-4 md:grid-cols-3">{[1,2,3].map(item => <Skeleton key={item} className="h-32 rounded-3xl" />)}</div><Skeleton className="h-96 rounded-3xl" /></div></div>;
 }
 
+export function RecentReadWindow({ label, returned, total, limit }: { label: string; returned: number; total: number; limit: number }) {
+  return <p role="status" className="mb-4 text-sm leading-7 text-slate-500">{label}: عرض أحدث <bdi>{returned}</bdi> من إجمالي <bdi>{total}</bdi> سجلًا (حد العرض <bdi>{limit}</bdi>). السجل الكامل داخل ملفات الموضوع الأصلية.</p>;
+}
+
 export default function ComoNextProjectPage() {
   const { id } = useParams<{ id: string }>();
   const projectId = Number(id);
   const { user, loading, isAuthenticated } = useAuth();
+  const { setSelectedProjectId } = useProjectContext();
   const [, navigate] = useLocation();
   const [selectedProjectSection, setSelectedProjectSection] = useState<ProjectSectionKey | null>(null);
   const [selectedProjectItem, setSelectedProjectItem] = useState<string | null>(null);
@@ -90,6 +96,15 @@ export default function ComoNextProjectPage() {
   const data = query.data;
   const activeWorkFiles = useMemo(() => data?.workFiles.filter((file: any) => !["closed", "cancelled"].includes(file.workFileStatus)) ?? [], [data]);
   const archivedWorkFiles = useMemo(() => data?.workFiles.filter((file: any) => ["closed", "cancelled"].includes(file.workFileStatus)) ?? [], [data]);
+  useEffect(() => {
+    setSelectedProjectSection(null);
+    setSelectedProjectItem(null);
+  }, [projectId]);
+  useEffect(() => {
+    if (isAuthenticated && !query.isError && data && Number(data.project.id) === projectId) {
+      setSelectedProjectId(projectId);
+    }
+  }, [data, isAuthenticated, projectId, query.isError, setSelectedProjectId]);
 
   if (loading || query.isLoading) return <PageLoading />;
   if (!isAuthenticated || !user) return <div dir="rtl" className="flex min-h-screen items-center justify-center bg-[#f4f6f4] p-5"><Card className="w-full max-w-md rounded-3xl p-8 text-center"><LockKeyhole className="mx-auto h-8 w-8 text-slate-500" /><h1 className="mt-4 text-xl font-black">الملف التنفيذي للمشروع</h1><p className="mt-2 text-sm text-slate-500">سجل الدخول لقراءة ذاكرة المشروع وملفات عمله.</p><Button className="mt-6 w-full rounded-xl bg-slate-900 text-white" onClick={() => { window.location.href = getLoginUrl(); }}>تسجيل الدخول</Button></Card></div>;
@@ -112,14 +127,14 @@ export default function ComoNextProjectPage() {
     { key: "work-files" as const, title: "ملفات العمل والقرارات", count: activeWorkFiles.length + data.decisions.length, icon: FileStack },
     { key: "memory" as const, title: "ذاكرة المشروع", count: data.reviewedMemory.length, icon: BookOpenCheck },
     { key: "parties" as const, title: "الأطراف", count: data.summary.activeParties, icon: UsersRound },
-    { key: "communications" as const, title: "المراسلات", count: data.communications.length, icon: Mail },
-    { key: "meetings" as const, title: "الاجتماعات", count: data.meetings.length, icon: CalendarDays },
+    { key: "communications" as const, title: "المراسلات", count: data.summary.communications, icon: Mail },
+    { key: "meetings" as const, title: "الاجتماعات", count: data.summary.meetings, icon: CalendarDays },
   ];
   const selectedMemory = selectedProjectItem?.startsWith("memory:") ? data.reviewedMemory.find((item: any) => item.id === Number(selectedProjectItem.split(":")[1])) : null;
   const selectedParty = selectedProjectItem?.startsWith("party:") ? data.parties.find((item: any) => item.id === Number(selectedProjectItem.split(":")[1])) : null;
 
-  const openWorkFile = (workFileId: number) => navigate(`/como-next?tab=work-files&workFileId=${workFileId}`);
-  const openFocusedOfficeRecord = (section: "decisions" | "communications" | "meetings", kind: "decision" | "communication" | "meeting", workFileId: number, recordId: number) => navigate(`/como-next?section=${section}&workFileId=${workFileId}&focusKind=${kind}&focusId=${recordId}`);
+  const openWorkFile = (workFileId: number) => navigate(`/como-next?section=work-files&projectId=${projectId}&workFileId=${workFileId}`);
+  const openFocusedOfficeRecord = (section: "decisions" | "communications" | "meetings", kind: "decision" | "communication" | "meeting", workFileId: number, recordId: number) => navigate(`/como-next?section=${section}&projectId=${projectId}&workFileId=${workFileId}&focusKind=${kind}&focusId=${recordId}`);
 
   return <div dir="rtl" className="min-h-screen min-w-0 max-w-full overflow-x-hidden bg-[radial-gradient(circle_at_top_right,#fff8e9_0,#f8faf9_34%,#eef3f2_100%)] text-slate-900">
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/88 backdrop-blur-xl">
@@ -236,8 +251,8 @@ export default function ComoNextProjectPage() {
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className="rounded-2xl bg-[#f3faf7] p-4"><p className="text-2xl font-black text-[#195d64]">{selectedParty.workFiles?.length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">ملفات موضوع</p></div>
                 <div className="rounded-2xl bg-[#fff8e9] p-4"><p className="text-2xl font-black text-amber-800">{selectedParty.workFiles?.filter((file: any) => !["closed", "cancelled"].includes(file.workFileStatus)).length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">موضوع نشط</p></div>
-                <div className="rounded-2xl bg-[#f3f7ff] p-4"><p className="text-2xl font-black text-sky-800">{selectedParty.communications?.length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">مراسلات</p></div>
-                <div className="rounded-2xl bg-[#faf7ff] p-4"><p className="text-2xl font-black text-violet-800">{selectedParty.meetings?.length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">اجتماعات</p></div>
+                <div className="rounded-2xl bg-[#f3f7ff] p-4"><p className="text-2xl font-black text-sky-800">{selectedParty.communications?.length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">مراسلات ضمن أحدث 12 للمشروع</p></div>
+                <div className="rounded-2xl bg-[#faf7ff] p-4"><p className="text-2xl font-black text-violet-800">{selectedParty.meetings?.length || 0}</p><p className="mt-1 text-[10px] font-bold text-slate-500">اجتماعات ضمن أحدث 12 للمشروع</p></div>
               </div>
 
               <section><div className="mb-3 flex items-center gap-2 text-[#1d6577]"><UsersRound className="h-5 w-5" /><h3 className="text-base font-black">الأشخاص وبيانات التواصل</h3></div><div className="grid gap-3 sm:grid-cols-2">{selectedParty.contacts?.length ? selectedParty.contacts.map((contact: any) => <Card key={contact.id} className="rounded-2xl border-slate-200 bg-white p-4 shadow-sm"><div className="flex flex-wrap items-center gap-2"><h4 className="font-black text-slate-950">{contact.displayName}</h4>{contact.isPrimary ? <Badge variant="outline" className="rounded-full border-emerald-100 bg-emerald-50 text-emerald-700">أساسي</Badge> : null}</div>{contact.jobTitle ? <p className="mt-1 text-xs font-bold text-slate-500">{contact.jobTitle}</p> : null}{contact.email ? <p className="mt-3 truncate text-xs text-slate-700"><bdi dir="ltr">{contact.email}</bdi></p> : null}{contact.phone ? <p className="mt-1 text-xs text-slate-700"><bdi dir="ltr">{contact.phone}</bdi></p> : null}</Card>) : <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm font-bold text-slate-500 sm:col-span-2">لا توجد جهات اتصال محفوظة لهذا الطرف.</div>}</div></section>
@@ -252,9 +267,11 @@ export default function ComoNextProjectPage() {
       </section> : null}
 
       {selectedProjectSection === "communications" ? <section className="mt-8 max-w-4xl pb-10">
+        <RecentReadWindow label="المراسلات" returned={data.recentWindow.communications.returned} total={data.recentWindow.communications.total} limit={data.recentWindow.limit} />
+        <Button variant="outline" className="mb-4 rounded-xl bg-white" onClick={() => setSelectedProjectSection("work-files")}>فتح ملفات الموضوع للسجل الكامل</Button>
         <div className="space-y-2">{data.communications.length ? data.communications.map((item: any) => <button key={item.id} type="button" onClick={() => openFocusedOfficeRecord("communications", "communication", item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-sky-200 hover:shadow-md"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.subject}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-sky-700" /></button>) : <p className="rounded-2xl bg-white p-5 text-center text-sm text-slate-500">لا توجد مراسلات مرتبطة.</p>}</div>
       </section> : null}
-      {selectedProjectSection === "meetings" ? <section className="mt-8 max-w-4xl pb-10"><div className="space-y-2">{data.meetings.length ? data.meetings.map((item: any) => <button key={item.id} type="button" onClick={() => openFocusedOfficeRecord("meetings", "meeting", item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-teal-200 hover:shadow-md"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.title}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-teal-700" /></button>) : <p className="rounded-2xl bg-white p-5 text-center text-sm text-slate-500">لا توجد اجتماعات مرتبطة.</p>}</div></section> : null}
+      {selectedProjectSection === "meetings" ? <section className="mt-8 max-w-4xl pb-10"><RecentReadWindow label="الاجتماعات" returned={data.recentWindow.meetings.returned} total={data.recentWindow.meetings.total} limit={data.recentWindow.limit} /><Button variant="outline" className="mb-4 rounded-xl bg-white" onClick={() => setSelectedProjectSection("work-files")}>فتح ملفات الموضوع للسجل الكامل</Button><div className="space-y-2">{data.meetings.length ? data.meetings.map((item: any) => <button key={item.id} type="button" onClick={() => openFocusedOfficeRecord("meetings", "meeting", item.workFileId, item.id)} className="group flex min-h-14 w-full items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right shadow-sm transition hover:border-teal-200 hover:shadow-md"><span className="min-w-0 flex-1 text-sm font-black text-slate-900">{item.title}</span><ChevronLeft className="h-5 w-5 shrink-0 text-slate-300 group-hover:text-teal-700" /></button>) : <p className="rounded-2xl bg-white p-5 text-center text-sm text-slate-500">لا توجد اجتماعات مرتبطة.</p>}</div></section> : null}
     </main>
   </div>;
 }

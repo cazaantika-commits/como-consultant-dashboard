@@ -63,7 +63,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
       const savedRates = JSON.parse((project as any)?.constructionScheduleJson || "{}")?.settings?.configurableRates || {};
       designRate = Number(savedRates.buildForRentDeveloperFeeDesignRate ?? designRate);
       supervisionRate = Number(savedRates.buildForRentDeveloperFeeSupervisionRate ?? supervisionRate);
-    } catch { /* retain approved defaults when historic settings JSON is absent */ }
+    } catch { /* retain configured defaults when historic settings JSON is absent */ }
     return { designRate, supervisionRate, totalRate: designRate + supervisionRate };
   }, [project]);
 
@@ -183,6 +183,7 @@ export default function V2Feasibility({ embedded }: { embedded?: boolean } = {})
       {costs && project && (
         <div className="max-w-[1100px] mx-auto px-4 py-3 space-y-3">
 
+          <p className="text-[11px] text-slate-600" role="note">عرض قراءة محسوب من بطاقة المشروع الحالية (current/unapproved)؛ لا توجد نسخة تكلفة معتمدة مثبتة في هذا المصدر. اعتماد المبيعات لا يعتمد التكلفة، والسيناريوهات أدناه تقديرات وليست تعديلًا للتقرير أو سدادًا فعليًا.</p>
           {/* ═══ INVESTOR DECISION CANVAS ═══ */}
           {!isBuildForRent && (
             <section className="fs-card fs-card-blue overflow-hidden">

@@ -56,6 +56,7 @@ import ComoNextProjectPage from "./pages/ComoNextProjectPage";
 import ComoNextProjectOpeningPage from "./pages/ComoNextProjectOpeningPage";
 import ProjectManagementPage from "./pages/ProjectManagementPage";
 import MajanFinanceWorkspace from "./pages/MajanFinanceWorkspace";
+import { sentEmailDestination } from "../../shared/comoPresentation";
 
 function FinancialWorkspaceRedirect({ tab }: { tab: string }) {
   const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
@@ -80,8 +81,8 @@ function Router() {
       <Route path="/tasks" component={() => <Redirect to="/como-next?section=actions" />} />
       <Route path="/agent-dashboard" component={() => <Redirect to="/sara" />} />
       {/* These pages are also accessible as tabs inside Project Management */}
-      <Route path="/feasibility" component={FeasibilityStudyPage} />
-      <Route path="/feasibility-study" component={FeasibilityStudyPage} />
+      <Route path="/feasibility" component={() => <FeasibilityStudyPage />} />
+      <Route path="/feasibility-study" component={() => <FeasibilityStudyPage />} />
       <Route path="/development-stages" component={() => <Redirect to="/development-phases" />} />
       <Route path="/cash-flow" component={() => <Redirect to="/bateekha" />} />
       <Route path="/project-lifecycle" component={ProjectLifecyclePage} />
@@ -119,7 +120,7 @@ function Router() {
       <Route path="/activity-monitor" component={() => <Redirect to="/como-next" />} />
       <Route path="/specialist-knowledge" component={() => <Redirect to="/como-next?section=specialists" />} />
       <Route path="/knowledge-analysis" component={KnowledgeHubPage} />
-      <Route path="/sent-emails" component={() => <Redirect to="/como-next?section=communications" />} />
+      <Route path="/sent-emails" component={() => <Redirect to={sentEmailDestination(typeof window === "undefined" ? "" : window.location.search)} />} />
       <Route path="/executive" component={() => <Redirect to="/como-next" />} />
       <Route path="/command-center" component={() => <Redirect to="/sara" />} />
       <Route path="/meetings/:id" component={() => <Redirect to="/como-next?section=meetings" />} />

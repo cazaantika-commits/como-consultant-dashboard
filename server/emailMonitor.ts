@@ -1,4 +1,5 @@
 import Imap from "imap";
+import { COMO_IMAP_TLS_OPTIONS } from "./services/comoSecurityPolicy";
 import { simpleParser, ParsedMail, Attachment } from "mailparser";
 import nodemailer from "nodemailer";
 import {
@@ -103,7 +104,7 @@ export function fetchNewEmails(): Promise<EmailMessage[]> {
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
     });
@@ -349,7 +350,7 @@ export function fetchReadonlyAutomationSignalByUID(input: {
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
     });
@@ -435,7 +436,7 @@ export function fetchReadonlyFolderSince(folderName: string, hours: number = 72,
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
       socketTimeout:90000,
@@ -573,7 +574,7 @@ export function fetchEmailsSince(hours: number = 48): Promise<EmailMessage[]> {
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
     });
@@ -685,7 +686,7 @@ export function fetchEmailByUID(targetUID: number, expectedUidValidity?: string,
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
       socketTimeout: 90000,
@@ -793,7 +794,7 @@ export function fetchRecentEmails(count: number = 10): Promise<EmailMessage[]> {
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 15000,
       authTimeout: 10000,
     });
@@ -933,7 +934,7 @@ export function markAsSeen(uid: number): Promise<void> {
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
     });
 
     imap.once("ready", () => {
@@ -1152,7 +1153,7 @@ function privateEmailDraftAppendPort(raw: Buffer) {
     findByStableIdentity(input: { draftKey: string; messageId: string }): Promise<MailboxDraftLookup> {
       return new Promise((resolve, reject) => {
         const imap = new Imap({ user: EMAIL_USER, password: EMAIL_PASSWORD, host: EMAIL_HOST, port: 993, tls: true,
-          tlsOptions: { rejectUnauthorized: false }, connTimeout: 15000, authTimeout: 10000 });
+          tlsOptions: COMO_IMAP_TLS_OPTIONS, connTimeout: 15000, authTimeout: 10000 });
         let settled = false;
         const finish = (error?: Error, value?: MailboxDraftLookup) => {
           if (settled) return;
@@ -1199,7 +1200,7 @@ function privateEmailDraftAppendPort(raw: Buffer) {
     appendDraft(): Promise<void> {
       return new Promise((resolve, reject) => {
         const imap = new Imap({ user: EMAIL_USER, password: EMAIL_PASSWORD, host: EMAIL_HOST, port: 993, tls: true,
-          tlsOptions: { rejectUnauthorized: false }, connTimeout: 15000, authTimeout: 10000 });
+          tlsOptions: COMO_IMAP_TLS_OPTIONS, connTimeout: 15000, authTimeout: 10000 });
         let settled = false;
         const finish = (error?: Error) => {
           if (settled) return;
@@ -1241,7 +1242,7 @@ function saveSentEmailToIMAP(
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
     });
 
     // Build the raw email message (RFC 2822 format)
@@ -1316,7 +1317,7 @@ export function testConnection(): Promise<{ success: boolean; messageCount: numb
       host: EMAIL_HOST,
       port: 993,
       tls: true,
-      tlsOptions: { rejectUnauthorized: false },
+      tlsOptions: COMO_IMAP_TLS_OPTIONS,
       connTimeout: 10000,
       authTimeout: 8000,
     });

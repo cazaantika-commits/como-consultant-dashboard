@@ -200,7 +200,7 @@ export async function runExecutiveControlLoopCommand(input: {
       try {
         const result = await reviewIntakeProposalCommand({ userId: input.userId, proposalId: Number(proposal.id), decision: "apply", reviewNote: "AUTO_MANUS: نتيجة داخلية آمنة طبقتها حلقة الإدارة التنفيذية." });
         appliedIntakeProposalIds.push(Number(proposal.id));
-        if (result.targetId) actionQueue.push(Number(result.targetId));
+        actionQueue.push(...result.actionIds);
       } catch (error) {
         failures.push({ kind: "intake_proposal", id: Number(proposal.id), message: error instanceof Error ? error.message : String(error) });
       }
